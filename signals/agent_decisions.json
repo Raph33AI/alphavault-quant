@@ -1,13 +1,13 @@
 {
-  "timestamp": "2026-04-17T18:09:19.481818Z",
+  "timestamp": "2026-04-17T19:23:11.217491Z",
   "decisions": {
     "SPY": {
       "council": {
-        "decision": "execute_strong",
-        "confidence": 0.799,
-        "size_multiplier": 1.2,
-        "reason": "Score pond\u00e9r\u00e9: 0.799 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "execute",
+        "confidence": 0.591,
+        "size_multiplier": 1.0,
+        "reason": "Market regime aligns with the buy signal, and confidence exceeds the threshold.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -31,20 +31,20 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.7986,
+        "weighted_score": 0.0,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:04.765575Z"
+        "timestamp": "2026-04-17T19:22:04.332205Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.92
     },
     "QQQ": {
       "council": {
-        "decision": "execute_strong",
-        "confidence": 0.779,
-        "size_multiplier": 1.2,
-        "reason": "Score pond\u00e9r\u00e9: 0.779 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "execute",
+        "confidence": 0.607,
+        "size_multiplier": 1.0,
+        "reason": "The market regime supports a buy direction with sufficient signal confidence, and all guardian systems are green.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -68,20 +68,20 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.7791,
+        "weighted_score": 0.0,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:06.406404Z"
+        "timestamp": "2026-04-17T19:22:11.648005Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.924
     },
     "IWM": {
       "council": {
-        "decision": "execute_strong",
-        "confidence": 0.777,
-        "size_multiplier": 1.2,
-        "reason": "Score pond\u00e9r\u00e9: 0.777 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "execute",
+        "confidence": 0.584,
+        "size_multiplier": 1.0,
+        "reason": "Market regime aligns with the buy direction, and the signal confidence exceeds the required threshold.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -97,7 +97,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.663,
-          "signal_model": 0.585,
+          "signal_model": 0.584,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -105,20 +105,20 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.7772,
+        "weighted_score": 0.0,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:08.236168Z"
+        "timestamp": "2026-04-17T19:22:28.060234Z"
       },
       "trade_action": "wait",
-      "exec_quality": 0.932
+      "exec_quality": 0.931
     },
     "AAPL": {
       "council": {
-        "decision": "execute_strong",
-        "confidence": 0.778,
-        "size_multiplier": 1.2,
-        "reason": "Score pond\u00e9r\u00e9: 0.778 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "execute",
+        "confidence": 0.617,
+        "size_multiplier": 1.1,
+        "reason": "Market regime aligns with a confident buy signal, and all risk checks are clear for execution.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -134,7 +134,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.637,
-          "signal_model": 0.619,
+          "signal_model": 0.617,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -142,20 +142,20 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.7783,
+        "weighted_score": 0.0,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:09.479458Z"
+        "timestamp": "2026-04-17T19:22:42.582837Z"
       },
       "trade_action": "wait",
-      "exec_quality": 0.963
+      "exec_quality": 0.961
     },
     "NVDA": {
       "council": {
-        "decision": "execute",
-        "confidence": 0.678,
-        "size_multiplier": 1.0,
-        "reason": "Score pond\u00e9r\u00e9: 0.678 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "wait",
+        "confidence": 0.9,
+        "size_multiplier": 0.5,
+        "reason": "Decision to wait is based on extremely low signal confidence (28.5%) and a 'crash' market regime for a buy direction.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -171,7 +171,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.3,
-          "signal_model": 0.284,
+          "signal_model": 0.285,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -179,20 +179,20 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6776,
-        "council_approved": true,
-        "timestamp": "2026-04-17T18:09:11.050432Z"
+        "weighted_score": 0.0,
+        "council_approved": false,
+        "timestamp": "2026-04-17T19:22:52.823414Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.941
     },
     "MSFT": {
       "council": {
-        "decision": "execute",
-        "confidence": 0.685,
-        "size_multiplier": 1.0,
-        "reason": "Score pond\u00e9r\u00e9: 0.685 | Votes buy: 8 | Votes sell: 0 | Warnings: 0",
-        "mode": "deterministic",
+        "decision": "wait",
+        "confidence": 0.9,
+        "size_multiplier": 0.5,
+        "reason": "The market regime is unfavorable for a BUY direction, and the signal confidence of 33.1% is below the required threshold for execution.",
+        "mode": "llm",
         "n_agents": 9,
         "agent_votes": {
           "drawdown_guardian": "buy",
@@ -208,7 +208,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.3,
-          "signal_model": 0.333,
+          "signal_model": 0.331,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -216,12 +216,12 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6849,
-        "council_approved": true,
-        "timestamp": "2026-04-17T18:09:12.381146Z"
+        "weighted_score": 0.0,
+        "council_approved": false,
+        "timestamp": "2026-04-17T19:23:00.794076Z"
       },
       "trade_action": "wait",
-      "exec_quality": 0.94
+      "exec_quality": 0.942
     },
     "GOOGL": {
       "council": {
@@ -253,9 +253,9 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6777,
+        "weighted_score": 0.6778,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:13.533830Z"
+        "timestamp": "2026-04-17T19:23:05.308002Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.937
@@ -282,7 +282,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.525,
-          "signal_model": 0.722,
+          "signal_model": 0.719,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -290,12 +290,12 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.777,
+        "weighted_score": 0.7766,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:14.728513Z"
+        "timestamp": "2026-04-17T19:23:06.427512Z"
       },
       "trade_action": "wait",
-      "exec_quality": 0.958
+      "exec_quality": 0.959
     },
     "META": {
       "council": {
@@ -319,7 +319,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.3,
-          "signal_model": 0.287,
+          "signal_model": 0.288,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -327,9 +327,9 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6781,
+        "weighted_score": 0.6782,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:15.817067Z"
+        "timestamp": "2026-04-17T19:23:07.550968Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.94
@@ -337,9 +337,9 @@
     "TSLA": {
       "council": {
         "decision": "execute",
-        "confidence": 0.656,
+        "confidence": 0.657,
         "size_multiplier": 1.0,
-        "reason": "Score pond\u00e9r\u00e9: 0.656 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
+        "reason": "Score pond\u00e9r\u00e9: 0.657 | Votes buy: 9 | Votes sell: 0 | Warnings: 0",
         "mode": "deterministic",
         "n_agents": 9,
         "agent_votes": {
@@ -356,7 +356,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.3,
-          "signal_model": 0.142,
+          "signal_model": 0.145,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -364,9 +364,9 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6562,
+        "weighted_score": 0.6567,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:16.925586Z"
+        "timestamp": "2026-04-17T19:23:08.632698Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.939
@@ -393,7 +393,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.654,
-          "signal_model": 0.595,
+          "signal_model": 0.596,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -401,9 +401,9 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.7773,
+        "weighted_score": 0.7775,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:18.297753Z"
+        "timestamp": "2026-04-17T19:23:09.923583Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.947
@@ -430,7 +430,7 @@
         "agent_scores": {
           "drawdown_guardian": 1.0,
           "regime_model": 0.3,
-          "signal_model": 0.266,
+          "signal_model": 0.267,
           "execution_timing": 0.85,
           "risk_manager": 0.8,
           "correlation_surface": 0.8,
@@ -438,9 +438,9 @@
           "market_impact": 0.85,
           "capital_rotation": 0.65
         },
-        "weighted_score": 0.6748,
+        "weighted_score": 0.675,
         "council_approved": true,
-        "timestamp": "2026-04-17T18:09:19.476577Z"
+        "timestamp": "2026-04-17T19:23:11.212250Z"
       },
       "trade_action": "wait",
       "exec_quality": 0.949
