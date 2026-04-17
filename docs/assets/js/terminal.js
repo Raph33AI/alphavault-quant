@@ -860,7 +860,7 @@ const Terminal = (() => {
 
     // Quant metrics
     const port    = data.portfolio || {};
-    const risk    = data.risk      || {};
+    // const risk    = data.risk      || {};
     const var95   = risk.var_metrics?.var_95;
     const cvar95  = risk.var_metrics?.cvar_95;
     const annVol  = risk.var_metrics?.portfolio_vol_annual;
