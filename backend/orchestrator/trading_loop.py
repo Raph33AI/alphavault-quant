@@ -51,7 +51,12 @@ SIGNALS_DIR.mkdir(exist_ok=True)
 # ════════════════════════════════════════════════════════════
 
 def save_signals(output: dict) -> list:
-    """Sauvegarde tous les JSON dans /signals/."""
+    """
+    Sauvegarde les JSON dans /signals/ ET dans /docs/signals/.
+    
+    - /signals/     → historique Git + source de vérité
+    - /docs/signals/ → servi par GitHub Pages (accessible au dashboard)
+    """
     file_map = {
         "current_signals":     "current_signals.json",
         "portfolio":           "portfolio.json",
@@ -62,43 +67,56 @@ def save_signals(output: dict) -> list:
         "performance_metrics": "performance_metrics.json",
         "system_status":       "system_status.json",
     }
+
+    # Dossiers de destination
+    signals_dir     = _ROOT_DIR / "signals"
+    docs_signals_dir= _ROOT_DIR / "docs" / "signals"
+
+    signals_dir.mkdir(exist_ok=True)
+    docs_signals_dir.mkdir(parents=True, exist_ok=True)
+
     saved = []
     for key, filename in file_map.items():
         if key not in output:
             continue
-        fpath = SIGNALS_DIR / filename
+        data = output[key]
         try:
-            with open(fpath, "w", encoding="utf-8") as f:
-                json.dump(output[key], f, indent=2, default=str)
+            # 1. Sauvegarde dans /signals/
+            with open(signals_dir / filename, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, default=str)
+
+            # 2. Sauvegarde dans /docs/signals/ (GitHub Pages)
+            with open(docs_signals_dir / filename, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, default=str)
+
             saved.append(filename)
             logger.debug(f"  💾 {filename}")
         except Exception as e:
             logger.error(f"  ❌ Erreur sauvegarde {filename}: {e}")
 
-    logger.info(f"💾 {len(saved)}/{len(file_map)} fichiers sauvegardés")
+    logger.info(f"💾 {len(saved)}/{len(file_map)} fichiers → signals/ + docs/signals/")
     return saved
 
 def git_commit_signals() -> bool:
-    """Commit + push automatique depuis la racine du repo."""
+    """Commit + push signals/ ET docs/signals/."""
     try:
         now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
         def run_git(args, check=True):
             return subprocess.run(
                 ["git"] + args,
-                check=check,
-                capture_output=True,
-                cwd=str(_ROOT_DIR),
+                check=check, capture_output=True, cwd=str(_ROOT_DIR)
             )
 
         run_git(["config", "--global", "user.name",  "AlphaVault Quant Bot"])
         run_git(["config", "--global", "user.email", "bot@alphavault-ai.com"])
-        run_git(["add", "signals/"])
 
-        # Vérifie si des changements existent
+        # Stage les deux dossiers
+        run_git(["add", "signals/", "docs/signals/"])
+
         diff = run_git(["diff", "--staged", "--quiet"], check=False)
         if diff.returncode == 0:
-            logger.info("📋 signals/ inchangé — pas de commit")
+            logger.info("📋 Aucun changement — pas de commit")
             return False
 
         run_git(["commit", "-m", f"🤖 Signals update — {now}"])
@@ -111,7 +129,7 @@ def git_commit_signals() -> bool:
         logger.error(f"Git error: {stderr[:300]}")
         return False
     except Exception as e:
-        logger.error(f"Git error inattendu: {e}")
+        logger.error(f"Git error: {e}")
         return False
 
 def write_error_status(error: Exception):

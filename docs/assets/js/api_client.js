@@ -1,43 +1,52 @@
 // ============================================================
-// ALPHAVAULT QUANT — API Client v2
-// Lit les JSON depuis docs/signals/ (copié par le workflow)
-// Compatible GitHub Pages + développement local
+// ALPHAVAULT QUANT — API Client v3
+// ✅ Lit depuis docs/signals/ (servi par GitHub Pages)
+// ✅ Auto-détection GitHub Pages vs local
 // ============================================================
 
 const ApiClient = (() => {
 
-  // Détection automatique de l'environnement
+  // ── Détection du BASE URL ──────────────────────────────
   const BASE = (() => {
-    const isGHPages = window.location.hostname.includes('github.io');
-    const isLocal   = window.location.hostname === 'localhost' ||
-                      window.location.hostname === '127.0.0.1';
+    const { hostname, pathname } = window.location;
 
-    if (isGHPages) {
-      // GitHub Pages : les signaux sont dans docs/signals/
-      const repoName = window.location.pathname.split('/')[1];
-      return repoName ? `/${repoName}/signals` : '/signals';
+    // GitHub Pages : ex https://raph33ai.github.io/alphavault-quant/
+    if (hostname.includes('github.io')) {
+      // Extrait le nom du repo depuis le pathname
+      // pathname = "/alphavault-quant/" → repoName = "alphavault-quant"
+      const parts    = pathname.split('/').filter(Boolean);
+      const repoName = parts[0] || '';
+      const base     = repoName ? `/${repoName}/signals` : '/signals';
+      console.log(`📡 GitHub Pages mode | BASE: ${base}`);
+      return base;
     }
-    if (isLocal) {
-      return '../signals';  // développement local
+
+    // Développement local (Live Server, Python HTTP, etc.)
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      console.log('📡 Local mode | BASE: ../signals');
+      return '../signals';
     }
-    return './signals';
+
+    // Domaine custom
+    console.log('📡 Custom domain mode | BASE: /signals');
+    return '/signals';
   })();
 
-  console.log(`📡 ApiClient initialized | BASE: ${BASE}`);
-
-  const CACHE = new Map();
+  const CACHE     = new Map();
   const CACHE_TTL = 45_000; // 45 secondes
 
+  // ── Fetch avec cache et fallback ──────────────────────
   async function fetchJSON(filename, bustCache = false) {
-    const cacheKey = filename;
-    const now      = Date.now();
-    const cached   = CACHE.get(cacheKey);
+    const key = filename;
+    const now = Date.now();
+    const hit = CACHE.get(key);
 
-    if (!bustCache && cached && (now - cached.ts) < CACHE_TTL) {
-      return cached.data;
+    if (!bustCache && hit && (now - hit.ts) < CACHE_TTL) {
+      return hit.data;
     }
 
     const url = `${BASE}/${filename}?_=${now}`;
+
     try {
       const resp = await fetch(url, {
         method:  'GET',
@@ -45,67 +54,104 @@ const ApiClient = (() => {
         headers: { 'Accept': 'application/json' },
       });
 
-      if (!resp.ok) throw new Error(`HTTP ${resp.status} on ${url}`);
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status} — ${url}`);
+      }
 
       const data = await resp.json();
-      CACHE.set(cacheKey, { data, ts: now });
+      CACHE.set(key, { data, ts: now });
       return data;
 
     } catch (err) {
-      console.warn(`⚠ ApiClient: ${filename} → ${err.message}`);
-      // Retourne le cache périmé plutôt qu'une erreur
-      return cached?.data || getDefaultData(filename);
+      console.warn(`⚠ ApiClient fetch failed: ${filename} → ${err.message}`);
+      // Retourne le cache périmé si disponible
+      if (hit?.data) {
+        console.log(`📦 Returning stale cache for ${filename}`);
+        return hit.data;
+      }
+      return _defaultData(filename);
     }
   }
 
-  // Données par défaut si fichier absent
-  function getDefaultData(filename) {
+  // ── Données par défaut (évite les crashes UI) ─────────
+  function _defaultData(filename) {
     const defaults = {
-      'current_signals.json':    { timestamp: null, signals: {}, session: 'closed', llm_mode: 'deterministic', dry_run: true },
-      'system_status.json':      { overall: 'initializing', llm_available: false, workers: {}, mode: 'deterministic', session: 'closed' },
-      'regime.json':             { global: { regime_label: 'initializing', regime_score: 0, confidence: 0 }, macro: {}, per_symbol: {} },
-      'portfolio.json':          { total_value: 100000, weights: {}, positions: {}, cash_pct: 1.0 },
-      'risk_metrics.json':       { drawdown: { current_drawdown: 0 }, leverage: { current_leverage: 0, allowed_leverage: 1.5 } },
-      'agent_decisions.json':    { decisions: {}, executions: [] },
-      'strategy_weights.json':   { weights: { trend: 0.40, mean_reversion: 0.25, vol_carry: 0.20, options_convexity: 0.15 } },
-      'performance_metrics.json':{ portfolio_value: 100000, n_signals: 0, n_executions: 0 },
+      'current_signals.json':    {
+        timestamp: null, signals: {}, session: 'closed',
+        llm_mode: 'deterministic', dry_run: true,
+      },
+      'system_status.json': {
+        overall: 'initializing', llm_available: false,
+        workers: {}, mode: 'deterministic', session: 'closed', dry_run: true,
+      },
+      'regime.json': {
+        global: {
+          regime_label: 'initializing', regime_score: 0,
+          confidence: 0, allow_long: false, allow_short: false,
+          reduce_exposure: true, probabilities: {},
+        },
+        macro: {}, per_symbol: {},
+      },
+      'portfolio.json': {
+        total_value: 100000, weights: {}, positions: {}, cash_pct: 1.0,
+      },
+      'risk_metrics.json': {
+        drawdown: { current_drawdown: 0, halt_active: false, daily_pnl_pct: 0 },
+        leverage: { current_leverage: 0, allowed_leverage: 1.5, is_over_leveraged: false },
+        var_metrics: {},
+      },
+      'agent_decisions.json': { decisions: {}, executions: [] },
+      'strategy_weights.json': {
+        weights: {
+          trend: 0.40, mean_reversion: 0.25,
+          vol_carry: 0.20, options_convexity: 0.15,
+        },
+        regime: 'initializing',
+      },
+      'performance_metrics.json': {
+        portfolio_value: 100000, n_signals: 0,
+        n_executions: 0, llm_mode: 'deterministic',
+      },
     };
     return defaults[filename] || {};
   }
 
+  // ── API publique ──────────────────────────────────────
   return {
-    getSignals:       (b) => fetchJSON('current_signals.json', b),
-    getPortfolio:     (b) => fetchJSON('portfolio.json', b),
-    getRisk:          (b) => fetchJSON('risk_metrics.json', b),
-    getRegime:        (b) => fetchJSON('regime.json', b),
-    getAgents:        (b) => fetchJSON('agent_decisions.json', b),
-    getStrategy:      (b) => fetchJSON('strategy_weights.json', b),
-    getPerformance:   (b) => fetchJSON('performance_metrics.json', b),
-    getSystemStatus:  (b) => fetchJSON('system_status.json', b),
+    getSignals:      (b) => fetchJSON('current_signals.json', b),
+    getPortfolio:    (b) => fetchJSON('portfolio.json', b),
+    getRisk:         (b) => fetchJSON('risk_metrics.json', b),
+    getRegime:       (b) => fetchJSON('regime.json', b),
+    getAgents:       (b) => fetchJSON('agent_decisions.json', b),
+    getStrategy:     (b) => fetchJSON('strategy_weights.json', b),
+    getPerformance:  (b) => fetchJSON('performance_metrics.json', b),
+    getSystemStatus: (b) => fetchJSON('system_status.json', b),
 
     fetchAll: async (bust = false) => {
-      const [signals, portfolio, risk, regime, agents, strategy, perf, status] =
-        await Promise.allSettled([
-          fetchJSON('current_signals.json',    bust),
-          fetchJSON('portfolio.json',          bust),
-          fetchJSON('risk_metrics.json',       bust),
-          fetchJSON('regime.json',             bust),
-          fetchJSON('agent_decisions.json',    bust),
-          fetchJSON('strategy_weights.json',   bust),
-          fetchJSON('performance_metrics.json',bust),
-          fetchJSON('system_status.json',      bust),
-        ]);
+      const results = await Promise.allSettled([
+        fetchJSON('current_signals.json',    bust),
+        fetchJSON('portfolio.json',          bust),
+        fetchJSON('risk_metrics.json',       bust),
+        fetchJSON('regime.json',             bust),
+        fetchJSON('agent_decisions.json',    bust),
+        fetchJSON('strategy_weights.json',   bust),
+        fetchJSON('performance_metrics.json',bust),
+        fetchJSON('system_status.json',      bust),
+      ]);
 
+      const [signals, portfolio, risk, regime, agents, strategy, perf, status] = results;
       return {
-        signals:   signals.value   || getDefaultData('current_signals.json'),
-        portfolio: portfolio.value || getDefaultData('portfolio.json'),
-        risk:      risk.value      || getDefaultData('risk_metrics.json'),
-        regime:    regime.value    || getDefaultData('regime.json'),
-        agents:    agents.value    || getDefaultData('agent_decisions.json'),
-        strategy:  strategy.value  || getDefaultData('strategy_weights.json'),
-        perf:      perf.value      || getDefaultData('performance_metrics.json'),
-        status:    status.value    || getDefaultData('system_status.json'),
+        signals:   signals.value   ?? _defaultData('current_signals.json'),
+        portfolio: portfolio.value ?? _defaultData('portfolio.json'),
+        risk:      risk.value      ?? _defaultData('risk_metrics.json'),
+        regime:    regime.value    ?? _defaultData('regime.json'),
+        agents:    agents.value    ?? _defaultData('agent_decisions.json'),
+        strategy:  strategy.value  ?? _defaultData('strategy_weights.json'),
+        perf:      perf.value      ?? _defaultData('performance_metrics.json'),
+        status:    status.value    ?? _defaultData('system_status.json'),
       };
     },
+
+    getBase: () => BASE,
   };
 })();
