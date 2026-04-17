@@ -94,7 +94,7 @@ const Terminal = (() => {
     const escapedFallback = fallback.replace(/'/g, "\\'");
 
     return `<img class="stock-logo"
-                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_Bl7HHDpkTWS5lOoNnGBEAg&size=${s * 2}&format=png"
+                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_e8wNvpBBQzGz5-q6XwWGxA&size=${s * 2}&format=png"
                 style="width:${s}px;height:${s}px;border-radius:3px;vertical-align:middle;background:var(--surf2)"
                 onerror="this.outerHTML='${escapedFallback}'"
                 loading="lazy"
