@@ -46,6 +46,11 @@ const Charts = (() => {
   const _ddHistory  = [];     // Drawdown history rolling window
   const DD_MAX      = 80;     // Max drawdown points
 
+  function _debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
   // ── Helpers ──────────────────────────────────────────────
   function _isDark() {
     return document.documentElement.getAttribute('data-theme') === 'dark';
@@ -166,38 +171,66 @@ const Charts = (() => {
   function initPriceChart(containerId, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) { console.error(`❌ #${containerId} not found`); return null; }
-    if (typeof LightweightCharts === 'undefined') {
-      console.error('❌ LightweightCharts not loaded'); return null;
-    }
+    if (typeof LightweightCharts === 'undefined') { console.error('❌ LightweightCharts not loaded'); return null; }
+
+    const H = options.height || 360;
+
+    // ✅ FIX: Force height AVANT création du chart — évite le feedback loop
+    const _lockHeight = (el, h) => {
+      el.style.setProperty('height',    `${h}px`, 'important');
+      el.style.setProperty('min-height',`${h}px`, 'important');
+      el.style.setProperty('max-height',`${h}px`, 'important');
+      el.style.setProperty('overflow',  'hidden',  'important');
+      el.style.setProperty('display',   'block',   'important');
+      el.style.setProperty('position',  'relative','important');
+    };
+
+    _lockHeight(container, H);
 
     const v = _getLWCVersion();
     console.log(`📊 LightweightCharts v${v} detected`);
 
-    // Destroy existing
     if (_mainChart) { try { _mainChart.remove(); } catch(e) {} _mainChart = null; }
 
     try {
-      const opts = _lwcChartOptions(container, options.height || 360);
-      _mainChart  = LightweightCharts.createChart(container, opts);
+      _mainChart = LightweightCharts.createChart(container, {
+        width:  Math.max(container.clientWidth || 600, 300),
+        height: H,
+        layout: {
+          background:  { color: 'transparent' },
+          textColor:   _isDark() ? '#9db3d8' : '#3d4f7c',
+          fontSize:    11,
+          fontFamily:  "'Inter', sans-serif",
+        },
+        grid: {
+          vertLines: { color: _isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+          horzLines: { color: _isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+        },
+        crosshair:       { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
+        rightPriceScale: { borderColor: 'rgba(128,128,128,0.15)', scaleMargins: { top: 0.08, bottom: 0.28 } },
+        timeScale:       { borderColor: 'rgba(128,128,128,0.15)', timeVisible: true, secondsVisible: false },
+      });
+
       _mainCandle = _addCandleSeries(_mainChart);
       _mainVolume = _addHistoSeries(_mainChart);
 
-      // Volume scale
-      try {
-        _mainChart.priceScale('volume').applyOptions({
-          scaleMargins: { top: 0.82, bottom: 0 },
-        });
-      } catch(e) { /* v4 fallback */ }
+      try { _mainChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } }); } catch(e) {}
 
-      // Resize observer
-      if (typeof ResizeObserver !== 'undefined') {
-        const ro = new ResizeObserver(entries => {
-          if (_mainChart && entries[0]) {
-            _mainChart.applyOptions({ width: entries[0].contentRect.width });
+      // ✅ FIX: window.resize UNIQUEMENT (pas ResizeObserver → évite feedback)
+      if (!window._avChartResizeHandler) {
+        window._avChartResizeHandler = _debounce(() => {
+          if (_mainChart && container.isConnected) {
+            _lockHeight(container, H);  // re-lock height
+            const w = container.clientWidth;
+            if (w > 0) _mainChart.applyOptions({ width: w });
           }
-        });
-        ro.observe(container);
+        }, 120);
+        window.addEventListener('resize', window._avChartResizeHandler);
       }
+
+      // ✅ FIX: Re-lock height après 100ms (LWC peut modifier le container)
+      setTimeout(() => _lockHeight(container, H), 100);
+      setTimeout(() => _lockHeight(container, H), 500);
 
       console.log('✅ Main price chart initialized');
       return { chart: _mainChart, candleSeries: _mainCandle };
@@ -316,28 +349,51 @@ const Charts = (() => {
     const container = document.getElementById(containerId);
     if (!container || typeof LightweightCharts === 'undefined') return null;
 
+    const H = 220;
+
+    // ✅ FIX: Lock height avant création
+    container.style.setProperty('height',    `${H}px`, 'important');
+    container.style.setProperty('min-height',`${H}px`, 'important');
+    container.style.setProperty('max-height',`${H}px`, 'important');
+    container.style.setProperty('overflow',  'hidden',  'important');
+
     try {
       const chart = LightweightCharts.createChart(container, {
-        ..._lwcChartOptions(container, 220),
+        width:  Math.max(container.clientWidth || 300, 200),
+        height: H,
+        layout: {
+          background: { color: 'transparent' },
+          textColor:  _isDark() ? '#9db3d8' : '#3d4f7c',
+          fontSize:   10,
+          fontFamily: "'Inter', sans-serif",
+        },
+        grid: {
+          vertLines: { color: _isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+          horzLines: { color: _isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+        },
+        timeScale:       { borderColor: 'rgba(128,128,128,0.12)', timeVisible: true },
+        rightPriceScale: { borderColor: 'rgba(128,128,128,0.12)', scaleMargins: { top: 0.1, bottom: 0.15 } },
       });
 
-      const series = _addCandleSeries(chart);
-
-      // Volume for panels
+      const series    = _addCandleSeries(chart);
       const volSeries = _addHistoSeries(chart);
-      try {
-        chart.priceScale('volume').applyOptions({
-          scaleMargins: { top: 0.85, bottom: 0 },
-        });
-      } catch(e) {}
+      try { chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } }); } catch(e) {}
 
-      if (typeof ResizeObserver !== 'undefined') {
-        new ResizeObserver(entries => {
-          if (chart && entries[0]) {
-            chart.applyOptions({ width: entries[0].contentRect.width });
-          }
-        }).observe(container);
-      }
+      // ✅ FIX: Resize via window uniquement
+      window.addEventListener('resize', _debounce(() => {
+        if (chart && container.isConnected) {
+          container.style.setProperty('height',    `${H}px`, 'important');
+          container.style.setProperty('max-height',`${H}px`, 'important');
+          const w = container.clientWidth;
+          if (w > 0) chart.applyOptions({ width: w });
+        }
+      }, 180));
+
+      // Re-lock après creation
+      setTimeout(() => {
+        container.style.setProperty('height',    `${H}px`, 'important');
+        container.style.setProperty('max-height',`${H}px`, 'important');
+      }, 200);
 
       _panels[panelIdx] = { chart, series, volSeries };
       return _panels[panelIdx];
