@@ -1,22 +1,10 @@
-# ============================================================
-# ALPHAVAULT QUANT — TRADING LOOP WORKFLOW
-# Exécution automatique toutes les 5 minutes (heures de marché)
-# ✅ Zéro intervention manuelle requise
-# ============================================================
-
 name: 🤖 Trading Loop — AlphaVault Quant
 
 on:
   schedule:
-    # Toutes les 5 minutes, du lundi au vendredi
-    # Marché US : 09:30–16:00 EST = 14:30–21:00 UTC
     - cron: '*/5 14-21 * * 1-5'
-    # Pre-market : 08:00–09:30 EST = 13:00–14:30 UTC
     - cron: '*/15 13-14 * * 1-5'
-    # Post-market : 16:00–20:00 EST = 21:00–01:00 UTC
     - cron: '*/15 21-23 * * 1-5'
-  
-  # Lancement manuel depuis l'interface GitHub (bouton "Run workflow")
   workflow_dispatch:
     inputs:
       mode:
@@ -28,90 +16,63 @@ on:
           - auto
           - signal_only
           - risk_check_only
-          - full_backtest
       dry_run:
-        description: 'Dry run (pas d execution réelle)'
+        description: 'Dry run'
         required: false
         default: 'true'
         type: boolean
 
-# Empêche deux workflows de tourner en même temps
 concurrency:
   group: trading-loop
-  cancel-in-progress: false  # Ne jamais annuler un trade en cours !
+  cancel-in-progress: false
 
 jobs:
+  # ── Job 1 : Vérification horaires ──────────────────────────
   market-hours-check:
     name: 🕐 Vérification Heures de Marché
     runs-on: ubuntu-latest
     outputs:
       is_market_open: ${{ steps.check.outputs.is_open }}
       market_session: ${{ steps.check.outputs.session }}
-    
     steps:
       - name: Check Market Hours
         id: check
         run: |
           python3 << 'EOF'
-          import datetime
-          import os
-          
-          now_utc = datetime.datetime.utcnow()
-          weekday = now_utc.weekday()  # 0=Lundi, 6=Dimanche
-          hour_utc = now_utc.hour
-          minute_utc = now_utc.minute
-          time_decimal = hour_utc + minute_utc / 60
-          
-          # Vérification jour de semaine
-          is_weekday = weekday < 5
-          
-          # Sessions de marché (UTC)
-          # Pre-market:  13:00 - 14:30 UTC (08:00 - 09:30 EST)
-          # Regular:     14:30 - 21:00 UTC (09:30 - 16:00 EST)
-          # Post-market: 21:00 - 01:00 UTC (16:00 - 20:00 EST)
-          
-          is_premarket  = is_weekday and 13.0  <= time_decimal < 14.5
-          is_regular    = is_weekday and 14.5  <= time_decimal < 21.0
-          is_postmarket = is_weekday and 21.0  <= time_decimal < 24.0
-          
-          is_open = is_premarket or is_regular or is_postmarket
-          
-          if is_regular:
-              session = "regular"
-          elif is_premarket:
-              session = "premarket"
-          elif is_postmarket:
-              session = "postmarket"
-          else:
-              session = "closed"
-          
-          # Écriture des outputs GitHub Actions
+          import datetime, os
+          now_utc   = datetime.datetime.utcnow()
+          weekday   = now_utc.weekday()
+          time_dec  = now_utc.hour + now_utc.minute / 60
+          is_weekday= weekday < 5
+          is_pre    = is_weekday and 13.0  <= time_dec < 14.5
+          is_regular= is_weekday and 14.5  <= time_dec < 21.0
+          is_post   = is_weekday and 21.0  <= time_dec < 24.0
+          is_open   = is_pre or is_regular or is_post
+          session   = "regular" if is_regular else "premarket" if is_pre else "postmarket" if is_post else "closed"
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"is_open={'true' if is_open else 'false'}\n")
               f.write(f"session={session}\n")
-          
-          print(f"🕐 UTC: {now_utc.strftime('%H:%M')} | Weekday: {weekday} | Session: {session} | Open: {is_open}")
+          print(f"🕐 {now_utc.strftime('%H:%M')} UTC | weekday={weekday} | session={session} | open={is_open}")
           EOF
 
+  # ── Job 2 : Boucle de trading ──────────────────────────────
   trading-loop:
     name: 🤖 Boucle de Trading Principale
     runs-on: ubuntu-latest
     needs: market-hours-check
-    # Exécute seulement si le marché est ouvert (ou si lancé manuellement)
     if: needs.market-hours-check.outputs.is_market_open == 'true' || github.event_name == 'workflow_dispatch'
-    
+
     permissions:
-      contents: write  # Nécessaire pour git push des JSON signals
-    
+      contents: write
+
     steps:
-      # ── 1. Checkout du code ────────────────────────────────
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1  # Shallow clone pour rapidité
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 2. Setup Python avec cache pip ────────────────────
+      # ── Python 3.11 (le plus stable pour libs financières) ──
       - name: 🐍 Setup Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -119,49 +80,97 @@ jobs:
           cache: 'pip'
           cache-dependency-path: 'requirements.txt'
 
-      # ── 3. Installation des dépendances ───────────────────
+      # ── Installation avec retry et timeout ──────────────────
       - name: 📦 Install Dependencies
         run: |
-          pip install --upgrade pip --quiet
-          pip install -r requirements.txt --quiet
-          echo "✅ Dependencies installed"
+          python -m pip install --upgrade pip setuptools wheel --quiet
+          pip install -r requirements.txt \
+            --timeout 120 \
+            --retries 3 \
+            --quiet
+          echo "✅ Python $(python --version)"
+          echo "✅ pip $(pip --version)"
+          echo "✅ Packages installés:"
+          pip list | grep -E "numpy|pandas|xgboost|lightgbm|scikit|loguru|pydantic|httpx"
 
-      # ── 4. Exécution de la boucle de trading ──────────────
+      # ── Vérification des imports avant run ──────────────────
+      - name: 🔍 Verify Imports
+        run: |
+          python3 << 'EOF'
+          import sys
+          print(f"Python {sys.version}")
+          
+          # Test imports critiques
+          try:
+              import numpy as np
+              print(f"✅ numpy {np.__version__}")
+          except Exception as e:
+              print(f"❌ numpy: {e}"); sys.exit(1)
+          
+          try:
+              import pandas as pd
+              print(f"✅ pandas {pd.__version__}")
+          except Exception as e:
+              print(f"❌ pandas: {e}"); sys.exit(1)
+          
+          try:
+              import xgboost as xgb
+              print(f"✅ xgboost {xgb.__version__}")
+          except Exception as e:
+              print(f"❌ xgboost: {e}"); sys.exit(1)
+          
+          try:
+              import lightgbm as lgb
+              print(f"✅ lightgbm {lgb.__version__}")
+          except Exception as e:
+              print(f"❌ lightgbm: {e}"); sys.exit(1)
+          
+          try:
+              import sklearn
+              print(f"✅ scikit-learn {sklearn.__version__}")
+          except Exception as e:
+              print(f"❌ sklearn: {e}"); sys.exit(1)
+          
+          try:
+              from loguru import logger
+              print("✅ loguru OK")
+          except Exception as e:
+              print(f"❌ loguru: {e}"); sys.exit(1)
+          
+          print("\n🚀 Tous les imports critiques OK !")
+          EOF
+
+      # ── Exécution principale ─────────────────────────────────
       - name: 🚀 Run Trading Loop
         env:
-          # ── Cloudflare Workers (tes endpoints existants) ──
           FINANCE_HUB_URL:      ${{ secrets.FINANCE_HUB_URL }}
           AI_PROXY_URL:         ${{ secrets.AI_PROXY_URL }}
           ECONOMIC_DATA_URL:    ${{ secrets.ECONOMIC_DATA_URL }}
-          
-          # ── Interactive Brokers ──────────────────────────
           IBKR_HOST:            ${{ secrets.IBKR_HOST }}
           IBKR_PORT:            ${{ secrets.IBKR_PORT }}
           IBKR_CLIENT_ID:       ${{ secrets.IBKR_CLIENT_ID }}
           IBKR_ACCOUNT:         ${{ secrets.IBKR_ACCOUNT }}
-          
-          # ── Mode d'exécution ────────────────────────────
-          EXECUTION_MODE:       ${{ github.event.inputs.mode || 'auto' }}
+          EXECUTION_MODE:       ${{ github.event.inputs.mode || 'signal_only' }}
           DRY_RUN:              ${{ github.event.inputs.dry_run || 'true' }}
           MARKET_SESSION:       ${{ needs.market-hours-check.outputs.market_session }}
-          
-          # ── GitHub (pour push des signaux) ──────────────
+          GITHUB_REPOSITORY:    ${{ github.repository }}
+          GITHUB_RUN_NUMBER:    ${{ github.run_number }}
+          GITHUB_RUN_ID:        ${{ github.run_id }}
+          GITHUB_SERVER_URL:    ${{ github.server_url }}
           GH_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
-          
-          # ── Firebase (logs) ──────────────────────────────
           FIREBASE_PROJECT_ID:  ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_API_KEY:     ${{ secrets.FIREBASE_API_KEY }}
-        
+          RESEND_ALERT_EMAIL:   ${{ secrets.RESEND_ALERT_EMAIL }}
         run: |
           cd backend
           python -m orchestrator.trading_loop
-        
-        timeout-minutes: 8  # Kill si dépasse 8 minutes
+        timeout-minutes: 8
+        continue-on-error: false
 
-      # ── 5. Upload des artefacts (logs) ────────────────────
+      # ── Upload logs ──────────────────────────────────────────
       - name: 📊 Upload Logs
         uses: actions/upload-artifact@v4
-        if: always()  # Même si le step précédent échoue
+        if: always()
         with:
           name: trading-logs-${{ github.run_number }}
           path: |
@@ -169,22 +178,9 @@ jobs:
             backend/logs/
           retention-days: 7
 
-      # ── 6. Notification en cas d'erreur ───────────────────
+      # ── Alerte en cas d'erreur ───────────────────────────────
       - name: 🚨 Notify on Failure
         if: failure()
-        env:
-          FINANCE_HUB_URL: ${{ secrets.FINANCE_HUB_URL }}
-          RESEND_ALERT_EMAIL: ${{ secrets.RESEND_ALERT_EMAIL }}
         run: |
-          python3 << 'EOF'
-          import urllib.request, json, os, datetime
-          
-          alert = {
-              "to": os.environ.get("RESEND_ALERT_EMAIL", ""),
-              "subject": f"🚨 AlphaVault Quant — Trading Loop FAILED #{os.environ.get('GITHUB_RUN_NUMBER', '?')}",
-              "message": f"La boucle de trading a échoué à {datetime.datetime.utcnow().isoformat()}Z\n"
-                         f"Run: {os.environ.get('GITHUB_SERVER_URL')}/{os.environ.get('GITHUB_REPOSITORY')}/actions/runs/{os.environ.get('GITHUB_RUN_ID')}"
-          }
-          print(f"🚨 Alert: {alert['subject']}")
-          # L'email est envoyé via ton worker Cloudflare existant
-          EOF
+          echo "❌ Trading Loop FAILED — Run #${{ github.run_number }}"
+          echo "📋 URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

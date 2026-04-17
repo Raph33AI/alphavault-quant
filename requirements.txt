@@ -1,5 +1,6 @@
 # ============================================================
-# ALPHAVAULT QUANT — Python Dependencies
+# ALPHAVAULT QUANT — requirements.txt CORRIGÉ
+# Compatible Python 3.11 / 3.12 / 3.13
 # ============================================================
 
 # ── Core Data Science ──────────────────────────────────────
@@ -13,44 +14,42 @@ lightgbm>=4.1.0
 scikit-learn>=1.3.0
 joblib>=1.3.0
 
-# ── Deep Learning (optionnel, pour LSTM/CNN) ──────────────
-# torch>=2.1.0           # Trop lourd pour GitHub Actions free tier
-# tensorflow>=2.14.0     # Idem
-
 # ── Statistics / Econometrics ─────────────────────────────
 statsmodels>=0.14.0
-arch>=6.2.0              # GARCH models
+arch>=6.2.0
 
 # ── Portfolio Optimization ────────────────────────────────
-cvxpy>=1.4.0             # Convex optimization (MVO, risk parity)
-pypfopt>=1.5.5           # PyPortfolioOpt
+# pypfopt SUPPRIMÉ → on utilise notre propre optimizer.py (scipy)
+# cvxpy gardé car utilisé par notre optimizer
+cvxpy>=1.4.0
 
 # ── Options Analytics ─────────────────────────────────────
-py_vollib>=1.0.1         # Black-Scholes, Greeks
-mibian>=0.1.3            # Options pricing
-
-# ── Broker (Interactive Brokers) ──────────────────────────
-ib_insync>=0.9.86        # IBKR API async
+# py_vollib supprimé (compilation C++ requise)
+# mibian supprimé (inutile en proxy mode)
 
 # ── HTTP Client ───────────────────────────────────────────
 requests>=2.31.0
-httpx>=0.25.0            # Async HTTP
+httpx>=0.25.0
 
-# ── Async / IO ────────────────────────────────────────────
-asyncio-throttle>=1.0.2
+# ── Async ─────────────────────────────────────────────────
 aiohttp>=3.9.0
 
-# ── Data Serialization ────────────────────────────────────
-orjson>=3.9.0            # JSON ultra-rapide
+# ── Serialisation ─────────────────────────────────────────
+orjson>=3.9.0
 
 # ── Utilities ─────────────────────────────────────────────
 python-dotenv>=1.0.0
-pydantic>=2.5.0          # Settings validation
+pydantic>=2.5.0
 pydantic-settings>=2.1.0
-loguru>=0.7.2            # Logging avancé
-tenacity>=8.2.3          # Retry logic
+loguru>=0.7.2
+tenacity>=8.2.3
 
 # ── Date/Time ─────────────────────────────────────────────
 pytz>=2023.3
 python-dateutil>=2.8.2
-pandas-market-calendars>=4.3.0  # Calendriers de marché
+pandas-market-calendars>=4.3.0
+
+# ── ib_insync OPTIONNEL ────────────────────────────────────
+# NE PAS installer en GitHub Actions (pas de connexion IBKR possible)
+# Décommenter UNIQUEMENT si tu tournes le script sur un VPS avec IBKR Gateway
+# ib_insync>=0.9.86
