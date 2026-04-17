@@ -663,22 +663,27 @@ const Dashboard = (() => {
     el('last-update', `Updated ${new Date().toLocaleTimeString()}`);
   }
 
+// ════════════════════════════════════════════════════════
+  // ── Auto-init ─────────────────────────────────────────
   // ════════════════════════════════════════════════════════
-    // ── Auto-init ─────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', init);
 
-    // ✅ CORRECTION : isReady ajouté, window.Dashboard DANS le return
-    return {
-        showSection,
-        forceRefresh,
-        filterSignals,
-        loadChart,
-        isReady: () => true      // ← FIX "Dashboard.isReady is not a function"
-    };
+  // ✅ CORRECTION : isReady ajouté au return
+  // ✅ CORRECTION : window.Dashboard = Dashboard (était dead code après return)
+  return {
+    showSection,
+    forceRefresh,
+    filterSignals,
+    loadChart,
+    isReady: () => true       // ← FIX "Dashboard.isReady is not a function"
+  };
 
-    })(); // ← fin IIFE
+// ← Fermeture de l'IIFE
+})();
 
-    // ✅ CORRECTION : window.Dashboard assigné ICI (après IIFE, pas dedans)
-    window.Dashboard = Dashboard;
+// ✅ CORRECTION : window.Dashboard assigné ICI, après l'IIFE
+//    (avant il était APRÈS le return → jamais exécuté)
+window.Dashboard = Dashboard;
 
-    console.log('✅ Dashboard controller loaded');
+console.log('✅ Dashboard controller loaded');
+console.log('📡 API Base:', ApiClient.getBase());
