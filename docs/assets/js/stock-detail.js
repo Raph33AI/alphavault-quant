@@ -1,332 +1,363 @@
 // ============================================================
-// stock-detail.js — AlphaVault Quant v3.0
-// ✅ Yahoo Finance UNIQUEMENT (via yahoo-proxy Worker)
-// ✅ Panel slide-in : Overview, Chart, News, Financials, Earnings
-// ✅ LightweightCharts pour mini-chart
-// ✅ Données : price, stats, news, EPS, calendar, profile
+// stock-detail.js — AlphaVault Quant v3.1
+// ✅ Full-page (plein écran) — plus de modal slide-in
+// ✅ Yahoo Finance UNIQUEMENT via yahoo-proxy Worker v2
+// ✅ KV cache côté Worker (TTL par route)
+// ✅ Fallback v11 → v10 → chart_endpoint
+// ✅ Fix chart infinite growth (height explicite + ResizeObserver)
+// ✅ Tabs: Overview | Chart | Financials | Earnings | News
 // ============================================================
 
 // ════════════════════════════════════════════════════════════
-// YAHOO FINANCE CLIENT — Yahoo Proxy uniquement
+// YAHOO FINANCE CLIENT — Proxy Worker v2 uniquement
 // ════════════════════════════════════════════════════════════
 const YahooFinance = (() => {
 
-  const PROXY  = 'https://yahoo-proxy.raphnardone.workers.dev';
-  const _cache = new Map();
-  const TTL    = 60_000; // 60s
+  const PROXY = 'https://yahoo-proxy.raphnardone.workers.dev';
+  const _mem  = new Map();   // mémoire courte session (60s)
+  const TTL   = 60_000;
 
-  async function _fetch(path, bustCache = false) {
-    const key = path;
+  async function _get(path, bustCache = false) {
     const now = Date.now();
-    const hit = _cache.get(key);
+    const hit = _mem.get(path);
     if (!bustCache && hit && (now - hit.ts) < TTL) return hit.data;
 
     try {
       const resp = await fetch(`${PROXY}${path}`, {
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(12_000),
       });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      if (!resp.ok) throw new Error(`Proxy HTTP ${resp.status}`);
       const data = await resp.json();
-      _cache.set(key, { data, ts: now });
+      if (data?.error) throw new Error(data.error);
+      _mem.set(path, { data, ts: now });
       return data;
     } catch(e) {
-      console.warn(`YahooFinance fetch ${path}: ${e.message}`);
-      if (hit?.data) return hit.data;
+      console.warn(`YahooFinance ${path}: ${e.message}`);
+      if (hit?.data) return hit.data;   // stale fallback
       return null;
     }
   }
 
-  // ── Quote / Real-time price ──────────────────────────────
-  async function getQuote(sym) {
-    const data = await _fetch(`/chart/${sym}?interval=1d&range=5d`);
-    if (!data?.chart?.result?.[0]) return null;
-    const r     = data.chart.result[0];
-    const meta  = r.meta;
-    const close = r.indicators?.quote?.[0]?.close || [];
-    const last  = close.filter(v => v != null).pop();
-    const prev  = close.filter(v => v != null).slice(-2)[0] || last;
-    const chg   = last && prev ? ((last - prev) / prev * 100) : 0;
-    return {
-      symbol:      meta.symbol,
-      price:       last || meta.regularMarketPrice || 0,
-      prev_close:  meta.previousClose || prev || 0,
-      change:      last - (meta.previousClose || prev),
-      change_pct:  chg,
-      open:        meta.regularMarketOpen,
-      high:        meta.regularMarketDayHigh,
-      low:         meta.regularMarketDayLow,
-      volume:      meta.regularMarketVolume,
-      market_cap:  meta.marketCap,
-      currency:    meta.currency || 'USD',
-      exchange:    meta.exchangeName || '',
-      source:      'yahoo',
-    };
+  // ── OHLCV Chart Data ──────────────────────────────────────
+  async function getChart(sym, interval = '1d', range = '1y') {
+    const data = await _get(`/chart/${sym}?interval=${interval}&range=${range}`, true);
+    if (!data?.chart?.result?.[0]) return [];
+    const r    = data.chart.result[0];
+    const ts   = r.timestamp || [];
+    const q    = r.indicators?.quote?.[0] || {};
+    return ts
+      .map((t, i) => ({
+        time:   t,
+        open:   +((q.open?.[i]   || 0).toFixed(4)),
+        high:   +((q.high?.[i]   || 0).toFixed(4)),
+        low:    +((q.low?.[i]    || 0).toFixed(4)),
+        close:  +((q.close?.[i]  || 0).toFixed(4)),
+        volume: Math.round(q.volume?.[i] || 0),
+      }))
+      .filter(c => c.close > 0);
   }
 
-  // ── OHLCV Chart Data ─────────────────────────────────────
-  async function getChart(sym, interval = '1d', range = '1y') {
-    const data = await _fetch(`/chart/${sym}?interval=${interval}&range=${range}`, true);
-    if (!data?.chart?.result?.[0]) return [];
-    const r          = data.chart.result[0];
-    const timestamps = r.timestamp || [];
-    const quotes     = r.indicators?.quote?.[0] || {};
-    return timestamps.map((ts, i) => ({
-      time:   ts,
-      open:   parseFloat((quotes.open?.[i] || 0).toFixed(4)),
-      high:   parseFloat((quotes.high?.[i] || 0).toFixed(4)),
-      low:    parseFloat((quotes.low?.[i]  || 0).toFixed(4)),
-      close:  parseFloat((quotes.close?.[i]|| 0).toFixed(4)),
-      volume: Math.round(quotes.volume?.[i] || 0),
-    })).filter(c => c.close > 0);
+  // ── Real-time Quote ───────────────────────────────────────
+  async function getQuote(sym) {
+    const data = await _get(`/chart/${sym}?interval=1d&range=5d`);
+    if (!data?.chart?.result?.[0]) return null;
+    const meta  = data.chart.result[0].meta || {};
+    const closes= (data.chart.result[0].indicators?.quote?.[0]?.close || []).filter(Boolean);
+    const price = meta.regularMarketPrice || closes.at(-1) || 0;
+    const prev  = meta.previousClose      || closes.at(-2) || price;
+    const chgPct= prev ? ((price - prev) / prev * 100) : 0;
+    return {
+      symbol:    meta.symbol  || sym,
+      price,
+      prev_close: prev,
+      change:    price - prev,
+      change_pct: chgPct,
+      open:      meta.regularMarketOpen,
+      high:      meta.regularMarketDayHigh,
+      low:       meta.regularMarketDayLow,
+      volume:    meta.regularMarketVolume,
+      market_cap:meta.marketCap,
+      currency:  meta.currency || 'USD',
+      exchange:  meta.exchangeName || '',
+      '52w_high':meta.fiftyTwoWeekHigh,
+      '52w_low': meta.fiftyTwoWeekLow,
+      '50d_avg': meta.fiftyDayAverage,
+      '200d_avg':meta.twoHundredDayAverage,
+      source:    'yahoo',
+    };
   }
 
   // ── Financial Summary ─────────────────────────────────────
   async function getFinancials(sym) {
-    const data = await _fetch(`/summary/${sym}`);
-    return data?.quoteSummary?.result?.[0] || null;
+    const data = await _get(`/summary/${sym}`);
+    if (!data) return null;
+    // Worker v2 retourne quoteSummary.result[0]
+    const result = data?.quoteSummary?.result?.[0];
+    if (result) return result;
+    // fallback: data est déjà le result object
+    if (data?.price || data?.financialData) return data;
+    return null;
   }
 
   // ── News ──────────────────────────────────────────────────
   async function getNews(sym) {
-    const data = await _fetch(`/news/${sym}`, true);
+    const data = await _get(`/news/${sym}`, true);
     return data?.news || [];
   }
 
-  // ── Profile (alias for summary) ───────────────────────────
-  async function getProfile(sym) {
-    const fin = await getFinancials(sym);
-    return fin?.assetProfile || null;
-  }
-
-  // ── Search symbols ────────────────────────────────────────
+  // ── Symbol Search ─────────────────────────────────────────
   async function search(q) {
-    const data = await _fetch(`/search/${encodeURIComponent(q)}`);
+    const data = await _get(`/search/${encodeURIComponent(q)}`);
     return data?.quotes || [];
   }
 
-  return { getQuote, getChart, getFinancials, getNews, getProfile, search };
+  return { getChart, getQuote, getFinancials, getNews, search };
 
 })();
 
 window.YahooFinance = YahooFinance;
 
 // ════════════════════════════════════════════════════════════
-// STOCK DETAIL PANEL
+// HELPER: Fix Chart Container Heights (empêche la croissance infinie)
+// ════════════════════════════════════════════════════════════
+function _fixChartHeights() {
+  const rules = [
+    { sel: '.chart-container', h: 360 },
+    { sel: '.cp-chart',        h: 220 },
+    { sel: '.sdp-fp-chart',    h: 420 },
+  ];
+  rules.forEach(({ sel, h }) => {
+    document.querySelectorAll(sel).forEach(el => {
+      el.style.height    = `${h}px`;
+      el.style.minHeight = `${h}px`;
+      el.style.maxHeight = `${h}px`;
+      el.style.overflow  = 'hidden';
+      el.style.display   = 'block';
+      el.style.position  = 'relative';
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+// STOCK DETAIL — Full Page Controller
 // ════════════════════════════════════════════════════════════
 const StockDetail = (() => {
 
-  let _currentSym   = null;
-  let _activeTab    = 'overview';
-  let _panelChart   = null;
-  let _panelSeries  = null;
-  let _currentIv    = '1d';
-  let _currentRange = '1y';
-  let _data         = {};   // Cached data per symbol
+  // ── State ────────────────────────────────────────────────
+  let _sym       = null;
+  let _tab       = 'overview';
+  let _iv        = '1d';
+  let _range     = '1y';
+  let _data      = {};     // { sym: { quote, summary, news } }
+  let _fpChart   = null;   // LWC full-page chart instance
+  let _fpSeries  = null;
+  let _lastFPWidth = 0;
 
-  // ── HTML Template ────────────────────────────────────────
-  function _createPanel() {
-    if (document.getElementById('stock-detail-overlay')) return;
+  // ────────────────────────────────────────────────────────
+  // BUILD HTML (une seule fois au premier appel)
+  // ────────────────────────────────────────────────────────
+  function _build() {
+    if (document.getElementById('sdp-fullpage')) return;
 
     document.body.insertAdjacentHTML('beforeend', `
-      <div class="stock-detail-overlay" id="stock-detail-overlay"></div>
-      <div class="stock-detail-panel" id="stock-detail-panel">
+      <div class="sdp-fullpage" id="sdp-fullpage">
 
-        <!-- Header -->
-        <div class="sdp-header">
+        <!-- ── HEADER ── -->
+        <div class="sdp-fp-header">
+          <button class="sdp-fp-back" id="sdp-back">
+            <i class="fa-solid fa-arrow-left"></i> Back
+          </button>
+
           <div>
-            <div class="sdp-sym" id="sdp-sym">--</div>
-            <div class="sdp-name" id="sdp-name">Loading...</div>
+            <div class="sdp-fp-sym"  id="sdp-fp-sym">--</div>
+            <div class="sdp-fp-name" id="sdp-fp-name">Loading...</div>
           </div>
-          <div id="sdp-sector-badge" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.1);color:var(--b1);border:1px solid rgba(59,130,246,0.2)">--</div>
-          <button class="sdp-btn wl" id="sdp-wl-toggle" title="Toggle watchlist" style="flex:none;width:34px;height:34px;padding:0">
-            <i class="fa-regular fa-star"></i>
-          </button>
-          <button class="sdp-close" id="sdp-close-btn">
-            <i class="fa-solid fa-xmark"></i>
-          </button>
-        </div>
 
-        <!-- Price Header -->
-        <div class="sdp-price-header">
-          <div class="sdp-price" id="sdp-price">--</div>
-          <div class="sdp-change" id="sdp-change">--</div>
-          <div style="display:flex;flex-direction:column;gap:2px;margin-left:4px">
-            <span style="font-size:10px;color:var(--txt4)" id="sdp-volume-label">Vol: --</span>
-            <span style="font-size:10px;color:var(--txt4)" id="sdp-mktcap-label">Cap: --</span>
+          <div id="sdp-fp-sector" style="font-size:10px;font-weight:700;padding:2px 9px;
+               border-radius:10px;background:rgba(59,130,246,0.1);color:var(--b1);
+               border:1px solid rgba(59,130,246,0.2)">--</div>
+
+          <div class="sdp-fp-price"  id="sdp-fp-price">--</div>
+          <div class="sdp-fp-change" id="sdp-fp-change">--</div>
+
+          <div style="display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--txt4)">
+            <span id="sdp-fp-vol">Vol: --</span>
+            <span id="sdp-fp-cap">Cap: --</span>
           </div>
-          <div class="sdp-mkt-status" id="sdp-mkt-status" style="background:rgba(16,185,129,0.1);color:var(--g);border:1px solid rgba(16,185,129,0.25)">LIVE</div>
-        </div>
 
-        <!-- Tabs -->
-        <div class="sdp-tabs">
-          <button class="sdp-tab active" data-tab="overview"><i class="fa-solid fa-chart-pie"></i> Overview</button>
-          <button class="sdp-tab" data-tab="chart"><i class="fa-solid fa-chart-candlestick"></i> Chart</button>
-          <button class="sdp-tab" data-tab="financials"><i class="fa-solid fa-dollar-sign"></i> Financials</button>
-          <button class="sdp-tab" data-tab="earnings"><i class="fa-solid fa-calendar-check"></i> Earnings</button>
-          <button class="sdp-tab" data-tab="news"><i class="fa-solid fa-newspaper"></i> News</button>
-        </div>
+          <div class="sdp-fp-actions">
+            <button class="sdp-fp-action-btn buy"  id="sdp-fp-buy">
+              <i class="fa-solid fa-arrow-up"></i> BUY
+            </button>
+            <button class="sdp-fp-action-btn sell" id="sdp-fp-sell">
+              <i class="fa-solid fa-arrow-down"></i> SELL
+            </button>
+            <button class="sdp-fp-action-btn wl"   id="sdp-fp-wl">
+              <i class="fa-regular fa-star"></i> Watchlist
+            </button>
+          </div>
 
-        <!-- Content -->
-        <div class="sdp-content" id="sdp-content">
-          <div class="sdp-loading">
-            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:var(--b1)"></i>
-            <span>Loading Yahoo Finance data...</span>
+          <div class="sdp-source-badge">
+            <i class="fa-brands fa-yahoo"></i> Yahoo Finance
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="sdp-actions">
-          <button class="sdp-btn buy" id="sdp-btn-buy">
-            <i class="fa-solid fa-arrow-up"></i> BUY
+        <!-- ── TABS ── -->
+        <div class="sdp-fp-tabs" id="sdp-fp-tabs">
+          <button class="sdp-fp-tab active" data-tab="overview">
+            <i class="fa-solid fa-chart-pie"></i> Overview
           </button>
-          <button class="sdp-btn sell" id="sdp-btn-sell">
-            <i class="fa-solid fa-arrow-down"></i> SELL
+          <button class="sdp-fp-tab" data-tab="chart">
+            <i class="fa-solid fa-chart-candlestick"></i> Chart
           </button>
-          <button class="sdp-btn chart" id="sdp-btn-mainchart">
-            <i class="fa-solid fa-chart-bar"></i> Main Chart
+          <button class="sdp-fp-tab" data-tab="financials">
+            <i class="fa-solid fa-dollar-sign"></i> Financials
+          </button>
+          <button class="sdp-fp-tab" data-tab="earnings">
+            <i class="fa-solid fa-calendar-check"></i> Earnings
+          </button>
+          <button class="sdp-fp-tab" data-tab="news">
+            <i class="fa-solid fa-newspaper"></i> News
           </button>
         </div>
+
+        <!-- ── CONTENT ── -->
+        <div class="sdp-fp-body layout-overview" id="sdp-fp-body">
+          <div style="display:flex;align-items:center;justify-content:center;gap:12px;color:var(--txt4);grid-column:1/-1">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1)"></i>
+            Loading data from Yahoo Finance...
+          </div>
+        </div>
+
       </div>`);
 
-    // Bind static events
-    document.getElementById('stock-detail-overlay')
-      .addEventListener('click', close);
-    document.getElementById('sdp-close-btn')
+    // ── Event bindings ───────────────────────────────────
+    document.getElementById('sdp-back')
       .addEventListener('click', close);
 
-    document.querySelectorAll('.sdp-tab').forEach(tab => {
+    document.querySelectorAll('.sdp-fp-tab').forEach(tab => {
       tab.addEventListener('click', () => _switchTab(tab.dataset.tab));
     });
 
-    document.getElementById('sdp-btn-buy').addEventListener('click', () => {
+    document.getElementById('sdp-fp-buy').addEventListener('click', () => {
       const sel = document.getElementById('order-symbol');
-      if (sel) sel.value = _currentSym;
-      if (window.Terminal) window.Terminal.showSection('execution');
+      if (sel) sel.value = _sym;
+      if (window.Terminal) { window.Terminal.setSide?.('BUY'); window.Terminal.showSection('execution'); }
       close();
     });
 
-    document.getElementById('sdp-btn-sell').addEventListener('click', () => {
+    document.getElementById('sdp-fp-sell').addEventListener('click', () => {
       const sel = document.getElementById('order-symbol');
-      if (sel) { sel.value = _currentSym; }
-      if (window.Terminal) {
-        window.Terminal.setSide?.('SELL');
-        window.Terminal.showSection('execution');
-      }
+      if (sel) sel.value = _sym;
+      if (window.Terminal) { window.Terminal.setSide?.('SELL'); window.Terminal.showSection('execution'); }
       close();
     });
 
-    document.getElementById('sdp-btn-mainchart').addEventListener('click', () => {
-      if (window.Terminal) {
-        window.Terminal.loadChartSymbol?.(_currentSym);
-        window.Terminal.showSection('overview');
-      }
-      close();
-    });
+    document.getElementById('sdp-fp-wl').addEventListener('click', _toggleWL);
 
-    document.getElementById('sdp-wl-toggle').addEventListener('click', () => {
-      if (window.WatchlistManager) {
-        if (WatchlistManager.isInWatchlist(_currentSym)) {
-          WatchlistManager.removeSymbol(_currentSym);
-        } else {
-          WatchlistManager.addSymbol(_currentSym);
-        }
-        _updateWLButton();
+    // ESC key
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && document.getElementById('sdp-fullpage')?.classList.contains('open')) {
+        close();
       }
     });
   }
 
-  // ── Open Panel ───────────────────────────────────────────
+  // ────────────────────────────────────────────────────────
+  // OPEN
+  // ────────────────────────────────────────────────────────
   async function open(sym) {
     if (!sym) return;
-    _currentSym = sym.toUpperCase();
-    _activeTab  = 'overview';
-    _createPanel();
+    _sym  = sym.toUpperCase();
+    _tab  = 'overview';
+    _iv   = '1d';
+    _range= '1y';
 
-    // Show panel
-    const overlay = document.getElementById('stock-detail-overlay');
-    const panel   = document.getElementById('stock-detail-panel');
-    overlay.classList.add('open');
-    panel.classList.add('open');
+    _build();
 
-    // Prevent body scroll
+    const fp = document.getElementById('sdp-fullpage');
+    fp.classList.add('open');
     document.body.style.overflow = 'hidden';
 
-    // Set initial header
-    const meta = window.WatchlistManager?.getSymbolMeta(_currentSym);
-    _setText('sdp-sym',  _currentSym);
-    _setText('sdp-name', meta?.name || _currentSym);
-    _setText('sdp-sector-badge', meta?.sector || '--');
-    _updateWLButton();
+    // Fix all chart heights immediately
+    _fixChartHeights();
+
+    // Initial header
+    const meta = window.WatchlistManager?.getSymbolMeta(_sym) || { name: _sym, sector: '--' };
+    _t('sdp-fp-sym',    _sym);
+    _t('sdp-fp-name',   meta.name);
+    _t('sdp-fp-sector', meta.sector);
+    _updateWLBtn();
+
+    // Reset tabs UI
+    document.querySelectorAll('.sdp-fp-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === 'overview')
+    );
 
     // Show loading
-    const content = document.getElementById('sdp-content');
-    if (content) content.innerHTML = `
-      <div class="sdp-loading">
-        <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:var(--b1)"></i>
-        <span>Loading Yahoo Finance data for ${_currentSym}...</span>
-      </div>`;
+    _bodyHtml('<div style="display:flex;align-items:center;justify-content:center;gap:12px;color:var(--txt4);grid-column:1/-1;padding:60px">' +
+      '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1)"></i>' +
+      `Loading Yahoo Finance data for <strong style="color:var(--txt)">${_sym}</strong>...</div>`,
+      'layout-overview');
 
     // Fetch all data in parallel
-    await _fetchAllData(_currentSym);
+    await _fetchAll(_sym);
 
     // Render first tab
     _switchTab('overview');
   }
 
-  // ── Close Panel ──────────────────────────────────────────
+  // ────────────────────────────────────────────────────────
+  // CLOSE
+  // ────────────────────────────────────────────────────────
   function close() {
-    const overlay = document.getElementById('stock-detail-overlay');
-    const panel   = document.getElementById('stock-detail-panel');
-    if (overlay) overlay.classList.remove('open');
-    if (panel)   panel.classList.remove('open');
+    const fp = document.getElementById('sdp-fullpage');
+    if (fp) fp.classList.remove('open');
     document.body.style.overflow = '';
-
-    // Destroy panel chart
-    if (_panelChart) {
-      try { _panelChart.remove(); } catch(e) {}
-      _panelChart = null; _panelSeries = null;
-    }
+    _destroyFPChart();
   }
 
-  // ── Fetch All Yahoo Data ─────────────────────────────────
-  async function _fetchAllData(sym) {
-    _data[sym] = _data[sym] || {};
+  // ────────────────────────────────────────────────────────
+  // DATA FETCH (Yahoo only)
+  // ────────────────────────────────────────────────────────
+  async function _fetchAll(sym) {
+    if (!_data[sym]) _data[sym] = {};
 
-    // Parallel fetch
-    const [quote, summary, news] = await Promise.allSettled([
+    const [quoteRes, summaryRes, newsRes] = await Promise.allSettled([
       YahooFinance.getQuote(sym),
       YahooFinance.getFinancials(sym),
       YahooFinance.getNews(sym),
     ]);
 
-    _data[sym].quote   = quote.value   || null;
-    _data[sym].summary = summary.value || null;
-    _data[sym].news    = news.value    || [];
+    _data[sym].quote   = quoteRes.status   === 'fulfilled' ? quoteRes.value   : null;
+    _data[sym].summary = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
+    _data[sym].news    = newsRes.status    === 'fulfilled' ? newsRes.value    : [];
 
-    // Update price header from quote
+    // Update header price
     const q = _data[sym].quote;
-    if (q) {
-      const price  = parseFloat(q.price   || 0);
+    if (q && q.price > 0) {
+      _t('sdp-fp-price', `$${q.price.toFixed(2)}`);
       const chgPct = parseFloat(q.change_pct || 0);
-      const cls    = chgPct >= 0 ? 'up' : 'down';
-
-      _setText('sdp-price', price > 0 ? `$${price.toFixed(2)}` : '--');
-      const chgEl = document.getElementById('sdp-change');
+      const chgEl  = document.getElementById('sdp-fp-change');
       if (chgEl) {
         chgEl.textContent = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
-        chgEl.className   = `sdp-change ${cls}`;
+        chgEl.className   = `sdp-fp-change ${chgPct >= 0 ? 'up' : 'down'}`;
       }
-      _setText('sdp-volume-label', `Vol: ${_fmtNum(q.volume)}`);
-      _setText('sdp-mktcap-label', `Cap: ${_fmtMarketCap(q.market_cap)}`);
+      _t('sdp-fp-vol', `Vol: ${_fmtNum(q.volume)}`);
+      _t('sdp-fp-cap', `Cap: ${_fmtMCap(q.market_cap)}`);
     }
   }
 
-  // ── Switch Tab ───────────────────────────────────────────
+  // ────────────────────────────────────────────────────────
+  // SWITCH TAB
+  // ────────────────────────────────────────────────────────
   function _switchTab(tab) {
-    _activeTab = tab;
-    document.querySelectorAll('.sdp-tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tab === tab);
-    });
+    _tab = tab;
+    _destroyFPChart();
+
+    document.querySelectorAll('.sdp-fp-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.tab === tab)
+    );
 
     switch(tab) {
       case 'overview':   _renderOverview();   break;
@@ -335,59 +366,58 @@ const StockDetail = (() => {
       case 'earnings':   _renderEarnings();   break;
       case 'news':       _renderNews();       break;
     }
+
+    // Re-apply height fix after render
+    setTimeout(_fixChartHeights, 50);
   }
 
   // ════════════════════════════════════════════════════════
   // TAB: OVERVIEW
   // ════════════════════════════════════════════════════════
   function _renderOverview() {
-    const sym     = _currentSym;
-    const quote   = _data[sym]?.quote;
-    const summary = _data[sym]?.summary;
-    const price   = summary?.price || {};
-    const detail  = summary?.summaryDetail || {};
-    const stats   = summary?.defaultKeyStatistics || {};
-    const finData = summary?.financialData || {};
-    const profile = summary?.assetProfile || {};
-    const signal  = _getSignalData(sym);
+    const sym     = _sym;
+    const q       = _data[sym]?.quote   || {};
+    const sum     = _data[sym]?.summary || {};
+    const price   = sum.price            || {};
+    const detail  = sum.summaryDetail    || {};
+    const stats   = sum.defaultKeyStatistics || {};
+    const fin     = sum.financialData    || {};
+    const profile = sum.assetProfile     || {};
+    const signal  = _sig(sym);
+    const isFallback = sum._source === 'chart_fallback';
 
-    const content = document.getElementById('sdp-content');
-    if (!content) return;
+    // ── Key Stats ──
+    const kstats = [
+      { l:'Open',         v: _f(q.open || detail.open?.raw,        '$') },
+      { l:'Day High',     v: _f(q.high || detail.dayHigh?.raw,     '$') },
+      { l:'Day Low',      v: _f(q.low  || detail.dayLow?.raw,      '$') },
+      { l:'Prev Close',   v: _f(q.prev_close || detail.previousClose?.raw, '$') },
+      { l:'Volume',       v: _fmtNum(q.volume || detail.volume?.raw) },
+      { l:'Avg Volume',   v: _fmtNum(detail.averageVolume?.raw) },
+      { l:'Market Cap',   v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
+      { l:'P/E (TTM)',    v: _f(detail.trailingPE?.raw,  '', 2) },
+      { l:'Fwd P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
+      { l:'EPS (TTM)',    v: _f(stats.trailingEps?.raw,  '$', 2) },
+      { l:'Div Yield',    v: _f(detail.dividendYield?.raw != null ? detail.dividendYield.raw * 100 : null, '', 2, '%') },
+      { l:'Beta',         v: _f(detail.beta?.raw,         '', 2) },
+      { l:'52W High',     v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw,     '$') },
+      { l:'52W Low',      v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw,      '$') },
+      { l:'50D Avg',      v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw,      '$') },
+      { l:'200D Avg',     v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
+      { l:'Profit Margin',v: _f(fin.profitMargins?.raw != null ? fin.profitMargins.raw * 100 : null, '', 2, '%') },
+      { l:'ROE',          v: _f(fin.returnOnEquity?.raw  != null ? fin.returnOnEquity.raw  * 100 : null, '', 2, '%') },
+      { l:'Debt/Equity',  v: _f(fin.debtToEquity?.raw,   '', 2) },
+      { l:'Revenue (TTM)',v: _fmtMCap(fin.totalRevenue?.raw) },
+      { l:'Gross Margin', v: _f(fin.grossMargins?.raw    != null ? fin.grossMargins.raw    * 100 : null, '', 2, '%') },
+      { l:'Float',        v: _fmtNum(stats.floatShares?.raw) },
+      { l:'Short %',      v: _f(stats.shortPercentOfFloat?.raw != null ? stats.shortPercentOfFloat.raw * 100 : null, '', 2, '%') },
+    ].filter(i => i.v && i.v !== '--');
 
-    // Key stats
-    const statsItems = [
-      { l:'Open',           v: _fmt(quote?.open,           '$') },
-      { l:'Day High',       v: _fmt(quote?.high,           '$') },
-      { l:'Day Low',        v: _fmt(quote?.low,            '$') },
-      { l:'Prev Close',     v: _fmt(quote?.prev_close,     '$') },
-      { l:'Volume',         v: _fmtNum(quote?.volume || detail.volume?.raw) },
-      { l:'Avg Volume',     v: _fmtNum(detail.averageVolume?.raw) },
-      { l:'Market Cap',     v: _fmtMarketCap(price.marketCap?.raw || quote?.market_cap) },
-      { l:'P/E Ratio',      v: _fmt(detail.trailingPE?.raw,    '', 2) },
-      { l:'Fwd P/E',        v: _fmt(detail.forwardPE?.raw,     '', 2) },
-      { l:'EPS (TTM)',      v: _fmt(stats.trailingEps?.raw,    '$', 2) },
-      { l:'EPS Fwd',        v: _fmt(stats.forwardEps?.raw,     '$', 2) },
-      { l:'Dividend',       v: _fmt(detail.dividendRate?.raw,  '$', 2) },
-      { l:'Div Yield',      v: _fmt(detail.dividendYield?.raw, '%', 2, 100) },
-      { l:'Beta',           v: _fmt(detail.beta?.raw,          '', 2) },
-      { l:'52W High',       v: _fmt(detail.fiftyTwoWeekHigh?.raw, '$') },
-      { l:'52W Low',        v: _fmt(detail.fiftyTwoWeekLow?.raw,  '$') },
-      { l:'50D MA',         v: _fmt(detail.fiftyDayAverage?.raw,  '$') },
-      { l:'200D MA',        v: _fmt(detail.twoHundredDayAverage?.raw, '$') },
-      { l:'Float',          v: _fmtNum(stats.floatShares?.raw) },
-      { l:'Short %',        v: _fmt(stats.shortPercentOfFloat?.raw, '%', 2, 100) },
-      { l:'Profit Margin',  v: _fmt(finData.profitMargins?.raw, '%', 2, 100) },
-      { l:'Gross Margin',   v: _fmt(finData.grossMargins?.raw,  '%', 2, 100) },
-      { l:'ROE',            v: _fmt(finData.returnOnEquity?.raw,'%', 2, 100) },
-      { l:'Debt/Equity',    v: _fmt(finData.debtToEquity?.raw,  '', 2) },
-      { l:'Current Ratio',  v: _fmt(finData.currentRatio?.raw,  '', 2) },
-    ];
-
-    // Signal data (from our ML engine)
+    // ── AlphaVault Signal block ──
     const sigBlock = signal ? `
-      <div class="card" style="margin-bottom:12px;background:var(--surf2)">
-        <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
-          <i class="fa-solid fa-robot" style="color:var(--b1)"></i> AlphaVault Signal
+      <div class="sdp-fp-stat-section" style="background:var(--grad-soft);border-color:rgba(59,130,246,0.25)">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-robot"></i> AlphaVault ML Signal
         </div>
         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
           ${signal.direction === 'buy'
@@ -395,514 +425,636 @@ const StockDetail = (() => {
             : signal.direction === 'sell'
               ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
               : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`}
-          <span style="font-size:12px;color:var(--txt3)">Score: <strong class="mono" style="color:var(--b1)">${parseFloat(signal.final_score||0).toFixed(3)}</strong></span>
-          <span style="font-size:12px;color:var(--txt3)">Conf: <strong class="mono">${(parseFloat(signal.confidence||0)*100).toFixed(1)}%</strong></span>
-          <span style="font-size:12px;color:var(--txt3)">Council: <strong style="color:${(signal.council||'').includes('execute')?'var(--g)':'var(--y)'}">${(signal.council||'wait').toUpperCase()}</strong></span>
-          <span class="regime-chip">${(signal.regime||'--').replace(/_/g,' ')}</span>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--txt3)">Score <strong class="mono" style="color:var(--b1)">${parseFloat(signal.final_score||0).toFixed(3)}</strong></span>
+            <span style="font-size:12px;color:var(--txt3)">Conf <strong class="mono">${(parseFloat(signal.confidence||0)*100).toFixed(1)}%</strong></span>
+            <span style="font-size:12px;color:var(--txt3)">BP <strong class="mono">${(parseFloat(signal.buy_prob||0.5)*100).toFixed(1)}%</strong></span>
+            <strong style="font-size:12px;color:${(signal.council||'').includes('execute')?'var(--g)':'var(--y)'}">
+              ${(signal.council||'wait').toUpperCase()}
+            </strong>
+            <span class="regime-chip">${(signal.regime||'--').replace(/_/g,' ')}</span>
+          </div>
         </div>
       </div>` : '';
 
-    // Company description
+    // ── Company description block ──
     const descBlock = profile.longBusinessSummary ? `
-      <div style="margin-bottom:16px">
-        <div style="font-size:12px;font-weight:700;color:var(--txt3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">
-          About ${sym}
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-building"></i> About ${sym}
         </div>
-        <p style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden" id="sdp-desc-text">
+        ${profile.industry || profile.sector || profile.country ? `
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
+            ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
+            ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
+            ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+          </div>` : ''}
+        <p class="sdp-desc" id="sdp-desc-p"
+          style="font-size:13px;color:var(--txt2);line-height:1.8;
+                 display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
           ${profile.longBusinessSummary}
         </p>
-        <button onclick="this.previousElementSibling.style.webkitLineClamp=this.previousElementSibling.style.webkitLineClamp?'':'4';this.textContent=this.textContent==='Show less'?'Show more':'Show less'"
-          style="font-size:11px;color:var(--b1);cursor:pointer;border:none;background:none;padding:2px 0;margin-top:4px">Show more</button>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-          ${profile.sector    ? `<span class="regime-chip">${profile.sector}</span>` : ''}
-          ${profile.industry  ? `<span class="regime-chip">${profile.industry}</span>` : ''}
-          ${profile.country   ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
-          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)} emp</span>` : ''}
-        </div>
+        <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>
       </div>` : '';
 
-    content.innerHTML = `
-      ${sigBlock}
-      ${descBlock}
-      <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
-        <i class="fa-solid fa-table" style="color:var(--b1)"></i> Key Statistics
-      </div>
-      <div class="sdp-stats-grid">
-        ${statsItems.filter(i => i.v !== '--').map(i => `
-          <div class="sdp-stat">
-            <div class="sdp-stat-lbl">${i.l}</div>
-            <div class="sdp-stat-val">${i.v}</div>
-          </div>`).join('')}
-      </div>
-      ${!quote && !summary ? `
-        <div style="text-align:center;padding:30px;color:var(--txt4)">
-          <i class="fa-solid fa-triangle-exclamation" style="font-size:24px;margin-bottom:8px;color:var(--y)"></i><br>
-          Yahoo Finance data unavailable. Check if <code>yahoo-proxy</code> Worker is deployed.
-        </div>` : ''}`;
+    // ── Stats grid ──
+    const statsBlock = `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-table"></i> Key Statistics
+          ${isFallback ? `<span style="font-size:10px;color:var(--y);margin-left:8px">(partial data — proxy fallback)</span>` : ''}
+        </div>
+        <div class="sdp-fp-stats">
+          ${kstats.map(i => `
+            <div class="sdp-fp-stat-item">
+              <div class="sdp-fp-stat-lbl">${i.l}</div>
+              <div class="sdp-fp-stat-val">${i.v}</div>
+            </div>`).join('')}
+        </div>
+        ${!kstats.length ? `<div style="color:var(--txt4);font-size:12px;padding:16px;text-align:center">
+          <i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i>
+          Yahoo Finance data unavailable. Check yahoo-proxy Worker deployment.
+        </div>` : ''}
+      </div>`;
+
+    // ── Mini chart right column ──
+    const miniChartBlock = `
+      <div>
+        ${sigBlock}
+        <div class="sdp-fp-stat-section" style="margin-top:${signal?'16px':'0'}">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-chart-line"></i> Price Chart (1Y)
+          </div>
+          <div class="sdp-fp-chart" id="sdp-fp-chart-mini" style="height:260px!important;min-height:260px!important;max-height:260px!important"></div>
+          <div style="font-size:10px;color:var(--txt4);text-align:center;margin-top:6px">
+            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · Daily
+          </div>
+        </div>
+      </div>`;
+
+    _bodyHtml(descBlock + statsBlock, 'layout-overview', miniChartBlock);
+
+    // Bind description toggle
+    const tog = document.getElementById('sdp-desc-toggle');
+    const para = document.getElementById('sdp-desc-p');
+    if (tog && para) {
+      let expanded = false;
+      tog.addEventListener('click', () => {
+        expanded = !expanded;
+        para.style.webkitLineClamp = expanded ? 'unset' : '3';
+        para.style.overflow        = expanded ? 'visible' : 'hidden';
+        tog.textContent            = expanded ? 'Show less' : 'Show more';
+      });
+    }
+
+    // Load mini chart
+    setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', _sym, '1d', '1y', 260), 80);
   }
 
   // ════════════════════════════════════════════════════════
-  // TAB: CHART (LightweightCharts)
+  // TAB: CHART (full width, 420px)
   // ════════════════════════════════════════════════════════
   function _renderChart() {
-    const content = document.getElementById('sdp-content');
-    if (!content) return;
-
     const INTERVALS = [
       { l:'1D', iv:'5m',  r:'1d' },
       { l:'5D', iv:'15m', r:'5d' },
       { l:'1M', iv:'1h',  r:'1mo' },
       { l:'3M', iv:'1d',  r:'3mo' },
       { l:'6M', iv:'1d',  r:'6mo' },
-      { l:'1Y', iv:'1d',  r:'1y',  active: true },
+      { l:'1Y', iv:'1d',  r:'1y', active:true },
       { l:'2Y', iv:'1wk', r:'2y' },
       { l:'5Y', iv:'1wk', r:'5y' },
     ];
 
-    content.innerHTML = `
-      <div style="display:flex;gap:3px;margin-bottom:10px;flex-wrap:wrap">
+    const ivTabs = `
+      <div class="sdp-iv-tabs">
         ${INTERVALS.map(i => `
-          <button class="cp-itab ${i.active?'active':''} sdp-chart-iv"
-            data-iv="${i.iv}" data-range="${i.r}">${i.l}</button>`).join('')}
+          <button class="sdp-iv-btn ${i.active?'active':''}" data-iv="${i.iv}" data-range="${i.r}">
+            ${i.l}
+          </button>`).join('')}
       </div>
-      <div class="sdp-chart-container" id="sdp-chart-container"></div>
-      <div style="font-size:10px;color:var(--txt4);margin-top:6px;text-align:center">
-        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance
+      <div class="sdp-fp-chart" id="sdp-fp-chart-main"></div>
+      <div style="font-size:10px;color:var(--txt4);text-align:center;margin-top:8px">
+        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance — interval ${_iv}
       </div>`;
 
+    _bodyHtml(ivTabs, 'layout-chart');
+
     // Bind interval buttons
-    content.querySelectorAll('.sdp-chart-iv').forEach(btn => {
+    document.querySelectorAll('.sdp-iv-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        content.querySelectorAll('.sdp-chart-iv')
-          .forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.sdp-iv-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        _currentIv    = btn.dataset.iv;
-        _currentRange = btn.dataset.range;
-        _loadPanelChart(_currentSym, _currentIv, _currentRange);
+        _iv    = btn.dataset.iv;
+        _range = btn.dataset.range;
+        _destroyFPChart();
+        setTimeout(() => _loadMainFPChart(), 50);
       });
     });
 
-    // Init chart
-    _loadPanelChart(_currentSym, _currentIv, _currentRange);
-  }
-
-  async function _loadPanelChart(sym, interval, range) {
-    const container = document.getElementById('sdp-chart-container');
-    if (!container || typeof LightweightCharts === 'undefined') return;
-
-    // Show loading in container
-    container.innerHTML = `<div class="sdp-loading" style="height:200px">
-      <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i>
-      <span>Loading chart data...</span>
-    </div>`;
-
-    // Fetch Yahoo data
-    const candles = await YahooFinance.getChart(sym, interval, range);
-
-    // Re-check container still exists (user might have switched tab)
-    const containerCheck = document.getElementById('sdp-chart-container');
-    if (!containerCheck) return;
-
-    containerCheck.innerHTML = '';
-
-    if (!candles.length) {
-      containerCheck.innerHTML = `<div class="sdp-loading" style="height:200px;color:var(--y)">
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <span>No chart data available</span>
-      </div>`;
-      return;
-    }
-
-    try {
-      // Destroy old chart
-      if (_panelChart) { try { _panelChart.remove(); } catch(e) {} _panelChart = null; }
-
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-
-      _panelChart = LightweightCharts.createChart(containerCheck, {
-        width:  containerCheck.clientWidth || 460,
-        height: 200,
-        layout: {
-          background: { color: 'transparent' },
-          textColor:  isDark ? '#9db3d8' : '#3d4f7c',
-          fontSize:   11,
-        },
-        grid: {
-          vertLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-          horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-        },
-        rightPriceScale: { borderColor: 'rgba(128,128,128,0.15)', scaleMargins: { top: 0.1, bottom: 0.15 } },
-        timeScale:       { borderColor: 'rgba(128,128,128,0.15)', timeVisible: true, secondsVisible: false },
-        crosshair:       { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
-      });
-
-      const v = typeof LightweightCharts.CandlestickSeries !== 'undefined' ? 4 : 3;
-      _panelSeries = v === 4
-        ? _panelChart.addSeries(LightweightCharts.CandlestickSeries, {
-            upColor:'#10b981', downColor:'#ef4444',
-            borderUpColor:'#10b981', borderDownColor:'#ef4444',
-            wickUpColor:'#10b981', wickDownColor:'#ef4444',
-          })
-        : _panelChart.addCandlestickSeries({
-            upColor:'#10b981', downColor:'#ef4444',
-            borderUpColor:'#10b981', borderDownColor:'#ef4444',
-            wickUpColor:'#10b981', wickDownColor:'#ef4444',
-          });
-
-      _panelSeries.setData(candles);
-      _panelChart.timeScale().fitContent();
-
-      new ResizeObserver(entries => {
-        if (_panelChart && entries[0]) {
-          _panelChart.applyOptions({ width: entries[0].contentRect.width });
-        }
-      }).observe(containerCheck);
-
-    } catch(err) {
-      console.error('Panel chart error:', err);
-      containerCheck.innerHTML = `<div class="sdp-loading" style="height:200px;color:var(--r)">
-        <i class="fa-solid fa-xmark"></i><span>Chart error: ${err.message}</span>
-      </div>`;
-    }
+    setTimeout(() => _loadMainFPChart(), 80);
   }
 
   // ════════════════════════════════════════════════════════
   // TAB: FINANCIALS
   // ════════════════════════════════════════════════════════
   function _renderFinancials() {
-    const sym     = _currentSym;
-    const summary = _data[sym]?.summary;
-    const content = document.getElementById('sdp-content');
-    if (!content) return;
+    const sum    = _data[_sym]?.summary || {};
+    const fin    = sum.financialData          || {};
+    const stats  = sum.defaultKeyStatistics   || {};
+    const detail = sum.summaryDetail          || {};
+    const price  = sum.price                  || {};
+    const inc0   = sum.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
+    const isFallback = sum._source === 'chart_fallback';
 
-    if (!summary) {
-      content.innerHTML = `<div class="sdp-loading">
-        <i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i>
-        <span>Financial data unavailable — check yahoo-proxy Worker</span>
-      </div>`;
+    if (isFallback || (!fin.totalRevenue && !stats.enterpriseValue)) {
+      _bodyHtml(`
+        <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txt4)">
+          <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:var(--y);margin-bottom:12px;display:block"></i>
+          <strong style="color:var(--txt);font-size:15px">Detailed financials unavailable</strong><br>
+          <span style="font-size:12px;margin-top:8px;display:block">
+            Yahoo Finance requires a crumb for full financials.
+            The proxy is fetching it — try again in 30s or check Worker logs.
+          </span>
+          <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:16px">
+            <i class="fa-solid fa-rotate"></i> Retry
+          </button>
+        </div>`, 'layout-financials');
       return;
     }
 
-    const fin    = summary.financialData          || {};
-    const stats  = summary.defaultKeyStatistics   || {};
-    const detail = summary.summaryDetail          || {};
-    const inc    = summary.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
-
     const sections = [
       {
-        title: 'Valuation',
-        icon:  'fa-scale-balanced',
-        items: [
-          { l:'Market Cap',          v: _fmtMarketCap(summary.price?.marketCap?.raw) },
-          { l:'Enterprise Value',    v: _fmtMarketCap(stats.enterpriseValue?.raw) },
-          { l:'EV/EBITDA',           v: _fmt(stats.enterpriseToEbitda?.raw, '', 2) },
-          { l:'EV/Revenue',          v: _fmt(stats.enterpriseToRevenue?.raw, '', 2) },
-          { l:'P/E (TTM)',           v: _fmt(detail.trailingPE?.raw, '', 2) },
-          { l:'Forward P/E',         v: _fmt(detail.forwardPE?.raw, '', 2) },
-          { l:'PEG Ratio',           v: _fmt(stats.pegRatio?.raw, '', 2) },
-          { l:'P/S Ratio',           v: _fmt(stats.priceToSalesTrailing12Months?.raw, '', 2) },
-          { l:'P/B Ratio',           v: _fmt(stats.priceToBook?.raw, '', 2) },
-          { l:'EV/EBITDA',           v: _fmt(stats.enterpriseToEbitda?.raw, '', 2) },
+        title:'Valuation', icon:'fa-scale-balanced',
+        items:[
+          { l:'Market Cap',       v: _fmtMCap(price.marketCap?.raw) },
+          { l:'Enterprise Value', v: _fmtMCap(stats.enterpriseValue?.raw) },
+          { l:'P/E (TTM)',        v: _f(detail.trailingPE?.raw,  '', 2) },
+          { l:'Forward P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
+          { l:'PEG Ratio',        v: _f(stats.pegRatio?.raw,     '', 2) },
+          { l:'P/S (TTM)',        v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
+          { l:'P/B Ratio',        v: _f(stats.priceToBook?.raw,  '', 2) },
+          { l:'EV/EBITDA',        v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
+          { l:'EV/Revenue',       v: _f(stats.enterpriseToRevenue?.raw,'',2) },
         ],
       },
       {
-        title: 'Profitability',
-        icon:  'fa-chart-line',
-        items: [
-          { l:'Revenue (TTM)',        v: _fmtMarketCap(fin.totalRevenue?.raw) },
-          { l:'Gross Profit',        v: _fmtMarketCap(inc.grossProfit?.raw) },
-          { l:'EBITDA',              v: _fmtMarketCap(fin.ebitda?.raw) },
-          { l:'Net Income',          v: _fmtMarketCap(inc.netIncome?.raw) },
-          { l:'Gross Margin',        v: _fmt(fin.grossMargins?.raw,         '%', 2, 100) },
-          { l:'Operating Margin',    v: _fmt(fin.operatingMargins?.raw,     '%', 2, 100) },
-          { l:'EBITDA Margin',       v: _fmt(fin.ebitdaMargins?.raw,        '%', 2, 100) },
-          { l:'Profit Margin',       v: _fmt(fin.profitMargins?.raw,        '%', 2, 100) },
-          { l:'Revenue Growth',      v: _fmt(fin.revenueGrowth?.raw,        '%', 2, 100) },
-          { l:'Earnings Growth',     v: _fmt(fin.earningsGrowth?.raw,       '%', 2, 100) },
+        title:'Profitability', icon:'fa-chart-line',
+        items:[
+          { l:'Revenue (TTM)',      v: _fmtMCap(fin.totalRevenue?.raw) },
+          { l:'Gross Profit',       v: _fmtMCap(inc0.grossProfit?.raw) },
+          { l:'Net Income',         v: _fmtMCap(inc0.netIncome?.raw) },
+          { l:'EBITDA',             v: _fmtMCap(fin.ebitda?.raw) },
+          { l:'Gross Margin',       v: _fPct(fin.grossMargins?.raw) },
+          { l:'Operating Margin',   v: _fPct(fin.operatingMargins?.raw) },
+          { l:'EBITDA Margin',      v: _fPct(fin.ebitdaMargins?.raw) },
+          { l:'Profit Margin',      v: _fPct(fin.profitMargins?.raw) },
+          { l:'Revenue Growth',     v: _fPct(fin.revenueGrowth?.raw) },
+          { l:'Earnings Growth',    v: _fPct(fin.earningsGrowth?.raw) },
         ],
       },
       {
-        title: 'Balance Sheet & Cash',
-        icon:  'fa-building-columns',
-        items: [
-          { l:'Total Cash',          v: _fmtMarketCap(fin.totalCash?.raw) },
-          { l:'Cash/Share',          v: _fmt(fin.totalCashPerShare?.raw, '$', 2) },
-          { l:'Total Debt',          v: _fmtMarketCap(fin.totalDebt?.raw) },
-          { l:'Debt/Equity',         v: _fmt(fin.debtToEquity?.raw, '', 2) },
-          { l:'Current Ratio',       v: _fmt(fin.currentRatio?.raw, '', 2) },
-          { l:'Quick Ratio',         v: _fmt(fin.quickRatio?.raw, '', 2) },
-          { l:'Free Cash Flow',      v: _fmtMarketCap(fin.freeCashflow?.raw) },
-          { l:'Operating Cash Flow', v: _fmtMarketCap(fin.operatingCashflow?.raw) },
+        title:'Balance Sheet', icon:'fa-building-columns',
+        items:[
+          { l:'Total Cash',         v: _fmtMCap(fin.totalCash?.raw) },
+          { l:'Cash/Share',         v: _f(fin.totalCashPerShare?.raw,     '$', 2) },
+          { l:'Total Debt',         v: _fmtMCap(fin.totalDebt?.raw) },
+          { l:'Debt/Equity',        v: _f(fin.debtToEquity?.raw,          '', 2) },
+          { l:'Current Ratio',      v: _f(fin.currentRatio?.raw,          '', 2) },
+          { l:'Quick Ratio',        v: _f(fin.quickRatio?.raw,            '', 2) },
+          { l:'Free Cash Flow',     v: _fmtMCap(fin.freeCashflow?.raw) },
+          { l:'Oper. Cash Flow',    v: _fmtMCap(fin.operatingCashflow?.raw) },
         ],
       },
       {
-        title: 'Management & Returns',
-        icon:  'fa-award',
-        items: [
-          { l:'Return on Assets',    v: _fmt(fin.returnOnAssets?.raw, '%', 2, 100) },
-          { l:'Return on Equity',    v: _fmt(fin.returnOnEquity?.raw, '%', 2, 100) },
-          { l:'Revenue/Employee',    v: _fmt(fin.revenuePerShare?.raw, '$', 2) },
-          { l:'Beta',                v: _fmt(detail.beta?.raw, '', 2) },
-          { l:'52W High',            v: _fmt(detail.fiftyTwoWeekHigh?.raw, '$') },
-          { l:'52W Low',             v: _fmt(detail.fiftyTwoWeekLow?.raw, '$') },
-          { l:'50D Avg',             v: _fmt(detail.fiftyDayAverage?.raw, '$') },
-          { l:'200D Avg',            v: _fmt(detail.twoHundredDayAverage?.raw, '$') },
-          { l:'Shares Outstanding',  v: _fmtNum(stats.sharesOutstanding?.raw) },
-          { l:'Insider Ownership',   v: _fmt(stats.heldPercentInsiders?.raw, '%', 2, 100) },
-          { l:'Institution Own.',    v: _fmt(stats.heldPercentInstitutions?.raw, '%', 2, 100) },
-          { l:'Short Interest',      v: _fmt(stats.shortPercentOfFloat?.raw, '%', 2, 100) },
+        title:'Returns & Management', icon:'fa-award',
+        items:[
+          { l:'ROA',                v: _fPct(fin.returnOnAssets?.raw) },
+          { l:'ROE',                v: _fPct(fin.returnOnEquity?.raw) },
+          { l:'Beta',               v: _f(detail.beta?.raw,            '', 2) },
+          { l:'Shares Outstanding', v: _fmtNum(stats.sharesOutstanding?.raw) },
+          { l:'Float',              v: _fmtNum(stats.floatShares?.raw) },
+          { l:'Insider Own.',       v: _fPct(stats.heldPercentInsiders?.raw) },
+          { l:'Institution Own.',   v: _fPct(stats.heldPercentInstitutions?.raw) },
+          { l:'Short % Float',      v: _fPct(stats.shortPercentOfFloat?.raw) },
+          { l:'Div Yield',          v: _fPct(detail.dividendYield?.raw) },
+          { l:'Payout Ratio',       v: _fPct(stats.payoutRatio?.raw) },
         ],
       },
     ];
 
-    content.innerHTML = sections.map(sec => `
-      <div style="margin-bottom:20px">
-        <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;
-             letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
-          <i class="fa-solid ${sec.icon}" style="color:var(--b1)"></i>${sec.title}
+    const html = sections.map(sec => `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid ${sec.icon}"></i> ${sec.title}
         </div>
-        <div class="sdp-stats-grid">
+        <div class="sdp-fp-stats">
           ${sec.items.filter(i => i.v && i.v !== '--').map(i => `
-            <div class="sdp-stat">
-              <div class="sdp-stat-lbl">${i.l}</div>
-              <div class="sdp-stat-val">${i.v}</div>
+            <div class="sdp-fp-stat-item">
+              <div class="sdp-fp-stat-lbl">${i.l}</div>
+              <div class="sdp-fp-stat-val">${i.v}</div>
             </div>`).join('')}
         </div>
-      </div>`).join('') + `<div style="font-size:10px;color:var(--txt4);text-align:center;padding:8px">
-        <i class="fa-brands fa-yahoo"></i> Data: Yahoo Finance via yfinance
-      </div>`;
+      </div>`).join('');
+
+    _bodyHtml(html + `
+      <div style="grid-column:1/-1;font-size:10px;color:var(--txt4);text-align:center;padding:8px">
+        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance via yfinance proxy
+      </div>`, 'layout-financials');
+  }
+
+  // ── Retry financials (KV might have cached the crumb now) ─
+  async function _retryFinancials() {
+    // Clear memory cache for this sym
+    if (_data[_sym]) delete _data[_sym].summary;
+    // Refetch
+    const sum = await YahooFinance.getFinancials(_sym);
+    if (_data[_sym]) _data[_sym].summary = sum;
+    _renderFinancials();
   }
 
   // ════════════════════════════════════════════════════════
   // TAB: EARNINGS
   // ════════════════════════════════════════════════════════
   function _renderEarnings() {
-    const sym     = _currentSym;
-    const summary = _data[sym]?.summary;
-    const content = document.getElementById('sdp-content');
-    if (!content) return;
+    const sum      = _data[_sym]?.summary || {};
+    const trend    = sum.earningsTrend?.trend     || [];
+    const calendar = sum.calendarEvents?.earnings || {};
+    const signal   = _sig(_sym);
 
-    const trend    = summary?.earningsTrend?.trend || [];
-    const calendar = summary?.calendarEvents || {};
-    const signal   = _getSignalData(sym);
+    // Next earnings date
+    const nextDates = (calendar.earningsDate || []).map(d =>
+      new Date((d.raw || d) * 1000)
+    ).filter(d => d > new Date());
+    const nextEarnings = nextDates[0]?.toLocaleDateString('en-US', {
+      month:'long', day:'numeric', year:'numeric'
+    });
 
-    // Upcoming earnings date
-    const earningsDate = calendar.earnings?.earningsDate?.[0]?.raw;
-    const earningsDateStr = earningsDate
-      ? new Date(earningsDate * 1000).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
-      : null;
+    // EPS trend rows
+    const PERIOD_LABELS = { '0q':'Current Qtr', '+1q':'Next Qtr', '0y':'Current Year', '+1y':'Next Year' };
 
-    // EPS estimates from trend
-    const estimates = trend.map(t => ({
-      period:   t.period === '0q' ? 'Current Qtr'
-               : t.period === '+1q' ? 'Next Qtr'
-               : t.period === '0y' ? 'Current Year'
-               : 'Next Year',
-      epsAvg:   t.earningsEstimate?.avg?.raw,
-      epsPrev:  t.earningsEstimate?.yearAgoEps?.raw,
-      revAvg:   t.revenueEstimate?.avg?.raw,
-      revGrowth:t.revenueEstimate?.growth?.raw,
-    }));
-
-    content.innerHTML = `
-      ${earningsDateStr ? `
-        <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);
-             border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
-          <i class="fa-solid fa-calendar-check" style="color:var(--b1);font-size:20px"></i>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--txt)">Next Earnings Date</div>
-            <div style="font-size:20px;font-weight:900;color:var(--b1);font-family:var(--mono)">${earningsDateStr}</div>
-          </div>
-        </div>` : ''}
-
-      ${signal?.earnings?.upcoming ? `
-        <div class="test-status warn" style="margin-bottom:12px">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          Earnings upcoming detected by AlphaVault ML engine — increased volatility expected
-        </div>` : ''}
-
-      <!-- EPS Estimates -->
-      ${estimates.length ? `
-        <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;
-             letter-spacing:0.5px;margin-bottom:10px">
-          <i class="fa-solid fa-chart-bar" style="color:var(--b1)"></i> EPS Estimates
+    const epsSection = trend.length ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-chart-bar"></i> EPS & Revenue Estimates
         </div>
-        <div class="sdp-earnings-grid">
-          ${estimates.map(e => `
-            <div class="sdp-earning-card">
-              <div class="sdp-earning-date">${e.period}</div>
-              <div class="sdp-earning-eps" style="color:var(--b1)">
-                ${e.epsAvg != null ? `$${e.epsAvg.toFixed(2)}` : '--'}
-              </div>
-              <div class="sdp-earning-surp">
-                ${e.epsPrev != null ? `Prev: $${e.epsPrev.toFixed(2)}` : ''}
-                ${e.revGrowth != null
-                  ? `<span class="${e.revGrowth > 0 ? 'beat' : 'miss'}">
-                      Rev ${e.revGrowth > 0 ? '+' : ''}${(e.revGrowth*100).toFixed(1)}%
-                    </span>` : ''}
-              </div>
-            </div>`).join('')}
-        </div>` : ''}
+        ${trend.map(t => {
+          const epsEst  = t.earningsEstimate?.avg?.raw;
+          const epsLow  = t.earningsEstimate?.low?.raw;
+          const epsHigh = t.earningsEstimate?.high?.raw;
+          const epsYago = t.earningsEstimate?.yearAgoEps?.raw;
+          const revEst  = t.revenueEstimate?.avg?.raw;
+          const revGrow = t.revenueEstimate?.growth?.raw;
+          const period  = PERIOD_LABELS[t.period] || t.period;
 
-      <!-- Revenue Estimates -->
-      ${estimates.length ? `
-        <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;
-             letter-spacing:0.5px;margin:16px 0 10px">
-          <i class="fa-solid fa-dollar-sign" style="color:var(--g)"></i> Revenue Estimates
-        </div>
-        <div class="sdp-stats-grid">
-          ${estimates.filter(e => e.revAvg).map(e => `
-            <div class="sdp-stat">
-              <div class="sdp-stat-lbl">${e.period}</div>
-              <div class="sdp-stat-val">${_fmtMarketCap(e.revAvg)}</div>
-              ${e.revGrowth != null ? `
-                <div style="font-size:10px;font-weight:600;margin-top:2px;
-                     color:${e.revGrowth > 0 ? 'var(--g)' : 'var(--r)'}">
-                  ${e.revGrowth > 0 ? '+' : ''}${(e.revGrowth*100).toFixed(1)}% YoY
+          return `
+            <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bord)">
+              <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:12px">
+                ${period}
+                ${revGrow != null ? `<span style="margin-left:8px;font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">
+                  Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY
+                </span>` : ''}
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+                ${epsEst != null ? `<div class="sdp-fp-stat-item">
+                  <div class="sdp-fp-stat-lbl">EPS Estimate</div>
+                  <div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div>
                 </div>` : ''}
-            </div>`).join('')}
-        </div>` : ''}
+                ${epsLow != null ? `<div class="sdp-fp-stat-item">
+                  <div class="sdp-fp-stat-lbl">EPS Low</div>
+                  <div class="sdp-fp-stat-val">$${epsLow.toFixed(2)}</div>
+                </div>` : ''}
+                ${epsHigh != null ? `<div class="sdp-fp-stat-item">
+                  <div class="sdp-fp-stat-lbl">EPS High</div>
+                  <div class="sdp-fp-stat-val">$${epsHigh.toFixed(2)}</div>
+                </div>` : ''}
+                ${epsYago != null ? `<div class="sdp-fp-stat-item">
+                  <div class="sdp-fp-stat-lbl">Year Ago EPS</div>
+                  <div class="sdp-fp-stat-val">$${epsYago.toFixed(2)}</div>
+                </div>` : ''}
+                ${revEst != null ? `<div class="sdp-fp-stat-item">
+                  <div class="sdp-fp-stat-lbl">Rev Estimate</div>
+                  <div class="sdp-fp-stat-val">${_fmtMCap(revEst)}</div>
+                </div>` : ''}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>` : '';
 
-      ${!estimates.length && !earningsDateStr ? `
-        <div class="sdp-loading" style="height:150px">
-          <i class="fa-solid fa-circle-info" style="color:var(--y)"></i>
-          <span>No earnings data available for ${sym} via Yahoo Finance</span>
-        </div>` : ''}
+    const calSection = nextEarnings ? `
+      <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-calendar-check"></i> Next Earnings Date
+        </div>
+        <div style="font-size:28px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:8px">
+          ${nextEarnings}
+        </div>
+        ${signal?.earnings?.upcoming ? `
+          <div class="test-status warn" style="margin-top:8px">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            AlphaVault ML detected upcoming earnings — expect increased volatility
+          </div>` : ''}
+      </div>` : '';
 
-      <div style="font-size:10px;color:var(--txt4);text-align:center;padding:8px;margin-top:8px">
-        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance via yfinance
-      </div>`;
+    const fallbackMsg = !trend.length && !nextEarnings ? `
+      <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txt4)">
+        <i class="fa-solid fa-calendar-xmark" style="font-size:32px;color:var(--txt4);margin-bottom:12px;display:block"></i>
+        No earnings data available for <strong style="color:var(--txt)">${_sym}</strong>
+        <div style="font-size:12px;margin-top:8px">This may be an ETF or the crumb has not loaded yet.</div>
+        <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:16px">
+          <i class="fa-solid fa-rotate"></i> Retry
+        </button>
+      </div>` : '';
+
+    _bodyHtml(
+      (calSection ? calSection + epsSection : epsSection + fallbackMsg),
+      'layout-earnings'
+    );
   }
 
   // ════════════════════════════════════════════════════════
   // TAB: NEWS
   // ════════════════════════════════════════════════════════
   function _renderNews() {
-    const sym     = _currentSym;
-    const news    = _data[sym]?.news || [];
-    const content = document.getElementById('sdp-content');
-    if (!content) return;
+    const news = _data[_sym]?.news || [];
 
     if (!news.length) {
-      content.innerHTML = `<div class="sdp-loading">
-        <i class="fa-solid fa-newspaper" style="font-size:24px;color:var(--txt4)"></i>
-        <span>Loading news...</span>
-      </div>`;
-      // Try fetching news if not loaded
-      YahooFinance.getNews(sym).then(articles => {
-        _data[sym].news = articles;
-        if (_activeTab === 'news') _renderNews();
+      // Attempt to load
+      YahooFinance.getNews(_sym).then(articles => {
+        if (_tab === 'news') {
+          if (_data[_sym]) _data[_sym].news = articles;
+          _renderNews();
+        }
       });
+      _bodyHtml(`
+        <div style="text-align:center;padding:60px;color:var(--txt4)">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1);margin-bottom:12px;display:block"></i>
+          Loading news for ${_sym}...
+        </div>`, 'layout-news');
       return;
     }
 
-    content.innerHTML = `
-      <div style="font-size:12px;font-weight:700;color:var(--txt3);text-transform:uppercase;
-           letter-spacing:0.5px;margin-bottom:12px">
-        <i class="fa-solid fa-newspaper" style="color:var(--b1)"></i>
-        Latest News — ${sym} (${news.length} articles)
-      </div>
-      ${news.map(article => {
-        const pub  = article.publisher || 'Yahoo Finance';
-        const time = article.providerPublishTime
-          ? _timeAgo(article.providerPublishTime * 1000)
-          : '';
-        const thumb = article.thumbnail?.resolutions?.[0]?.url;
-        const sentiment = _guessSentiment(article.title || '');
-
-        return `<a href="${article.link || '#'}" target="_blank" rel="noopener" class="sdp-news-item">
-          <div style="display:flex;gap:10px">
-            ${thumb ? `<img src="${thumb}" alt="" style="width:60px;height:40px;object-fit:cover;border-radius:4px;flex-shrink:0">` : ''}
-            <div>
-              <div class="sdp-news-headline">${article.title || 'No title'}</div>
-              <div class="sdp-news-meta">
-                <span>${pub}</span>
-                <span>${time}</span>
-                <span class="sdp-news-sentiment ${sentiment.cls}">${sentiment.label}</span>
+    const html = `
+      <div style="max-width:900px;width:100%;margin:0 auto">
+        <div style="font-size:13px;font-weight:700;color:var(--txt3);margin-bottom:16px">
+          <i class="fa-solid fa-newspaper" style="color:var(--b1)"></i>
+          ${news.length} articles — ${_sym}
+        </div>
+        ${news.map(a => {
+          const thumb = a.thumbnail?.resolutions?.find(r => r.width >= 80)?.url;
+          const pub   = a.publisher || 'Yahoo Finance';
+          const time  = a.providerPublishTime ? _timeAgo(a.providerPublishTime * 1000) : '';
+          const sent  = _sentiment(a.title || '');
+          return `
+            <a href="${a.link || '#'}" target="_blank" rel="noopener" class="sdp-fp-news-item">
+              ${thumb ? `<img src="${thumb}" alt="" class="sdp-fp-news-thumb">` : ''}
+              <div style="flex:1;min-width:0">
+                <div class="sdp-fp-news-headline">${a.title || 'No title'}</div>
+                <div class="sdp-fp-news-meta">
+                  <span><i class="fa-solid fa-newspaper" style="font-size:10px"></i> ${pub}</span>
+                  <span>${time}</span>
+                  <span class="sdp-news-sentiment ${sent.cls}">${sent.label}</span>
+                </div>
               </div>
-            </div>
-          </div>
-        </a>`;
-      }).join('')}
-      <div style="font-size:10px;color:var(--txt4);text-align:center;padding:8px;margin-top:4px">
-        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance News
+              <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--txt4);font-size:12px;flex-shrink:0;align-self:center"></i>
+            </a>`;
+        }).join('')}
+        <div style="font-size:10px;color:var(--txt4);text-align:center;padding:12px">
+          <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance News
+        </div>
       </div>`;
+
+    _bodyHtml(html, 'layout-news');
   }
 
   // ════════════════════════════════════════════════════════
-  // HELPERS
+  // CHART HELPERS
   // ════════════════════════════════════════════════════════
-  function _getSignalData(sym) {
-    if (!window._terminalState) return null;
-    return window._terminalState?.signals?.signals?.[sym] || null;
+  async function _loadMainFPChart() {
+    const containerId = 'sdp-fp-chart-main';
+    await _loadChart(containerId, _sym, _iv, _range, 420);
   }
 
-  function _updateWLButton() {
-    const btn = document.getElementById('sdp-wl-toggle');
-    if (!btn || !window.WatchlistManager) return;
-    const inWL = WatchlistManager.isInWatchlist(_currentSym);
-    btn.innerHTML = `<i class="fa-${inWL ? 'solid' : 'regular'} fa-star"></i>`;
-    btn.title     = inWL ? 'Remove from watchlist' : 'Add to watchlist';
-    btn.style.color = inWL ? 'var(--y)' : '';
+  async function _loadMiniChart(containerId, sym, iv, range, height = 260) {
+    await _loadChart(containerId, sym, iv, range, height);
   }
 
-  function _setText(id, val) {
+  async function _loadChart(containerId, sym, iv, range, height) {
+    const container = document.getElementById(containerId);
+    if (!container || typeof LightweightCharts === 'undefined') return;
+
+    // Enforce explicit height BEFORE creating chart
+    container.style.height    = `${height}px`;
+    container.style.minHeight = `${height}px`;
+    container.style.maxHeight = `${height}px`;
+    container.style.overflow  = 'hidden';
+    container.style.display   = 'block';
+
+    container.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:8px;color:var(--txt4)">
+      <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i> Loading chart...
+    </div>`;
+
+    const candles = await YahooFinance.getChart(sym, iv, range);
+
+    // Re-check container (user might have switched tab)
+    const c2 = document.getElementById(containerId);
+    if (!c2) return;
+
+    c2.innerHTML   = '';
+    c2.style.height    = `${height}px`;
+    c2.style.minHeight = `${height}px`;
+    c2.style.maxHeight = `${height}px`;
+    c2.style.overflow  = 'hidden';
+
+    if (!candles.length) {
+      c2.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--y);gap:8px">
+        <i class="fa-solid fa-triangle-exclamation"></i> No chart data
+      </div>`;
+      return;
+    }
+
+    try {
+      _destroyFPChart();
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const w      = c2.getBoundingClientRect().width || c2.offsetWidth || 460;
+
+      _fpChart = LightweightCharts.createChart(c2, {
+        width:  w,
+        height, // explicit pixel height — NEVER container.clientHeight
+        layout: {
+          background: { color: 'transparent' },
+          textColor:  isDark ? '#9db3d8' : '#3d4f7c',
+          fontSize:   11,
+          fontFamily: "'Inter', sans-serif",
+        },
+        grid: {
+          vertLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+          horzLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+        },
+        rightPriceScale: {
+          borderColor:  'rgba(128,128,128,0.12)',
+          scaleMargins: { top: 0.08, bottom: 0.12 },
+        },
+        timeScale: {
+          borderColor:    'rgba(128,128,128,0.12)',
+          timeVisible:    true,
+          secondsVisible: false,
+        },
+        crosshair: { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
+      });
+
+      const v = typeof LightweightCharts.CandlestickSeries !== 'undefined' ? 4 : 3;
+      const opts = { upColor:'#10b981', downColor:'#ef4444', borderUpColor:'#10b981', borderDownColor:'#ef4444', wickUpColor:'#10b981', wickDownColor:'#ef4444' };
+      _fpSeries = v === 4
+        ? _fpChart.addSeries(LightweightCharts.CandlestickSeries, opts)
+        : _fpChart.addCandlestickSeries(opts);
+
+      _fpSeries.setData(candles);
+      _fpChart.timeScale().fitContent();
+
+      // ResizeObserver — WIDTH only, NEVER touch height
+      if (typeof ResizeObserver !== 'undefined') {
+        const ro = new ResizeObserver(entries => {
+          if (!_fpChart || !entries[0]) return;
+          const newW = Math.floor(entries[0].contentRect.width);
+          if (newW > 0 && newW !== _lastFPWidth) {
+            _lastFPWidth = newW;
+            try { _fpChart.applyOptions({ width: newW }); } catch(e) {}
+          }
+        });
+        ro.observe(c2);
+      }
+
+    } catch(err) {
+      console.error('FP Chart error:', err);
+      if (c2) c2.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--r);gap:8px">
+        <i class="fa-solid fa-xmark"></i> Chart error: ${err.message}
+      </div>`;
+    }
+  }
+
+  function _destroyFPChart() {
+    if (_fpChart) {
+      try { _fpChart.remove(); } catch(e) {}
+      _fpChart = null;
+      _fpSeries = null;
+      _lastFPWidth = 0;
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // UI HELPERS
+  // ════════════════════════════════════════════════════════
+  function _bodyHtml(leftHtml, layoutClass, rightHtml = '') {
+    const body = document.getElementById('sdp-fp-body');
+    if (!body) return;
+    body.className = `sdp-fp-body ${layoutClass}`;
+    body.innerHTML = leftHtml + (rightHtml ? rightHtml : '');
+  }
+
+  function _t(id, val) {
     const el = document.getElementById(id);
     if (el) el.textContent = val;
   }
 
-  function _fmt(val, prefix = '', decimals = 2, multiply = 1) {
-    if (val == null || isNaN(val)) return '--';
-    const v = parseFloat(val) * multiply;
-    return `${prefix}${v.toFixed(decimals)}${prefix === '%' ? '%' : ''}`;
+  function _updateWLBtn() {
+    const btn = document.getElementById('sdp-fp-wl');
+    if (!btn || !window.WatchlistManager) return;
+    const inWL = WatchlistManager.isInWatchlist(_sym);
+    btn.innerHTML = `<i class="fa-${inWL?'solid':'regular'} fa-star"></i> ${inWL ? 'In Watchlist' : 'Add to WL'}`;
+    btn.style.color = inWL ? 'var(--y)' : '';
+  }
+
+  function _toggleWL() {
+    if (!window.WatchlistManager) return;
+    WatchlistManager.isInWatchlist(_sym)
+      ? WatchlistManager.removeSymbol(_sym)
+      : WatchlistManager.addSymbol(_sym);
+    _updateWLBtn();
+  }
+
+  function _sig(sym) {
+    return window._terminalState?.signals?.signals?.[sym] || null;
+  }
+
+  // ── Formatters ───────────────────────────────────────────
+  function _f(val, prefix = '', decimals = 2, suffix = '') {
+    if (val == null || val === '' || isNaN(parseFloat(val))) return '--';
+    return `${prefix}${parseFloat(val).toFixed(decimals)}${suffix}`;
+  }
+
+  function _fPct(raw) {
+    if (raw == null || isNaN(raw)) return '--';
+    return `${(raw * 100).toFixed(2)}%`;
   }
 
   function _fmtNum(n) {
     if (!n) return '--';
-    n = parseFloat(n);
+    n = Math.abs(parseFloat(n));
     if (n >= 1e9) return `${(n/1e9).toFixed(2)}B`;
     if (n >= 1e6) return `${(n/1e6).toFixed(2)}M`;
     if (n >= 1e3) return `${(n/1e3).toFixed(0)}K`;
-    return n.toLocaleString();
+    return n.toFixed(0);
   }
 
-  function _fmtMarketCap(n) {
+  function _fmtMCap(n) {
     if (!n) return '--';
     n = parseFloat(n);
     if (n >= 1e12) return `$${(n/1e12).toFixed(2)}T`;
     if (n >= 1e9)  return `$${(n/1e9).toFixed(2)}B`;
     if (n >= 1e6)  return `$${(n/1e6).toFixed(2)}M`;
-    return `$${n.toLocaleString()}`;
+    if (n >= 1e3)  return `$${(n/1e3).toFixed(0)}K`;
+    return `$${n.toFixed(2)}`;
   }
 
   function _timeAgo(ts) {
-    const diff = Date.now() - ts;
-    const m    = Math.floor(diff / 60000);
-    const h    = Math.floor(m / 60);
-    const d    = Math.floor(h / 24);
-    if (d > 0)  return `${d}d ago`;
-    if (h > 0)  return `${h}h ago`;
-    if (m > 0)  return `${m}m ago`;
-    return 'Just now';
+    const d = Date.now() - ts;
+    const m = Math.floor(d/60000), h = Math.floor(m/60), dy = Math.floor(h/24);
+    return dy > 0 ? `${dy}d ago` : h > 0 ? `${h}h ago` : m > 0 ? `${m}m ago` : 'Just now';
   }
 
-  function _guessSentiment(headline) {
-    const h = headline.toLowerCase();
-    const pos = ['beat','surges','rises','gains','up','record','growth','strong','buy','upgrade','bullish','profit','revenue'];
-    const neg = ['miss','falls','drops','down','loss','cuts','crash','sell','downgrade','bearish','debt','layoff','decline'];
-    const posScore = pos.filter(w => h.includes(w)).length;
-    const negScore = neg.filter(w => h.includes(w)).length;
-    if (posScore > negScore) return { cls: 'positive', label: '▲ Positive' };
-    if (negScore > posScore) return { cls: 'negative', label: '▼ Negative' };
-    return { cls: 'neutral', label: '— Neutral' };
+  function _sentiment(h) {
+    h = h.toLowerCase();
+    const p = ['beat','surges','rises','gains','record','growth','strong','upgrade','bullish','profit'];
+    const n = ['miss','falls','drops','loss','cuts','crash','downgrade','bearish','decline','layoff'];
+    const ps = p.filter(w => h.includes(w)).length;
+    const ns = n.filter(w => h.includes(w)).length;
+    if (ps > ns) return { cls:'positive', label:'▲ Positive' };
+    if (ns > ps) return { cls:'negative', label:'▼ Negative' };
+    return { cls:'neutral', label:'— Neutral' };
   }
 
   // ════════════════════════════════════════════════════════
   // PUBLIC API
   // ════════════════════════════════════════════════════════
-  return { open, close };
+  return {
+    open,
+    close,
+    _retryFinancials,
+  };
 
 })();
 
 window.StockDetail = StockDetail;
-console.log('✅ StockDetail loaded — Yahoo Finance only');
+
+// ════════════════════════════════════════════════════════════
+// FIX GLOBAL: Appel immédiat et après DOMContentLoaded
+// Empêche les charts de grandir à l'infini
+// ════════════════════════════════════════════════════════════
+(function applyChartHeightFix() {
+  const apply = () => {
+    document.querySelectorAll('.chart-container').forEach(el => {
+      el.style.cssText += ';height:360px!important;min-height:360px!important;max-height:360px!important;overflow:hidden!important;contain:layout size style!important;';
+    });
+    document.querySelectorAll('.cp-chart').forEach(el => {
+      el.style.cssText += ';height:220px!important;min-height:220px!important;max-height:220px!important;overflow:hidden!important;';
+    });
+  };
+  apply();
+  document.addEventListener('DOMContentLoaded', apply);
+  // Re-apply after any section switch
+  setInterval(apply, 3000);
+})();
+
+console.log('✅ StockDetail v3.1 loaded — Full-page | Yahoo Finance only | Chart height fix');
