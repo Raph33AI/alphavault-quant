@@ -57,13 +57,31 @@ const Terminal = (() => {
   };
 
   // ════════════════════════════════════════════════════════
-    // LOGO HELPER — Logo.dev (supporte les tickers directement)
+    // LOGO FALLBACK — Fonction globale (évite les problèmes
+    // d'échappement dans l'attribut onerror HTML)
+    // ════════════════════════════════════════════════════════
+    window._logoFallback = function(el, sym, size) {
+    if (!el || !el.parentNode) return;
+    const span        = document.createElement('span');
+    span.className    = 'sym-initial-badge';
+    span.style.width  = size + 'px';
+    span.style.height = size + 'px';
+    span.style.fontSize = Math.max(7, Math.floor(size * 0.42)) + 'px';
+    span.style.borderRadius = '3px';
+    span.title        = sym;
+    // ETF badge → 2-3 lettres, stock → 1 lettre
+    span.textContent  = sym.length <= 3 ? sym : sym.charAt(0);
+    el.parentNode.replaceChild(span, el);
+    };
+
+    // ════════════════════════════════════════════════════════
+    // LOGO HELPER — Logo.dev (supporte les tickers US)
     // ════════════════════════════════════════════════════════
     const ETF_SYMBOLS = new Set([
     'SPY','QQQ','IWM','DIA','VTI','VOO','IVV','EFA','EEM','GLD','SLV',
     'TLT','HYG','LQD','VNQ','XLF','XLK','XLE','XLV','XLI','XLP','XLU',
     'XLRE','XLC','XLB','XLY','XBI','IBB','SMH','SOXX','ARKK','ARKG',
-    'SOXL','TQQQ','SPXL','SQQQ','SH','BITO','BNDX','BND','AGG',
+    'SOXL','TQQQ','SPXL','SQQQ','SH','BITO','BND','AGG','BNDX',
     ]);
 
     const ETF_COLORS = {
@@ -71,37 +89,40 @@ const Terminal = (() => {
     GLD:'#d97706', SLV:'#64748b', TLT:'#7c3aed', HYG:'#db2777',
     VTI:'#0891b2', XLF:'#1e40af', XLK:'#6d28d9', XLE:'#065f46',
     XLV:'#be123c', XLI:'#b45309', ARKK:'#7c3aed', TQQQ:'#1a56db',
-    SOXL:'#0f766e', default:'#3b82f6',
+    SOXL:'#0f766e', SMH:'#0369a1', SOXX:'#4f46e5', default:'#3b82f6',
     };
 
-    function _getLogoHtml(sym, size = 20) {
-    const s = size;
+    function _getLogoHtml(sym, size) {
+    size = size || 20;
+    const s  = size;
     const fs = Math.max(7, Math.floor(s * 0.42));
 
-    // ETFs → badge coloré avec initiales
+    // ETFs → badge coloré avec initiales (pas de logo dispo)
     if (ETF_SYMBOLS.has(sym)) {
-        const bg = ETF_COLORS[sym] || ETF_COLORS.default;
+        const bg    = ETF_COLORS[sym] || ETF_COLORS.default;
         const label = sym.length <= 3 ? sym : sym.slice(0, 3);
-        return `<span class="sym-initial-badge"
-                    style="width:${s}px;height:${s}px;background:${bg};font-size:${fs}px;border-radius:3px"
-                    title="${sym}">${label}</span>`;
+        return '<span class="sym-initial-badge" '
+        + 'style="width:' + s + 'px;height:' + s + 'px;'
+        + 'background:' + bg + ';font-size:' + fs + 'px;'
+        + 'border-radius:3px" title="' + sym + '">'
+        + label
+        + '</span>';
     }
 
-    // Stocks → Logo.dev (supporte les tickers US directement)
-    const fallback = `<span class="sym-initial-badge"
-                            style="width:${s}px;height:${s}px;font-size:${fs}px;border-radius:3px"
-                            title="${sym}">${sym.charAt(0)}</span>`;
-    const escapedFallback = fallback.replace(/'/g, "\\'");
-
-    return `<img class="stock-logo"
-                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_e8wNvpBBQzGz5-q6XwWGxA&size=${s * 2}&format=png"
-                style="width:${s}px;height:${s}px;border-radius:3px;vertical-align:middle;background:var(--surf2)"
-                onerror="this.outerHTML='${escapedFallback}'"
-                loading="lazy"
-                alt="${sym}">`;
+    // Stocks → Logo.dev + fallback via _logoFallback()
+    // NOTE: onerror utilise une fonction globale pour éviter
+    //       les problèmes d'échappement de guillemets
+    return '<img class="stock-logo"'
+        + ' src="https://img.logo.dev/ticker/' + sym.toLowerCase()
+        + '?token=pk_e8wNvpBBQzGz5-q6XwWGxA&size=' + (s * 2) + '&format=png"'
+        + ' style="width:' + s + 'px;height:' + s + 'px;'
+        + 'border-radius:3px;vertical-align:middle;background:var(--surf2)"'
+        + ' onerror="_logoFallback(this,\'' + sym + '\',' + s + ')"'
+        + ' loading="lazy"'
+        + ' alt="' + sym + '">';
     }
 
-    // Expose globalement pour watchlist-manager.js
+    // Expose globally pour watchlist-manager.js
     window._getLogoHtml = _getLogoHtml;
 
   // ── State ────────────────────────────────────────────────
@@ -1531,27 +1552,22 @@ const Terminal = (() => {
     banner.id = 'charts-wl-banner';
     banner.className = 'charts-wl-banner';
     banner.innerHTML = fromWL
-        ? `<i class="fa-solid fa-list-ul"></i>
-        <span>Affichage de <strong>${n} symboles</strong> depuis votre watchlist</span>
+    ? `<i class="fa-solid fa-list-ul"></i>
+        <span>Displaying <strong>${n} symbols</strong> from your watchlist</span>
         <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
-            <i class="fa-solid fa-rotate"></i> Rafraîchir
+        <i class="fa-solid fa-rotate"></i> Refresh
         </button>`
-        : `<i class="fa-solid fa-info-circle"></i>
-        <span>Watchlist vide — <strong>10 symboles prédéfinis</strong> affichés.
-        Ajoutez des symboles dans l'onglet <em>Watchlist</em>.</span>
+    : `<i class="fa-solid fa-info-circle"></i>
+        <span>Empty watchlist — <strong>10 default symbols</strong> displayed.
+        Add symbols in the <em>Watchlist</em> tab.</span>
         <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
-            <i class="fa-solid fa-rotate"></i> Rafraîchir
+        <i class="fa-solid fa-rotate"></i> Refresh
         </button>`;
     grid.parentElement.insertBefore(banner, grid);
 
     // Génère les panels dynamiquement
     grid.innerHTML = symbols.map((sym, i) => {
-        const logoHtml = typeof _getLogoHtml === 'function'
-        ? `<img class="cp-logo"
-                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_Bl7HHDpkTWS5lOoNnGBEAg&size=36&format=png"
-                onerror="this.style.display='none'"
-                loading="lazy" alt="${sym}">`
-        : '';
+        const logoHtml = _getLogoHtml(sym, 18);
 
         return `
         <div class="chart-panel" id="chart-panel-${i}">
