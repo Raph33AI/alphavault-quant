@@ -1,7 +1,7 @@
 {
-  "timestamp": "2026-04-17T18:19:17.115698+00:00",
-  "run_id": "20260417_181917",
-  "total": 2,
+  "timestamp": "2026-04-17T19:23:12.122175",
+  "run_id": "run_9",
+  "total": 17,
   "logs": [
     {
       "ts": "2026-04-17T18:19:17.114647+00:00",
@@ -35,6 +35,336 @@
         "error": null
       },
       "run_id": "20260417_181917"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "INFO",
+      "module": "trading_loop",
+      "symbol": "GLOBAL",
+      "message": "Cycle #9 termin\u00e9 | 11 fichiers signals",
+      "details": {
+        "run_number": "9",
+        "run_url": "https://github.com/Raph33AI/alphavault-quant/actions/runs/24582691914",
+        "files": [
+          "strategy_weights.json",
+          "current_signals.json",
+          "regime.json",
+          "execution_alpha.json",
+          "portfolio.json",
+          "system_status.json",
+          "performance_metrics.json",
+          "correlation_surface.json",
+          "agent_decisions.json",
+          "options_signals.json",
+          "risk_metrics.json"
+        ]
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "SPY",
+      "message": "BUY | score=0.109 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.1091,
+        "confidence": 0.5906,
+        "buy_prob": 0.7961,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 709.4500122070312,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "QQQ",
+      "message": "BUY | score=0.077 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0774,
+        "confidence": 0.607,
+        "buy_prob": 0.8029,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 647.6599731445312,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "IWM",
+      "message": "BUY | score=0.076 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0757,
+        "confidence": 0.5842,
+        "buy_prob": 0.7934,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 275.0849914550781,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "AAPL",
+      "message": "BUY | score=0.075 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0755,
+        "confidence": 0.6172,
+        "buy_prob": 0.8072,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 269.7200012207031,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "NVDA",
+      "message": "BUY | score=0.009 | council=wait",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0094,
+        "confidence": 0.2847,
+        "buy_prob": 0.6847,
+        "trade_action": "wait",
+        "council": "wait",
+        "price": 201.36000061035156,
+        "regime": "crash"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "MSFT",
+      "message": "BUY | score=0.017 | council=wait",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0168,
+        "confidence": 0.3312,
+        "buy_prob": 0.7366,
+        "trade_action": "wait",
+        "council": "wait",
+        "price": 422.2799987792969,
+        "regime": "high_volatility"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "GOOGL",
+      "message": "BUY | score=0.009 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0095,
+        "confidence": 0.2852,
+        "buy_prob": 0.6852,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 341.0799865722656,
+        "regime": "crash"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "AMZN",
+      "message": "BUY | score=0.106 | council=execute_strong",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.1056,
+        "confidence": 0.7193,
+        "buy_prob": 0.8497,
+        "trade_action": "wait",
+        "council": "execute_strong",
+        "price": 250.57000732421875,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "META",
+      "message": "BUY | score=0.009 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0095,
+        "confidence": 0.2878,
+        "buy_prob": 0.6878,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 684.3400268554688,
+        "regime": "crash"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "TSLA",
+      "message": "BUY | score=0.001 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0011,
+        "confidence": 0.1446,
+        "buy_prob": 0.5446,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 401.9700927734375,
+        "regime": "crash"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "JPM",
+      "message": "BUY | score=0.075 | council=execute_strong",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0748,
+        "confidence": 0.5957,
+        "buy_prob": 0.7982,
+        "trade_action": "wait",
+        "council": "execute_strong",
+        "price": 311.44000244140625,
+        "regime": "trend_up"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "SIGNAL",
+      "module": "signal_engine",
+      "symbol": "GS",
+      "message": "BUY | score=0.009 | council=execute",
+      "details": {
+        "direction": "buy",
+        "final_score": 0.0095,
+        "confidence": 0.2665,
+        "buy_prob": 0.6903,
+        "trade_action": "wait",
+        "council": "execute",
+        "price": 923.469970703125,
+        "regime": "high_volatility"
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "REGIME",
+      "module": "regime_model",
+      "symbol": "GLOBAL",
+      "message": "R\u00e9gime: trend_up | score=+0.60 | conf=52.0%",
+      "details": {
+        "regime": "trend_up",
+        "regime_label": "trend_up",
+        "probabilities": {
+          "trend_up": 0.52,
+          "trend_down": 0.0,
+          "range_bound": 0.16,
+          "low_volatility": 0.24,
+          "high_volatility": 0.0,
+          "crash": 0.0,
+          "macro_tightening": 0.08,
+          "macro_easing": 0.0
+        },
+        "confidence": 0.52,
+        "regime_score": 0.6,
+        "next_regime": "trend_up",
+        "signals": {
+          "technical": {
+            "trend_up_score": 0.857,
+            "trend_down_score": 0.0,
+            "range_score": 0.0,
+            "adx": 29.2,
+            "strong_trend": true,
+            "above_ema200": "True"
+          },
+          "volatility": {
+            "rvol_21d": 0.1859,
+            "rvol_pct_rank": 0.5,
+            "crash_score": 0.0,
+            "high_vol": 0.0,
+            "low_vol": 0.0
+          },
+          "macro": {
+            "tight_score": 0.0,
+            "ease_score": 0.0,
+            "risk_off_score": 0.0,
+            "yield_curve": 0.6459999084472656,
+            "fed_rate": null,
+            "vix": 17.739999771118164
+          },
+          "momentum": {
+            "mom_20d": 0.07818660737069441,
+            "mom_60d": 0.037915854876087694,
+            "mom_120d": 0.06211981905374384,
+            "momentum_aligned_up": true,
+            "momentum_aligned_down": false,
+            "momentum_divergent": false
+          }
+        },
+        "allow_long": true,
+        "allow_short": false,
+        "reduce_exposure": false,
+        "favor_options": false,
+        "leverage_allowed": false
+      },
+      "run_id": "run_9"
+    },
+    {
+      "ts": "2026-04-17T19:23:12.122175",
+      "level": "RISK",
+      "module": "risk_manager",
+      "symbol": "GLOBAL",
+      "message": "DD=0.00% | Lever=0.00x | Halt=False",
+      "details": {
+        "timestamp": "2026-04-17T19:23:11.217491Z",
+        "drawdown": {
+          "halt_active": false,
+          "hit_daily_limit": false,
+          "current_drawdown": 0.0,
+          "daily_pnl_pct": 0.0
+        },
+        "leverage": {
+          "max_leverage": 1.5,
+          "allowed_leverage": 1.5,
+          "current_leverage": 0.0,
+          "is_over_leveraged": false,
+          "reduce_by_pct": 0.0,
+          "regime_mult": 1.0
+        },
+        "var_metrics": {}
+      },
+      "run_id": "run_9"
     }
   ]
 }
