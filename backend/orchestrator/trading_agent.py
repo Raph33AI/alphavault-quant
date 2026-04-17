@@ -70,90 +70,268 @@ class TradingAgent:
         self.allocator    = StrategyAllocator()
         self.council      = MultiAgentCouncil(self.worker, settings)
 
-        # État du portefeuille (persisté via JSON)
-        self._portfolio_value  = 100_000.0   # Capital initial
-        self._positions: Dict  = {}          # {symbol: {shares, entry_price, ...}}
-        self._returns_cache: Dict = {}       # {symbol: np.array}
+        # ── Univers de trading ─────────────────────────────
+        self._full_universe = settings.get_active_universe()
+        self._core_universe = settings.get_core_universe()
 
         # Vérification des workers
-        worker_status = self.worker.check_all_workers()
-        self._llm_mode = "llm" if worker_status.get("ai_proxy") else "deterministic"
+        worker_status     = self.worker.check_all_workers()
+        self._llm_mode    = "llm" if worker_status.get("ai_proxy") else "deterministic"
+
         logger.info(
-            f"✅ TradingAgent prêt | Mode LLM: {self._llm_mode} | "
-            f"Univers: {len(settings.EQUITY_UNIVERSE)} symboles"
+            f"[TradingAgent] Ready | LLM: {self._llm_mode} | "
+            f"Universe: {len(self._full_universe)} symbols "
+            f"({len(self._core_universe)} core)"
         )
 
     # ════════════════════════════════════════════════
     # PIPELINE PRINCIPAL
     # ════════════════════════════════════════════════
     def run_full_pipeline(self) -> Dict:
-        """
-        Exécute le pipeline complet pour tous les symboles de l'univers.
-        Retourne un résumé des décisions + signaux JSON pour le dashboard.
-        """
-        logger.info(f"\n{'='*60}")
-        logger.info(f"  🤖 ALPHAVAULT QUANT — Cycle de Trading")
-        logger.info(f"  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
-        logger.info(f"  Mode: {self.settings.EXECUTION_MODE} | DryRun: {self.settings.DRY_RUN}")
-        logger.info(f"  LLM: {self._llm_mode} | Session: {self.settings.MARKET_SESSION}")
-        logger.info(f"{'='*60}\n")
+    """
+    Pipeline complet — version batch optimisée.
 
-        results        = {}
-        all_signals    = {}
-        all_returns    = {}
-        session        = self.settings.MARKET_SESSION
+    Architecture:
+    1. Batch OHLCV download (tous les symboles en 1 appel)
+    2. Feature building parallèle (ThreadPoolExecutor)
+    3. ML signal inference (vectorisée)
+    4. LLM council (seulement Top N)
+    5. Portfolio optimization
+    6. JSON output
+    """
+    import time
+    t_start = time.time()
 
-        # ── Étape 1 : Snapshot macro (une seule fois) ──
-        macro_snapshot = self._fetch_macro_snapshot()
+    logger.info(f"\n{'='*60}")
+    logger.info(f"  ALPHAVAULT QUANT — Trading Cycle")
+    logger.info(f"  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    logger.info(f"  Mode: {self.settings.EXECUTION_MODE} | DryRun: {self.settings.DRY_RUN}")
+    logger.info(f"  LLM: {self._llm_mode} | Session: {self.settings.MARKET_SESSION}")
+    logger.info(f"  Universe: {len(self._full_universe)} symbols")
+    logger.info(f"{'='*60}\n")
 
-        # ── Étape 2 : Régime global (sur SPY) ─────────
-        global_regime  = self._detect_global_regime(macro_snapshot)
+    # ── 1. Macro snapshot ──────────────────────────────────
+    macro = self._fetch_macro_snapshot()
 
-        # ── Étape 3 : Analyse par symbole ──────────────
-        for symbol in self.settings.EQUITY_UNIVERSE:
-            try:
-                result = self._analyze_symbol(
-                    symbol, macro_snapshot, global_regime, session
-                )
-                results[symbol]  = result
-                all_signals[symbol] = result.get("signal", {})
+    # ── 2. Global regime (SPY daily) ──────────────────────
+    global_regime = self._detect_global_regime(macro)
 
-                # Cache des returns pour l'optimisation portefeuille
-                if result.get("returns_array") is not None:
-                    all_returns[symbol] = result["returns_array"]
+    # ── 3. Batch OHLCV download ────────────────────────────
+    logger.info(f"[Pipeline] Batch OHLCV download | {len(self._full_universe)} symbols...")
+    batch_daily = self.market_data.batch_ohlcv_download(
+        symbols  = self._full_universe,
+        interval = "1day",
+        period   = "1y",
+    )
 
-                logger.info(
-                    f"  📊 {symbol:6s} | "
-                    f"{result.get('signal', {}).get('direction', '?'):6s} | "
-                    f"score={result.get('signal', {}).get('final_score', 0):.3f} | "
-                    f"council={result.get('council', {}).get('decision', '?')}"
-                )
+    # Intraday seulement pour le core universe
+    logger.info(f"[Pipeline] Intraday download | {len(self._core_universe)} core symbols...")
+    batch_5min = self.market_data.batch_ohlcv_download(
+        symbols  = self._core_universe,
+        interval = "5min",
+        period   = "5d",
+    )
 
-            except Exception as e:
-                logger.error(f"  ❌ {symbol}: {e}")
-                results[symbol] = {"error": str(e)}
+    t_download = time.time()
+    logger.info(f"[Pipeline] Download done in {t_download - t_start:.1f}s")
 
-        # ── Étape 4 : Optimisation portefeuille global ──
-        portfolio_weights = self._optimize_portfolio(
-            all_returns, all_signals, global_regime
+    # ── 4. Batch realtime quotes ───────────────────────────
+    logger.info(f"[Pipeline] Batch quotes...")
+    batch_quotes = self.market_data.get_portfolio_quotes(self._full_universe)
+
+    # ── 5. Feature building (parallèle) ───────────────────
+    logger.info(f"[Pipeline] Building features (parallel, {self.settings.FEATURE_WORKERS} workers)...")
+    all_features, all_signals = self._batch_build_features(
+        symbols      = self._full_universe,
+        batch_daily  = batch_daily,
+        batch_5min   = batch_5min,
+        batch_quotes = batch_quotes,
+        macro        = macro,
+    )
+
+    t_features = time.time()
+    logger.info(
+        f"[Pipeline] Features done in {t_features - t_download:.1f}s | "
+        f"{len(all_features)} symbols processed"
+    )
+
+    # ── 6. Sélection Top N pour LLM ───────────────────────
+    top_symbols = self._select_top_symbols(all_signals, self.settings.LLM_TOP_N)
+    logger.info(f"[Pipeline] Top {len(top_symbols)} symbols selected for Council/LLM")
+
+    # ── 7. Council decisions ───────────────────────────────
+    results      = {}
+    all_returns  = {}
+    all_executions = []
+
+    for sym in self._full_universe:
+        if sym not in all_signals:
+            continue
+
+        signal     = all_signals[sym]
+        features   = all_features.get(sym, {})
+        df_daily   = batch_daily.get(sym)
+        quote      = batch_quotes.get(sym) or {}
+        price      = float(quote.get("price", 0) or 0)
+
+        if price <= 0 and df_daily is not None and not df_daily.empty:
+            price = float(df_daily["close"].iloc[-1])
+
+        if price <= 0:
+            continue
+
+        # Returns for optimizer
+        if df_daily is not None and not df_daily.empty:
+            returns = np.log(df_daily["close"] / df_daily["close"].shift(1)).dropna().values
+            if len(returns) >= 20:
+                all_returns[sym] = returns
+
+        # Regime per symbol (lightweight — uses precomputed features)
+        regime = self._regime_from_features(features, global_regime)
+
+        # Risk sizing
+        pos_size = self.risk_manager.compute_position_size(
+            signal          = signal,
+            regime_result   = regime,
+            portfolio_value = self._portfolio_value,
+            current_price   = price,
         )
 
-        # ── Étape 5 : Allocation stratégies ───────────
-        strategy_weights = self._allocate_strategies(
-            all_signals, global_regime
-        )
+        # Council — LLM pour top symbols, déterministe pour les autres
+        use_llm = sym in top_symbols and self._llm_mode == "llm"
+        council = self._get_council_decision(sym, signal, regime, features, use_llm)
 
-        # ── Étape 6 : Exécution des ordres ────────────
-        executions = self._execute_decisions(
-            results, portfolio_weights, global_regime
-        )
+        results[sym] = {
+            "symbol":        sym,
+            "price":         price,
+            "signal":        signal,
+            "regime":        regime,
+            "features":      {k: round(v, 4) for k, v in features.items() if isinstance(v, (int, float))},
+            "position_size": pos_size,
+            "council":       council,
+            "quote":         quote,
+            "should_execute": (
+                council.get("council_approved", False)
+                and signal.get("trade_action") in ("execute", "execute_strong")
+                and not self.settings.DRY_RUN
+            ),
+        }
 
-        # ── Étape 7 : Génération JSON signals ─────────
-        output = self._build_output(
-            results, global_regime, macro_snapshot,
-            portfolio_weights, strategy_weights, executions
-        )
-        return output
+        # Log only for meaningful signals
+        if abs(signal.get("final_score", 0) or 0) > 0.3 or sym in self._core_universe:
+            logger.info(
+                f"  {sym:6s} | {signal.get('direction','?'):7s} | "
+                f"score={signal.get('final_score',0):.3f} | "
+                f"council={council.get('decision','?')}"
+            )
+
+    t_council = time.time()
+    logger.info(
+        f"[Pipeline] Council done in {t_council - t_features:.1f}s | "
+        f"{len(results)} results"
+    )
+
+    def _batch_build_features(
+    self,
+    symbols:      List[str],
+    batch_daily:  Dict[str, Optional[pd.DataFrame]],
+    batch_5min:   Dict[str, Optional[pd.DataFrame]],
+    batch_quotes: Dict[str, Optional[Dict]],
+    macro:        Dict,
+) -> Tuple[Dict, Dict]:
+    """
+    Construit les features et signaux ML pour tous les symboles en parallèle.
+    Retourne (all_features, all_signals).
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    all_features: Dict[str, Dict]  = {}
+    all_signals:  Dict[str, Dict]  = {}
+
+    def _process(sym: str):
+        try:
+            df_daily = batch_daily.get(sym)
+            if df_daily is None or df_daily.empty or len(df_daily) < 30:
+                return sym, None, None
+
+            df_5min  = batch_5min.get(sym)   # None pour les non-core
+            ohlcv    = {"1day": df_daily}
+            if df_5min is not None and not df_5min.empty:
+                ohlcv["5min"] = df_5min
+
+            # Features
+            features = self.feat_builder.build_all_features(
+                symbol          = sym,
+                ohlcv_dict      = ohlcv,
+                macro_snapshot  = macro,
+                sentiment_score = 0.0,   # Sentiment via Worker (optionnel)
+                analyst_score   = 0.0,
+                earnings_data   = None,
+            )
+
+            # Microstructure (only if 5min available)
+            if df_5min is not None:
+                features.update(self.micro_feats.build_all(df_daily, df_5min))
+
+            # Volatility
+            features.update(self.vol_engine.analyze(sym, df_daily))
+
+            # ML Signal
+            raw_signal = self.signal_model.predict(features)
+
+            # Meta-model calibration
+            regime_simple = {
+                "regime_label": "range_bound",
+                "regime_score": float(features.get("momentum_20d", 0)),
+                "allow_long":   True,
+                "allow_short":  False,
+                "confidence":   0.5,
+            }
+            calibrated = self.meta_model.calibrate(
+                raw_signal    = raw_signal,
+                regime_result = regime_simple,
+                options_data  = features,
+                features      = features,
+            )
+
+            return sym, features, calibrated
+
+        except Exception as e:
+            logger.debug(f"[Features] {sym}: {e}")
+            return sym, None, None
+
+    # Parallélisation
+    n_workers = min(self.settings.FEATURE_WORKERS, len(symbols))
+    with ThreadPoolExecutor(max_workers=n_workers) as ex:
+        futures = {ex.submit(_process, sym): sym for sym in symbols}
+        for future in as_completed(futures):
+            sym, feats, sig = future.result()
+            if feats is not None:
+                all_features[sym] = feats
+            if sig is not None:
+                all_signals[sym] = sig
+
+    return all_features, all_signals
+
+    # ── 8. Execution ───────────────────────────────────────
+    portfolio_weights = self._optimize_portfolio(all_returns, all_signals, global_regime)
+    strategy_weights  = self._allocate_strategies(all_signals, global_regime)
+    all_executions    = self._execute_decisions(results, portfolio_weights, global_regime)
+
+    # ── 9. Output JSON ─────────────────────────────────────
+    output = self._build_output(
+        results           = results,
+        global_regime     = global_regime,
+        macro_snapshot    = macro,
+        portfolio_weights = portfolio_weights,
+        strategy_weights  = strategy_weights,
+        executions        = all_executions,
+    )
+
+    t_total = time.time() - t_start
+    logger.info(f"\n[Pipeline] Total: {t_total:.1f}s | {len(results)} signals | {len(all_executions)} executed")
+
+    return output
 
     # ════════════════════════════════════════════════
     # ANALYSE PAR SYMBOLE

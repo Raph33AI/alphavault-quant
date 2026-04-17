@@ -299,6 +299,109 @@ class MarketDataClient:
 
         return results
 
+    def batch_ohlcv_download(
+    self,
+    symbols:  List[str],
+    interval: str = "1day",
+    period:   str = "1y",
+) -> Dict[str, Optional[pd.DataFrame]]:
+    """Télécharge OHLCV pour TOUS les symboles en un seul appel yfinance.
+    Beaucoup plus rapide que des appels individuels.
+    Timing approximatif:
+    - 300 symboles, 1y daily  → ~20-35 secondes
+    - 30 symboles,  5d 5min   → ~8-12 secondes
+    """
+    if not YFINANCE_AVAILABLE:
+        logger.warning("yfinance non disponible — batch impossible")
+        return {s: None for s in symbols}
+
+    YF_IV = {
+        "5min": ("5m",  "5d"),
+        "15min":("15m", "30d"),
+        "1h":   ("1h",  "60d"),
+        "4h":   ("1h",  "60d"),   # resampled
+        "1day": ("1d",  period),
+        "1week":("1wk", "5y"),
+    }
+    yf_interval, yf_period = YF_IV.get(interval, ("1d", period))
+
+    logger.info(
+        f"[Batch] Downloading {len(symbols)} symbols "
+        f"| interval={yf_interval} | period={yf_period}"
+    )
+
+    try:
+        import time
+        t0 = time.time()
+
+        raw = yf.download(
+            tickers      = " ".join(symbols),
+            period       = yf_period,
+            interval     = yf_interval,
+            group_by     = "ticker",
+            auto_adjust  = True,
+            prepost      = False,
+            progress     = False,
+            threads      = True,
+        )
+
+        elapsed = time.time() - t0
+        logger.info(f"[Batch] yfinance download done in {elapsed:.1f}s")
+
+        result: Dict[str, Optional[pd.DataFrame]] = {}
+        single = len(symbols) == 1
+
+        for sym in symbols:
+            try:
+                df = raw.copy() if single else raw[sym].copy()
+                df = df.reset_index()
+                df.columns = [c.lower().replace(" ", "_") for c in df.columns]
+
+                # Rename date/datetime column
+                for col in ("date", "datetime", "index"):
+                    if col in df.columns:
+                        df = df.rename(columns={col: "datetime"})
+                        break
+
+                # Timezone-naive
+                if "datetime" in df.columns:
+                    df["datetime"] = pd.to_datetime(df["datetime"])
+                    if hasattr(df["datetime"].dt, "tz") and df["datetime"].dt.tz is not None:
+                        df["datetime"] = df["datetime"].dt.tz_localize(None)
+
+                # Resample 4h from 1h
+                if interval == "4h" and yf_interval == "1h" and "datetime" in df.columns:
+                    df = df.set_index("datetime")
+                    df = df.resample("4h").agg({
+                        "open":"first", "high":"max",
+                        "low":"min",   "close":"last",
+                        "volume":"sum",
+                    }).dropna().reset_index()
+
+                for col in ["open", "high", "low", "close", "volume"]:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+                df = df.dropna(subset=["close"])
+
+                if len(df) < 5:
+                    result[sym] = None
+                else:
+                    result[sym] = df.reset_index(drop=True)
+
+            except Exception as e:
+                logger.debug(f"[Batch] {sym}: {e}")
+                result[sym] = None
+
+        n_ok  = sum(1 for v in result.values() if v is not None)
+        n_fail= len(symbols) - n_ok
+        logger.info(f"[Batch] {n_ok}/{len(symbols)} symbols OK | {n_fail} failed")
+        return result
+
+    except Exception as e:
+        logger.error(f"[Batch] Download error: {e}")
+        return {s: None for s in symbols}
+
     # ── VWAP Proxy ────────────────────────────────────────────
     def compute_vwap(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
         if df is None or df.empty:
