@@ -667,8 +667,6 @@ const Dashboard = (() => {
   document.addEventListener('DOMContentLoaded', init);
 
   return { showSection, forceRefresh, filterSignals, loadChart };
-  // ✅ Exposition globale pour les onclick inline dans le HTML
-    // (nécessaire car les onclick="Dashboard.xxx()" sont dans le HTML)
     window.Dashboard = Dashboard;
 
     console.log('✅ Dashboard controller loaded');
