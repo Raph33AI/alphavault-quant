@@ -191,30 +191,25 @@ class RiskManager:
     # ── Leverage Check ────────────────────────────────────────
     def check_leverage_constraints(
         self,
-        total_exposure: float,
+        total_exposure:  float,
         portfolio_value: float,
         regime_result:   Dict,
     ) -> Dict:
-        """
-        Vérifie les contraintes de levier.
-        Retourne le levier maximum autorisé selon le régime.
-        """
         regime_label    = regime_result.get("regime_label", "range_bound")
         reduce_exposure = regime_result.get("reduce_exposure", False)
         max_lever       = self.settings.MAX_PORTFOLIO_LEVERAGE
 
-        # Ajustement par régime
         regime_lever_mult = {
-            "trend_up":       1.00,
-            "trend_down":     0.60,
-            "range_bound":    0.80,
-            "low_volatility": 1.00,
-            "high_volatility":0.50,
-            "crash":          0.20,
-            "macro_tightening": 0.70,
-            "macro_easing":   0.90,
+            "trend_up":          1.00,
+            "trend_down":        0.60,
+            "range_bound":       0.80,
+            "low_volatility":    1.00,
+            "high_volatility":   0.50,
+            "crash":             0.20,
+            "macro_tightening":  0.70,
+            "macro_easing":      0.90,
         }
-        mult = regime_lever_mult.get(regime_label, 0.80)
+        mult           = regime_lever_mult.get(regime_label, 0.80)
         if reduce_exposure:
             mult *= 0.75
 
@@ -222,13 +217,19 @@ class RiskManager:
         current_lever  = total_exposure / (portfolio_value + 1e-10)
         over_leveraged = current_lever > allowed_lever
 
+        # ✅ FIX : évite ZeroDivisionError quand pas de positions
+        if current_lever > 0:
+            reduce_by_pct = max(0.0, (current_lever - allowed_lever) / current_lever)
+        else:
+            reduce_by_pct = 0.0
+
         return {
-            "max_leverage":     round(max_lever, 2),
-            "allowed_leverage": round(allowed_lever, 2),
-            "current_leverage": round(current_lever, 2),
+            "max_leverage":      round(max_lever, 2),
+            "allowed_leverage":  round(allowed_lever, 2),
+            "current_leverage":  round(current_lever, 2),
             "is_over_leveraged": over_leveraged,
-            "reduce_by_pct":   round(max(0, (current_lever - allowed_lever) / current_lever), 3),
-            "regime_mult":     round(mult, 2),
+            "reduce_by_pct":     round(reduce_by_pct, 3),
+            "regime_mult":       round(mult, 2),
         }
 
     # ── Drawdown Guardian ─────────────────────────────────────

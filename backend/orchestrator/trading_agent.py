@@ -166,140 +166,161 @@ class TradingAgent:
         session:        str,
     ) -> Dict:
         """Pipeline complet d'analyse pour un symbole."""
+        try:
+            # ── 1. OHLCV ──────────────────────────────────
+            ohlcv_dict = self.market_data.get_multi_timeframe_ohlcv(
+                symbol, self.settings.SIGNAL_TIMEFRAMES
+            )
+            df_daily = ohlcv_dict.get("1day")
+            df_5min  = ohlcv_dict.get("5min")
 
-        # ── 1. Données de marché ──────────────────────
-        ohlcv_dict = self.market_data.get_multi_timeframe_ohlcv(
-            symbol, self.settings.SIGNAL_TIMEFRAMES
-        )
-        df_daily = ohlcv_dict.get("1day")
-        df_5min  = ohlcv_dict.get("5min")
-        df_1h    = ohlcv_dict.get("1h")
+            if df_daily is None or df_daily.empty or len(df_daily) < 30:
+                return {"error": "insufficient_data", "symbol": symbol}
 
-        if df_daily is None or df_daily.empty:
-            return {"error": "no_data", "symbol": symbol}
+            # ── 2. Prix courant — sécurisé ─────────────────
+            try:
+                quote = self.market_data.get_realtime_quote(symbol)
+            except Exception:
+                quote = None
 
-        # Quote temps réel
-        quote = self.market_data.get_realtime_quote(symbol)
-        current_price = float(quote.get("price", df_daily["close"].iloc[-1])) if quote else float(df_daily["close"].iloc[-1])
+            # ✅ Protection division par zéro sur le prix
+            if quote and float(quote.get("price", 0) or 0) > 0:
+                current_price = float(quote["price"])
+            else:
+                current_price = float(df_daily["close"].iloc[-1])
 
-        # Returns pour VaR / optimisation
-        returns_array = np.log(df_daily["close"] / df_daily["close"].shift(1)).dropna().values
+            if current_price <= 0:
+                logger.warning(f"Prix nul pour {symbol} — skip")
+                return {"error": "zero_price", "symbol": symbol}
 
-        # ── 2. Features ───────────────────────────────
-        sentiment_score = self.market_data.get_news_sentiment_score(symbol)
-        analyst_data    = self.market_data.get_analyst_ratings(symbol)
-        analyst_score   = analyst_data.get("score", 0.0)
-        earnings_data   = self.market_data.get_earnings_data(symbol)
+            # Returns array
+            returns_array = np.log(
+                df_daily["close"] / df_daily["close"].shift(1)
+            ).dropna().values
 
-        features = self.feat_builder.build_all_features(
-            symbol         = symbol,
-            ohlcv_dict     = ohlcv_dict,
-            macro_snapshot = macro_snapshot,
-            sentiment_score= sentiment_score,
-            analyst_score  = analyst_score,
-            earnings_data  = earnings_data,
-        )
+            # ── 3. Features ───────────────────────────────
+            sentiment_score = self.market_data.get_news_sentiment_score(symbol)
+            analyst_data    = self.market_data.get_analyst_ratings(symbol)
+            analyst_score   = analyst_data.get("score", 0.0)
+            earnings_data   = self.market_data.get_earnings_data(symbol)
 
-        micro_features = self.micro_feats.build_all(df_daily, df_5min)
-        features.update(micro_features)
+            features = self.feat_builder.build_all_features(
+                symbol          = symbol,
+                ohlcv_dict      = ohlcv_dict,
+                macro_snapshot  = macro_snapshot,
+                sentiment_score = sentiment_score,
+                analyst_score   = analyst_score,
+                earnings_data   = earnings_data,
+            )
+            features.update(self.micro_feats.build_all(df_daily, df_5min))
+            features.update(self.vol_engine.analyze(symbol, df_daily))
+            features.update(self.options_feats.build_all(symbol, current_price, df_daily))
 
-        vol_features = self.vol_engine.analyze(symbol, df_daily)
-        features.update(vol_features)
+            # ── 4. Régime ─────────────────────────────────
+            regime_result = self.regime_model.detect(df_daily, macro_snapshot, features)
 
-        options_features = self.options_feats.build_all(
-            symbol, current_price, df_daily
-        )
-        features.update(options_features)
+            # ── 5. Signal ML ──────────────────────────────
+            raw_signal = self.signal_model.predict(features)
 
-        # ── 3. Régime par symbole ─────────────────────
-        regime_result = self.regime_model.detect(df_daily, macro_snapshot, features)
+            # ── 6. Meta Model ─────────────────────────────
+            calibrated_signal = self.meta_model.calibrate(
+                raw_signal    = raw_signal,
+                regime_result = regime_result,
+                options_data  = features,
+                features      = features,
+            )
 
-        # ── 4. Signal ML ──────────────────────────────
-        raw_signal = self.signal_model.predict(features)
+            # ── 7. Execution Alpha ─────────────────────────
+            market_cap = float((quote or {}).get("market_cap", 0) or 0)
+            pos_pct    = float(calibrated_signal.get("position_pct", 0.05) or 0.05)
+            exec_alpha = self.exec_alpha.analyze(
+                symbol          = symbol,
+                df_daily        = df_daily,
+                signal          = calibrated_signal,
+                market_cap      = market_cap,
+                order_size_usd  = self._portfolio_value * pos_pct,
+                df_intra        = df_5min,
+            )
 
-        # ── 5. Calibration Meta-Model ─────────────────
-        calibrated_signal = self.meta_model.calibrate(
-            raw_signal    = raw_signal,
-            regime_result = regime_result,
-            options_data  = options_features,
-            features      = features,
-        )
-
-        # ── 6. Execution Alpha ────────────────────────
-        market_cap = float(quote.get("market_cap", 0)) if quote else 0.0
-        exec_alpha = self.exec_alpha.analyze(
-            symbol         = symbol,
-            df_daily       = df_daily,
-            signal         = calibrated_signal,
-            market_cap     = market_cap,
-            order_size_usd = self._portfolio_value * calibrated_signal.get("position_pct", 0.05),
-            df_intra       = df_5min,
-        )
-
-        # ── 7. Risk Sizing ────────────────────────────
-        position_size = self.risk_manager.compute_position_size(
-            signal          = calibrated_signal,
-            regime_result   = regime_result,
-            portfolio_value = self._portfolio_value,
-            current_price   = current_price,
-        )
-
-        # ── 8. Agent Outputs (pour le Council) ────────
-        agent_outputs = {
-            "drawdown_guardian":  self._get_drawdown_status(),
-            "regime":             regime_result,
-            "signal":             calibrated_signal,
-            "exec_timing": {
-                "vote": "execute" if exec_alpha.get("optimal_timing", {}).get("is_optimal_now") else "wait",
-            },
-            "risk": self.risk_manager.check_leverage_constraints(
-                total_exposure  = self._get_total_exposure(),
-                portfolio_value = self._portfolio_value,
+            # ── 8. Risk Sizing ─────────────────────────────
+            position_size = self.risk_manager.compute_position_size(
+                signal          = calibrated_signal,
                 regime_result   = regime_result,
-            ),
-            "correlation_surface": {"reduce_exposure": False},
-            "strategy_switching":  {"allocation_score": 0.70},
-            "market_impact":       {"feasible": exec_alpha.get("execution_quality", 0.5) > 0.40},
-            "capital_rotation":    {"rotation_alignment": 0.65},
-            "self_eval":           {"system_health": "ok"},
-            "feature_drift":       {"retrain_needed": False, "severe_drift": False},
-            "greeks_balancer":     {"convexity_exposure": options_features.get("iv_rank", 0.5)},
-        }
+                portfolio_value = self._portfolio_value,
+                current_price   = current_price,
+            )
 
-        # ── 9. Multi-Agent Council ────────────────────
-        council_result = self.council.deliberate(
-            agent_outputs   = agent_outputs,
-            symbol          = symbol,
-            proposed_action = calibrated_signal,
-        )
+            # ── 9. Agent Outputs ───────────────────────────
+            agent_outputs = {
+                "drawdown_guardian":  self._get_drawdown_status(),
+                "regime":             regime_result,
+                "signal":             calibrated_signal,
+                "exec_timing": {
+                    "vote": "execute"
+                    if exec_alpha.get("optimal_timing", {}).get("is_optimal_now")
+                    else "wait",
+                },
+                "risk": self.risk_manager.check_leverage_constraints(
+                    total_exposure  = self._get_total_exposure(),
+                    portfolio_value = self._portfolio_value,
+                    regime_result   = regime_result,
+                ),
+                "correlation_surface": {"reduce_exposure": False},
+                "strategy_switching":  {"allocation_score": 0.70},
+                "market_impact":       {
+                    "feasible": exec_alpha.get("execution_quality", 0.5) > 0.40
+                },
+                "capital_rotation":    {"rotation_alignment": 0.65},
+                "self_eval":           {"system_health": "ok"},
+                "feature_drift":       {"retrain_needed": False, "severe_drift": False},
+                "greeks_balancer":     {
+                    "convexity_exposure": features.get("iv_rank", 0.5)
+                },
+            }
 
-        # ── 10. Décision finale d'exécution ───────────
-        should_execute = (
-            council_result.get("council_approved", False) and
-            calibrated_signal.get("trade_action") in ("execute", "execute_strong") and
-            exec_alpha.get("execute_now", False) and
-            not self.settings.DRY_RUN is False  # Respecte dry_run
-        )
+            # ── 10. Council ────────────────────────────────
+            council_result = self.council.deliberate(
+                agent_outputs   = agent_outputs,
+                symbol          = symbol,
+                proposed_action = calibrated_signal,
+            )
 
-        return {
-            "symbol":         symbol,
-            "price":          current_price,
-            "signal":         calibrated_signal,
-            "raw_signal":     raw_signal,
-            "regime":         regime_result,
-            "features":       {k: round(v, 4) for k, v in features.items() if isinstance(v, float)},
-            "exec_alpha":     exec_alpha,
-            "position_size":  position_size,
-            "council":        council_result,
-            "should_execute": should_execute,
-            "returns_array":  returns_array,
-            "quote":          quote,
-            "options":        options_features,
-            "sentiment":      sentiment_score,
-            "analyst":        analyst_data,
-            "earnings":       earnings_data,
-            "timestamp":      datetime.datetime.utcnow().isoformat() + "Z",
-        }
+            should_execute = (
+                council_result.get("council_approved", False) and
+                calibrated_signal.get("trade_action") in ("execute", "execute_strong") and
+                exec_alpha.get("execute_now", False) and
+                not self.settings.DRY_RUN
+            )
+
+            return {
+                "symbol":        symbol,
+                "price":         current_price,
+                "signal":        calibrated_signal,
+                "raw_signal":    raw_signal,
+                "regime":        regime_result,
+                "features":      {
+                    k: round(v, 4)
+                    for k, v in features.items()
+                    if isinstance(v, (int, float))
+                },
+                "exec_alpha":    exec_alpha,
+                "position_size": position_size,
+                "council":       council_result,
+                "should_execute": should_execute,
+                "returns_array": returns_array,
+                "quote":         quote or {},
+                "options":       features,
+                "sentiment":     sentiment_score,
+                "analyst":       analyst_data,
+                "earnings":      earnings_data,
+                "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
+            }
+
+        except Exception as e:
+            logger.error(f"  ❌ {symbol}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+            return {"error": str(e), "symbol": symbol}
 
     # ════════════════════════════════════════════════
     # MACRO & RÉGIME GLOBAL
