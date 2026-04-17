@@ -698,6 +698,10 @@ const Terminal = (() => {
     _txt('nav-signals-count', Object.keys(sigs).length);
 
     _renderSignalsTable('signals-tbody', sigs, 0, true);
+    // New analytics charts
+    const regime = data.regime?.global?.probabilities || {};
+    Charts.renderSignalDistribution('signal-distribution-chart', sigs);
+    Charts.renderRegimeProbabilities('regime-prob-chart', regime);
   }
 
   function _renderSignalsTable(tbodyId, sigs, limit, showChart) {
@@ -853,6 +857,31 @@ const Terminal = (() => {
         </div>`;
       }).join('');
     }
+
+    // Quant metrics
+    const port    = data.portfolio || {};
+    const risk    = data.risk      || {};
+    const var95   = risk.var_metrics?.var_95;
+    const cvar95  = risk.var_metrics?.cvar_95;
+    const annVol  = risk.var_metrics?.portfolio_vol_annual;
+    const sharpe  = risk.var_metrics?.sharpe_ratio;
+    const avgCorr = risk.var_metrics?.avg_correlation;
+    const hurst   = port.hurst_exponent;
+
+    _txt('risk-var95',    var95   != null ? `${(var95  *100).toFixed(2)}%` : '--');
+    _txt('risk-cvar95',   cvar95  != null ? `${(cvar95 *100).toFixed(2)}%` : '--');
+    _txt('risk-annual-vol', annVol!= null ? `${(annVol *100).toFixed(1)}%` : '--');
+    _txt('risk-sharpe',   sharpe  != null ? sharpe.toFixed(2)              : '--');
+    _txt('risk-avg-corr', avgCorr != null ? avgCorr.toFixed(3)             : '--');
+    _txt('risk-hurst',    hurst   != null ? hurst.toFixed(3)               : '--');
+
+    // Sector exposure chart
+    const wts  = data.portfolio?.weights     || {};
+    const meta = window.WatchlistManager?.getSymbolMeta
+    ? Object.fromEntries(Object.keys(wts).map(s => [s, WatchlistManager.getSymbolMeta(s)]))
+    : {};
+    Charts.renderSectorExposure('sector-exposure-chart', wts, meta);
+    Charts.renderRollingMetrics('rolling-metrics-chart');
   }
 
   // ════════════════════════════════════════════════════════
@@ -970,6 +999,12 @@ const Terminal = (() => {
         Python backend continues generating signals regardless.
         </span>`;
     }
+
+    // Feature importance + regime detail
+    const sigs   = data.signals?.signals || {};
+    const regime = data.regime?.global?.probabilities || {};
+    Charts.renderFeatureImportance('feature-importance-chart', {}, sigs);
+    Charts.renderRegimeProbabilities('agent-regime-prob-chart', regime);
   }
 
   // ════════════════════════════════════════════════════════
@@ -999,6 +1034,8 @@ const Terminal = (() => {
         </div>`;
       }).join('');
     }
+
+    Charts.renderRollingMetrics('strategy-rolling-chart');
   }
 
   // ════════════════════════════════════════════════════════
@@ -1039,6 +1076,9 @@ const Terminal = (() => {
           <span class="tl-msg">${e.msg}</span>
         </div>`).join('');
     }
+
+    Charts.renderRollingMetrics('perf-rolling-chart');
+    Charts.renderSignalDistribution('perf-score-dist-chart', data.signals?.signals || {});
   }
 
   // ════════════════════════════════════════════════════════

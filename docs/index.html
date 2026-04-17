@@ -190,12 +190,15 @@
 
       <!-- Auto-Trading Active Banner -->
       <div class="info-banner" id="auto-trading-banner"
-           style="background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.25);margin-bottom:16px">
-        <i class="fa-solid fa-brain" style="color:var(--g)"></i>
+          style="background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.25);margin-bottom:16px">
+        <i class="fa-solid fa-robot" style="color:var(--g)"></i>
         <div>
-          <strong>Automated Trading Active</strong> — GitHub Actions runs the full ML pipeline every 5 min during market hours.
-          Orders execute automatically based on Council decisions — no browser required.
-          <span id="auto-last-cycle" style="margin-left:8px;font-size:11px;color:var(--txt4)">Last cycle: --</span>
+          <strong>Automated Trading Active</strong> — GitHub Actions runs the full ML pipeline
+          every 5 min during market hours. Orders execute automatically based on Council decisions
+          — no browser required.
+          <span id="auto-last-cycle" style="margin-left:8px;font-size:11px;color:var(--txt4)">
+            Last cycle: --
+          </span>
         </div>
       </div>
 
@@ -487,19 +490,76 @@
         <!-- Panel 0 -->
         <div class="chart-panel" id="chart-panel-0">
           <div class="cp-header">
+            <!-- Panel 0 — SPY selected -->
             <select class="select-sm" id="cp-sym-0">
-              <option value="SPY" selected>SPY</option>
-              <option value="QQQ">QQQ</option>
-              <option value="AAPL">AAPL</option>
-              <option value="NVDA">NVDA</option>
-              <option value="MSFT">MSFT</option>
-              <option value="GOOGL">GOOGL</option>
-              <option value="AMZN">AMZN</option>
-              <option value="META">META</option>
-              <option value="TSLA">TSLA</option>
-              <option value="JPM">JPM</option>
-              <option value="GS">GS</option>
-              <option value="IWM">IWM</option>
+              <optgroup label="ETFs">
+                <option value="SPY" selected>SPY</option>
+                <option value="QQQ">QQQ</option>
+                <option value="IWM">IWM</option>
+                <option value="DIA">DIA</option>
+                <option value="GLD">GLD</option>
+                <option value="TLT">TLT</option>
+                <option value="HYG">HYG</option>
+                <option value="SMH">SMH</option>
+                <option value="XLF">XLF</option>
+                <option value="XLK">XLK</option>
+                <option value="XLE">XLE</option>
+              </optgroup>
+              <optgroup label="Mega Cap Tech">
+                <option value="AAPL">AAPL</option>
+                <option value="MSFT">MSFT</option>
+                <option value="NVDA">NVDA</option>
+                <option value="GOOGL">GOOGL</option>
+                <option value="AMZN">AMZN</option>
+                <option value="META">META</option>
+                <option value="TSLA">TSLA</option>
+                <option value="AMD">AMD</option>
+                <option value="INTC">INTC</option>
+                <option value="QCOM">QCOM</option>
+                <option value="MU">MU</option>
+                <option value="CRM">CRM</option>
+                <option value="ADBE">ADBE</option>
+                <option value="NOW">NOW</option>
+              </optgroup>
+              <optgroup label="Financials">
+                <option value="JPM">JPM</option>
+                <option value="GS">GS</option>
+                <option value="BAC">BAC</option>
+                <option value="MS">MS</option>
+                <option value="V">V</option>
+                <option value="MA">MA</option>
+                <option value="BLK">BLK</option>
+                <option value="COIN">COIN</option>
+              </optgroup>
+              <optgroup label="Healthcare">
+                <option value="UNH">UNH</option>
+                <option value="LLY">LLY</option>
+                <option value="JNJ">JNJ</option>
+                <option value="ABBV">ABBV</option>
+                <option value="MRK">MRK</option>
+              </optgroup>
+              <optgroup label="Industrials &amp; Energy">
+                <option value="XOM">XOM</option>
+                <option value="CVX">CVX</option>
+                <option value="BA">BA</option>
+                <option value="CAT">CAT</option>
+                <option value="DE">DE</option>
+                <option value="LMT">LMT</option>
+              </optgroup>
+              <optgroup label="Consumer">
+                <option value="AMZN">AMZN</option>
+                <option value="HD">HD</option>
+                <option value="MCD">MCD</option>
+                <option value="WMT">WMT</option>
+                <option value="COST">COST</option>
+                <option value="NKE">NKE</option>
+              </optgroup>
+              <optgroup label="Leveraged ETF">
+                <option value="TQQQ">TQQQ</option>
+                <option value="SOXL">SOXL</option>
+                <option value="SPXL">SPXL</option>
+                <option value="SQQQ">SQQQ</option>
+              </optgroup>
             </select>
             <div class="cp-itabs" data-panel="0">
               <button class="cp-itab" data-iv="1h">1H</button>
@@ -512,19 +572,76 @@
         <!-- Panel 1 -->
         <div class="chart-panel" id="chart-panel-1">
           <div class="cp-header">
+            <!-- Panel 0 — SPY selected -->
             <select class="select-sm" id="cp-sym-1">
-              <option value="SPY">SPY</option>
-              <option value="QQQ" selected>QQQ</option>
-              <option value="AAPL">AAPL</option>
-              <option value="NVDA">NVDA</option>
-              <option value="MSFT">MSFT</option>
-              <option value="GOOGL">GOOGL</option>
-              <option value="AMZN">AMZN</option>
-              <option value="META">META</option>
-              <option value="TSLA">TSLA</option>
-              <option value="JPM">JPM</option>
-              <option value="GS">GS</option>
-              <option value="IWM">IWM</option>
+              <optgroup label="ETFs">
+                <option value="SPY" >SPY</option>
+                <option value="QQQ" selected>QQQ</option>
+                <option value="IWM">IWM</option>
+                <option value="DIA">DIA</option>
+                <option value="GLD">GLD</option>
+                <option value="TLT">TLT</option>
+                <option value="HYG">HYG</option>
+                <option value="SMH">SMH</option>
+                <option value="XLF">XLF</option>
+                <option value="XLK">XLK</option>
+                <option value="XLE">XLE</option>
+              </optgroup>
+              <optgroup label="Mega Cap Tech">
+                <option value="AAPL">AAPL</option>
+                <option value="MSFT">MSFT</option>
+                <option value="NVDA">NVDA</option>
+                <option value="GOOGL">GOOGL</option>
+                <option value="AMZN">AMZN</option>
+                <option value="META">META</option>
+                <option value="TSLA">TSLA</option>
+                <option value="AMD">AMD</option>
+                <option value="INTC">INTC</option>
+                <option value="QCOM">QCOM</option>
+                <option value="MU">MU</option>
+                <option value="CRM">CRM</option>
+                <option value="ADBE">ADBE</option>
+                <option value="NOW">NOW</option>
+              </optgroup>
+              <optgroup label="Financials">
+                <option value="JPM">JPM</option>
+                <option value="GS">GS</option>
+                <option value="BAC">BAC</option>
+                <option value="MS">MS</option>
+                <option value="V">V</option>
+                <option value="MA">MA</option>
+                <option value="BLK">BLK</option>
+                <option value="COIN">COIN</option>
+              </optgroup>
+              <optgroup label="Healthcare">
+                <option value="UNH">UNH</option>
+                <option value="LLY">LLY</option>
+                <option value="JNJ">JNJ</option>
+                <option value="ABBV">ABBV</option>
+                <option value="MRK">MRK</option>
+              </optgroup>
+              <optgroup label="Industrials &amp; Energy">
+                <option value="XOM">XOM</option>
+                <option value="CVX">CVX</option>
+                <option value="BA">BA</option>
+                <option value="CAT">CAT</option>
+                <option value="DE">DE</option>
+                <option value="LMT">LMT</option>
+              </optgroup>
+              <optgroup label="Consumer">
+                <option value="AMZN">AMZN</option>
+                <option value="HD">HD</option>
+                <option value="MCD">MCD</option>
+                <option value="WMT">WMT</option>
+                <option value="COST">COST</option>
+                <option value="NKE">NKE</option>
+              </optgroup>
+              <optgroup label="Leveraged ETF">
+                <option value="TQQQ">TQQQ</option>
+                <option value="SOXL">SOXL</option>
+                <option value="SPXL">SPXL</option>
+                <option value="SQQQ">SQQQ</option>
+              </optgroup>
             </select>
             <div class="cp-itabs" data-panel="1">
               <button class="cp-itab" data-iv="1h">1H</button>
@@ -537,19 +654,76 @@
         <!-- Panel 2 -->
         <div class="chart-panel" id="chart-panel-2">
           <div class="cp-header">
+            <!-- Panel 0 — SPY selected -->
             <select class="select-sm" id="cp-sym-2">
-              <option value="SPY">SPY</option>
-              <option value="QQQ">QQQ</option>
-              <option value="AAPL" selected>AAPL</option>
-              <option value="NVDA">NVDA</option>
-              <option value="MSFT">MSFT</option>
-              <option value="GOOGL">GOOGL</option>
-              <option value="AMZN">AMZN</option>
-              <option value="META">META</option>
-              <option value="TSLA">TSLA</option>
-              <option value="JPM">JPM</option>
-              <option value="GS">GS</option>
-              <option value="IWM">IWM</option>
+              <optgroup label="ETFs">
+                <option value="SPY">SPY</option>
+                <option value="QQQ">QQQ</option>
+                <option value="IWM">IWM</option>
+                <option value="DIA">DIA</option>
+                <option value="GLD">GLD</option>
+                <option value="TLT">TLT</option>
+                <option value="HYG">HYG</option>
+                <option value="SMH">SMH</option>
+                <option value="XLF">XLF</option>
+                <option value="XLK">XLK</option>
+                <option value="XLE">XLE</option>
+              </optgroup>
+              <optgroup label="Mega Cap Tech">
+                <option value="AAPL" selected>AAPL</option>
+                <option value="MSFT">MSFT</option>
+                <option value="NVDA">NVDA</option>
+                <option value="GOOGL">GOOGL</option>
+                <option value="AMZN">AMZN</option>
+                <option value="META">META</option>
+                <option value="TSLA">TSLA</option>
+                <option value="AMD">AMD</option>
+                <option value="INTC">INTC</option>
+                <option value="QCOM">QCOM</option>
+                <option value="MU">MU</option>
+                <option value="CRM">CRM</option>
+                <option value="ADBE">ADBE</option>
+                <option value="NOW">NOW</option>
+              </optgroup>
+              <optgroup label="Financials">
+                <option value="JPM">JPM</option>
+                <option value="GS">GS</option>
+                <option value="BAC">BAC</option>
+                <option value="MS">MS</option>
+                <option value="V">V</option>
+                <option value="MA">MA</option>
+                <option value="BLK">BLK</option>
+                <option value="COIN">COIN</option>
+              </optgroup>
+              <optgroup label="Healthcare">
+                <option value="UNH">UNH</option>
+                <option value="LLY">LLY</option>
+                <option value="JNJ">JNJ</option>
+                <option value="ABBV">ABBV</option>
+                <option value="MRK">MRK</option>
+              </optgroup>
+              <optgroup label="Industrials &amp; Energy">
+                <option value="XOM">XOM</option>
+                <option value="CVX">CVX</option>
+                <option value="BA">BA</option>
+                <option value="CAT">CAT</option>
+                <option value="DE">DE</option>
+                <option value="LMT">LMT</option>
+              </optgroup>
+              <optgroup label="Consumer">
+                <option value="AMZN">AMZN</option>
+                <option value="HD">HD</option>
+                <option value="MCD">MCD</option>
+                <option value="WMT">WMT</option>
+                <option value="COST">COST</option>
+                <option value="NKE">NKE</option>
+              </optgroup>
+              <optgroup label="Leveraged ETF">
+                <option value="TQQQ">TQQQ</option>
+                <option value="SOXL">SOXL</option>
+                <option value="SPXL">SPXL</option>
+                <option value="SQQQ">SQQQ</option>
+              </optgroup>
             </select>
             <div class="cp-itabs" data-panel="2">
               <button class="cp-itab" data-iv="1h">1H</button>
@@ -562,19 +736,76 @@
         <!-- Panel 3 -->
         <div class="chart-panel" id="chart-panel-3">
           <div class="cp-header">
+            <!-- Panel 0 — SPY selected -->
             <select class="select-sm" id="cp-sym-3">
-              <option value="SPY">SPY</option>
-              <option value="QQQ">QQQ</option>
-              <option value="AAPL">AAPL</option>
-              <option value="NVDA" selected>NVDA</option>
-              <option value="MSFT">MSFT</option>
-              <option value="GOOGL">GOOGL</option>
-              <option value="AMZN">AMZN</option>
-              <option value="META">META</option>
-              <option value="TSLA">TSLA</option>
-              <option value="JPM">JPM</option>
-              <option value="GS">GS</option>
-              <option value="IWM">IWM</option>
+              <optgroup label="ETFs">
+                <option value="SPY">SPY</option>
+                <option value="QQQ">QQQ</option>
+                <option value="IWM">IWM</option>
+                <option value="DIA">DIA</option>
+                <option value="GLD">GLD</option>
+                <option value="TLT">TLT</option>
+                <option value="HYG">HYG</option>
+                <option value="SMH">SMH</option>
+                <option value="XLF">XLF</option>
+                <option value="XLK">XLK</option>
+                <option value="XLE">XLE</option>
+              </optgroup>
+              <optgroup label="Mega Cap Tech">
+                <option value="AAPL">AAPL</option>
+                <option value="MSFT">MSFT</option>
+                <option value="NVDA" selected>NVDA</option>
+                <option value="GOOGL">GOOGL</option>
+                <option value="AMZN">AMZN</option>
+                <option value="META">META</option>
+                <option value="TSLA">TSLA</option>
+                <option value="AMD">AMD</option>
+                <option value="INTC">INTC</option>
+                <option value="QCOM">QCOM</option>
+                <option value="MU">MU</option>
+                <option value="CRM">CRM</option>
+                <option value="ADBE">ADBE</option>
+                <option value="NOW">NOW</option>
+              </optgroup>
+              <optgroup label="Financials">
+                <option value="JPM">JPM</option>
+                <option value="GS">GS</option>
+                <option value="BAC">BAC</option>
+                <option value="MS">MS</option>
+                <option value="V">V</option>
+                <option value="MA">MA</option>
+                <option value="BLK">BLK</option>
+                <option value="COIN">COIN</option>
+              </optgroup>
+              <optgroup label="Healthcare">
+                <option value="UNH">UNH</option>
+                <option value="LLY">LLY</option>
+                <option value="JNJ">JNJ</option>
+                <option value="ABBV">ABBV</option>
+                <option value="MRK">MRK</option>
+              </optgroup>
+              <optgroup label="Industrials &amp; Energy">
+                <option value="XOM">XOM</option>
+                <option value="CVX">CVX</option>
+                <option value="BA">BA</option>
+                <option value="CAT">CAT</option>
+                <option value="DE">DE</option>
+                <option value="LMT">LMT</option>
+              </optgroup>
+              <optgroup label="Consumer">
+                <option value="AMZN">AMZN</option>
+                <option value="HD">HD</option>
+                <option value="MCD">MCD</option>
+                <option value="WMT">WMT</option>
+                <option value="COST">COST</option>
+                <option value="NKE">NKE</option>
+              </optgroup>
+              <optgroup label="Leveraged ETF">
+                <option value="TQQQ">TQQQ</option>
+                <option value="SOXL">SOXL</option>
+                <option value="SPXL">SPXL</option>
+                <option value="SQQQ">SQQQ</option>
+              </optgroup>
             </select>
             <div class="cp-itabs" data-panel="3">
               <button class="cp-itab" data-iv="1h">1H</button>
@@ -616,6 +847,38 @@
           <div class="kpi-lbl">To Execute</div>
         </div>
       </div>
+
+      <!-- ── Signal Analytics Charts ───────────────────────────── -->
+      <div class="signals-analytics-grid">
+
+        <!-- Score Distribution Histogram -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <i class="fa-solid fa-chart-bar"></i> Score Distribution
+            <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+              All signals this cycle
+            </span>
+          </div>
+          <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+            <canvas id="signal-distribution-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Regime Probability -->
+        <div class="card" style="margin-bottom:0">
+          <div class="card-header">
+            <i class="fa-solid fa-crosshairs"></i> Regime Probabilities
+            <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+              Current detection
+            </span>
+          </div>
+          <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+            <canvas id="regime-prob-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
       <div class="card">
         <div class="table-wrap">
           <table class="data-table">
@@ -756,6 +1019,88 @@
         </div>
         <canvas id="drawdown-chart" height="160"></canvas>
       </div>
+
+      <!-- ── Quantitative Risk Metrics Grid ───────────────────────── -->
+      <div class="risk-metrics-grid">
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-gauge" style="color:var(--r)"></i> VaR 95%
+          </div>
+          <div class="mc-val mono" id="risk-var95">--</div>
+          <div class="mc-sub">1-day historical</div>
+        </div>
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-gauge-high" style="color:var(--r)"></i> CVaR 95%
+          </div>
+          <div class="mc-val mono" id="risk-cvar95">--</div>
+          <div class="mc-sub">Expected shortfall</div>
+        </div>
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-chart-area" style="color:var(--b1)"></i> Portfolio Vol
+          </div>
+          <div class="mc-val mono" id="risk-annual-vol">--</div>
+          <div class="mc-sub">Annualized realized</div>
+        </div>
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-arrow-trend-up" style="color:var(--g)"></i> Sharpe Ratio
+          </div>
+          <div class="mc-val mono" id="risk-sharpe">--</div>
+          <div class="mc-sub">Ex-post annualized</div>
+        </div>
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-network-wired" style="color:var(--b2)"></i> Avg Correlation
+          </div>
+          <div class="mc-val mono" id="risk-avg-corr">--</div>
+          <div class="mc-sub">Portfolio positions</div>
+        </div>
+
+        <div class="metric-card-sm">
+          <div class="mc-lbl">
+            <i class="fa-solid fa-wave-square" style="color:var(--c)"></i> Hurst Exp. (SPY)
+          </div>
+          <div class="mc-val mono" id="risk-hurst">--</div>
+          <div class="mc-sub">&gt;0.5 trend | &lt;0.5 mean-rev</div>
+        </div>
+
+      </div>
+
+      <!-- ── Sector Exposure + Rolling Performance ────────────────── -->
+      <div class="grid-2">
+
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-industry"></i> Sector Exposure
+            <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+              Portfolio weights by sector
+            </span>
+          </div>
+          <div class="sector-exposure-container">
+            <canvas id="sector-exposure-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-chart-line"></i> Rolling Sharpe &amp; Win Rate
+            <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+              Last 30 cycles
+            </span>
+          </div>
+          <div class="rolling-metrics-container">
+            <canvas id="rolling-metrics-chart"></canvas>
+          </div>
+        </div>
+
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════
@@ -824,6 +1169,37 @@
           <div class="llm-fallback-box" id="llm-fallback-info" style="display:none"></div>
         </div>
       </div>
+
+      <!-- ── ML Feature Importance ─────────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-sliders"></i> ML Feature Importance
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            Top predictive features — current cycle
+          </span>
+          <button class="btn-icon-sm" id="btn-refresh-features" title="Refresh">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+        <div class="feature-importance-container">
+          <canvas id="feature-importance-chart"></canvas>
+        </div>
+        <div style="font-size:10px;color:var(--txt4);text-align:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--bord)">
+          <i class="fa-solid fa-circle-info"></i>
+          Importance computed from absolute feature values across all signal cycles.
+          Higher = more predictive power in current regime.
+        </div>
+      </div>
+
+      <!-- ── Regime Probability Detail ─────────────────────────── -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-crosshairs"></i> Regime Probability Detail
+        </div>
+        <div style="height:160px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="agent-regime-prob-chart"></canvas>
+        </div>
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════
@@ -850,8 +1226,26 @@
       <div class="card">
         <div class="card-header">
           <i class="fa-solid fa-chart-bar"></i> Performance by Strategy
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            Sharpe ratio (left) · Return % (right)
+          </span>
         </div>
-        <canvas id="strategy-perf-chart" height="180"></canvas>
+        <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="strategy-perf-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Rolling allocation chart -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-rotate"></i> Strategy Rolling Metrics
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            Sharpe &amp; Win Rate — last 30 cycles
+          </span>
+        </div>
+        <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="strategy-rolling-chart"></canvas>
+        </div>
       </div>
     </section>
 
@@ -872,9 +1266,10 @@
         <i class="fa-solid fa-circle-info"></i>
         <div>
           <strong>Automated Trading — No Browser Required</strong><br>
-          GitHub Actions runs <code>trading_loop.py</code> every 5 min. When Council = <strong>EXECUTE</strong>
-          and <code>DRY_RUN=false</code>, <code>IBKRExecutor</code> places paper orders automatically.
-          To activate: set secret <code>DRY_RUN=false</code> or change the workflow default.
+          GitHub Actions runs <code>trading_loop.py</code> every 5 min.
+          When Council = <strong>EXECUTE</strong> and <code>DRY_RUN=false</code>,
+          <code>IBKRExecutor</code> places paper orders automatically.
+          To activate: set secret <code>DRY_RUN=false</code> in workflow.
           Orders appear in the Execution Log below after each cycle.
         </div>
       </div>
@@ -1052,8 +1447,39 @@
       <div class="card">
         <div class="card-header">
           <i class="fa-solid fa-chart-bar"></i> Strategy Sharpe Ratio
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            Sharpe (left) · Return % (right)
+          </span>
         </div>
-        <canvas id="strategy-sharpe-chart" height="180"></canvas>
+        <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="strategy-sharpe-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Rolling Sharpe over cycles -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-rotate"></i> Rolling Sharpe &amp; Win Rate
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            30-cycle rolling window
+          </span>
+        </div>
+        <div style="height:150px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="perf-rolling-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Signal distribution across universe -->
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-bar"></i> Signal Score Distribution
+          <span style="font-size:10px;color:var(--txt4);font-weight:400;margin-left:auto">
+            Distribution of ML scores — all symbols
+          </span>
+        </div>
+        <div style="height:140px;position:relative;overflow:hidden;contain:strict">
+          <canvas id="perf-score-dist-chart"></canvas>
+        </div>
       </div>
       <div class="card">
         <div class="card-header">
