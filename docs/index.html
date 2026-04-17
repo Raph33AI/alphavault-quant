@@ -81,6 +81,12 @@
       <li class="nav-item" onclick="Dashboard.showSection('performance')" data-sec="performance">
         <span class="nav-icon">📈</span><span>Performance</span>
       </li>
+      <li class="nav-item" onclick="Dashboard.showSection('terminal')" data-sec="terminal">
+        <span class="nav-icon">🖐</span><span>Terminal</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('logs')" data-sec="logs">
+        <span class="nav-icon">🐛</span><span>Debug Logs</span>
+      </li>
     </ul>
   </nav>
 
@@ -465,6 +471,214 @@
       </div>
     </section>
 
+    <!-- ════════════════════════════════════════════════
+         SECTION : TRADING TERMINAL (Manuel)
+    ════════════════════════════════════════════════ -->
+    <section id="sec-terminal" class="section">
+      <div class="section-header">
+        <h2>🖐 Trading Terminal</h2>
+        <span class="section-sub">Ordres manuels via GitHub Actions → IBKR Paper</span>
+      </div>
+
+      <!-- IBKR Status -->
+      <div class="card ibkr-status-card" id="ibkr-status-card">
+        <div class="ibkr-status-row">
+          <div class="ibkr-dot" id="ibkr-dot"></div>
+          <span id="ibkr-status-label">Vérification IBKR...</span>
+          <span id="ibkr-mode-badge" class="mode-badge paper">PAPER</span>
+          <span id="ibkr-latency" style="font-size:12px;color:#64748b;margin-left:auto"></span>
+        </div>
+      </div>
+
+      <!-- PAT Config -->
+      <div class="card" id="pat-config-card">
+        <div class="card-header">
+          <span>🔑 GitHub PAT (requis pour déclencher les workflows)</span>
+          <button class="btn-small" onclick="TradingTerminal.togglePAT()">
+            <span id="pat-visibility-icon">👁</span>
+          </button>
+        </div>
+        <div class="pat-input-row">
+          <input type="password" id="gh-pat-input"
+                 placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                 style="flex:1"
+                 oninput="TradingTerminal.savePAT(this.value)">
+          <div class="pat-status" id="pat-status">Non configuré</div>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-top:8px">
+          💡 Créez un PAT sur <a href="https://github.com/settings/tokens" target="_blank"
+          style="color:#3b82f6">github.com/settings/tokens</a>
+          avec le scope <code>workflow</code>. Stocké localement (localStorage).
+        </div>
+      </div>
+
+      <!-- Formulaire ordre -->
+      <div class="card">
+        <div class="card-header">
+          <span>📋 Nouvel Ordre</span>
+          <div class="dry-run-toggle">
+            <input type="checkbox" id="terminal-dry-run" checked onchange="TradingTerminal.updateDryRun()">
+            <label for="terminal-dry-run">Dry Run</label>
+          </div>
+        </div>
+
+        <!-- Quick symbols -->
+        <div class="quick-symbols" id="quick-symbols">
+          <span style="font-size:12px;color:#64748b;margin-right:8px">Rapide:</span>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('SPY')">SPY</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('QQQ')">QQQ</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('AAPL')">AAPL</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('NVDA')">NVDA</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('MSFT')">MSFT</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('TSLA')">TSLA</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('AMZN')">AMZN</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('GOOGL')">GOOGL</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('META')">META</button>
+          <button class="sym-btn" onclick="TradingTerminal.setSymbol('JPM')">JPM</button>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="order-form-grid">
+          <div class="form-group">
+            <label>Symbole</label>
+            <input type="text" id="order-symbol" placeholder="SPY" value="SPY"
+                   oninput="this.value = this.value.toUpperCase()">
+          </div>
+          <div class="form-group">
+            <label>Quantité</label>
+            <input type="number" id="order-qty" value="1" min="1" max="10000" step="1">
+          </div>
+          <div class="form-group">
+            <label>Type d'ordre</label>
+            <select id="order-type" onchange="TradingTerminal.onOrderTypeChange()">
+              <option value="MKT">Market (MKT)</option>
+              <option value="LMT">Limit (LMT)</option>
+              <option value="STP">Stop (STP)</option>
+              <option value="STPLMT">Stop-Limit (STPLMT)</option>
+            </select>
+          </div>
+          <div class="form-group" id="limit-price-group" style="display:none">
+            <label>Prix Limite ($)</label>
+            <input type="number" id="order-limit-price" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group" id="stop-price-group" style="display:none">
+            <label>Prix Stop ($)</label>
+            <input type="number" id="order-stop-price" placeholder="0.00" step="0.01">
+          </div>
+          <div class="form-group" style="grid-column:1/-1">
+            <label>Raison / Note (optionnel)</label>
+            <input type="text" id="order-reason" placeholder="Ex: Breakout confirmation sur RSI...">
+          </div>
+        </div>
+
+        <!-- Boutons BUY / SELL -->
+        <div class="order-action-row">
+          <button class="btn-buy" id="btn-buy" onclick="TradingTerminal.submitOrder('BUY')">
+            ▲ BUY
+          </button>
+          <button class="btn-sell" id="btn-sell" onclick="TradingTerminal.submitOrder('SELL')">
+            ▼ SELL
+          </button>
+        </div>
+
+        <!-- Barre de statut ordre -->
+        <div class="order-status-bar" id="order-status-bar" style="display:none">
+          <div class="order-status-inner" id="order-status-inner">
+            <div class="spinner" id="order-spinner"></div>
+            <span id="order-status-msg">Envoi en cours...</span>
+          </div>
+          <a id="order-run-link" href="#" target="_blank"
+             style="font-size:11px;color:#3b82f6;display:none">
+            Voir le workflow →
+          </a>
+        </div>
+      </div>
+
+      <!-- Historique ordres manuels -->
+      <div class="card">
+        <div class="card-header">
+          <span>📜 Historique Ordres Manuels</span>
+          <button class="btn-small" onclick="TradingTerminal.refresh()">🔄</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Heure</th><th>Symbole</th><th>Action</th>
+                <th>Qty</th><th>Type</th><th>Prix</th>
+                <th>Status</th><th>Dry Run</th>
+              </tr>
+            </thead>
+            <tbody id="manual-orders-tbody">
+              <tr><td colspan="8" class="loading-row">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : DEBUG LOGS
+    ════════════════════════════════════════════════ -->
+    <section id="sec-logs" class="section">
+      <div class="section-header">
+        <h2>🐛 Debug Logs</h2>
+        <span class="section-sub" id="logs-count">0 entrées</span>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card logs-filter-bar">
+        <input type="text" id="logs-search"
+               placeholder="🔍 Filtrer (symbole, message, module...)"
+               oninput="Dashboard.filterLogs()"
+               style="flex:1">
+        <select id="logs-level-filter" onchange="Dashboard.filterLogs()">
+          <option value="">Tous les niveaux</option>
+          <option value="DEBUG">DEBUG</option>
+          <option value="INFO">INFO</option>
+          <option value="SIGNAL">SIGNAL</option>
+          <option value="REGIME">REGIME</option>
+          <option value="COUNCIL">COUNCIL</option>
+          <option value="RISK">RISK</option>
+          <option value="ORDER_OK">ORDER ✅</option>
+          <option value="ORDER_ERR">ORDER ❌</option>
+          <option value="WARNING">WARNING</option>
+          <option value="ERROR">ERROR</option>
+        </select>
+        <select id="logs-symbol-filter" onchange="Dashboard.filterLogs()">
+          <option value="">Tous symboles</option>
+        </select>
+        <button class="btn-small" onclick="Dashboard.clearLogs()">🗑 Vider</button>
+        <button class="btn-small" onclick="Dashboard.exportLogs()">⬇ Export</button>
+      </div>
+
+      <!-- KPI logs -->
+      <div class="kpi-row" id="logs-kpi-row">
+        <div class="kpi-card"><div class="kpi-val" id="log-kpi-total">0</div><div class="kpi-lbl">Total</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="log-kpi-signals">0</div><div class="kpi-lbl">Signals</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="log-kpi-orders">0</div><div class="kpi-lbl">Ordres</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="log-kpi-errors">0</div><div class="kpi-lbl">Erreurs</div></div>
+      </div>
+
+      <!-- Log viewer -->
+      <div class="card">
+        <div class="card-header">
+          <span>📋 Journal</span>
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px">
+            <input type="checkbox" id="logs-auto-scroll" checked> Auto-scroll
+          </label>
+        </div>
+        <div class="log-viewer" id="log-viewer">
+          <div class="log-entry info">
+            <span class="log-ts">--:--:--</span>
+            <span class="log-lvl info">INFO</span>
+            <span class="log-sym">SYSTEM</span>
+            <span class="log-msg">Chargement des logs...</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 </div>
 
@@ -475,6 +689,7 @@
     <script src="assets/js/charts.js"></script>
     <!-- 3. Dashboard controller (définit window.Dashboard) -->
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/trading-terminal.js"></script>
 
     <!-- ✅ Vérification au chargement -->
     <script>

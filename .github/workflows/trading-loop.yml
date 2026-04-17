@@ -343,6 +343,181 @@ jobs:
         timeout-minutes: 8
 
       # ════════════════════════════════════════════════════════
+      # ✅ NOUVEAU — Génération debug log JSON depuis les signals
+      # ════════════════════════════════════════════════════════
+      - name: 🐛 Generate Debug Snapshot
+        if: always()
+        run: |
+          python3 << 'EOF'
+          import json, os, datetime
+          from pathlib import Path
+
+          signals_dir = Path('signals')
+          out_dir     = Path('docs/signals')
+          out_dir.mkdir(parents=True, exist_ok=True)
+
+          ts  = datetime.datetime.utcnow().isoformat()
+          run = os.environ.get('GITHUB_RUN_NUMBER', '?')
+          sid = os.environ.get('GITHUB_RUN_ID', '')
+          srv = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
+          rep = os.environ.get('GITHUB_REPOSITORY', '')
+
+          # Charge tous les JSON signals
+          files_data = {}
+          for f in signals_dir.glob('*.json'):
+              try:
+                  with open(f) as fp:
+                      files_data[f.name] = json.load(fp)
+              except Exception as e:
+                  files_data[f.name] = {'error': str(e)}
+
+          # Charge debug_log existant
+          debug_path = out_dir / 'debug_log.json'
+          existing_logs = []
+          if debug_path.exists():
+              try:
+                  existing_logs = json.loads(debug_path.read_text()).get('logs', [])
+              except Exception:
+                  pass
+
+          # Génère entrées debug pour ce cycle
+          new_entries = []
+
+          # Entrée globale du cycle
+          new_entries.append({
+              'ts':      ts,
+              'level':   'INFO',
+              'module':  'trading_loop',
+              'symbol':  'GLOBAL',
+              'message': f'Cycle #{run} terminé | {len(files_data)} fichiers signals',
+              'details': {
+                  'run_number': run,
+                  'run_url':    f'{srv}/{rep}/actions/runs/{sid}',
+                  'files':      list(files_data.keys()),
+              },
+              'run_id': f'run_{run}'
+          })
+
+          # Entrée par signal
+          signals = files_data.get('current_signals.json', {}).get('signals', {})
+          for sym, sig in signals.items():
+              new_entries.append({
+                  'ts':      ts,
+                  'level':   'SIGNAL',
+                  'module':  'signal_engine',
+                  'symbol':  sym,
+                  'message': (
+                      f"{sig.get('direction','?').upper()} | "
+                      f"score={float(sig.get('final_score',0)):.3f} | "
+                      f"council={sig.get('council','?')}"
+                  ),
+                  'details': sig,
+                  'run_id':  f'run_{run}'
+              })
+
+          # Régime global
+          regime = files_data.get('regime.json', {}).get('global', {})
+          if regime:
+              new_entries.append({
+                  'ts':      ts,
+                  'level':   'REGIME',
+                  'module':  'regime_model',
+                  'symbol':  'GLOBAL',
+                  'message': (
+                      f"Régime: {regime.get('regime_label','?')} | "
+                      f"score={float(regime.get('regime_score',0)):+.2f} | "
+                      f"conf={float(regime.get('confidence',0)):.1%}"
+                  ),
+                  'details': regime,
+                  'run_id':  f'run_{run}'
+              })
+
+          # Risk metrics
+          risk = files_data.get('risk_metrics.json', {})
+          dd = risk.get('drawdown', {})
+          lv = risk.get('leverage', {})
+          if dd or lv:
+              new_entries.append({
+                  'ts':      ts,
+                  'level':   'RISK',
+                  'module':  'risk_manager',
+                  'symbol':  'GLOBAL',
+                  'message': (
+                      f"DD={float(dd.get('current_drawdown',0))*100:.2f}% | "
+                      f"Lever={float(lv.get('current_leverage',0)):.2f}x | "
+                      f"Halt={dd.get('halt_active',False)}"
+                  ),
+                  'details': risk,
+                  'run_id':  f'run_{run}'
+              })
+
+          # Merge et sauvegarde
+          all_logs = existing_logs + new_entries
+          all_logs = all_logs[-500:]   # Garde 500 max
+
+          debug_path.write_text(json.dumps({
+              'timestamp': ts,
+              'run_id':    f'run_{run}',
+              'total':     len(all_logs),
+              'logs':      all_logs
+          }, indent=2, default=str))
+
+          print(f"✅ debug_log.json mis à jour | {len(new_entries)} nouvelles entrées | {len(all_logs)} total")
+          EOF
+
+      # ════════════════════════════════════════════════════════
+      # ✅ NOUVEAU — Status IBKR (ping uniquement, pas d'ordre)
+      # ════════════════════════════════════════════════════════
+      - name: 🔌 IBKR Status Check
+        if: always()
+        env:
+          IBKR_HOST:      ${{ secrets.IBKR_HOST }}
+          IBKR_PORT:      ${{ secrets.IBKR_PORT }}
+          IBKR_CLIENT_ID: ${{ secrets.IBKR_CLIENT_ID }}
+          IBKR_ACCOUNT:   ${{ secrets.IBKR_ACCOUNT }}
+        run: |
+          python3 << 'EOF'
+          import json, os, socket, datetime
+          from pathlib import Path
+
+          host     = os.environ.get('IBKR_HOST', '')
+          port     = int(os.environ.get('IBKR_PORT', '4002'))
+          account  = os.environ.get('IBKR_ACCOUNT', '')
+          ts       = datetime.datetime.utcnow().isoformat()
+
+          status = {
+              'timestamp': ts,
+              'host':      host,
+              'port':      port,
+              'account':   account,
+              'reachable': False,
+              'latency_ms': None,
+              'mode':      'paper' if port in (4002, 7497) else 'live',
+          }
+
+          if host:
+              try:
+                  import time
+                  t0 = time.time()
+                  with socket.create_connection((host, port), timeout=5):
+                      latency = round((time.time() - t0) * 1000, 1)
+                      status['reachable']  = True
+                      status['latency_ms'] = latency
+                  print(f"✅ IBKR Gateway reachable | {host}:{port} | {latency}ms")
+              except Exception as e:
+                  print(f"⚠ IBKR Gateway not reachable: {host}:{port} | {e}")
+                  status['error'] = str(e)
+          else:
+              print("ℹ IBKR_HOST non configuré — skip")
+              status['error'] = 'IBKR_HOST not set'
+
+          out = Path('docs/signals/ibkr_status.json')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text(json.dumps(status, indent=2))
+          print(f"💾 ibkr_status.json sauvegardé")
+          EOF
+
+      # ════════════════════════════════════════════════════════
       # ✅ NOUVEAU — Copie des signaux vers docs/signals/
       # GitHub Pages sert depuis docs/ donc les JSON doivent
       # être dans docs/signals/ pour être accessibles via URL

@@ -1,0 +1,223 @@
+name: 🖐 Manuel Trade — AlphaVault Quant
+
+on:
+  workflow_dispatch:
+    inputs:
+      symbol:
+        description: 'Symbole (ex: AAPL, SPY, QQQ)'
+        required: true
+        default: 'SPY'
+        type: string
+      action:
+        description: 'Direction'
+        required: true
+        default: 'BUY'
+        type: choice
+        options:
+          - BUY
+          - SELL
+      quantity:
+        description: 'Quantité (nb de parts)'
+        required: true
+        default: '1'
+        type: string
+      order_type:
+        description: 'Type d ordre'
+        required: true
+        default: 'MKT'
+        type: choice
+        options:
+          - MKT
+          - LMT
+          - STP
+          - STPLMT
+      limit_price:
+        description: 'Prix limite (LMT/STPLMT uniquement)'
+        required: false
+        default: ''
+        type: string
+      stop_price:
+        description: 'Prix stop (STP/STPLMT uniquement)'
+        required: false
+        default: ''
+        type: string
+      dry_run:
+        description: 'Dry Run (simulation)'
+        required: false
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      reason:
+        description: 'Raison / note (optionnel)'
+        required: false
+        default: 'Manual order from dashboard'
+        type: string
+
+jobs:
+  manual-trade:
+    name: 🖐 Exécution Ordre Manuel
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: 📦 Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel --quiet
+          pip install -r requirements.txt --timeout 120 --retries 3 --quiet
+          echo "✅ Dépendances installées"
+
+      # ── Validation paramètres ────────────────────────────
+      - name: 🔍 Validate Parameters
+        run: |
+          python3 << 'EOF'
+          import sys
+
+          symbol = "${{ github.event.inputs.symbol }}".upper().strip()
+          action = "${{ github.event.inputs.action }}".upper()
+          qty    = "${{ github.event.inputs.quantity }}"
+          oType  = "${{ github.event.inputs.order_type }}"
+
+          print(f"📋 Paramètres ordre:")
+          print(f"   Symbol:     {symbol}")
+          print(f"   Action:     {action}")
+          print(f"   Quantity:   {qty}")
+          print(f"   Order Type: {oType}")
+          print(f"   Limit:      ${{ github.event.inputs.limit_price }}")
+          print(f"   Stop:       ${{ github.event.inputs.stop_price }}")
+          print(f"   Dry Run:    ${{ github.event.inputs.dry_run }}")
+          print(f"   Reason:     ${{ github.event.inputs.reason }}")
+
+          # Validations
+          errors = []
+          if not symbol or len(symbol) > 10:
+              errors.append(f"Symbole invalide: '{symbol}'")
+          if action not in ('BUY', 'SELL'):
+              errors.append(f"Action invalide: '{action}'")
+          try:
+              q = int(qty)
+              if q <= 0 or q > 10000:
+                  errors.append(f"Quantité invalide: {q} (doit être 1-10000)")
+          except ValueError:
+              errors.append(f"Quantité non numérique: '{qty}'")
+
+          lmt = "${{ github.event.inputs.limit_price }}"
+          stp = "${{ github.event.inputs.stop_price }}"
+
+          if oType == 'LMT' and not lmt:
+              errors.append("Limit price requis pour LMT order")
+          if oType == 'STP' and not stp:
+              errors.append("Stop price requis pour STP order")
+          if oType == 'STPLMT' and (not lmt or not stp):
+              errors.append("Limit price ET Stop price requis pour STPLMT order")
+
+          if errors:
+              print(f"\n❌ ERREURS DE VALIDATION:")
+              for e in errors:
+                  print(f"   - {e}")
+              sys.exit(1)
+          else:
+              print(f"\n✅ Paramètres valides")
+          EOF
+
+      # ── Exécution ordre ──────────────────────────────────
+      - name: 🚀 Execute Order
+        env:
+          FINANCE_HUB_URL:   ${{ secrets.FINANCE_HUB_URL }}
+          AI_PROXY_URL:      ${{ secrets.AI_PROXY_URL }}
+          IBKR_HOST:         ${{ secrets.IBKR_HOST }}
+          IBKR_PORT:         ${{ secrets.IBKR_PORT }}
+          IBKR_CLIENT_ID:    ${{ secrets.IBKR_CLIENT_ID }}
+          IBKR_ACCOUNT:      ${{ secrets.IBKR_ACCOUNT }}
+          TRADE_SYMBOL:      ${{ github.event.inputs.symbol }}
+          TRADE_ACTION:      ${{ github.event.inputs.action }}
+          TRADE_QTY:         ${{ github.event.inputs.quantity }}
+          TRADE_ORDER_TYPE:  ${{ github.event.inputs.order_type }}
+          TRADE_LIMIT_PRICE: ${{ github.event.inputs.limit_price }}
+          TRADE_STOP_PRICE:  ${{ github.event.inputs.stop_price }}
+          TRADE_TIF:         'DAY'
+          TRADE_REASON:      ${{ github.event.inputs.reason }}
+          DRY_RUN:           ${{ github.event.inputs.dry_run }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_RUN_ID:     ${{ github.run_id }}
+        run: |
+          python -m backend.orchestrator.manual_trade
+        timeout-minutes: 5
+
+      # ── Copie résultats vers docs/ ───────────────────────
+      - name: 📂 Copy results → docs/signals/
+        if: always()
+        run: |
+          mkdir -p docs/signals
+          # execution_log.json et debug_log.json déjà écrits dans docs/signals/
+          # manual_order_result.json aussi
+          ls -la docs/signals/ 2>/dev/null || echo "Aucun fichier généré"
+
+      # ── Commit résultats ─────────────────────────────────
+      - name: 💾 Commit & Push Results
+        if: always()
+        run: |
+          git config user.name  "AlphaVault Bot"
+          git config user.email "bot@alphavault-ai.com"
+          git pull origin HEAD --rebase --autostash || true
+          git add docs/signals/
+          if git diff --cached --quiet; then
+            echo "ℹ Aucun changement à committer"
+          else
+            ACTION="${{ github.event.inputs.action }}"
+            SYMBOL="${{ github.event.inputs.symbol }}"
+            QTY="${{ github.event.inputs.quantity }}"
+            DRY="${{ github.event.inputs.dry_run }}"
+            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M UTC')
+            git commit -m "🖐 Manual ${ACTION} ${QTY}x ${SYMBOL} [dry=${DRY}] — ${TIMESTAMP}"
+            git push origin HEAD
+            echo "✅ Résultats poussés sur GitHub Pages"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Upload logs ──────────────────────────────────────
+      - name: 📊 Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: manual-trade-${{ github.run_number }}-${{ github.event.inputs.symbol }}-${{ github.event.inputs.action }}
+          path: |
+            docs/signals/execution_log.json
+            docs/signals/debug_log.json
+            docs/signals/manual_order_result.json
+          retention-days: 30
+
+      - name: 📋 Order Summary
+        if: always()
+        run: |
+          echo "════════════════════════════════════════"
+          echo "  ORDRE MANUEL — RÉSUMÉ"
+          echo "════════════════════════════════════════"
+          echo "  Symbol:   ${{ github.event.inputs.symbol }}"
+          echo "  Action:   ${{ github.event.inputs.action }}"
+          echo "  Quantity: ${{ github.event.inputs.quantity }}"
+          echo "  Type:     ${{ github.event.inputs.order_type }}"
+          echo "  Dry Run:  ${{ github.event.inputs.dry_run }}"
+          echo "  Run URL:  ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "════════════════════════════════════════"
+          if [ -f docs/signals/manual_order_result.json ]; then
+            echo "  Résultat:"
+            cat docs/signals/manual_order_result.json | python3 -m json.tool
+          fi

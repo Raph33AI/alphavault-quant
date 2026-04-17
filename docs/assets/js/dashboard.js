@@ -142,6 +142,8 @@ const Dashboard = (() => {
       case 'strategies':  renderStrategies(data);  break;
       case 'execution':   renderExecution(data);   break;
       case 'performance': renderPerformance(data); break;
+      case 'terminal': TradingTerminal && TradingTerminal.refresh(); break;
+      case 'logs':     renderLogs(data);     break;
     }
   }
 
@@ -635,6 +637,139 @@ const Dashboard = (() => {
   }
 
   // ════════════════════════════════════════════════════════
+    // SECTION: LOGS
+    // ════════════════════════════════════════════════════════
+    async function renderLogs(data) {
+        try {
+            const resp = await fetch(
+                `${ApiClient.getBase()}/debug_log.json?_=${Date.now()}`,
+                { cache: 'no-store' }
+            );
+            if (!resp.ok) throw new Error('not found');
+            const logData = await resp.json();
+            _displayLogs(logData.logs || []);
+        } catch(e) {
+            const viewer = document.getElementById('log-viewer');
+            if (viewer) {
+                viewer.innerHTML = `<div class="log-entry warn">
+                    <span class="log-ts">--:--</span>
+                    <span class="log-lvl warn">WARN</span>
+                    <span class="log-sym">SYSTEM</span>
+                    <span class="log-msg">debug_log.json non disponible — lancez d'abord un cycle de trading.</span>
+                </div>`;
+            }
+        }
+    }
+
+    function _displayLogs(logs = []) {
+        // KPIs
+        el('logs-count',      `${logs.length} entrées`);
+        el('log-kpi-total',   logs.length);
+        el('log-kpi-signals', logs.filter(l => l.level === 'SIGNAL').length);
+        el('log-kpi-orders',  logs.filter(l => l.level?.startsWith('ORDER')).length);
+        el('log-kpi-errors',  logs.filter(l => ['ERROR', 'ORDER_ERR'].includes(l.level)).length);
+
+        // Symboles uniques pour le filtre
+        const sel = document.getElementById('logs-symbol-filter');
+        if (sel && sel.options.length < 3) {
+            const syms = [...new Set(logs.map(l => l.symbol).filter(Boolean).filter(s => s !== 'GLOBAL'))];
+            sel.innerHTML = '<option value="">Tous symboles</option>' +
+                ['GLOBAL', ...syms.sort()].map(s => `<option value="${s}">${s}</option>`).join('');
+        }
+
+        _renderLogViewer(logs);
+    }
+
+    function _renderLogViewer(logs) {
+        const viewer = document.getElementById('log-viewer');
+        if (!viewer) return;
+
+        const LEVEL_COLOR = {
+            DEBUG:     '#64748b',
+            INFO:      '#3b82f6',
+            SIGNAL:    '#10b981',
+            REGIME:    '#8b5cf6',
+            COUNCIL:   '#06b6d4',
+            RISK:      '#f59e0b',
+            ORDER_OK:  '#10b981',
+            ORDER_ERR: '#ef4444',
+            WARNING:   '#f59e0b',
+            ERROR:     '#ef4444',
+        };
+
+        const reversed = [...logs].reverse().slice(0, 200);
+
+        viewer.innerHTML = reversed.map(entry => {
+            const color   = LEVEL_COLOR[entry.level] || '#94a3b8';
+            const ts      = entry.ts
+                ? new Date(entry.ts).toLocaleTimeString()
+                : '--:--:--';
+            const details = entry.details && Object.keys(entry.details).length
+                ? `<details class="log-details">
+                    <summary>détails</summary>
+                    <pre>${JSON.stringify(entry.details, null, 2)}</pre>
+                </details>`
+                : '';
+            return `<div class="log-entry" data-level="${entry.level}" data-sym="${entry.symbol || ''}" data-msg="${entry.message || ''}">
+                <span class="log-ts">${ts}</span>
+                <span class="log-lvl" style="background:${color}22;color:${color};border-color:${color}">${entry.level}</span>
+                <span class="log-sym">${entry.symbol || '—'}</span>
+                <span class="log-module">${entry.module || ''}</span>
+                <span class="log-msg">${entry.message || ''}</span>
+                ${details}
+            </div>`;
+        }).join('');
+
+        // Auto-scroll
+        const autoScroll = document.getElementById('logs-auto-scroll');
+        if (autoScroll?.checked) viewer.scrollTop = 0;
+    }
+
+    function filterLogs() {
+        const search  = document.getElementById('logs-search')?.value.toLowerCase()  || '';
+        const level   = document.getElementById('logs-level-filter')?.value           || '';
+        const symbol  = document.getElementById('logs-symbol-filter')?.value          || '';
+
+        document.querySelectorAll('#log-viewer .log-entry').forEach(row => {
+            const rowLevel = row.dataset.level || '';
+            const rowSym   = row.dataset.sym   || '';
+            const rowMsg   = row.dataset.msg   || '';
+
+            const matchSearch = !search ||
+                rowSym.toLowerCase().includes(search) ||
+                rowMsg.toLowerCase().includes(search) ||
+                rowLevel.toLowerCase().includes(search);
+            const matchLevel  = !level  || rowLevel === level;
+            const matchSym    = !symbol || rowSym   === symbol;
+
+            row.style.display = (matchSearch && matchLevel && matchSym) ? '' : 'none';
+        });
+    }
+
+    function clearLogs() {
+        const viewer = document.getElementById('log-viewer');
+        if (viewer) viewer.innerHTML = '<div class="log-entry info"><span class="log-msg">Logs vidés localement.</span></div>';
+    }
+
+    function exportLogs() {
+        const viewer  = document.getElementById('log-viewer');
+        const entries = viewer ? [...viewer.querySelectorAll('.log-entry')] : [];
+        const text = entries.map(r => {
+            const ts  = r.querySelector('.log-ts')?.textContent  || '';
+            const lvl = r.querySelector('.log-lvl')?.textContent || '';
+            const sym = r.querySelector('.log-sym')?.textContent || '';
+            const msg = r.querySelector('.log-msg')?.textContent || '';
+            return `[${ts}] [${lvl}] ${sym} — ${msg}`;
+        }).join('\n');
+
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a    = document.createElement('a');
+        a.href     = URL.createObjectURL(blob);
+        a.download = `alphavault_logs_${new Date().toISOString().slice(0,10)}.txt`;
+        a.click();
+    }
+
+  // ════════════════════════════════════════════════════════
   // CLOCK
   // ════════════════════════════════════════════════════════
   function startClock() {
@@ -668,15 +803,17 @@ const Dashboard = (() => {
   // ════════════════════════════════════════════════════════
   document.addEventListener('DOMContentLoaded', init);
 
-  // ✅ CORRECTION : isReady ajouté au return
   // ✅ CORRECTION : window.Dashboard = Dashboard (était dead code après return)
   return {
-    showSection,
-    forceRefresh,
-    filterSignals,
-    loadChart,
-    isReady: () => true       // ← FIX "Dashboard.isReady is not a function"
-  };
+        showSection,
+        forceRefresh,
+        filterSignals,
+        filterLogs,     // ← AJOUTER
+        clearLogs,      // ← AJOUTER
+        exportLogs,     // ← AJOUTER
+        loadChart,
+        isReady: () => true
+    };
 
 // ← Fermeture de l'IIFE
 })();
