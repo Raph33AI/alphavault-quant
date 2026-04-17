@@ -9,25 +9,26 @@
 import json
 import datetime
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from loguru import logger
 
-from ..core.worker_client         import WorkerClient
-from ..core.market_data_client    import MarketDataClient
-from ..core.feature_builder       import FeatureBuilder
-from ..core.microstructure_features import MicrostructureFeatures
-from ..core.options_features      import OptionsFeatures
-from ..core.volatility_engine     import VolatilityEngine
-from ..core.regime_model          import RegimeModel
-from ..core.signal_model          import SignalModel
-from ..core.meta_model            import MetaModel
-from ..core.execution_alpha_engine import ExecutionAlphaEngine
-from ..core.smart_execution_router import SmartExecutionRouter
-from ..core.risk_manager          import RiskManager
-from ..core.optimizer             import PortfolioOptimizer
-from ..core.strategy_allocator    import StrategyAllocator
-from ..agents.multi_agent_council import MultiAgentCouncil
-from ..config.settings            import Settings
+# Imports relatifs (on est dans backend/orchestrator/)
+from core.worker_client          import WorkerClient
+from core.market_data_client     import MarketDataClient
+from core.feature_builder        import FeatureBuilder
+from core.microstructure_features import MicrostructureFeatures
+from core.options_features       import OptionsFeatures
+from core.volatility_engine      import VolatilityEngine
+from core.regime_model           import RegimeModel
+from core.signal_model           import SignalModel
+from core.meta_model             import MetaModel
+from core.execution_alpha_engine import ExecutionAlphaEngine
+from core.smart_execution_router import SmartExecutionRouter
+from core.risk_manager           import RiskManager
+from core.optimizer              import PortfolioOptimizer
+from core.strategy_allocator     import StrategyAllocator
+from agents.multi_agent_council  import MultiAgentCouncil
+from config.settings             import Settings
 
 class TradingAgent:
     """
