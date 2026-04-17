@@ -29,6 +29,8 @@ if str(_ROOT_DIR) not in sys.path:
 # ── Imports du projet (depuis la racine, package "backend") ─
 from backend.orchestrator.trading_agent import TradingAgent
 from backend.config.settings import Settings
+from backend.core.performance_tracker import PerformanceTracker
+from backend.core.alert_engine        import AlertEngine
 
 # ── Logger ──────────────────────────────────────────────────
 LOG_DIR = _BACKEND_DIR / "logs"
@@ -243,13 +245,53 @@ def main():
         git_commit_signals()
         sys.exit(1)
 
-    # ── 5. Sauvegarde ─────────────────────────────────────
+    # ── 5. Sauvegarde signals ─────────────────────────────
     saved = save_signals(output)
     if not saved:
-        logger.error("❌ Aucun signal sauvegardé")
+        logger.error("No signals saved")
         sys.exit(1)
 
-    # ── 6. Git push ───────────────────────────────────────
+    # ── 6. Performance Tracker ────────────────────────────
+    try:
+        tracker = PerformanceTracker(root_dir=_ROOT_DIR)
+        # batch_quotes disponible depuis agent si exposé, sinon None
+        batch_quotes = getattr(agent, "_last_batch_quotes", None)
+        tracker.record_cycle(
+            output       = output,
+            batch_quotes = batch_quotes,
+            run_id       = f"run_{os.environ.get('GITHUB_RUN_NUMBER', '0')}",
+        )
+        tracker.save()
+        # Injecter les métriques dans performance_metrics.json
+        perf_metrics = tracker.compute_metrics()
+        perf_path    = _ROOT_DIR / "docs" / "signals" / "performance_metrics.json"
+        existing_perf= json.loads(perf_path.read_text()) if perf_path.exists() else {}
+        existing_perf.update({
+            "tracker_metrics": perf_metrics,
+            "best_symbols":    tracker.get_best_symbols(10),
+            "regime_perf":     tracker.get_regime_performance(),
+        })
+        perf_path.write_text(json.dumps(existing_perf, indent=2, default=str))
+        logger.info("[Loop] Performance tracker updated")
+    except Exception as e:
+        logger.warning(f"[Loop] Performance tracker error: {e}")
+        perf_metrics = {}
+
+    # ── 7. Alert Engine ───────────────────────────────────
+    try:
+        alert_engine = AlertEngine(settings=settings, root_dir=_ROOT_DIR)
+        alert_engine.check_all(output=output, perf_metrics=perf_metrics)
+
+        # Résumé quotidien si fin de session regular (après 20h UTC)
+        now_h = datetime.datetime.utcnow().hour
+        if now_h >= 20 and settings.MARKET_SESSION in ("regular", "postmarket"):
+            alert_engine.send_daily_summary(output=output, perf_metrics=perf_metrics)
+
+        logger.info("[Loop] Alert engine checked")
+    except Exception as e:
+        logger.warning(f"[Loop] Alert engine error: {e}")
+
+    # ── 8. Git push ───────────────────────────────────────
     pushed = git_commit_signals()
 
     # ── 7. Bilan ──────────────────────────────────────────

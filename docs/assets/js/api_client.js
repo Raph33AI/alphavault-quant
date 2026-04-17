@@ -132,6 +132,11 @@ const ApiClient = (() => {
       total:     0,
       logs:      [],
     },
+    'performance_history.json': {
+      cycles: [], n_cycles: 0,
+      metrics: { avg_accuracy:0, win_rate:0, rolling_sharpe:0, n_cycles:0 },
+    },
+    'alerts.json': { total:0, alerts:[] },
   };
 
   // ── Core Fetch ───────────────────────────────────────────
@@ -260,6 +265,8 @@ const ApiClient = (() => {
     getManualOrders: (b) => fetchJSON('manual_order_result.json', b),
     getIBKRStatus:   (b) => fetchJSON('ibkr_status.json',         b),
     getDebugLog:     (b) => fetchJSON('debug_log.json',           b),
+    getPerformanceHistory: (b) => fetchJSON('performance_history.json', b),
+    getAlerts:            (b) => fetchJSON('alerts.json',              b),
 
     // Cache utils
     clearCache,
