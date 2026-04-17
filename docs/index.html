@@ -1,13 +1,40 @@
-<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>AlphaVault Quant — Trading Terminal</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous"><link rel="stylesheet" href="assets/css/dashboard.css"><script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script></head><body>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlphaVault Quant — Trading Terminal</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+
+  <!-- Charts Libraries (head — non-blocking ok pour LWC) -->
+  <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
 
 <!-- ═══════════════════════════════════════════════════════════
      TICKER BAR
 ═══════════════════════════════════════════════════════════ -->
 <div class="ticker-bar" id="ticker-bar">
-  <div class="ticker-label"><i class="fa-solid fa-circle-dot pulse-dot"></i> LIVE</div>
-  <div class="ticker-viewport"><div class="ticker-track" id="ticker-track">
-    <span class="ticker-placeholder">Loading market data...</span>
-  </div></div>
+  <div class="ticker-label">
+    <i class="fa-solid fa-circle-dot pulse-dot"></i> LIVE
+  </div>
+  <div class="ticker-viewport">
+    <div class="ticker-track" id="ticker-track">
+      <span class="ticker-placeholder">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Loading market data...
+      </span>
+    </div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -15,7 +42,7 @@
 ═══════════════════════════════════════════════════════════ -->
 <header class="topbar">
   <div class="topbar-left">
-    <button class="sidebar-toggle" id="sidebar-toggle" onclick="Terminal.toggleSidebar()" title="Toggle sidebar">
+    <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle sidebar">
       <i class="fa-solid fa-bars"></i>
     </button>
     <div class="logo">
@@ -23,7 +50,7 @@
       <div class="logo-text"><span>AlphaVault</span><strong>Quant</strong></div>
     </div>
     <div class="regime-pill" id="regime-badge">
-      <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px;"></i> Loading
+      <i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px"></i> Loading
     </div>
   </div>
 
@@ -33,32 +60,48 @@
       <div class="market-session" id="session-badge">CLOSED</div>
     </div>
     <div class="market-mini-bar" id="market-mini-bar">
-      <div class="mini-quote" id="mini-spy"><span class="mq-sym">SPY</span><span class="mq-val">--</span></div>
-      <div class="mini-quote" id="mini-qqq"><span class="mq-sym">QQQ</span><span class="mq-val">--</span></div>
-      <div class="mini-quote" id="mini-iwm"><span class="mq-sym">IWM</span><span class="mq-val">--</span></div>
+      <div class="mini-quote" id="mini-spy">
+        <span class="mq-sym">SPY</span>
+        <span class="mq-val" id="mq-spy-val">--</span>
+      </div>
+      <div class="mini-quote" id="mini-qqq">
+        <span class="mq-sym">QQQ</span>
+        <span class="mq-val" id="mq-qqq-val">--</span>
+      </div>
+      <div class="mini-quote" id="mini-iwm">
+        <span class="mq-sym">IWM</span>
+        <span class="mq-val" id="mq-iwm-val">--</span>
+      </div>
     </div>
   </div>
 
   <div class="topbar-right">
     <div class="status-cluster">
       <div class="status-pill" id="pill-llm" title="LLM Status">
-        <span class="s-dot" id="dot-llm"></span><span class="s-lbl">LLM</span>
+        <span class="s-dot" id="dot-llm"></span>
+        <span class="s-lbl">LLM</span>
       </div>
       <div class="status-pill" id="pill-hub" title="Finance Hub Worker">
-        <span class="s-dot" id="dot-hub"></span><span class="s-lbl">Hub</span>
+        <span class="s-dot" id="dot-hub"></span>
+        <span class="s-lbl">Hub</span>
       </div>
-      <div class="status-pill" id="pill-ibkr" title="IBKR Broker">
-        <span class="s-dot" id="dot-ibkr"></span><span class="s-lbl">IBKR</span>
+      <div class="status-pill" id="pill-ibkr" title="IBKR Paper Trading">
+        <span class="s-dot" id="dot-ibkr"></span>
+        <span class="s-lbl">IBKR</span>
       </div>
       <div class="status-pill" id="pill-sys" title="System Health">
-        <span class="s-dot" id="dot-sys"></span><span class="s-lbl">Sys</span>
+        <span class="s-dot" id="dot-sys"></span>
+        <span class="s-lbl">Sys</span>
       </div>
     </div>
+    <div class="auto-trading-badge inactive" id="auto-trading-badge" title="Automated trading status">
+      <i class="fa-solid fa-robot"></i> AUTO
+    </div>
     <div class="dry-run-badge" id="dry-run-badge">PAPER</div>
-    <button class="btn-icon" id="btn-refresh" onclick="Terminal.forceRefresh()" title="Force refresh">
+    <button class="btn-icon" id="btn-refresh" title="Force refresh">
       <i class="fa-solid fa-rotate"></i>
     </button>
-    <button class="btn-icon" onclick="Terminal.toggleTheme()" id="btn-theme" title="Toggle theme">
+    <button class="btn-icon" id="btn-theme" title="Toggle theme">
       <i class="fa-solid fa-moon" id="theme-icon"></i>
     </button>
     <span class="last-update" id="last-update">--</span>
@@ -70,58 +113,68 @@
 ═══════════════════════════════════════════════════════════ -->
 <div class="layout" id="layout">
 
-  <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+  <!-- ── SIDEBAR ──────────────────────────────────────────────── -->
   <nav class="sidebar" id="sidebar">
-
-    <!-- Navigation -->
     <ul class="nav-list">
-      <li class="nav-item active" data-sec="overview" onclick="Terminal.showSection('overview')">
-        <i class="fa-solid fa-chart-line nav-icon"></i><span class="nav-label">Overview</span>
+      <li class="nav-item active" data-sec="overview">
+        <i class="fa-solid fa-chart-line nav-icon"></i>
+        <span class="nav-label">Overview</span>
       </li>
-      <li class="nav-item" data-sec="watchlist" onclick="Terminal.showSection('watchlist')">
-        <i class="fa-solid fa-list-ul nav-icon"></i><span class="nav-label">Watchlist</span>
+      <li class="nav-item" data-sec="watchlist">
+        <i class="fa-solid fa-list-ul nav-icon"></i>
+        <span class="nav-label">Watchlist</span>
       </li>
-      <li class="nav-item" data-sec="charts" onclick="Terminal.showSection('charts')">
-        <i class="fa-solid fa-chart-bar nav-icon"></i><span class="nav-label">Charts</span>
+      <li class="nav-item" data-sec="charts">
+        <i class="fa-solid fa-chart-bar nav-icon"></i>
+        <span class="nav-label">Charts</span>
       </li>
-      <li class="nav-item" data-sec="signals" onclick="Terminal.showSection('signals')">
-        <i class="fa-solid fa-satellite-dish nav-icon"></i><span class="nav-label">Signals</span>
+      <li class="nav-item" data-sec="signals">
+        <i class="fa-solid fa-satellite-dish nav-icon"></i>
+        <span class="nav-label">Signals</span>
         <span class="nav-badge" id="nav-signals-count">0</span>
       </li>
-      <li class="nav-item" data-sec="portfolio" onclick="Terminal.showSection('portfolio')">
-        <i class="fa-solid fa-briefcase nav-icon"></i><span class="nav-label">Portfolio</span>
+      <li class="nav-item" data-sec="portfolio">
+        <i class="fa-solid fa-briefcase nav-icon"></i>
+        <span class="nav-label">Portfolio</span>
       </li>
-      <li class="nav-item" data-sec="risk" onclick="Terminal.showSection('risk')">
-        <i class="fa-solid fa-shield-halved nav-icon"></i><span class="nav-label">Risk</span>
+      <li class="nav-item" data-sec="risk">
+        <i class="fa-solid fa-shield-halved nav-icon"></i>
+        <span class="nav-label">Risk</span>
       </li>
-      <li class="nav-item" data-sec="agents" onclick="Terminal.showSection('agents')">
-        <i class="fa-solid fa-robot nav-icon"></i><span class="nav-label">Agents</span>
+      <li class="nav-item" data-sec="agents">
+        <i class="fa-solid fa-robot nav-icon"></i>
+        <span class="nav-label">Agents</span>
       </li>
-      <li class="nav-item" data-sec="strategies" onclick="Terminal.showSection('strategies')">
-        <i class="fa-solid fa-sliders nav-icon"></i><span class="nav-label">Strategies</span>
+      <li class="nav-item" data-sec="strategies">
+        <i class="fa-solid fa-sliders nav-icon"></i>
+        <span class="nav-label">Strategies</span>
       </li>
-      <li class="nav-item" data-sec="execution" onclick="Terminal.showSection('execution')">
-        <i class="fa-solid fa-terminal nav-icon"></i><span class="nav-label">Terminal</span>
+      <li class="nav-item" data-sec="execution">
+        <i class="fa-solid fa-terminal nav-icon"></i>
+        <span class="nav-label">Terminal</span>
       </li>
-      <li class="nav-item" data-sec="performance" onclick="Terminal.showSection('performance')">
-        <i class="fa-solid fa-chart-area nav-icon"></i><span class="nav-label">Performance</span>
+      <li class="nav-item" data-sec="performance">
+        <i class="fa-solid fa-chart-area nav-icon"></i>
+        <span class="nav-label">Performance</span>
       </li>
     </ul>
 
-    <!-- Watchlist Mini -->
+    <!-- Sidebar Watchlist Mini -->
     <div class="sidebar-watchlist">
       <div class="sw-header">
-        <i class="fa-solid fa-star"></i><span>Watchlist</span>
+        <i class="fa-solid fa-star"></i>
+        <span>Watchlist</span>
         <span class="sw-session" id="sw-session">CLOSED</span>
       </div>
       <div class="sw-list" id="sw-list">
-        <div class="sw-loading"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading...</div>
+        <div class="sw-loading">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Loading...
+        </div>
       </div>
     </div>
-
   </nav>
 
-  <!-- ── CONTENT ────────────────────────────────────────────── -->
+  <!-- ── CONTENT ──────────────────────────────────────────────── -->
   <main class="content" id="content">
 
     <!-- ══════════════════════════════════════════════════════
@@ -129,28 +182,54 @@
     ══════════════════════════════════════════════════════ -->
     <section id="sec-overview" class="section active">
 
+      <!-- Auto-Trading Active Banner -->
+      <div class="info-banner" id="auto-trading-banner"
+           style="background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.25);margin-bottom:16px">
+        <i class="fa-solid fa-robot" style="color:var(--g)"></i>
+        <div>
+          <strong>Automated Trading Active</strong> — GitHub Actions runs the full ML pipeline every 5 min during market hours.
+          Orders execute automatically based on Council decisions — no browser required.
+          <span id="auto-last-cycle" style="margin-left:8px;font-size:11px;color:var(--txt4)">Last cycle: --</span>
+        </div>
+      </div>
+
       <!-- Index Cards Row -->
       <div class="index-cards" id="index-cards">
-        <div class="index-card" id="card-spy" onclick="Terminal.loadChartSymbol('SPY')">
-          <div class="ic-header"><span class="ic-sym">SPY</span><span class="ic-name">S&amp;P 500 ETF</span></div>
+        <div class="index-card" id="card-spy">
+          <div class="ic-header">
+            <span class="ic-sym">SPY</span>
+            <span class="ic-name">S&amp;P 500 ETF</span>
+          </div>
           <div class="ic-price" id="ic-spy-price">--</div>
-          <div class="ic-change" id="ic-spy-change">-- (--)</div>
+          <div class="ic-change" id="ic-spy-change">--</div>
           <canvas class="ic-spark" id="spark-spy" height="40"></canvas>
         </div>
-        <div class="index-card" id="card-qqq" onclick="Terminal.loadChartSymbol('QQQ')">
-          <div class="ic-header"><span class="ic-sym">QQQ</span><span class="ic-name">Nasdaq 100 ETF</span></div>
+
+        <div class="index-card" id="card-qqq">
+          <div class="ic-header">
+            <span class="ic-sym">QQQ</span>
+            <span class="ic-name">Nasdaq 100 ETF</span>
+          </div>
           <div class="ic-price" id="ic-qqq-price">--</div>
-          <div class="ic-change" id="ic-qqq-change">-- (--)</div>
+          <div class="ic-change" id="ic-qqq-change">--</div>
           <canvas class="ic-spark" id="spark-qqq" height="40"></canvas>
         </div>
-        <div class="index-card" id="card-iwm" onclick="Terminal.loadChartSymbol('IWM')">
-          <div class="ic-header"><span class="ic-sym">IWM</span><span class="ic-name">Russell 2000 ETF</span></div>
+
+        <div class="index-card" id="card-iwm">
+          <div class="ic-header">
+            <span class="ic-sym">IWM</span>
+            <span class="ic-name">Russell 2000 ETF</span>
+          </div>
           <div class="ic-price" id="ic-iwm-price">--</div>
-          <div class="ic-change" id="ic-iwm-change">-- (--)</div>
+          <div class="ic-change" id="ic-iwm-change">--</div>
           <canvas class="ic-spark" id="spark-iwm" height="40"></canvas>
         </div>
+
         <div class="index-card" id="card-regime">
-          <div class="ic-header"><span class="ic-sym">REGIME</span><span class="ic-name">Market State</span></div>
+          <div class="ic-header">
+            <span class="ic-sym">REGIME</span>
+            <span class="ic-name">Market State</span>
+          </div>
           <div class="ic-regime-label" id="ic-regime-label">--</div>
           <div class="ic-regime-meta">
             <span>Score: <strong id="ic-regime-score">--</strong></span>
@@ -162,11 +241,10 @@
 
       <!-- Main Chart + Right Panel -->
       <div class="overview-grid">
-        <!-- Main Chart -->
         <div class="card chart-main-card">
           <div class="card-header">
             <div class="ch-controls">
-              <select class="select-input" id="ov-symbol" onchange="Terminal.loadMainChart()">
+              <select class="select-input" id="ov-symbol">
                 <option value="SPY">SPY</option>
                 <option value="QQQ">QQQ</option>
                 <option value="IWM">IWM</option>
@@ -181,78 +259,141 @@
                 <option value="GS">GS</option>
               </select>
               <div class="interval-tabs" id="ov-intervals">
-                <button class="itab" data-iv="5min" onclick="Terminal.setInterval(this,'5min')">5m</button>
-                <button class="itab" data-iv="1h" onclick="Terminal.setInterval(this,'1h')">1H</button>
-                <button class="itab" data-iv="4h" onclick="Terminal.setInterval(this,'4h')">4H</button>
-                <button class="itab active" data-iv="1day" onclick="Terminal.setInterval(this,'1day')">1D</button>
-                <button class="itab" data-iv="1week" onclick="Terminal.setInterval(this,'1week')">1W</button>
+                <button class="itab" data-iv="5min">5m</button>
+                <button class="itab" data-iv="1h">1H</button>
+                <button class="itab" data-iv="4h">4H</button>
+                <button class="itab active" data-iv="1day">1D</button>
+                <button class="itab" data-iv="1week">1W</button>
               </div>
             </div>
             <div class="ch-title" id="main-chart-title">SPY — Daily</div>
             <div class="ch-actions">
-              <button class="btn-icon-sm" onclick="Terminal.loadMainChart(true)" title="Refresh chart"><i class="fa-solid fa-rotate"></i></button>
+              <button class="btn-icon-sm" id="btn-refresh-chart" title="Refresh chart">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
             </div>
           </div>
           <div id="main-price-chart" class="chart-container"></div>
           <div class="chart-legend" id="main-chart-legend"></div>
         </div>
 
-        <!-- Right Column -->
         <div class="overview-right">
           <!-- Signal Summary -->
           <div class="card">
-            <div class="card-header"><i class="fa-solid fa-satellite-dish"></i> Signal Summary</div>
+            <div class="card-header">
+              <i class="fa-solid fa-satellite-dish"></i> Signal Summary
+            </div>
             <div class="signal-kpi-grid">
-              <div class="skpi buy"><div class="skpi-val" id="ov-buy">0</div><div class="skpi-lbl">BUY</div></div>
-              <div class="skpi sell"><div class="skpi-val" id="ov-sell">0</div><div class="skpi-lbl">SELL</div></div>
-              <div class="skpi neutral"><div class="skpi-val" id="ov-neutral">0</div><div class="skpi-lbl">NEUTRAL</div></div>
-              <div class="skpi exec"><div class="skpi-val" id="ov-exec">0</div><div class="skpi-lbl">EXECUTE</div></div>
+              <div class="skpi buy">
+                <div class="skpi-val" id="ov-buy">0</div>
+                <div class="skpi-lbl">BUY</div>
+              </div>
+              <div class="skpi sell">
+                <div class="skpi-val" id="ov-sell">0</div>
+                <div class="skpi-lbl">SELL</div>
+              </div>
+              <div class="skpi neutral">
+                <div class="skpi-val" id="ov-neutral">0</div>
+                <div class="skpi-lbl">NEUTRAL</div>
+              </div>
+              <div class="skpi exec">
+                <div class="skpi-val" id="ov-exec">0</div>
+                <div class="skpi-lbl">EXECUTE</div>
+              </div>
             </div>
           </div>
 
-          <!-- Strategy Allocation -->
+          <!-- Strategy Allocation mini donut -->
           <div class="card">
-            <div class="card-header"><i class="fa-solid fa-sliders"></i> Allocation</div>
+            <div class="card-header">
+              <i class="fa-solid fa-sliders"></i> Allocation
+            </div>
             <canvas id="ov-strategy-donut" height="160"></canvas>
           </div>
 
           <!-- Portfolio Snapshot -->
           <div class="card">
-            <div class="card-header"><i class="fa-solid fa-briefcase"></i> Portfolio</div>
+            <div class="card-header">
+              <i class="fa-solid fa-briefcase"></i> Portfolio
+            </div>
             <div class="port-snapshot">
-              <div class="ps-row"><span class="ps-lbl">Total Value</span><span class="ps-val mono" id="ov-port-value">$100,000</span></div>
-              <div class="ps-row"><span class="ps-lbl">Cash</span><span class="ps-val mono" id="ov-cash">100%</span></div>
-              <div class="ps-row"><span class="ps-lbl">Leverage</span><span class="ps-val mono" id="ov-lever">0.00x</span></div>
-              <div class="ps-row"><span class="ps-lbl">Drawdown</span><span class="ps-val mono" id="ov-dd">0.00%</span></div>
+              <div class="ps-row">
+                <span class="ps-lbl">Total Value</span>
+                <span class="ps-val mono" id="ov-port-value">$100,000</span>
+              </div>
+              <div class="ps-row">
+                <span class="ps-lbl">Cash</span>
+                <span class="ps-val mono" id="ov-cash">100%</span>
+              </div>
+              <div class="ps-row">
+                <span class="ps-lbl">Leverage</span>
+                <span class="ps-val mono" id="ov-lever">0.00x</span>
+              </div>
+              <div class="ps-row">
+                <span class="ps-lbl">Drawdown</span>
+                <span class="ps-val mono" id="ov-dd">0.00%</span>
+              </div>
             </div>
           </div>
 
           <!-- System Health -->
           <div class="card">
-            <div class="card-header"><i class="fa-solid fa-heart-pulse"></i> System Health</div>
+            <div class="card-header">
+              <i class="fa-solid fa-heart-pulse"></i> System Health
+            </div>
             <div class="health-grid">
-              <div class="hg-row"><span class="hg-lbl"><i class="fa-solid fa-robot"></i> LLM Mode</span><span class="hg-val" id="hg-llm">--</span></div>
-              <div class="hg-row"><span class="hg-lbl"><i class="fa-solid fa-plug"></i> IBKR</span><span class="hg-val" id="hg-ibkr">PAPER</span></div>
-              <div class="hg-row"><span class="hg-lbl"><i class="fa-solid fa-server"></i> Hub Worker</span><span class="hg-val" id="hg-hub">--</span></div>
-              <div class="hg-row"><span class="hg-lbl"><i class="fa-solid fa-clock"></i> Last Cycle</span><span class="hg-val mono" id="hg-last">--</span></div>
+              <div class="hg-row">
+                <span class="hg-lbl"><i class="fa-solid fa-robot"></i> Auto-Trade</span>
+                <span class="hg-val" id="hg-auto" style="color:var(--g)">GitHub Actions</span>
+              </div>
+              <div class="hg-row">
+                <span class="hg-lbl"><i class="fa-solid fa-brain"></i> LLM Mode</span>
+                <span class="hg-val" id="hg-llm">--</span>
+              </div>
+              <div class="hg-row">
+                <span class="hg-lbl"><i class="fa-solid fa-plug"></i> IBKR</span>
+                <span class="hg-val" id="hg-ibkr">PAPER</span>
+              </div>
+              <div class="hg-row">
+                <span class="hg-lbl"><i class="fa-solid fa-server"></i> Hub Worker</span>
+                <span class="hg-val" id="hg-hub">--</span>
+              </div>
+              <div class="hg-row">
+                <span class="hg-lbl"><i class="fa-solid fa-clock"></i> Last Cycle</span>
+                <span class="hg-val mono" id="hg-last">--</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Top Signals Table (preview) -->
+      <!-- Top Signals Table Preview -->
       <div class="card">
         <div class="card-header">
           <span><i class="fa-solid fa-satellite-dish"></i> Top Signals</span>
-          <button class="btn-sm" onclick="Terminal.showSection('signals')">View All <i class="fa-solid fa-arrow-right"></i></button>
+          <button class="btn-sm" id="btn-view-all-signals">
+            View All <i class="fa-solid fa-arrow-right"></i>
+          </button>
         </div>
         <div class="table-wrap">
-          <table class="data-table" id="ov-signals-table">
-            <thead><tr>
-              <th>Symbol</th><th>Price</th><th>Direction</th><th>Score</th><th>Confidence</th><th>Council</th><th>Regime</th>
-            </tr></thead>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Price</th>
+                <th>Direction</th>
+                <th>Score</th>
+                <th>Confidence</th>
+                <th>Council</th>
+                <th>Regime</th>
+              </tr>
+            </thead>
             <tbody id="ov-signals-tbody">
-              <tr><td colspan="7" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...</td></tr>
+              <tr>
+                <td colspan="7" class="loading-row">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -266,27 +407,33 @@
       <div class="section-header">
         <h2><i class="fa-solid fa-list-ul"></i> Market Watchlist</h2>
         <div class="sh-actions">
-          <input type="text" class="search-input" id="wl-search" placeholder="Filter symbol..." oninput="Terminal.filterWatchlist()">
+          <input type="text" class="search-input" id="wl-search" placeholder="Filter symbol...">
         </div>
       </div>
       <div class="card">
         <div class="table-wrap">
-          <table class="data-table watchlist-table" id="watchlist-table">
-            <thead><tr>
-              <th>Symbol</th>
-              <th>Name</th>
-              <th>Price</th>
-              <th>Change</th>
-              <th>% Change</th>
-              <th>Score</th>
-              <th>Direction</th>
-              <th>Buy Prob</th>
-              <th>Regime</th>
-              <th>Council</th>
-              <th>Action</th>
-            </tr></thead>
+          <table class="data-table watchlist-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Change</th>
+                <th>% Chg</th>
+                <th>Score</th>
+                <th>Direction</th>
+                <th>Buy Prob</th>
+                <th>Regime</th>
+                <th>Council</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
             <tbody id="watchlist-tbody">
-              <tr><td colspan="11" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading watchlist...</td></tr>
+              <tr>
+                <td colspan="11" class="loading-row">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Loading watchlist...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -294,73 +441,117 @@
     </section>
 
     <!-- ══════════════════════════════════════════════════════
-         SECTION: CHARTS (Multi-chart view)
+         SECTION: CHARTS (Multi-panel)
     ══════════════════════════════════════════════════════ -->
     <section id="sec-charts" class="section">
       <div class="section-header">
         <h2><i class="fa-solid fa-chart-bar"></i> Chart Analysis</h2>
         <div class="sh-actions">
-          <select class="select-input" id="chart-layout" onchange="Terminal.setChartLayout(this.value)">
-            <option value="1">Single Chart</option>
-            <option value="2x1">2 Charts (Side)</option>
-            <option value="2x2" selected>4 Charts (Grid)</option>
+          <select class="select-input" id="chart-layout">
+            <option value="1">Single</option>
+            <option value="2x1">2 Side</option>
+            <option value="2x2" selected>4 Grid</option>
           </select>
         </div>
       </div>
 
-      <!-- Chart Grid (2x2 default) -->
       <div class="charts-grid" id="charts-grid">
+        <!-- Panel 0 -->
         <div class="chart-panel" id="chart-panel-0">
           <div class="cp-header">
-            <select class="select-sm" onchange="Terminal.loadPanelChart(0, this.value)" id="cp-sym-0">
-              <option value="SPY" selected>SPY</option><option value="QQQ">QQQ</option><option value="AAPL">AAPL</option><option value="NVDA">NVDA</option><option value="MSFT">MSFT</option><option value="GOOGL">GOOGL</option><option value="AMZN">AMZN</option><option value="META">META</option><option value="TSLA">TSLA</option><option value="JPM">JPM</option><option value="GS">GS</option><option value="IWM">IWM</option>
+            <select class="select-sm" id="cp-sym-0">
+              <option value="SPY" selected>SPY</option>
+              <option value="QQQ">QQQ</option>
+              <option value="AAPL">AAPL</option>
+              <option value="NVDA">NVDA</option>
+              <option value="MSFT">MSFT</option>
+              <option value="GOOGL">GOOGL</option>
+              <option value="AMZN">AMZN</option>
+              <option value="META">META</option>
+              <option value="TSLA">TSLA</option>
+              <option value="JPM">JPM</option>
+              <option value="GS">GS</option>
+              <option value="IWM">IWM</option>
             </select>
-            <div class="cp-itabs">
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(0,'1h',this)">1H</button>
-              <button class="cp-itab active" onclick="Terminal.setPanelInterval(0,'1day',this)">1D</button>
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(0,'1week',this)">1W</button>
+            <div class="cp-itabs" data-panel="0">
+              <button class="cp-itab" data-iv="1h">1H</button>
+              <button class="cp-itab active" data-iv="1day">1D</button>
+              <button class="cp-itab" data-iv="1week">1W</button>
             </div>
           </div>
           <div class="cp-chart" id="chart-container-0"></div>
         </div>
-
+        <!-- Panel 1 -->
         <div class="chart-panel" id="chart-panel-1">
           <div class="cp-header">
-            <select class="select-sm" onchange="Terminal.loadPanelChart(1, this.value)" id="cp-sym-1">
-              <option value="SPY">SPY</option><option value="QQQ" selected>QQQ</option><option value="AAPL">AAPL</option><option value="NVDA">NVDA</option><option value="MSFT">MSFT</option><option value="GOOGL">GOOGL</option><option value="AMZN">AMZN</option><option value="META">META</option><option value="TSLA">TSLA</option><option value="JPM">JPM</option><option value="GS">GS</option><option value="IWM">IWM</option>
+            <select class="select-sm" id="cp-sym-1">
+              <option value="SPY">SPY</option>
+              <option value="QQQ" selected>QQQ</option>
+              <option value="AAPL">AAPL</option>
+              <option value="NVDA">NVDA</option>
+              <option value="MSFT">MSFT</option>
+              <option value="GOOGL">GOOGL</option>
+              <option value="AMZN">AMZN</option>
+              <option value="META">META</option>
+              <option value="TSLA">TSLA</option>
+              <option value="JPM">JPM</option>
+              <option value="GS">GS</option>
+              <option value="IWM">IWM</option>
             </select>
-            <div class="cp-itabs">
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(1,'1h',this)">1H</button>
-              <button class="cp-itab active" onclick="Terminal.setPanelInterval(1,'1day',this)">1D</button>
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(1,'1week',this)">1W</button>
+            <div class="cp-itabs" data-panel="1">
+              <button class="cp-itab" data-iv="1h">1H</button>
+              <button class="cp-itab active" data-iv="1day">1D</button>
+              <button class="cp-itab" data-iv="1week">1W</button>
             </div>
           </div>
           <div class="cp-chart" id="chart-container-1"></div>
         </div>
-
+        <!-- Panel 2 -->
         <div class="chart-panel" id="chart-panel-2">
           <div class="cp-header">
-            <select class="select-sm" onchange="Terminal.loadPanelChart(2, this.value)" id="cp-sym-2">
-              <option value="SPY">SPY</option><option value="QQQ">QQQ</option><option value="AAPL" selected>AAPL</option><option value="NVDA">NVDA</option><option value="MSFT">MSFT</option><option value="GOOGL">GOOGL</option><option value="AMZN">AMZN</option><option value="META">META</option><option value="TSLA">TSLA</option><option value="JPM">JPM</option><option value="GS">GS</option><option value="IWM">IWM</option>
+            <select class="select-sm" id="cp-sym-2">
+              <option value="SPY">SPY</option>
+              <option value="QQQ">QQQ</option>
+              <option value="AAPL" selected>AAPL</option>
+              <option value="NVDA">NVDA</option>
+              <option value="MSFT">MSFT</option>
+              <option value="GOOGL">GOOGL</option>
+              <option value="AMZN">AMZN</option>
+              <option value="META">META</option>
+              <option value="TSLA">TSLA</option>
+              <option value="JPM">JPM</option>
+              <option value="GS">GS</option>
+              <option value="IWM">IWM</option>
             </select>
-            <div class="cp-itabs">
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(2,'1h',this)">1H</button>
-              <button class="cp-itab active" onclick="Terminal.setPanelInterval(2,'1day',this)">1D</button>
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(2,'1week',this)">1W</button>
+            <div class="cp-itabs" data-panel="2">
+              <button class="cp-itab" data-iv="1h">1H</button>
+              <button class="cp-itab active" data-iv="1day">1D</button>
+              <button class="cp-itab" data-iv="1week">1W</button>
             </div>
           </div>
           <div class="cp-chart" id="chart-container-2"></div>
         </div>
-
+        <!-- Panel 3 -->
         <div class="chart-panel" id="chart-panel-3">
           <div class="cp-header">
-            <select class="select-sm" onchange="Terminal.loadPanelChart(3, this.value)" id="cp-sym-3">
-              <option value="SPY">SPY</option><option value="QQQ">QQQ</option><option value="AAPL">AAPL</option><option value="NVDA" selected>NVDA</option><option value="MSFT">MSFT</option><option value="GOOGL">GOOGL</option><option value="AMZN">AMZN</option><option value="META">META</option><option value="TSLA">TSLA</option><option value="JPM">JPM</option><option value="GS">GS</option><option value="IWM">IWM</option>
+            <select class="select-sm" id="cp-sym-3">
+              <option value="SPY">SPY</option>
+              <option value="QQQ">QQQ</option>
+              <option value="AAPL">AAPL</option>
+              <option value="NVDA" selected>NVDA</option>
+              <option value="MSFT">MSFT</option>
+              <option value="GOOGL">GOOGL</option>
+              <option value="AMZN">AMZN</option>
+              <option value="META">META</option>
+              <option value="TSLA">TSLA</option>
+              <option value="JPM">JPM</option>
+              <option value="GS">GS</option>
+              <option value="IWM">IWM</option>
             </select>
-            <div class="cp-itabs">
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(3,'1h',this)">1H</button>
-              <button class="cp-itab active" onclick="Terminal.setPanelInterval(3,'1day',this)">1D</button>
-              <button class="cp-itab" onclick="Terminal.setPanelInterval(3,'1week',this)">1W</button>
+            <div class="cp-itabs" data-panel="3">
+              <button class="cp-itab" data-iv="1h">1H</button>
+              <button class="cp-itab active" data-iv="1day">1D</button>
+              <button class="cp-itab" data-iv="1week">1W</button>
             </div>
           </div>
           <div class="cp-chart" id="chart-container-3"></div>
@@ -376,23 +567,50 @@
         <h2><i class="fa-solid fa-satellite-dish"></i> Live Signals</h2>
         <div class="sh-actions">
           <span class="badge-count" id="signals-count">0 symbols</span>
-          <input type="text" class="search-input" id="signal-search" placeholder="Filter..." oninput="Terminal.filterSignals()">
+          <input type="text" class="search-input" id="signal-search" placeholder="Filter...">
         </div>
       </div>
       <div class="kpi-row">
-        <div class="kpi-card buy"><div class="kpi-val" id="kpi-buy">0</div><div class="kpi-lbl">BUY Signals</div></div>
-        <div class="kpi-card sell"><div class="kpi-val" id="kpi-sell">0</div><div class="kpi-lbl">SELL Signals</div></div>
-        <div class="kpi-card neutral"><div class="kpi-val" id="kpi-neutral">0</div><div class="kpi-lbl">NEUTRAL</div></div>
-        <div class="kpi-card exec"><div class="kpi-val" id="kpi-exec">0</div><div class="kpi-lbl">To Execute</div></div>
+        <div class="kpi-card buy">
+          <div class="kpi-val" id="kpi-buy">0</div>
+          <div class="kpi-lbl">BUY Signals</div>
+        </div>
+        <div class="kpi-card sell">
+          <div class="kpi-val" id="kpi-sell">0</div>
+          <div class="kpi-lbl">SELL Signals</div>
+        </div>
+        <div class="kpi-card neutral">
+          <div class="kpi-val" id="kpi-neutral">0</div>
+          <div class="kpi-lbl">Neutral</div>
+        </div>
+        <div class="kpi-card exec">
+          <div class="kpi-val" id="kpi-exec">0</div>
+          <div class="kpi-lbl">To Execute</div>
+        </div>
       </div>
       <div class="card">
         <div class="table-wrap">
-          <table class="data-table" id="signals-table">
-            <thead><tr>
-              <th>Symbol</th><th>Price</th><th>Direction</th><th>Score</th><th>Confidence</th><th>Buy Prob</th><th>Action</th><th>Council</th><th>Regime</th><th>Chart</th>
-            </tr></thead>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Price</th>
+                <th>Direction</th>
+                <th>Score</th>
+                <th>Confidence</th>
+                <th>Buy Prob</th>
+                <th>Action</th>
+                <th>Council</th>
+                <th>Regime</th>
+                <th>Chart</th>
+              </tr>
+            </thead>
             <tbody id="signals-tbody">
-              <tr><td colspan="10" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...</td></tr>
+              <tr>
+                <td colspan="10" class="loading-row">
+                  <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -403,18 +621,55 @@
          SECTION: PORTFOLIO
     ══════════════════════════════════════════════════════ -->
     <section id="sec-portfolio" class="section">
-      <div class="section-header"><h2><i class="fa-solid fa-briefcase"></i> Portfolio</h2></div>
+      <div class="section-header">
+        <h2><i class="fa-solid fa-briefcase"></i> Portfolio</h2>
+      </div>
       <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val mono" id="p-total-value">$100,000</div><div class="kpi-lbl">Total Value</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="p-cash">100%</div><div class="kpi-lbl">Cash</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="p-positions">0</div><div class="kpi-lbl">Positions</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="p-leverage">0.00x</div><div class="kpi-lbl">Leverage</div></div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="p-total-value">$100,000</div>
+          <div class="kpi-lbl">Total Value</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="p-cash">100%</div>
+          <div class="kpi-lbl">Cash</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="p-positions">0</div>
+          <div class="kpi-lbl">Positions</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="p-leverage">0.00x</div>
+          <div class="kpi-lbl">Leverage</div>
+        </div>
       </div>
       <div class="grid-2">
-        <div class="card"><div class="card-header"><i class="fa-solid fa-chart-pie"></i> Allocation</div><canvas id="portfolio-donut" height="260"></canvas></div>
-        <div class="card"><div class="card-header"><i class="fa-solid fa-table"></i> Positions</div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>Symbol</th><th>Shares</th><th>Value</th><th>Weight</th></tr></thead>
-          <tbody id="positions-tbody"><tr><td colspan="4" class="loading-row">No open positions</td></tr></tbody></table></div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-chart-pie"></i> Allocation
+          </div>
+          <canvas id="portfolio-donut" height="260"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-table"></i> Open Positions
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Shares</th>
+                  <th>Value</th>
+                  <th>Weight</th>
+                </tr>
+              </thead>
+              <tbody id="positions-tbody">
+                <tr>
+                  <td colspan="4" class="loading-row">No open positions (paper mode)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -423,21 +678,56 @@
          SECTION: RISK
     ══════════════════════════════════════════════════════ -->
     <section id="sec-risk" class="section">
-      <div class="section-header"><h2><i class="fa-solid fa-shield-halved"></i> Risk Dashboard</h2></div>
+      <div class="section-header">
+        <h2><i class="fa-solid fa-shield-halved"></i> Risk Dashboard</h2>
+      </div>
       <div class="kpi-row">
-        <div class="kpi-card" id="dd-kpi"><div class="kpi-val mono" id="risk-dd">0.00%</div><div class="kpi-lbl">Drawdown</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="risk-lever">0.00x</div><div class="kpi-lbl">Leverage</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="risk-daily-pnl">0.00%</div><div class="kpi-lbl">Daily P&amp;L</div></div>
-        <div class="kpi-card" id="halt-kpi"><div class="kpi-val" id="risk-halt"><i class="fa-solid fa-circle-check" style="color:var(--g)"></i> ACTIVE</div><div class="kpi-lbl">Status</div></div>
+        <div class="kpi-card" id="dd-kpi">
+          <div class="kpi-val mono" id="risk-dd">0.00%</div>
+          <div class="kpi-lbl">Drawdown</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="risk-lever">0.00x</div>
+          <div class="kpi-lbl">Leverage</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="risk-daily-pnl">0.00%</div>
+          <div class="kpi-lbl">Daily P&amp;L</div>
+        </div>
+        <div class="kpi-card" id="halt-kpi">
+          <div class="kpi-val" id="risk-halt">
+            <i class="fa-solid fa-circle-check" style="color:var(--g)"></i> ACTIVE
+          </div>
+          <div class="kpi-lbl">Status</div>
+        </div>
       </div>
       <div class="grid-2">
-        <div class="card"><div class="card-header"><i class="fa-solid fa-gauge"></i> Leverage Gauge</div>
-          <div class="gauge-wrap"><canvas id="leverage-gauge" height="220"></canvas></div>
-          <div class="gauge-labels"><span>0x</span><span id="lever-current-label">--</span><span id="lever-max-label">--</span></div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-gauge"></i> Leverage Gauge
+          </div>
+          <div class="gauge-wrap">
+            <canvas id="leverage-gauge" height="220"></canvas>
+          </div>
+          <div class="gauge-labels">
+            <span>0x</span>
+            <span id="lever-current-label">--</span>
+            <span id="lever-max-label">--</span>
+          </div>
         </div>
-        <div class="card"><div class="card-header"><i class="fa-solid fa-triangle-exclamation"></i> Risk Limits</div><div id="risk-limits-grid" class="risk-limits-grid"></div></div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-triangle-exclamation"></i> Risk Limits
+          </div>
+          <div id="risk-limits-grid" class="risk-limits-grid"></div>
+        </div>
       </div>
-      <div class="card"><div class="card-header"><i class="fa-solid fa-chart-area"></i> Drawdown Monitor</div><canvas id="drawdown-chart" height="160"></canvas></div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-area"></i> Drawdown Monitor
+        </div>
+        <canvas id="drawdown-chart" height="160"></canvas>
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════
@@ -448,6 +738,7 @@
         <h2><i class="fa-solid fa-robot"></i> Agent Council</h2>
         <span class="badge-mode" id="council-mode-badge">MODE: --</span>
       </div>
+
       <div class="card council-panel">
         <div class="council-inner">
           <div class="council-verdict" id="council-decision-main">WAITING</div>
@@ -458,18 +749,49 @@
         </div>
         <div class="council-reason" id="council-reason">Awaiting first cycle...</div>
       </div>
-      <div class="card"><div class="card-header"><i class="fa-solid fa-vote-yea"></i> Agent Votes</div><div id="agent-votes-grid" class="agent-votes-grid"></div></div>
+
       <div class="card">
-        <div class="card-header"><i class="fa-solid fa-history"></i> Recent Executions</div>
-        <div class="table-wrap"><table class="data-table"><thead><tr><th>Time</th><th>Symbol</th><th>Action</th><th>Council</th><th>Status</th></tr></thead>
-        <tbody id="executions-tbody"><tr><td colspan="5" class="loading-row">No executions yet</td></tr></tbody></table></div>
+        <div class="card-header">
+          <i class="fa-solid fa-vote-yea"></i> Agent Votes
+        </div>
+        <div id="agent-votes-grid" class="agent-votes-grid"></div>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-history"></i> Recent Executions
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Symbol</th>
+                <th>Action</th>
+                <th>Council</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="executions-tbody">
+              <tr>
+                <td colspan="5" class="loading-row">No executions yet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card llm-status-card">
-        <div class="card-header"><i class="fa-solid fa-brain"></i> LLM Status</div>
+        <div class="card-header">
+          <i class="fa-solid fa-brain"></i> LLM Status
+        </div>
         <div class="llm-status-inner">
           <div class="llm-indicator-row">
             <div class="llm-dot-big" id="llm-main-dot"></div>
-            <div><div class="llm-status-text" id="llm-status-text">Checking...</div><div class="llm-mode-text" id="llm-mode-text">Mode: --</div></div>
+            <div>
+              <div class="llm-status-text" id="llm-status-text">Checking...</div>
+              <div class="llm-mode-text" id="llm-mode-text">Mode: --</div>
+            </div>
           </div>
           <div class="llm-fallback-box" id="llm-fallback-info" style="display:none"></div>
         </div>
@@ -480,12 +802,29 @@
          SECTION: STRATEGIES
     ══════════════════════════════════════════════════════ -->
     <section id="sec-strategies" class="section">
-      <div class="section-header"><h2><i class="fa-solid fa-sliders"></i> Strategy Allocation</h2></div>
-      <div class="grid-2">
-        <div class="card"><div class="card-header"><i class="fa-solid fa-chart-pie"></i> Strategy Weights</div><canvas id="strategy-donut" height="260"></canvas></div>
-        <div class="card"><div class="card-header"><i class="fa-solid fa-list"></i> Detail</div><div id="strategy-details" class="strategy-details"></div></div>
+      <div class="section-header">
+        <h2><i class="fa-solid fa-sliders"></i> Strategy Allocation</h2>
       </div>
-      <div class="card"><div class="card-header"><i class="fa-solid fa-chart-bar"></i> Performance by Strategy</div><canvas id="strategy-perf-chart" height="180"></canvas></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-chart-pie"></i> Strategy Weights
+          </div>
+          <canvas id="strategy-donut" height="260"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <i class="fa-solid fa-list"></i> Detail
+          </div>
+          <div id="strategy-details" class="strategy-details"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-bar"></i> Performance by Strategy
+        </div>
+        <canvas id="strategy-perf-chart" height="180"></canvas>
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════
@@ -495,38 +834,53 @@
       <div class="section-header">
         <h2><i class="fa-solid fa-terminal"></i> Trading Terminal</h2>
         <div class="ibkr-status-pill" id="ibkr-status-pill">
-          <i class="fa-solid fa-plug"></i> IBKR: <span id="ibkr-mode-text">PAPER MODE</span>
+          <i class="fa-solid fa-plug"></i>
+          IBKR: <span id="ibkr-mode-text">PAPER MODE</span>
         </div>
       </div>
 
-      <!-- IBKR Info Banner -->
-      <div class="info-banner" id="ibkr-info-banner">
+      <!-- How Automated Trading Works -->
+      <div class="info-banner" id="auto-trading-info">
         <i class="fa-solid fa-circle-info"></i>
         <div>
-          <strong>Paper Trading Mode Active</strong> — IBKR TWS/Gateway requires a local connection. GitHub Actions runners use cloud VMs which cannot connect directly to IBKR. Orders are simulated via paper trading. To enable live execution: use a self-hosted runner with TWS Paper Trading running, or deploy IB Gateway on a dedicated server.
+          <strong>Automated Trading — No Browser Required</strong><br>
+          GitHub Actions runs <code>trading_loop.py</code> every 5 min. When Council = <strong>EXECUTE</strong>
+          and <code>DRY_RUN=false</code>, <code>IBKRExecutor</code> places paper orders automatically.
+          To activate: set secret <code>DRY_RUN=false</code> or change the workflow default.
+          Orders appear in the Execution Log below after each cycle.
         </div>
       </div>
 
       <div class="execution-grid">
-        <!-- Order Entry -->
+        <!-- Order Entry Panel -->
         <div class="card order-entry-card">
-          <div class="card-header"><i class="fa-solid fa-paper-plane"></i> Place Order via GitHub Actions</div>
-          <form class="order-form" id="order-form" onsubmit="Terminal.submitOrder(event)">
+          <div class="card-header">
+            <i class="fa-solid fa-paper-plane"></i> Manual Order (GitHub Actions dispatch)
+          </div>
+          <form class="order-form" id="order-form">
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Symbol</label>
                 <select class="form-select" id="order-symbol">
-                  <option value="SPY">SPY</option><option value="QQQ">QQQ</option><option value="IWM">IWM</option>
-                  <option value="AAPL">AAPL</option><option value="NVDA">NVDA</option><option value="MSFT">MSFT</option>
-                  <option value="GOOGL">GOOGL</option><option value="AMZN">AMZN</option><option value="META">META</option>
-                  <option value="TSLA">TSLA</option><option value="JPM">JPM</option><option value="GS">GS</option>
+                  <option value="SPY">SPY</option>
+                  <option value="QQQ">QQQ</option>
+                  <option value="IWM">IWM</option>
+                  <option value="AAPL">AAPL</option>
+                  <option value="NVDA">NVDA</option>
+                  <option value="MSFT">MSFT</option>
+                  <option value="GOOGL">GOOGL</option>
+                  <option value="AMZN">AMZN</option>
+                  <option value="META">META</option>
+                  <option value="TSLA">TSLA</option>
+                  <option value="JPM">JPM</option>
+                  <option value="GS">GS</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Side</label>
                 <div class="side-toggle">
-                  <button type="button" class="side-btn buy active" id="side-buy" onclick="Terminal.setSide('BUY')">BUY</button>
-                  <button type="button" class="side-btn sell" id="side-sell" onclick="Terminal.setSide('SELL')">SELL</button>
+                  <button type="button" class="side-btn buy active" id="side-buy">BUY</button>
+                  <button type="button" class="side-btn sell" id="side-sell">SELL</button>
                 </div>
               </div>
             </div>
@@ -537,7 +891,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">Order Type</label>
-                <select class="form-select" id="order-type" onchange="Terminal.togglePriceFields()">
+                <select class="form-select" id="order-type">
                   <option value="MKT">Market (MKT)</option>
                   <option value="LMT">Limit (LMT)</option>
                   <option value="STP">Stop (STP)</option>
@@ -545,26 +899,31 @@
                 </select>
               </div>
             </div>
-            <div class="form-row" id="price-fields">
-              <div class="form-group" id="limit-field">
-                <label class="form-label">Limit Price</label>
-                <input type="number" class="form-input mono" id="order-limit" placeholder="0.00" step="0.01">
-              </div>
-              <div class="form-group" id="stop-field">
-                <label class="form-label">Stop Price</label>
-                <input type="number" class="form-input mono" id="order-stop" placeholder="0.00" step="0.01">
+            <div id="price-fields">
+              <div class="form-row">
+                <div class="form-group" id="limit-field" style="display:none">
+                  <label class="form-label">Limit Price</label>
+                  <input type="number" class="form-input mono" id="order-limit" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group" id="stop-field" style="display:none">
+                  <label class="form-label">Stop Price</label>
+                  <input type="number" class="form-input mono" id="order-stop" placeholder="0.00" step="0.01">
+                </div>
               </div>
             </div>
             <div class="form-group">
-              <label class="form-label">Reason / Note</label>
-              <input type="text" class="form-input" id="order-reason" placeholder="Manual order from dashboard" value="Manual order from dashboard">
+              <label class="form-label">Note / Reason</label>
+              <input type="text" class="form-input" id="order-reason" value="Manual order from dashboard">
             </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">GitHub PAT <a href="https://github.com/settings/tokens" target="_blank" class="link-sm"><i class="fa-solid fa-external-link"></i></a></label>
-                <input type="password" class="form-input mono" id="gh-pat" placeholder="ghp_xxxxxxxxxxxx">
-                <div class="form-hint">Token needs <code>workflow</code> scope. Stored locally only.</div>
-              </div>
+            <div class="form-group">
+              <label class="form-label">
+                GitHub PAT
+                <a href="https://github.com/settings/tokens" target="_blank" class="link-sm">
+                  <i class="fa-solid fa-external-link-alt"></i> Generate
+                </a>
+              </label>
+              <input type="password" class="form-input mono" id="gh-pat" placeholder="ghp_xxxxxxxxxxxx">
+              <div class="form-hint">Needs <code>workflow</code> scope — stored in localStorage only.</div>
             </div>
             <div class="form-actions">
               <label class="dry-run-toggle">
@@ -576,7 +935,6 @@
               </button>
             </div>
           </form>
-          <!-- Order Preview -->
           <div class="order-preview" id="order-preview" style="display:none">
             <div class="preview-header"><i class="fa-solid fa-eye"></i> Order Preview</div>
             <div id="order-preview-content"></div>
@@ -587,33 +945,53 @@
         <div class="card exec-log-card">
           <div class="card-header">
             <span><i class="fa-solid fa-history"></i> Execution Log</span>
-            <button class="btn-icon-sm" onclick="Terminal.refreshExecLog()" title="Refresh"><i class="fa-solid fa-rotate"></i></button>
+            <button class="btn-icon-sm" id="btn-refresh-exec" title="Refresh">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
           </div>
           <div class="exec-log-scroll">
             <div id="exec-log-content">
-              <div class="log-empty"><i class="fa-solid fa-inbox"></i><br>No executions yet</div>
+              <div class="log-empty">
+                <i class="fa-solid fa-inbox"></i><br>No executions yet
+              </div>
             </div>
           </div>
-
           <!-- IBKR Connection Panel -->
           <div class="ibkr-conn-panel">
-            <div class="icp-header"><i class="fa-solid fa-plug-circle-bolt"></i> IBKR Connection</div>
+            <div class="icp-header">
+              <i class="fa-solid fa-plug-circle-bolt"></i> IBKR Connection
+            </div>
             <div class="icp-grid">
-              <div class="icp-row"><span>Status</span><span class="icp-val" id="icp-status">PAPER MODE</span></div>
-              <div class="icp-row"><span>Mode</span><span class="icp-val">Simulation (ib_insync)</span></div>
-              <div class="icp-row"><span>Account</span><span class="icp-val" id="icp-account">--</span></div>
-              <div class="icp-row"><span>ib_insync</span><span class="icp-val" id="icp-lib">Not connected</span></div>
+              <div class="icp-row">
+                <span>Status</span>
+                <span class="icp-val" id="icp-status">PAPER MODE</span>
+              </div>
+              <div class="icp-row">
+                <span>Mode</span>
+                <span class="icp-val">ib_insync — Simulated</span>
+              </div>
+              <div class="icp-row">
+                <span>Account</span>
+                <span class="icp-val" id="icp-account">--</span>
+              </div>
+              <div class="icp-row">
+                <span>Last Auto-Trade</span>
+                <span class="icp-val" id="icp-last-trade">--</span>
+              </div>
             </div>
             <div class="icp-note">
-              <i class="fa-solid fa-circle-info"></i> For live IBKR: self-hosted runner + TWS Paper Trading required.
+              <i class="fa-solid fa-circle-info"></i>
+              Auto-trading runs via GitHub Actions. No browser needed.
             </div>
           </div>
         </div>
 
-        <!-- Execution Quality -->
-        <div class="card">
-          <div class="card-header"><i class="fa-solid fa-gauge-high"></i> Execution Quality</div>
-          <canvas id="exec-quality-chart" height="180"></canvas>
+        <!-- Execution Quality Chart -->
+        <div class="card" style="grid-column: 1 / -1">
+          <div class="card-header">
+            <i class="fa-solid fa-gauge-high"></i> Execution Quality
+          </div>
+          <canvas id="exec-quality-chart" height="160"></canvas>
         </div>
       </div>
     </section>
@@ -622,1066 +1000,72 @@
          SECTION: PERFORMANCE
     ══════════════════════════════════════════════════════ -->
     <section id="sec-performance" class="section">
-      <div class="section-header"><h2><i class="fa-solid fa-chart-area"></i> Performance</h2></div>
-      <div class="kpi-row">
-        <div class="kpi-card"><div class="kpi-val mono" id="perf-value">$100,000</div><div class="kpi-lbl">Portfolio Value</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="perf-signals">0</div><div class="kpi-lbl">Signals Generated</div></div>
-        <div class="kpi-card"><div class="kpi-val mono" id="perf-exec">0</div><div class="kpi-lbl">Orders Executed</div></div>
-        <div class="kpi-card"><div class="kpi-val" id="perf-mode">--</div><div class="kpi-lbl">Engine Mode</div></div>
+      <div class="section-header">
+        <h2><i class="fa-solid fa-chart-area"></i> Performance</h2>
       </div>
-      <div class="card"><div class="card-header"><i class="fa-solid fa-chart-bar"></i> Strategy Sharpe</div><canvas id="strategy-sharpe-chart" height="180"></canvas></div>
-      <div class="card"><div class="card-header"><i class="fa-solid fa-timeline"></i> System Timeline</div><div id="system-timeline" class="system-timeline"></div></div>
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="perf-value">$100,000</div>
+          <div class="kpi-lbl">Portfolio Value</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="perf-signals">0</div>
+          <div class="kpi-lbl">Signals Generated</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val mono" id="perf-exec">0</div>
+          <div class="kpi-lbl">Orders Executed</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="perf-mode">--</div>
+          <div class="kpi-lbl">Engine Mode</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-bar"></i> Strategy Sharpe Ratio
+        </div>
+        <canvas id="strategy-sharpe-chart" height="180"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <i class="fa-solid fa-timeline"></i> System Timeline
+        </div>
+        <div id="system-timeline" class="system-timeline"></div>
+      </div>
     </section>
 
   </main>
 </div>
 
-<!-- ── Mobile Bottom Nav ──────────────────────────────────── -->
+<!-- Mobile Bottom Nav -->
 <nav class="mobile-nav" id="mobile-nav">
-  <button class="mob-nav-btn active" onclick="Terminal.showSection('overview')"><i class="fa-solid fa-chart-line"></i><span>Home</span></button>
-  <button class="mob-nav-btn" onclick="Terminal.showSection('watchlist')"><i class="fa-solid fa-list-ul"></i><span>Watch</span></button>
-  <button class="mob-nav-btn" onclick="Terminal.showSection('signals')"><i class="fa-solid fa-satellite-dish"></i><span>Signals</span></button>
-  <button class="mob-nav-btn" onclick="Terminal.showSection('execution')"><i class="fa-solid fa-terminal"></i><span>Trade</span></button>
-  <button class="mob-nav-btn" onclick="Terminal.showSection('portfolio')"><i class="fa-solid fa-briefcase"></i><span>Port.</span></button>
+  <button class="mob-nav-btn active" data-sec="overview">
+    <i class="fa-solid fa-chart-line"></i><span>Home</span>
+  </button>
+  <button class="mob-nav-btn" data-sec="watchlist">
+    <i class="fa-solid fa-list-ul"></i><span>Watch</span>
+  </button>
+  <button class="mob-nav-btn" data-sec="signals">
+    <i class="fa-solid fa-satellite-dish"></i><span>Signals</span>
+  </button>
+  <button class="mob-nav-btn" data-sec="execution">
+    <i class="fa-solid fa-terminal"></i><span>Trade</span>
+  </button>
+  <button class="mob-nav-btn" data-sec="portfolio">
+    <i class="fa-solid fa-briefcase"></i><span>Port.</span>
+  </button>
 </nav>
 
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
 <!-- ═══════════════════════════════════════════════════════════
-     SCRIPTS
+     SCRIPTS — Ordre impératif
 ═══════════════════════════════════════════════════════════ -->
 <script src="assets/js/api_client.js"></script>
 <script src="assets/js/charts.js"></script>
-<script src="assets/js/dashboard.js"></script>
+<script src="assets/js/terminal.js"></script>
 
-<script>
-// ============================================================
-// TERMINAL — Controller principal
-// Étend Dashboard avec les fonctionnalités de trading terminal
-// ============================================================
-
-const Terminal = (() => {
-
-  const FINANCE_HUB = 'https://finance-hub-api.raphnardone.workers.dev';
-  const GH_OWNER    = 'Raph33AI';
-  const GH_REPO     = 'alphavault-quant';
-  const UNIVERSE    = ['SPY','QQQ','IWM','AAPL','NVDA','MSFT','GOOGL','AMZN','META','TSLA','JPM','GS'];
-
-  const NAMES = {
-    SPY:'S&P 500 ETF', QQQ:'Nasdaq 100 ETF', IWM:'Russell 2000 ETF',
-    AAPL:'Apple Inc.', NVDA:'NVIDIA Corp.', MSFT:'Microsoft Corp.',
-    GOOGL:'Alphabet Inc.', AMZN:'Amazon.com', META:'Meta Platforms',
-    TSLA:'Tesla Inc.', JPM:'JPMorgan Chase', GS:'Goldman Sachs'
-  };
-
-  let _state        = {};
-  let _interval     = null;
-  let _currentSide  = 'BUY';
-  let _currentIv    = '1day';
-  let _panelIv      = ['1day','1day','1day','1day'];
-  let _panelCharts  = [null,null,null,null];
-  let _mainChart    = null;
-  let _sparkCharts  = {};
-  let _sidebarOpen  = true;
-  const REFRESH_MS  = 60_000;
-
-  // ────────────────────────────────────────────────────────
-  // INIT
-  // ────────────────────────────────────────────────────────
-  async function init() {
-    _startClock();
-    _restoreTheme();
-    _restorePAT();
-    await _refresh();
-    _interval = setInterval(_refresh, REFRESH_MS);
-    // Init main chart (overview section)
-    await loadMainChart();
-    // Init 4 panel charts
-    await _initPanelCharts();
-  }
-
-  async function _refresh(bust = false) {
-    try {
-      const data = await ApiClient.fetchAll(bust);
-      _state = data;
-      _updateTopbar(data);
-      _updateTicker(data);
-      _updateSidebarWatchlist(data);
-      _updateMiniQuotes(data);
-      _renderActiveSection(data);
-      _updateLastRefresh();
-    } catch(e) {
-      console.error('Terminal refresh error:', e);
-    }
-  }
-
-  async function forceRefresh() {
-    clearInterval(_interval);
-    const btn = document.getElementById('btn-refresh');
-    if(btn) btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i>';
-    await _refresh(true);
-    await loadMainChart(true);
-    if(btn) btn.innerHTML = '<i class="fa-solid fa-rotate"></i>';
-    _interval = setInterval(_refresh, REFRESH_MS);
-  }
-
-  // ────────────────────────────────────────────────────────
-  // SECTION ROUTING
-  // ────────────────────────────────────────────────────────
-  function showSection(name) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    document.querySelectorAll('.mob-nav-btn').forEach(n => n.classList.remove('active'));
-
-    const sec = document.getElementById(`sec-${name}`);
-    const nav = document.querySelector(`[data-sec="${name}"]`);
-    const mob = document.querySelector(`.mob-nav-btn[onclick*="${name}"]`);
-    if(sec) sec.classList.add('active');
-    if(nav) nav.classList.add('active');
-    if(mob) mob.classList.add('active');
-
-    _renderSection(name, _state);
-
-    // Init charts on first show
-    if(name === 'charts') _initPanelCharts();
-    if(name === 'execution') refreshExecLog();
-  }
-
-  function _renderActiveSection(data) {
-    const active = document.querySelector('.section.active');
-    if(!active) return;
-    _renderSection(active.id.replace('sec-',''), data);
-  }
-
-  function _renderSection(name, data) {
-    switch(name) {
-      case 'overview':    _renderOverview(data);    break;
-      case 'watchlist':   _renderWatchlist(data);   break;
-      case 'signals':     _renderSignals(data);     break;
-      case 'portfolio':   _renderPortfolio(data);   break;
-      case 'risk':        _renderRisk(data);        break;
-      case 'agents':      _renderAgents(data);      break;
-      case 'strategies':  _renderStrategies(data);  break;
-      case 'performance': _renderPerformance(data); break;
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // TOPBAR
-  // ────────────────────────────────────────────────────────
-  function _updateTopbar(data) {
-    const status = data.status || {};
-    const regime = data.regime?.global || {};
-
-    // Regime badge
-    const REGIME_MAP = {
-      trend_up:'TREND UP', trend_down:'TREND DOWN', range_bound:'RANGE',
-      low_volatility:'LOW VOL', high_volatility:'HIGH VOL', crash:'CRASH',
-      macro_tightening:'TIGHTENING', macro_easing:'EASING', initializing:'INIT'
-    };
-    const REGIME_ICON = {
-      trend_up:'fa-arrow-trend-up', trend_down:'fa-arrow-trend-down',
-      range_bound:'fa-arrows-left-right', low_volatility:'fa-minus',
-      high_volatility:'fa-bolt', crash:'fa-skull-crossbones',
-      macro_tightening:'fa-lock', macro_easing:'fa-unlock', initializing:'fa-circle-notch fa-spin'
-    };
-    const REGIME_COLOR = {
-      trend_up:'#10b981', trend_down:'#ef4444', range_bound:'#64748b',
-      low_volatility:'#06b6d4', high_volatility:'#f59e0b', crash:'#ef4444',
-      macro_tightening:'#f97316', macro_easing:'#8b5cf6', initializing:'#64748b'
-    };
-    const rl = regime.regime_label || 'initializing';
-    const badge = document.getElementById('regime-badge');
-    if(badge) {
-      badge.innerHTML = `<i class="fa-solid ${REGIME_ICON[rl]||'fa-question'}" style="margin-right:5px"></i>${REGIME_MAP[rl]||rl.replace(/_/g,' ').toUpperCase()}`;
-      badge.style.borderColor = REGIME_COLOR[rl]||'#64748b';
-      badge.style.color       = REGIME_COLOR[rl]||'#64748b';
-    }
-
-    // Status dots
-    _setDot('dot-llm',  status.llm_available ? 'ok' : 'error');
-    _setDot('dot-hub',  status.workers?.finance_hub ? 'ok' : 'warn');
-    _setDot('dot-ibkr', 'warn'); // Always paper in cloud
-    _setDot('dot-sys',  status.overall === 'healthy' ? 'ok' : status.overall === 'degraded' ? 'warn' : 'error');
-
-    // Session
-    const sess = status.session || 'closed';
-    const sessEl = document.getElementById('session-badge');
-    if(sessEl) { sessEl.textContent = sess.toUpperCase(); sessEl.className = `market-session ${sess}`; }
-
-    // Dry run
-    const drEl = document.getElementById('dry-run-badge');
-    if(drEl) { drEl.textContent = status.dry_run === false ? 'LIVE' : 'PAPER'; drEl.className = status.dry_run === false ? 'dry-run-badge live' : 'dry-run-badge'; }
-
-    // Sidebar watchlist session
-    const swSess = document.getElementById('sw-session');
-    if(swSess) { swSess.textContent = sess.toUpperCase(); swSess.className = `sw-session ${sess}`; }
-  }
-
-  function _setDot(id, state) {
-    const el = document.getElementById(id);
-    if(el) el.className = `s-dot ${state}`;
-    const pill = document.getElementById(id.replace('dot-','pill-'));
-    if(pill) pill.className = `status-pill ${state}`;
-  }
-
-  // ────────────────────────────────────────────────────────
-  // TICKER BAR
-  // ────────────────────────────────────────────────────────
-  function _updateTicker(data) {
-    const sigs = data.signals?.signals || {};
-    const track = document.getElementById('ticker-track');
-    if(!track) return;
-
-    const symbols = Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE;
-    const items = symbols.map(sym => {
-      const s = sigs[sym] || {};
-      const price = parseFloat(s.price || 0);
-      const chgPct = parseFloat(s.change_pct || 0);
-      const cls = chgPct > 0 ? 'up' : chgPct < 0 ? 'down' : '';
-      const arrow = chgPct > 0 ? '<i class="fa-solid fa-caret-up"></i>' : chgPct < 0 ? '<i class="fa-solid fa-caret-down"></i>' : '';
-      return `<span class="ticker-item ${cls}"><strong>${sym}</strong> ${price > 0 ? '$' + price.toFixed(2) : '--'} ${arrow}<em>${chgPct !== 0 ? (chgPct > 0 ? '+' : '') + chgPct.toFixed(2) + '%' : ''}</em></span>`;
-    }).join('');
-
-    // Duplicate for seamless loop
-    track.innerHTML = items + items;
-    // Adjust animation speed based on content
-    const itemCount = symbols.length;
-    track.style.animationDuration = `${Math.max(20, itemCount * 3)}s`;
-  }
-
-  // ────────────────────────────────────────────────────────
-  // MINI QUOTES (topbar center)
-  // ────────────────────────────────────────────────────────
-  function _updateMiniQuotes(data) {
-    const sigs = data.signals?.signals || {};
-    ['SPY','QQQ','IWM'].forEach(sym => {
-      const s = sigs[sym];
-      if(!s) return;
-      const el = document.getElementById(`mini-${sym.toLowerCase()}`);
-      if(!el) return;
-      const price = parseFloat(s.price || 0);
-      const chg   = parseFloat(s.change_pct || 0);
-      const valEl = el.querySelector('.mq-val');
-      if(valEl) {
-        valEl.textContent = price > 0 ? `$${price.toFixed(2)}` : '--';
-        valEl.className   = `mq-val ${chg > 0 ? 'up' : chg < 0 ? 'down' : ''}`;
-      }
-    });
-  }
-
-  // ────────────────────────────────────────────────────────
-  // SIDEBAR WATCHLIST
-  // ────────────────────────────────────────────────────────
-  function _updateSidebarWatchlist(data) {
-    const sigs = data.signals?.signals || {};
-    const list = document.getElementById('sw-list');
-    if(!list) return;
-
-    const symbols = Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE;
-    list.innerHTML = symbols.map(sym => {
-      const s     = sigs[sym] || {};
-      const price = parseFloat(s.price || 0);
-      const chg   = parseFloat(s.change_pct || 0);
-      const dir   = s.direction || 'neutral';
-      const cls   = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
-      return `<div class="sw-item" onclick="Terminal.loadChartSymbol('${sym}')">
-        <div class="sw-sym-row">
-          <span class="sw-sym">${sym}</span>
-          <span class="sw-dir ${dir}">${dir === 'buy' ? '<i class="fa-solid fa-arrow-up"></i>' : dir === 'sell' ? '<i class="fa-solid fa-arrow-down"></i>' : '<i class="fa-solid fa-minus"></i>'}</span>
-        </div>
-        <div class="sw-price-row">
-          <span class="sw-price mono ${cls}">${price > 0 ? '$' + price.toFixed(2) : '--'}</span>
-          <span class="sw-chg mono ${cls}">${chg > 0 ? '+' : ''}${chg !== 0 ? chg.toFixed(2) + '%' : ''}</span>
-        </div>
-      </div>`;
-    }).join('');
-  }
-
-  // ────────────────────────────────────────────────────────
-  // OVERVIEW SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderOverview(data) {
-    const sigs    = data.signals?.signals || {};
-    const regime  = data.regime?.global   || {};
-    const port    = data.portfolio         || {};
-    const risk    = data.risk              || {};
-    const status  = data.status            || {};
-    const sw      = data.strategy?.weights || {};
-
-    // Index cards
-    ['SPY','QQQ','IWM'].forEach(sym => {
-      const s     = sigs[sym] || {};
-      const price = parseFloat(s.price || 0);
-      const chg   = parseFloat(s.change_pct || 0);
-      const cls   = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
-      _el(`ic-${sym.toLowerCase()}-price`, price > 0 ? `$${price.toFixed(2)}` : '--', true);
-      const chgEl = document.getElementById(`ic-${sym.toLowerCase()}-change`);
-      if(chgEl) {
-        chgEl.textContent = `${chg > 0 ? '+' : ''}${chg.toFixed(2)}%`;
-        chgEl.className   = `ic-change ${cls}`;
-      }
-    });
-
-    // Regime card
-    const REGIME_MAP = {
-      trend_up:'Trend Up', trend_down:'Trend Down', range_bound:'Range Bound',
-      low_volatility:'Low Volatility', high_volatility:'High Volatility',
-      crash:'Crash', macro_tightening:'Macro Tightening', macro_easing:'Macro Easing', initializing:'Initializing'
-    };
-    _el('ic-regime-label', REGIME_MAP[regime.regime_label] || (regime.regime_label||'--'));
-    _el('ic-regime-score', parseFloat(regime.regime_score||0).toFixed(2));
-    _el('ic-regime-conf',  `${((regime.confidence||0)*100).toFixed(0)}%`);
-    const flagsEl = document.getElementById('ic-regime-flags');
-    if(flagsEl) {
-      flagsEl.innerHTML = [
-        {l:'Long', ok: regime.allow_long},
-        {l:'Short', ok: regime.allow_short},
-        {l:'Lev.', ok: regime.leverage_allowed},
-      ].map(f => `<span class="ir-flag ${f.ok?'ok':'no'}">${f.l}</span>`).join('');
-    }
-
-    // Signal KPIs
-    let buy=0, sell=0, neutral=0, exec=0;
-    Object.values(sigs).forEach(s => {
-      if(s.direction==='buy') buy++;
-      else if(s.direction==='sell') sell++;
-      else neutral++;
-      if((s.council||'').includes('execute')) exec++;
-    });
-    _el('ov-buy', buy); _el('ov-sell', sell); _el('ov-neutral', neutral); _el('ov-exec', exec);
-
-    // Portfolio snapshot
-    _el('ov-port-value', `$${parseFloat(port.total_value||100000).toLocaleString()}`);
-    _el('ov-cash',       `${((port.cash_pct||1)*100).toFixed(1)}%`);
-    _el('ov-lever',      `${parseFloat(risk.leverage?.current_leverage||0).toFixed(2)}x`);
-    const dd = parseFloat(risk.drawdown?.current_drawdown||0);
-    const ddEl = document.getElementById('ov-dd');
-    if(ddEl) { ddEl.textContent = `${(dd*100).toFixed(2)}%`; ddEl.className = `ps-val mono ${dd < -0.02 ? 'down' : 'up'}`; }
-
-    // Health grid
-    _el('hg-llm',  status.llm_available ? 'Available' : 'Deterministic');
-    _el('hg-ibkr', 'Paper Mode');
-    _el('hg-hub',  status.workers?.finance_hub ? 'Online' : 'Offline');
-    const ts = data.signals?.timestamp ? new Date(data.signals.timestamp).toLocaleTimeString() : '--';
-    _el('hg-last', ts);
-
-    // Strategy donut in overview
-    if(typeof Charts !== 'undefined' && Charts.renderStrategyDonut) {
-      const defSW = {trend:0.40, mean_reversion:0.25, vol_carry:0.20, options_convexity:0.15};
-      Charts.renderStrategyDonut(Object.keys(sw).length ? sw : defSW);
-    }
-    // Rename canvas for overview
-    const ovDonut = document.getElementById('ov-strategy-donut');
-    if(ovDonut) {
-      // Render separately for overview
-      _renderSmallDonut('ov-strategy-donut', sw);
-    }
-
-    // Top signals table (limited to 8)
-    _renderSignalsTable('ov-signals-tbody', sigs, 8, false);
-  }
-
-  function _renderSmallDonut(canvasId, weights) {
-    const c = document.getElementById(canvasId);
-    if(!c || typeof Chart === 'undefined') return;
-    const id = canvasId;
-    if(window['__cj_'+id]) { window['__cj_'+id].destroy(); }
-    const STRAT_COLORS = {trend:'#3b82f6', mean_reversion:'#10b981', vol_carry:'#8b5cf6', options_convexity:'#f97316'};
-    const def = {trend:0.40, mean_reversion:0.25, vol_carry:0.20, options_convexity:0.15};
-    const src = Object.keys(weights).length ? weights : def;
-    window['__cj_'+id] = new Chart(c.getContext('2d'), {
-      type:'doughnut',
-      data:{
-        labels: Object.keys(src).map(k=>k.replace(/_/g,' ')),
-        datasets:[{
-          data: Object.values(src).map(v=>(v*100).toFixed(1)),
-          backgroundColor: Object.keys(src).map(k=>(STRAT_COLORS[k]||'#64748b')+'cc'),
-          borderWidth:2
-        }]
-      },
-      options:{responsive:true, cutout:'65%', plugins:{legend:{position:'bottom', labels:{color:_isDark()?'#f1f5f9':'#0f172a', font:{size:10}, padding:6}}}}
-    });
-  }
-
-  // ────────────────────────────────────────────────────────
-  // WATCHLIST SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderWatchlist(data) {
-    const sigs = data.signals?.signals || {};
-    const tbody = document.getElementById('watchlist-tbody');
-    if(!tbody) return;
-
-    const symbols = Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE;
-    tbody.innerHTML = symbols.map(sym => {
-      const s      = sigs[sym] || {};
-      const price  = parseFloat(s.price || 0);
-      const chg    = parseFloat(s.change_pct || 0);
-      const score  = parseFloat(s.final_score || 0);
-      const bp     = parseFloat(s.buy_prob || 0.5);
-      const dir    = s.direction || 'neutral';
-      const council= s.council   || 'wait';
-      const cls    = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
-      const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
-      const ccolor = council.includes('execute') ? '#10b981' : council === 'veto' ? '#ef4444' : '#f59e0b';
-      return `<tr>
-        <td><strong class="sym-link" onclick="Terminal.loadChartSymbol('${sym}')">${sym}</strong></td>
-        <td><span class="muted-sm">${NAMES[sym]||''}</span></td>
-        <td class="mono ${cls}">${price > 0 ? '$' + price.toFixed(2) : '--'}</td>
-        <td class="mono ${cls}">${chg > 0 ? '+' : ''}${chg.toFixed(2)}</td>
-        <td class="mono ${cls}">${chg > 0 ? '+' : ''}${chg.toFixed(2)}%</td>
-        <td>
-          <div class="score-bar-inline">
-            <div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div>
-          </div>
-          <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
-        </td>
-        <td><span class="dir-badge ${dir}">${dir === 'buy' ? '<i class="fa-solid fa-arrow-up"></i> BUY' : dir === 'sell' ? '<i class="fa-solid fa-arrow-down"></i> SELL' : '<i class="fa-solid fa-minus"></i> NEUTRAL'}</span></td>
-        <td class="mono">${(bp*100).toFixed(1)}%</td>
-        <td><span class="regime-chip">${(s.regime||'--').replace(/_/g,' ')}</span></td>
-        <td><strong style="color:${ccolor};font-size:11px">${council.toUpperCase()}</strong></td>
-        <td>
-          <button class="btn-xs" onclick="Terminal.loadChartSymbol('${sym}');Terminal.showSection('overview')"><i class="fa-solid fa-chart-bar"></i></button>
-          <button class="btn-xs" onclick="document.getElementById('order-symbol').value='${sym}';Terminal.showSection('execution')"><i class="fa-solid fa-paper-plane"></i></button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  function filterWatchlist() {
-    const q = document.getElementById('wl-search')?.value.toLowerCase() || '';
-    document.querySelectorAll('#watchlist-tbody tr').forEach(tr => {
-      tr.style.display = (tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
-    });
-  }
-
-  // ────────────────────────────────────────────────────────
-  // SIGNALS SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderSignals(data) {
-    const sigs = data.signals?.signals || {};
-    let buy=0, sell=0, neutral=0, exec=0;
-    Object.values(sigs).forEach(s => {
-      if(s.direction==='buy') buy++; else if(s.direction==='sell') sell++; else neutral++;
-      if((s.council||'').includes('execute')) exec++;
-    });
-    _el('kpi-buy', buy); _el('kpi-sell', sell); _el('kpi-neutral', neutral); _el('kpi-exec', exec);
-    _el('signals-count', `${Object.keys(sigs).length} symbols`);
-    _el('nav-signals-count', Object.keys(sigs).length);
-    _renderSignalsTable('signals-tbody', sigs, 0, true);
-  }
-
-  function _renderSignalsTable(tbodyId, sigs, limit, showChart) {
-    const tbody = document.getElementById(tbodyId);
-    if(!tbody) return;
-    const symbols = Object.keys(sigs);
-    if(!symbols.length) {
-      tbody.innerHTML = `<tr><td colspan="10" class="loading-row"><i class="fa-solid fa-circle-notch fa-spin"></i> Awaiting first signal cycle...</td></tr>`;
-      return;
-    }
-    const display = limit ? symbols.slice(0, limit) : symbols;
-    tbody.innerHTML = display.map(sym => {
-      const s      = sigs[sym] || {};
-      const price  = parseFloat(s.price   || 0);
-      const score  = parseFloat(s.final_score || 0);
-      const conf   = parseFloat(s.confidence  || 0);
-      const bp     = parseFloat(s.buy_prob    || 0.5);
-      const dir    = s.direction || 'neutral';
-      const council= s.council   || 'wait';
-      const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
-      const ccolor = council.includes('execute') ? '#10b981' : council === 'veto' ? '#ef4444' : '#f59e0b';
-      return `<tr>
-        <td><strong class="sym-link" onclick="Terminal.loadChartSymbol('${sym}')">${sym}</strong></td>
-        <td class="mono">${price > 0 ? '$' + price.toFixed(2) : '--'}</td>
-        <td><span class="dir-badge ${dir}">${dir==='buy'?'<i class="fa-solid fa-arrow-up"></i> BUY':dir==='sell'?'<i class="fa-solid fa-arrow-down"></i> SELL':'<i class="fa-solid fa-minus"></i> NEUTRAL'}</span></td>
-        <td>
-          <div class="score-bar-inline"><div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div></div>
-          <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
-        </td>
-        <td class="mono">${(conf*100).toFixed(1)}%</td>
-        <td class="mono">${(bp*100).toFixed(1)}%</td>
-        <td class="mono" style="color:#94a3b8;font-size:11px">${s.trade_action||'wait'}</td>
-        <td><strong style="color:${ccolor};font-size:11px">${council.toUpperCase()}</strong></td>
-        <td><span class="regime-chip">${(s.regime||'--').replace(/_/g,' ')}</span></td>
-        ${showChart ? `<td><button class="btn-xs" onclick="Terminal.loadChartSymbol('${sym}');Terminal.showSection('overview')"><i class="fa-solid fa-chart-bar"></i></button></td>` : ''}
-      </tr>`;
-    }).join('');
-  }
-
-  function filterSignals() {
-    const q = document.getElementById('signal-search')?.value.toLowerCase() || '';
-    document.querySelectorAll('#signals-tbody tr').forEach(tr => {
-      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  }
-
-  // ────────────────────────────────────────────────────────
-  // PORTFOLIO SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderPortfolio(data) {
-    const port = data.portfolio || {};
-    const risk = data.risk      || {};
-    const val  = parseFloat(port.total_value || 100000);
-    const cash = parseFloat(port.cash_pct   || 1);
-    const pos  = port.positions || {};
-    const wts  = port.weights   || {};
-
-    _el('p-total-value', `$${val.toLocaleString()}`);
-    _el('p-cash',        `${(cash*100).toFixed(1)}%`);
-    _el('p-positions',   Object.keys(pos).length);
-    _el('p-leverage',    `${parseFloat(risk.leverage?.current_leverage||0).toFixed(2)}x`);
-
-    if(typeof Charts !== 'undefined') Charts.renderPortfolioDonut(Object.keys(wts).length ? wts : {Cash: cash, Equities: 1-cash});
-
-    const tbody = document.getElementById('positions-tbody');
-    if(tbody) {
-      const entries = Object.entries(pos);
-      tbody.innerHTML = entries.length
-        ? entries.map(([sym,p]) => `<tr><td><strong>${sym}</strong></td><td class="mono">${p.shares||0}</td><td class="mono">$${parseFloat(p.value||0).toLocaleString()}</td><td class="mono">${((wts[sym]||0)*100).toFixed(1)}%</td></tr>`).join('')
-        : '<tr><td colspan="4" class="loading-row">No open positions (paper mode)</td></tr>';
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // RISK SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderRisk(data) {
-    const risk  = data.risk     || {};
-    const dd    = risk.drawdown || {};
-    const lever = risk.leverage || {};
-    const currDD   = parseFloat(dd.current_drawdown      || 0);
-    const dailyPnL = parseFloat(dd.daily_pnl_pct         || 0);
-    const currLev  = parseFloat(lever.current_leverage   || 0);
-    const maxLev   = parseFloat(lever.allowed_leverage   || 1.5);
-    const halt     = dd.halt_active || lever.is_over_leveraged;
-
-    _el('risk-dd',       `${(currDD*100).toFixed(2)}%`);
-    _el('risk-lever',    `${currLev.toFixed(2)}x`);
-    _el('risk-daily-pnl',`${dailyPnL >= 0 ? '+' : ''}${(dailyPnL*100).toFixed(2)}%`);
-    _el('risk-halt',     halt ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444"></i> HALTED' : '<i class="fa-solid fa-circle-check" style="color:#10b981"></i> ACTIVE', true);
-
-    if(typeof Charts !== 'undefined') {
-      Charts.renderLeverageGauge(currLev, maxLev);
-      Charts.updateDrawdownChart(currDD);
-    }
-
-    const limitsEl = document.getElementById('risk-limits-grid');
-    if(limitsEl) {
-      const limits = [
-        {label:'Daily Loss',      cur:Math.abs(dailyPnL*100), max:2,    unit:'%'},
-        {label:'Max Drawdown',    cur:Math.abs(currDD*100),   max:10,   unit:'%'},
-        {label:'Leverage',        cur:currLev,                 max:maxLev, unit:'x'},
-        {label:'Max Position',    cur:0,                       max:10,   unit:'%'},
-      ];
-      limitsEl.innerHTML = limits.map(l => {
-        const pct = Math.min((l.cur/l.max)*100, 100);
-        const cls = pct > 80 ? 'danger' : pct > 60 ? 'warn' : 'safe';
-        return `<div class="rli"><span class="rli-lbl">${l.label}</span>
-          <div class="rli-bar-wrap"><div class="rli-bar ${cls}" style="width:${pct.toFixed(0)}%"></div></div>
-          <span class="rli-val ${cls}">${l.cur.toFixed(2)}${l.unit}</span></div>`;
-      }).join('');
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // AGENTS SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderAgents(data) {
-    const agents  = data.agents  || {};
-    const status  = data.status  || {};
-    const decs    = agents.decisions  || {};
-    const execs   = agents.executions || [];
-
-    _el('council-mode-badge', `MODE: ${status.mode === 'llm' ? 'LLM ASSISTED' : 'DETERMINISTIC'}`);
-
-    let topDecision='wait', topScore=0, topReason='No decisions yet', topMode='--';
-    Object.values(decs).forEach(d => {
-      const sc = parseFloat(d.council?.weighted_score || 0);
-      if(sc > topScore) { topScore=sc; topDecision=d.council?.decision||'wait'; topReason=d.council?.reason||''; topMode=d.council?.mode||'--'; }
-    });
-    const cdEl = document.getElementById('council-decision-main');
-    if(cdEl) { cdEl.textContent = topDecision.replace(/_/g,' ').toUpperCase(); cdEl.className = `council-verdict ${topDecision}`; }
-    _el('council-mode',   topMode);
-    _el('council-score',  topScore.toFixed(3));
-    _el('council-reason', topReason || 'Awaiting cycle...');
-
-    // Agent votes
-    const votesEl = document.getElementById('agent-votes-grid');
-    if(votesEl) {
-      const firstDec = Object.values(decs)[0];
-      const votes    = firstDec?.council?.agent_votes  || {};
-      const scores   = firstDec?.council?.agent_scores || {};
-      const ICONS = {drawdown_guardian:'fa-shield', regime_model:'fa-crosshairs', signal_model:'fa-robot', execution_timing:'fa-bolt', risk_manager:'fa-scale-balanced', correlation_surface:'fa-network-wired', strategy_switching:'fa-rotate', market_impact:'fa-droplet', capital_rotation:'fa-arrows-rotate'};
-      votesEl.innerHTML = Object.entries(votes).map(([name, vote]) => {
-        const sc   = parseFloat(scores[name]||0);
-        const icon = ICONS[name] || 'fa-microchip';
-        const vc   = vote==='buy'?'#10b981':vote==='sell'?'#ef4444':'#64748b';
-        return `<div class="avc"><div class="avc-name"><i class="fa-solid ${icon}"></i> ${name.replace(/_/g,' ')}</div>
-          <div class="avc-vote" style="background:${vc}22;color:${vc};border:1px solid ${vc}">${vote.toUpperCase()}</div>
-          <div class="avc-score">Score: ${sc.toFixed(3)}</div>
-          <div class="avc-bar"><div style="width:${(sc*100).toFixed(0)}%;background:${vc};height:100%;border-radius:2px"></div></div></div>`;
-      }).join('') || '<div style="padding:16px;color:#64748b;text-align:center"><i class="fa-solid fa-clock"></i> Run first cycle to see agent votes</div>';
-    }
-
-    // Executions
-    const execTbody = document.getElementById('executions-tbody');
-    if(execTbody) {
-      execTbody.innerHTML = execs.length
-        ? execs.slice(-10).reverse().map(e => `<tr>
-          <td class="mono" style="font-size:11px">${new Date(e.timestamp).toLocaleTimeString()}</td>
-          <td><strong>${e.symbol}</strong></td>
-          <td>${e.result?.direction?.toUpperCase()||'--'} ${e.result?.quantity||0}</td>
-          <td><strong style="color:${e.council?.includes('execute')?'#10b981':'#f59e0b'}">${(e.council||'--').toUpperCase()}</strong></td>
-          <td><span style="color:${e.result?.status==='simulated'?'#06b6d4':'#10b981'}">${(e.result?.status||'--').toUpperCase()}</span></td></tr>`).join('')
-        : '<tr><td colspan="5" class="loading-row">No executions yet</td></tr>';
-    }
-
-    const llmAvail = status.llm_available;
-    const dot = document.getElementById('llm-main-dot');
-    if(dot) dot.className = `llm-dot-big ${llmAvail?'ok':'error'}`;
-    _el('llm-status-text', llmAvail ? 'LLM Available' : 'LLM Unavailable — 429 Rate Limit');
-    _el('llm-mode-text',   `Running: ${status.mode === 'llm' ? 'AI-Assisted Reasoning' : 'Deterministic Fallback (ML Ensemble)'}`);
-    const fbEl = document.getElementById('llm-fallback-info');
-    if(fbEl) {
-      fbEl.style.display = llmAvail ? 'none' : 'block';
-      fbEl.innerHTML = llmAvail ? '' : '<i class="fa-solid fa-triangle-exclamation"></i> Gemini returning 429 (rate limit). Fix: reduce LLM calls per cycle in multi_agent_council.py. System fully operational in deterministic mode.';
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // STRATEGIES SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderStrategies(data) {
-    const sw   = data.strategy?.weights || {};
-    const perf = data.perf?.strategy_perf || {};
-    const STRAT_COLORS = {trend:'#3b82f6', mean_reversion:'#10b981', vol_carry:'#8b5cf6', options_convexity:'#f97316'};
-    const def  = {trend:0.40, mean_reversion:0.25, vol_carry:0.20, options_convexity:0.15};
-    const src  = Object.keys(sw).length ? sw : def;
-
-    if(typeof Charts !== 'undefined') {
-      Charts.renderStrategyDonut(src);
-      Charts.renderStrategySharpe(perf);
-    }
-
-    const detEl = document.getElementById('strategy-details');
-    if(detEl) {
-      detEl.innerHTML = Object.entries(src).map(([name, weight]) => {
-        const color = STRAT_COLORS[name] || '#64748b';
-        const pct   = (weight*100).toFixed(1);
-        return `<div class="strat-item"><div class="strat-dot" style="background:${color}"></div>
-          <span class="strat-name">${name.replace(/_/g,' ')}</span>
-          <div class="strat-bar-wrap"><div class="strat-bar" style="width:${pct}%;background:${color}"></div></div>
-          <span class="strat-pct mono" style="color:${color}">${pct}%</span></div>`;
-      }).join('');
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // PERFORMANCE SECTION
-  // ────────────────────────────────────────────────────────
-  function _renderPerformance(data) {
-    const perf   = data.perf   || {};
-    const status = data.status || {};
-    _el('perf-value',   `$${parseFloat(perf.portfolio_value||100000).toLocaleString()}`);
-    _el('perf-signals', perf.n_signals    || 0);
-    _el('perf-exec',    perf.n_executions || 0);
-    _el('perf-mode',    status.mode === 'llm' ? 'LLM Assisted' : 'Deterministic');
-    if(typeof Charts !== 'undefined') Charts.renderStrategySharpe(perf.strategy_perf||{});
-    const tlEl = document.getElementById('system-timeline');
-    if(tlEl) {
-      tlEl.innerHTML = [
-        {time: _fmtTime(status.timestamp),  msg:`System: ${status.overall||'--'} | Mode: ${status.mode||'--'}`},
-        {time: _fmtTime(perf.timestamp),    msg:`Cycle: ${perf.n_signals||0} signals, ${perf.n_executions||0} executions`},
-        {time: '--',                         msg:'Next cycle: auto (5min during market hours)'},
-      ].map(e => `<div class="tl-item"><div class="tl-dot"></div><span class="tl-time mono">${e.time}</span><span class="tl-msg">${e.msg}</span></div>`).join('');
-    }
-  }
-
-  // ────────────────────────────────────────────────────────
-  // CHARTS — Main Chart
-  // ────────────────────────────────────────────────────────
-  async function loadMainChart(force = false) {
-    const sym      = document.getElementById('ov-symbol')?.value || 'SPY';
-    const interval = _currentIv;
-    const titleEl  = document.getElementById('main-chart-title');
-    if(titleEl) titleEl.textContent = `${sym} — ${interval}`;
-
-    if(!_mainChart) {
-      if(typeof Charts !== 'undefined') _mainChart = Charts.initPriceChart('main-price-chart', { height: 360 });
-    }
-
-    await _loadChartData('main-price-chart', sym, interval, true);
-  }
-
-  async function loadChartSymbol(sym) {
-    const sel = document.getElementById('ov-symbol');
-    if(sel) sel.value = sym;
-    await loadMainChart(true);
-    // Also update order form symbol
-    const orderSym = document.getElementById('order-symbol');
-    if(orderSym) orderSym.value = sym;
-  }
-
-  function setInterval(btn, iv) {
-    _currentIv = iv;
-    document.querySelectorAll('#ov-intervals .itab').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    loadMainChart(true);
-  }
-
-  // ────────────────────────────────────────────────────────
-  // CHARTS — Panel Charts (4-grid)
-  // ────────────────────────────────────────────────────────
-  const _panelInstances = {};
-
-  async function _initPanelCharts() {
-    for(let i = 0; i < 4; i++) {
-      const sym = document.getElementById(`cp-sym-${i}`)?.value || ['SPY','QQQ','AAPL','NVDA'][i];
-      await loadPanelChart(i, sym);
-    }
-  }
-
-  async function loadPanelChart(panelIdx, sym) {
-    const containerId = `chart-container-${panelIdx}`;
-    const iv = _panelIv[panelIdx] || '1day';
-    if(!_panelInstances[panelIdx]) {
-      if(typeof LightweightCharts !== 'undefined') {
-        const container = document.getElementById(containerId);
-        if(!container) return;
-        const v = typeof LightweightCharts.CandlestickSeries !== 'undefined' ? 4 : 3;
-        try {
-          _panelInstances[panelIdx] = LightweightCharts.createChart(container, {
-            width: container.clientWidth || 400, height: 220,
-            layout: { background:{color:'transparent'}, textColor: _isDark()?'#e2e8f0':'#334155', fontSize:11 },
-            grid: { vertLines:{color:'rgba(128,128,128,0.08)'}, horzLines:{color:'rgba(128,128,128,0.08)'} },
-            timeScale: { borderColor:'rgba(128,128,128,0.15)', timeVisible:true, secondsVisible:false },
-            rightPriceScale: { borderColor:'rgba(128,128,128,0.15)', scaleMargins:{top:0.1,bottom:0.15} }
-          });
-          const cSeries = v === 4
-            ? _panelInstances[panelIdx].addSeries(LightweightCharts.CandlestickSeries, {upColor:'#10b981',downColor:'#ef4444',borderUpColor:'#10b981',borderDownColor:'#ef4444',wickUpColor:'#10b981',wickDownColor:'#ef4444'})
-            : _panelInstances[panelIdx].addCandlestickSeries({upColor:'#10b981',downColor:'#ef4444',borderUpColor:'#10b981',borderDownColor:'#ef4444',wickUpColor:'#10b981',wickDownColor:'#ef4444'});
-          _panelInstances[`${panelIdx}_series`] = cSeries;
-
-          new ResizeObserver(entries => {
-            if(_panelInstances[panelIdx] && entries[0]) {
-              _panelInstances[panelIdx].applyOptions({width: entries[0].contentRect.width});
-            }
-          }).observe(container);
-        } catch(e) { console.warn('Panel chart init error:', e); }
-      }
-    }
-
-    // Load data
-    const candles = await _fetchChartData(sym, iv);
-    if(candles.length && _panelInstances[`${panelIdx}_series`]) {
-      try {
-        _panelInstances[`${panelIdx}_series`].setData(candles);
-        if(_panelInstances[panelIdx]) _panelInstances[panelIdx].timeScale().fitContent();
-      } catch(e) { console.warn('Panel chart data error:', e); }
-    }
-  }
-
-  function setPanelInterval(panelIdx, iv, btn) {
-    _panelIv[panelIdx] = iv;
-    const panel = document.getElementById(`chart-panel-${panelIdx}`);
-    if(panel) panel.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    const sym = document.getElementById(`cp-sym-${panelIdx}`)?.value || 'SPY';
-    loadPanelChart(panelIdx, sym);
-  }
-
-  function setChartLayout(layout) {
-    const grid = document.getElementById('charts-grid');
-    if(!grid) return;
-    grid.className = `charts-grid layout-${layout.replace('x','-')}`;
-  }
-
-  // ────────────────────────────────────────────────────────
-  // CHART DATA FETCHING
-  // ────────────────────────────────────────────────────────
-  async function _loadChartData(containerId, sym, interval, isMain = false) {
-    const candles = await _fetchChartData(sym, interval);
-    if(!candles.length) return;
-    if(isMain && typeof Charts !== 'undefined') {
-      Charts.updatePriceChart(candles.map(c => ({
-        datetime: new Date(c.time * 1000).toISOString(),
-        open:c.open, high:c.high, low:c.low, close:c.close
-      })), {});
-    }
-  }
-
-  async function _fetchChartData(sym, interval = '1day', outputsize = 100) {
-    // Try finance-hub-api worker first
-    try {
-      const url  = `${FINANCE_HUB}/api/time-series?symbol=${sym}&interval=${interval}&outputsize=${outputsize}`;
-      const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = await resp.json();
-      const vals = data.values || data.data || [];
-      if(vals.length) {
-        return vals.map(c => ({
-          time:  Math.floor(new Date(c.datetime||c.date).getTime()/1000),
-          open:  parseFloat(c.open),
-          high:  parseFloat(c.high),
-          low:   parseFloat(c.low),
-          close: parseFloat(c.close)
-        })).filter(c => !isNaN(c.open) && c.time > 0).sort((a,b) => a.time - b.time);
-      }
-    } catch(e) {
-      console.warn(`Chart fetch ${sym}: ${e.message} — using synthetic data`);
-    }
-    // Fallback: generate synthetic data from signals
-    return _syntheticCandles(sym);
-  }
-
-  function _syntheticCandles(sym) {
-    const sigs  = _state.signals?.signals?.[sym];
-    let price   = parseFloat(sigs?.price || 400);
-    const now   = Date.now();
-    const data  = [];
-    for(let i = 99; i >= 0; i--) {
-      const change = (Math.random() - 0.48) * price * 0.015;
-      price       += change;
-      const o = price, c = price + (Math.random()-0.5)*price*0.005;
-      const h = Math.max(o,c) + Math.random()*price*0.003;
-      const l = Math.min(o,c) - Math.random()*price*0.003;
-      data.push({ time: Math.floor((now - i * 86400000)/1000), open:+o.toFixed(2), high:+h.toFixed(2), low:+l.toFixed(2), close:+c.toFixed(2) });
-    }
-    return data;
-  }
-
-  // ────────────────────────────────────────────────────────
-  // EXECUTION / ORDER TERMINAL
-  // ────────────────────────────────────────────────────────
-  function setSide(side) {
-    _currentSide = side;
-    document.getElementById('side-buy')?.classList.toggle('active',  side === 'BUY');
-    document.getElementById('side-sell')?.classList.toggle('active', side === 'SELL');
-  }
-
-  function togglePriceFields() {
-    const type     = document.getElementById('order-type')?.value;
-    const limField = document.getElementById('limit-field');
-    const stpField = document.getElementById('stop-field');
-    if(limField) limField.style.display = ['LMT','STP_LMT'].includes(type) ? '' : 'none';
-    if(stpField) stpField.style.display = ['STP','STP_LMT'].includes(type) ? '' : 'none';
-  }
-
-  async function submitOrder(e) {
-    e.preventDefault();
-    const sym     = document.getElementById('order-symbol')?.value || 'SPY';
-    const qty     = parseInt(document.getElementById('order-qty')?.value || 10);
-    const type    = document.getElementById('order-type')?.value || 'MKT';
-    const limit   = parseFloat(document.getElementById('order-limit')?.value || 0);
-    const stop    = parseFloat(document.getElementById('order-stop')?.value  || 0);
-    const reason  = document.getElementById('order-reason')?.value || 'Manual order from dashboard';
-    const dryRun  = document.getElementById('order-dry-run')?.checked ?? true;
-    const pat     = document.getElementById('gh-pat')?.value || '';
-
-    // Save PAT locally
-    if(pat) localStorage.setItem('av_gh_pat', pat);
-
-    const btn = document.getElementById('btn-submit-order');
-
-    // Show preview first
-    const preview = document.getElementById('order-preview');
-    const previewContent = document.getElementById('order-preview-content');
-    if(preview && previewContent) {
-      preview.style.display = 'block';
-      previewContent.innerHTML = `<div class="preview-row"><span>Symbol</span><strong>${sym}</strong></div>
-        <div class="preview-row"><span>Side</span><strong class="${_currentSide.toLowerCase()}">${_currentSide}</strong></div>
-        <div class="preview-row"><span>Quantity</span><strong>${qty}</strong></div>
-        <div class="preview-row"><span>Type</span><strong>${type}</strong></div>
-        ${limit > 0 ? `<div class="preview-row"><span>Limit</span><strong class="mono">$${limit}</strong></div>` : ''}
-        ${stop  > 0 ? `<div class="preview-row"><span>Stop</span><strong class="mono">$${stop}</strong></div>` : ''}
-        <div class="preview-row"><span>Mode</span><strong>${dryRun ? 'PAPER TRADE' : 'LIVE TRADE'}</strong></div>`;
-    }
-
-    if(!pat) {
-      _showOrderStatus('error', 'GitHub PAT required. Generate a token with "workflow" scope at github.com/settings/tokens');
-      return;
-    }
-
-    if(btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...'; }
-
-    try {
-      const resp = await fetch(
-        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/manual-trade.yml/dispatches`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Accept':        'application/vnd.github.v3+json',
-            'Content-Type':  'application/json'
-          },
-          body: JSON.stringify({
-            ref: 'main',
-            inputs: {
-              symbol:     sym,
-              action:     _currentSide,
-              quantity:   String(qty),
-              order_type: type,
-              limit_price:String(limit),
-              stop_price: String(stop),
-              dry_run:    String(dryRun),
-              reason:     reason
-            }
-          })
-        }
-      );
-
-      if(resp.status === 204) {
-        _showOrderStatus('success', `Order dispatched: ${_currentSide} ${qty}x ${sym} @ ${type}. Check GitHub Actions for execution status.`);
-        setTimeout(forceRefresh, 5000);
-      } else if(resp.status === 401) {
-        _showOrderStatus('error', 'Invalid PAT. Check your token has "workflow" scope.');
-      } else if(resp.status === 422) {
-        _showOrderStatus('error', 'Workflow not found. Ensure manual-trade.yml exists in .github/workflows/');
-      } else {
-        _showOrderStatus('error', `GitHub API error: ${resp.status} — ${await resp.text()}`);
-      }
-    } catch(err) {
-      _showOrderStatus('error', `Network error: ${err.message}`);
-    } finally {
-      if(btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Order'; }
-    }
-  }
-
-  function _showOrderStatus(type, msg) {
-    let statusEl = document.getElementById('order-status');
-    if(!statusEl) {
-      statusEl = document.createElement('div');
-      statusEl.id = 'order-status';
-      document.getElementById('order-form')?.appendChild(statusEl);
-    }
-    statusEl.className = `order-status ${type}`;
-    statusEl.innerHTML = `<i class="fa-solid ${type==='success'?'fa-circle-check':'fa-circle-exclamation'}"></i> ${msg}`;
-    setTimeout(() => { if(statusEl) statusEl.style.opacity = '0'; }, 8000);
-  }
-
-  async function refreshExecLog() {
-    const logEl = document.getElementById('exec-log-content');
-    if(!logEl) return;
-
-    // Read from signals JSON
-    const result = await ApiClient.fetchJSON?.('manual_order_result.json') || null;
-    const execLog = await ApiClient.fetchJSON?.('execution_log.json') || null;
-
-    if(!result && !execLog) {
-      logEl.innerHTML = '<div class="log-empty"><i class="fa-solid fa-inbox"></i><br>No executions yet</div>';
-      return;
-    }
-
-    const entries = execLog?.history || (result?.last_order ? [result.last_order] : []);
-    logEl.innerHTML = entries.length
-      ? entries.slice().reverse().map(e => `
-        <div class="log-entry ${e.status}">
-          <div class="le-header">
-            <strong>${e.action} ${e.quantity}x ${e.symbol}</strong>
-            <span class="le-status ${e.status}">${e.status?.toUpperCase()}</span>
-          </div>
-          <div class="le-meta">
-            <span>${e.order_type}</span>
-            <span>${e.dry_run ? 'PAPER' : 'LIVE'}</span>
-            <span class="mono">${new Date(e.timestamp).toLocaleString()}</span>
-          </div>
-          ${e.message ? `<div class="le-msg">${e.message}</div>` : ''}
-        </div>`).join('')
-      : '<div class="log-empty"><i class="fa-solid fa-inbox"></i><br>No executions yet</div>';
-
-    // IBKR status
-    _el('icp-status', 'Paper Mode (Simulated)');
-    _el('icp-lib',    'ib_insync: not connected (GitHub Actions limitation)');
-  }
-
-  // ────────────────────────────────────────────────────────
-  // SIDEBAR TOGGLE
-  // ────────────────────────────────────────────────────────
-  function toggleSidebar() {
-    _sidebarOpen = !_sidebarOpen;
-    const sidebar  = document.getElementById('sidebar');
-    const layout   = document.getElementById('layout');
-    if(sidebar) sidebar.classList.toggle('collapsed', !_sidebarOpen);
-    if(layout)  layout.classList.toggle('sidebar-collapsed', !_sidebarOpen);
-  }
-
-  // ────────────────────────────────────────────────────────
-  // THEME
-  // ────────────────────────────────────────────────────────
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('av_theme', isDark ? 'light' : 'dark');
-    const icon = document.getElementById('theme-icon');
-    if(icon) icon.className = isDark ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
-  }
-
-  function _restoreTheme() {
-    const saved = localStorage.getItem('av_theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-    const icon = document.getElementById('theme-icon');
-    if(icon) icon.className = saved === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-  }
-
-  function _isDark() { return document.documentElement.getAttribute('data-theme') === 'dark'; }
-
-  // ────────────────────────────────────────────────────────
-  // UTILS
-  // ────────────────────────────────────────────────────────
-  function _restorePAT() {
-    const saved = localStorage.getItem('av_gh_pat');
-    const el = document.getElementById('gh-pat');
-    if(saved && el) el.value = saved;
-  }
-
-  function _el(id, val, html = false) {
-    const e = document.getElementById(id);
-    if(!e) return;
-    if(html) e.innerHTML = val;
-    else e.textContent = val;
-  }
-
-  function _fmtTime(ts) {
-    if(!ts) return '--';
-    try { return new Date(ts).toLocaleTimeString(); } catch{ return '--'; }
-  }
-
-  function _updateLastRefresh() {
-    _el('last-update', `Updated ${new Date().toLocaleTimeString()}`);
-  }
-
-  function _startClock() {
-    const update = () => {
-      const n   = new Date();
-      const utc = `${_pad(n.getUTCHours())}:${_pad(n.getUTCMinutes())}:${_pad(n.getUTCSeconds())} UTC`;
-      _el('clock', utc);
-    };
-    update();
-    setInterval(update, 1000);
-  }
-
-  function _pad(n) { return String(n).padStart(2,'0'); }
-
-  // ────────────────────────────────────────────────────────
-  // AUTO-INIT
-  // ────────────────────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', () => {
-    init();
-    togglePriceFields(); // init price fields visibility
-  });
-
-  return {
-    showSection, forceRefresh, filterSignals, filterWatchlist,
-    toggleSidebar, toggleTheme, setSide, togglePriceFields,
-    submitOrder, refreshExecLog, loadMainChart, loadChartSymbol,
-    setInterval, loadPanelChart, setPanelInterval, setChartLayout,
-    isReady: () => true
-  };
-
-})();
-
-window.Terminal  = Terminal;
-window.Dashboard = Terminal; // Backward compat avec dashboard.js existant
-
-console.log('Terminal loaded');
-</script>
-
-</body></html>
+</body>
+</html>

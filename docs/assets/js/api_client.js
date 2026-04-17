@@ -78,11 +78,11 @@ const ApiClient = (() => {
     const defaults = {
       'current_signals.json':    {
         timestamp: null, signals: {}, session: 'closed',
-        llm_mode: 'deterministic', dry_run: true,
+        llm_mode: 'deterministic', dry_run: false,
       },
       'system_status.json': {
         overall: 'initializing', llm_available: false,
-        workers: {}, mode: 'deterministic', session: 'closed', dry_run: true,
+        workers: {}, mode: 'deterministic', session: 'closed', dry_run: false,
       },
       'regime.json': {
         global: {
