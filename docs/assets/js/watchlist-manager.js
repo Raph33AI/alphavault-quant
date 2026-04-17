@@ -1,631 +1,62 @@
 // ============================================================
-// watchlist-manager.js — AlphaVault Quant v3.0
-// ✅ ~700 symboles Yahoo Finance (S&P500 + NASDAQ100 + ETFs + Popular)
-// ✅ Gestion watchlist localStorage
-// ✅ Secteurs, pagination, search
-// ✅ Données live : price, financials, news, earnings via Finance Hub
+// watchlist-manager.js — AlphaVault Quant v3.1
+// ✅ Vide par défaut (aucun stock hardcodé)
+// ✅ Persistance GitHub (Contents API via PAT)
+// ✅ Chargement depuis docs/signals/watchlist.json (GitHub Pages)
+// ✅ Boutons étoile + delete toujours visibles
+// ✅ StockDetail.open() sur clic symbole
+// ✅ Secteurs, pagination, recherche
 // ============================================================
 
 const WatchlistManager = (() => {
 
-  // ── Finance Hub URL ──────────────────────────────────────
-  const YAHOO_PROXY = 'https://yahoo-proxy.raphnardone.workers.dev';
+  // ── Config GitHub ─────────────────────────────────────────
+  const GH_OWNER     = 'Raph33AI';
+  const GH_REPO      = 'alphavault-quant';
+  const GH_FILE_PATH = 'docs/signals/watchlist.json';
 
-  // ── LocalStorage Keys ────────────────────────────────────
-  const LS_KEY       = 'av_watchlist_v2';
-  const LS_STARRED   = 'av_starred_v2';
-  const PAGE_SIZE    = 50;
+  // ── LocalStorage Keys ─────────────────────────────────────
+  const LS_KEY     = 'av_watchlist_v3';
+  const LS_STARRED = 'av_starred_v3';
 
-  // ── State ────────────────────────────────────────────────
+  const PAGE_SIZE  = 50;
+
+  // ── State ─────────────────────────────────────────────────
   let _currentPage    = 1;
   let _currentSector  = 'All';
   let _currentSearch  = '';
-  let _signalData     = {};   // Latest signal data from JSON
-  let _liveCache      = {};   // Live price cache { sym: { price, chg, ... } }
+  let _signalData     = {};
   let _watchlist      = [];
   let _starred        = [];
+  let _ghSaveTimeout  = null;
 
-  // ════════════════════════════════════════════════════════
-  // UNIVERSE COMPLET (~700 symboles Yahoo Finance)
-  // ════════════════════════════════════════════════════════
+  // ── Universe (copie du UNIVERSE JS) ───────────────────────
   const UNIVERSE = {
-
-    // ── Technology ─────────────────────────────────────────
-    Technology: [
-      { s:'AAPL',  n:'Apple Inc.' },
-      { s:'MSFT',  n:'Microsoft Corp.' },
-      { s:'NVDA',  n:'NVIDIA Corp.' },
-      { s:'AVGO',  n:'Broadcom Inc.' },
-      { s:'ORCL',  n:'Oracle Corp.' },
-      { s:'AMD',   n:'Advanced Micro Devices' },
-      { s:'INTC',  n:'Intel Corp.' },
-      { s:'QCOM',  n:'Qualcomm Inc.' },
-      { s:'TXN',   n:'Texas Instruments' },
-      { s:'AMAT',  n:'Applied Materials' },
-      { s:'LRCX',  n:'Lam Research' },
-      { s:'KLAC',  n:'KLA Corp.' },
-      { s:'ADI',   n:'Analog Devices' },
-      { s:'MCHP',  n:'Microchip Technology' },
-      { s:'CDNS',  n:'Cadence Design' },
-      { s:'SNPS',  n:'Synopsys Inc.' },
-      { s:'ANSS',  n:'ANSYS Inc.' },
-      { s:'FTNT',  n:'Fortinet Inc.' },
-      { s:'CTSH',  n:'Cognizant Technology' },
-      { s:'IT',    n:'Gartner Inc.' },
-      { s:'AKAM',  n:'Akamai Technologies' },
-      { s:'CDW',   n:'CDW Corp.' },
-      { s:'NTAP',  n:'NetApp Inc.' },
-      { s:'WDC',   n:'Western Digital' },
-      { s:'STX',   n:'Seagate Technology' },
-      { s:'HPE',   n:'Hewlett Packard Enterprise' },
-      { s:'HPQ',   n:'HP Inc.' },
-      { s:'DELL',  n:'Dell Technologies' },
-      { s:'ZBRA',  n:'Zebra Technologies' },
-      { s:'KEYS',  n:'Keysight Technologies' },
-      { s:'TDY',   n:'Teledyne Technologies' },
-      { s:'MPWR',  n:'Monolithic Power Systems' },
-      { s:'ENTG',  n:'Entegris Inc.' },
-      { s:'SWKS',  n:'Skyworks Solutions' },
-      { s:'QRVO',  n:'Qorvo Inc.' },
-      { s:'JNPR',  n:'Juniper Networks' },
-      { s:'MU',    n:'Micron Technology' },
-      { s:'ON',    n:'ON Semiconductor' },
-      { s:'GEN',   n:'Gen Digital Inc.' },
-      { s:'CTXS',  n:'Citrix Systems' },
-      { s:'FFIV',  n:'F5 Inc.' },
-      { s:'GDDY',  n:'GoDaddy Inc.' },
-      { s:'SAIC',  n:'Science Applications' },
-      { s:'BAH',   n:'Booz Allen Hamilton' },
-      { s:'LDOS',  n:'Leidos Holdings' },
-      { s:'CACI',  n:'CACI International' },
-      { s:'EPAM',  n:'EPAM Systems' },
-      { s:'DXC',   n:'DXC Technology' },
-    ],
-
-    // ── Communication Services ─────────────────────────────
-    'Comm. Services': [
-      { s:'GOOGL', n:'Alphabet Inc. (A)' },
-      { s:'GOOG',  n:'Alphabet Inc. (C)' },
-      { s:'META',  n:'Meta Platforms' },
-      { s:'NFLX',  n:'Netflix Inc.' },
-      { s:'DIS',   n:'Walt Disney Co.' },
-      { s:'CMCSA', n:'Comcast Corp.' },
-      { s:'VZ',    n:'Verizon Communications' },
-      { s:'T',     n:'AT&T Inc.' },
-      { s:'TMUS',  n:'T-Mobile US' },
-      { s:'CHTR',  n:'Charter Communications' },
-      { s:'FOX',   n:'Fox Corp. (B)' },
-      { s:'FOXA',  n:'Fox Corp. (A)' },
-      { s:'OMC',   n:'Omnicom Group' },
-      { s:'IPG',   n:'Interpublic Group' },
-      { s:'NWSA',  n:'News Corp (A)' },
-      { s:'PARA',  n:'Paramount Global' },
-      { s:'WBD',   n:'Warner Bros. Discovery' },
-      { s:'LYV',   n:'Live Nation Entertainment' },
-      { s:'EA',    n:'Electronic Arts' },
-      { s:'TTWO',  n:'Take-Two Interactive' },
-      { s:'MTCH',  n:'Match Group' },
-      { s:'RBLX',  n:'Roblox Corp.' },
-      { s:'SNAP',  n:'Snap Inc.' },
-      { s:'PINS',  n:'Pinterest Inc.' },
-      { s:'SPOT',  n:'Spotify Technology' },
-      { s:'LUMN',  n:'Lumen Technologies' },
-    ],
-
-    // ── Consumer Discretionary ─────────────────────────────
-    'Cons. Discret.': [
-      { s:'AMZN',  n:'Amazon.com' },
-      { s:'TSLA',  n:'Tesla Inc.' },
-      { s:'HD',    n:'Home Depot Inc.' },
-      { s:'MCD',   n:"McDonald's Corp." },
-      { s:'NKE',   n:'Nike Inc.' },
-      { s:'LOW',   n:"Lowe's Companies" },
-      { s:'SBUX',  n:'Starbucks Corp.' },
-      { s:'BKNG',  n:'Booking Holdings' },
-      { s:'TJX',   n:'TJX Companies' },
-      { s:'CMG',   n:'Chipotle Mexican Grill' },
-      { s:'ORLY',  n:"O'Reilly Automotive" },
-      { s:'AZO',   n:'AutoZone Inc.' },
-      { s:'ROST',  n:'Ross Stores Inc.' },
-      { s:'DHI',   n:'D.R. Horton Inc.' },
-      { s:'LEN',   n:'Lennar Corp.' },
-      { s:'PHM',   n:'PulteGroup Inc.' },
-      { s:'MAR',   n:'Marriott International' },
-      { s:'HLT',   n:'Hilton Worldwide' },
-      { s:'GM',    n:'General Motors' },
-      { s:'F',     n:'Ford Motor Co.' },
-      { s:'APTV',  n:'Aptiv PLC' },
-      { s:'GNTX',  n:'Gentex Corp.' },
-      { s:'BWA',   n:'BorgWarner Inc.' },
-      { s:'MHK',   n:'Mohawk Industries' },
-      { s:'POOL',  n:'Pool Corp.' },
-      { s:'NVR',   n:'NVR Inc.' },
-      { s:'TOL',   n:'Toll Brothers Inc.' },
-      { s:'RIVN',  n:'Rivian Automotive' },
-      { s:'LCID',  n:'Lucid Group' },
-      { s:'UBER',  n:'Uber Technologies' },
-      { s:'LYFT',  n:'Lyft Inc.' },
-      { s:'ABNB',  n:'Airbnb Inc.' },
-      { s:'EXPE',  n:'Expedia Group' },
-      { s:'TRIP',  n:'TripAdvisor Inc.' },
-      { s:'DKNG',  n:'DraftKings Inc.' },
-      { s:'MGM',   n:'MGM Resorts' },
-      { s:'WYNN',  n:'Wynn Resorts' },
-      { s:'LVS',   n:'Las Vegas Sands' },
-      { s:'CCL',   n:'Carnival Corp.' },
-      { s:'RCL',   n:'Royal Caribbean' },
-      { s:'NCLH',  n:'Norwegian Cruise Line' },
-      { s:'DAL',   n:'Delta Air Lines' },
-      { s:'UAL',   n:'United Airlines' },
-      { s:'AAL',   n:'American Airlines' },
-      { s:'LUV',   n:'Southwest Airlines' },
-      { s:'ALK',   n:'Alaska Air Group' },
-    ],
-
-    // ── Consumer Staples ───────────────────────────────────
-    'Cons. Staples': [
-      { s:'WMT',   n:'Walmart Inc.' },
-      { s:'PG',    n:'Procter & Gamble' },
-      { s:'KO',    n:'Coca-Cola Co.' },
-      { s:'PEP',   n:'PepsiCo Inc.' },
-      { s:'COST',  n:'Costco Wholesale' },
-      { s:'PM',    n:'Philip Morris International' },
-      { s:'MO',    n:'Altria Group' },
-      { s:'MDLZ',  n:'Mondelez International' },
-      { s:'CL',    n:'Colgate-Palmolive' },
-      { s:'EL',    n:'Estee Lauder Companies' },
-      { s:'KHC',   n:'Kraft Heinz Co.' },
-      { s:'GIS',   n:'General Mills' },
-      { s:'K',     n:"Kellogg's Co." },
-      { s:'HSY',   n:'Hershey Co.' },
-      { s:'SJM',   n:'J.M. Smucker' },
-      { s:'CAG',   n:'Conagra Brands' },
-      { s:'MKC',   n:'McCormick & Co.' },
-      { s:'CLX',   n:'Clorox Co.' },
-      { s:'CHD',   n:'Church & Dwight' },
-      { s:'KMB',   n:'Kimberly-Clark' },
-      { s:'TSN',   n:'Tyson Foods' },
-      { s:'HRL',   n:'Hormel Foods' },
-      { s:'TAP',   n:'Molson Coors Beverage' },
-      { s:'STZ',   n:'Constellation Brands' },
-      { s:'BG',    n:'Bunge Global' },
-      { s:'KR',    n:'Kroger Co.' },
-      { s:'SFM',   n:'Sprouts Farmers Market' },
-      { s:'GO',    n:'Grocery Outlet Holding' },
-    ],
-
-    // ── Healthcare ─────────────────────────────────────────
-    Healthcare: [
-      { s:'UNH',   n:'UnitedHealth Group' },
-      { s:'JNJ',   n:'Johnson & Johnson' },
-      { s:'LLY',   n:'Eli Lilly & Co.' },
-      { s:'ABBV',  n:'AbbVie Inc.' },
-      { s:'MRK',   n:'Merck & Co.' },
-      { s:'TMO',   n:'Thermo Fisher Scientific' },
-      { s:'ABT',   n:'Abbott Laboratories' },
-      { s:'DHR',   n:'Danaher Corp.' },
-      { s:'BMY',   n:'Bristol-Myers Squibb' },
-      { s:'AMGN',  n:'Amgen Inc.' },
-      { s:'MDT',   n:'Medtronic PLC' },
-      { s:'ISRG',  n:'Intuitive Surgical' },
-      { s:'SYK',   n:'Stryker Corp.' },
-      { s:'BSX',   n:'Boston Scientific' },
-      { s:'EW',    n:'Edwards Lifesciences' },
-      { s:'REGN',  n:'Regeneron Pharmaceuticals' },
-      { s:'GILD',  n:'Gilead Sciences' },
-      { s:'VRTX',  n:'Vertex Pharmaceuticals' },
-      { s:'BIIB',  n:'Biogen Inc.' },
-      { s:'ILMN',  n:'Illumina Inc.' },
-      { s:'IQV',   n:'IQVIA Holdings' },
-      { s:'ZBH',   n:'Zimmer Biomet Holdings' },
-      { s:'BAX',   n:'Baxter International' },
-      { s:'BDX',   n:'Becton Dickinson' },
-      { s:'HOLX',  n:'Hologic Inc.' },
-      { s:'DXCM',  n:'DexCom Inc.' },
-      { s:'ALGN',  n:'Align Technology' },
-      { s:'IDXX',  n:'IDEXX Laboratories' },
-      { s:'MTD',   n:'Mettler-Toledo International' },
-      { s:'WAT',   n:'Waters Corp.' },
-      { s:'MRNA',  n:'Moderna Inc.' },
-      { s:'PFE',   n:'Pfizer Inc.' },
-      { s:'CTLT',  n:'Catalent Inc.' },
-      { s:'TECH',  n:'Bio-Techne Corp.' },
-      { s:'CRL',   n:'Charles River Laboratories' },
-      { s:'HUM',   n:'Humana Inc.' },
-      { s:'CI',    n:'Cigna Group' },
-      { s:'CVS',   n:'CVS Health Corp.' },
-      { s:'ELV',   n:'Elevance Health' },
-      { s:'CNC',   n:'Centene Corp.' },
-      { s:'MOH',   n:'Molina Healthcare' },
-      { s:'MCK',   n:'McKesson Corp.' },
-      { s:'CAH',   n:'Cardinal Health' },
-      { s:'ABC',   n:'AmerisourceBergen' },
-    ],
-
-    // ── Financials ─────────────────────────────────────────
-    Financials: [
-      { s:'JPM',   n:'JPMorgan Chase' },
-      { s:'BAC',   n:'Bank of America' },
-      { s:'WFC',   n:'Wells Fargo & Co.' },
-      { s:'GS',    n:'Goldman Sachs' },
-      { s:'MS',    n:'Morgan Stanley' },
-      { s:'BLK',   n:'BlackRock Inc.' },
-      { s:'SPGI',  n:'S&P Global Inc.' },
-      { s:'MCO',   n:"Moody's Corp." },
-      { s:'COF',   n:'Capital One Financial' },
-      { s:'AXP',   n:'American Express' },
-      { s:'V',     n:'Visa Inc.' },
-      { s:'MA',    n:'Mastercard Inc.' },
-      { s:'PYPL',  n:'PayPal Holdings' },
-      { s:'SCHW',  n:'Charles Schwab' },
-      { s:'CB',    n:'Chubb Ltd.' },
-      { s:'AIG',   n:'American International Group' },
-      { s:'PGR',   n:'Progressive Corp.' },
-      { s:'ALL',   n:'Allstate Corp.' },
-      { s:'TRV',   n:'Travelers Companies' },
-      { s:'MET',   n:'MetLife Inc.' },
-      { s:'PRU',   n:'Prudential Financial' },
-      { s:'HIG',   n:'Hartford Financial Services' },
-      { s:'AFL',   n:'Aflac Inc.' },
-      { s:'USB',   n:'U.S. Bancorp' },
-      { s:'PNC',   n:'PNC Financial Services' },
-      { s:'TFC',   n:'Truist Financial' },
-      { s:'FITB',  n:'Fifth Third Bancorp' },
-      { s:'KEY',   n:'KeyCorp' },
-      { s:'RF',    n:'Regions Financial' },
-      { s:'HBAN',  n:'Huntington Bancshares' },
-      { s:'CFG',   n:'Citizens Financial Group' },
-      { s:'ZION',  n:'Zions Bancorporation' },
-      { s:'CMA',   n:'Comerica Inc.' },
-      { s:'NTRS',  n:'Northern Trust' },
-      { s:'STT',   n:'State Street Corp.' },
-      { s:'BK',    n:'Bank of New York Mellon' },
-      { s:'RJF',   n:'Raymond James Financial' },
-      { s:'LPLA',  n:'LPL Financial Holdings' },
-      { s:'NDAQ',  n:'Nasdaq Inc.' },
-      { s:'ICE',   n:'Intercontinental Exchange' },
-      { s:'CME',   n:'CME Group' },
-      { s:'CBOE',  n:'Cboe Global Markets' },
-      { s:'FDS',   n:'FactSet Research Systems' },
-      { s:'MSCI',  n:'MSCI Inc.' },
-      { s:'HOOD',  n:'Robinhood Markets' },
-    ],
-
-    // ── Industrials ────────────────────────────────────────
-    Industrials: [
-      { s:'HON',   n:'Honeywell International' },
-      { s:'UPS',   n:'United Parcel Service' },
-      { s:'RTX',   n:'Raytheon Technologies' },
-      { s:'CAT',   n:'Caterpillar Inc.' },
-      { s:'DE',    n:'Deere & Company' },
-      { s:'ETN',   n:'Eaton Corp.' },
-      { s:'GE',    n:'General Electric' },
-      { s:'LMT',   n:'Lockheed Martin' },
-      { s:'NOC',   n:'Northrop Grumman' },
-      { s:'GD',    n:'General Dynamics' },
-      { s:'BA',    n:'Boeing Co.' },
-      { s:'MMM',   n:'3M Co.' },
-      { s:'EMR',   n:'Emerson Electric' },
-      { s:'ITW',   n:'Illinois Tool Works' },
-      { s:'ROK',   n:'Rockwell Automation' },
-      { s:'PH',    n:'Parker-Hannifin Corp.' },
-      { s:'DOV',   n:'Dover Corp.' },
-      { s:'IEX',   n:'IDEX Corp.' },
-      { s:'FAST',  n:'Fastenal Co.' },
-      { s:'SWK',   n:'Stanley Black & Decker' },
-      { s:'SNA',   n:'Snap-on Inc.' },
-      { s:'GNRC',  n:'Generac Holdings' },
-      { s:'XYL',   n:'Xylem Inc.' },
-      { s:'ROP',   n:'Roper Technologies' },
-      { s:'FDX',   n:'FedEx Corp.' },
-      { s:'NSC',   n:'Norfolk Southern' },
-      { s:'UNP',   n:'Union Pacific Corp.' },
-      { s:'CSX',   n:'CSX Corp.' },
-      { s:'JBHT',  n:'J.B. Hunt Transport' },
-      { s:'ODFL',  n:'Old Dominion Freight Line' },
-      { s:'EXPD',  n:'Expeditors International' },
-      { s:'CHRW',  n:'C.H. Robinson Worldwide' },
-      { s:'GWW',   n:'W.W. Grainger' },
-      { s:'URI',   n:'United Rentals' },
-      { s:'PCAR',  n:'PACCAR Inc.' },
-      { s:'CTAS',  n:'Cintas Corp.' },
-      { s:'VRSK',  n:'Verisk Analytics' },
-      { s:'RSG',   n:'Republic Services' },
-      { s:'WM',    n:'Waste Management' },
-      { s:'AWK',   n:'American Water Works' },
-      { s:'CPRT',  n:'Copart Inc.' },
-      { s:'BR',    n:'Broadridge Financial' },
-      { s:'L3H',   n:'L3Harris Technologies' },
-      { s:'HII',   n:'Huntington Ingalls' },
-      { s:'TXT',   n:'Textron Inc.' },
-      { s:'HWM',   n:'Howmet Aerospace' },
-      { s:'AXON',  n:'Axon Enterprise' },
-    ],
-
-    // ── Energy ─────────────────────────────────────────────
-    Energy: [
-      { s:'XOM',   n:'Exxon Mobil' },
-      { s:'CVX',   n:'Chevron Corp.' },
-      { s:'COP',   n:'ConocoPhillips' },
-      { s:'EOG',   n:'EOG Resources' },
-      { s:'PXD',   n:'Pioneer Natural Resources' },
-      { s:'MPC',   n:'Marathon Petroleum' },
-      { s:'VLO',   n:'Valero Energy' },
-      { s:'PSX',   n:'Phillips 66' },
-      { s:'HES',   n:'Hess Corp.' },
-      { s:'DVN',   n:'Devon Energy' },
-      { s:'OXY',   n:'Occidental Petroleum' },
-      { s:'SLB',   n:'SLB (Schlumberger)' },
-      { s:'HAL',   n:'Halliburton Co.' },
-      { s:'BKR',   n:'Baker Hughes' },
-      { s:'CTRA',  n:'Coterra Energy' },
-      { s:'EQT',   n:'EQT Corp.' },
-      { s:'APA',   n:'APA Corp.' },
-      { s:'OVV',   n:'Ovintiv Inc.' },
-      { s:'FANG',  n:'Diamondback Energy' },
-      { s:'MRO',   n:'Marathon Oil Corp.' },
-      { s:'CNX',   n:'CNX Resources' },
-      { s:'CHK',   n:'Chesapeake Energy' },
-      { s:'AM',    n:'Antero Midstream' },
-      { s:'TRGP',  n:'Targa Resources' },
-      { s:'KMI',   n:'Kinder Morgan' },
-      { s:'WMB',   n:'Williams Companies' },
-      { s:'OKE',   n:'ONEOK Inc.' },
-      { s:'LNG',   n:'Cheniere Energy' },
-    ],
-
-    // ── Materials ──────────────────────────────────────────
-    Materials: [
-      { s:'LIN',   n:'Linde PLC' },
-      { s:'APD',   n:'Air Products & Chemicals' },
-      { s:'SHW',   n:'Sherwin-Williams' },
-      { s:'PPG',   n:'PPG Industries' },
-      { s:'ECL',   n:'Ecolab Inc.' },
-      { s:'IFF',   n:'International Flavors' },
-      { s:'NEM',   n:'Newmont Corp.' },
-      { s:'FCX',   n:'Freeport-McMoRan' },
-      { s:'NUE',   n:'Nucor Corp.' },
-      { s:'STLD',  n:'Steel Dynamics' },
-      { s:'RS',    n:'Reliance Steel & Aluminum' },
-      { s:'WRK',   n:'WestRock Co.' },
-      { s:'ALB',   n:'Albemarle Corp.' },
-      { s:'FMC',   n:'FMC Corp.' },
-      { s:'CF',    n:'CF Industries Holdings' },
-      { s:'MOS',   n:'Mosaic Co.' },
-      { s:'VMC',   n:'Vulcan Materials' },
-      { s:'MLM',   n:'Martin Marietta Materials' },
-      { s:'CCK',   n:'Crown Holdings' },
-      { s:'RPM',   n:'RPM International' },
-      { s:'GOLD',  n:'Barrick Gold' },
-      { s:'PAAS',  n:'Pan American Silver' },
-      { s:'WPM',   n:'Wheaton Precious Metals' },
-      { s:'AA',    n:'Alcoa Corp.' },
-      { s:'X',     n:'United States Steel' },
-      { s:'CLF',   n:'Cleveland-Cliffs' },
-      { s:'MP',    n:'MP Materials' },
-    ],
-
-    // ── Real Estate ────────────────────────────────────────
-    'Real Estate': [
-      { s:'PLD',   n:'Prologis Inc.' },
-      { s:'AMT',   n:'American Tower' },
-      { s:'CCI',   n:'Crown Castle' },
-      { s:'EQIX',  n:'Equinix Inc.' },
-      { s:'SPG',   n:'Simon Property Group' },
-      { s:'O',     n:'Realty Income Corp.' },
-      { s:'WELL',  n:'Welltower Inc.' },
-      { s:'EQR',   n:'Equity Residential' },
-      { s:'AVB',   n:'AvalonBay Communities' },
-      { s:'ARE',   n:'Alexandria Real Estate' },
-      { s:'BXP',   n:'Boston Properties' },
-      { s:'VNO',   n:'Vornado Realty Trust' },
-      { s:'IRM',   n:'Iron Mountain' },
-      { s:'SBAC',  n:'SBA Communications' },
-      { s:'PSA',   n:'Public Storage' },
-      { s:'EXR',   n:'Extra Space Storage' },
-      { s:'CUBE',  n:'CubeSmart' },
-      { s:'NSA',   n:'National Storage Affiliates' },
-      { s:'REXR',  n:'Rexford Industrial Realty' },
-      { s:'VICI',  n:'VICI Properties' },
-      { s:'GLPI',  n:'Gaming & Leisure Properties' },
-      { s:'EPR',   n:'EPR Properties' },
-      { s:'NNN',   n:'NNN REIT Inc.' },
-      { s:'WPC',   n:'W. P. Carey Inc.' },
-      { s:'STOR',  n:'STORE Capital' },
-    ],
-
-    // ── Utilities ──────────────────────────────────────────
-    Utilities: [
-      { s:'NEE',   n:'NextEra Energy' },
-      { s:'DUK',   n:'Duke Energy' },
-      { s:'SO',    n:'Southern Co.' },
-      { s:'D',     n:'Dominion Energy' },
-      { s:'EXC',   n:'Exelon Corp.' },
-      { s:'AEP',   n:'American Electric Power' },
-      { s:'XEL',   n:'Xcel Energy' },
-      { s:'SRE',   n:'Sempra Energy' },
-      { s:'ED',    n:'Consolidated Edison' },
-      { s:'ETR',   n:'Entergy Corp.' },
-      { s:'PPL',   n:'PPL Corp.' },
-      { s:'DTE',   n:'DTE Energy' },
-      { s:'FE',    n:'FirstEnergy Corp.' },
-      { s:'CMS',   n:'CMS Energy' },
-      { s:'WEC',   n:'WEC Energy Group' },
-      { s:'ES',    n:'Eversource Energy' },
-      { s:'EVRG',  n:'Evergy Inc.' },
-      { s:'NI',    n:'NiSource Inc.' },
-      { s:'LNT',   n:'Alliant Energy' },
-      { s:'PNW',   n:'Pinnacle West Capital' },
-      { s:'AES',   n:'AES Corp.' },
-      { s:'NRG',   n:'NRG Energy' },
-      { s:'AEE',   n:'Ameren Corp.' },
-      { s:'CNP',   n:'CenterPoint Energy' },
-      { s:'OGE',   n:'OGE Energy Corp.' },
-    ],
-
-    // ── Software & Cloud ───────────────────────────────────
-    'Software/Cloud': [
-      { s:'CRM',   n:'Salesforce Inc.' },
-      { s:'ADBE',  n:'Adobe Inc.' },
-      { s:'NOW',   n:'ServiceNow Inc.' },
-      { s:'INTU',  n:'Intuit Inc.' },
-      { s:'TEAM',  n:'Atlassian Corp.' },
-      { s:'WDAY',  n:'Workday Inc.' },
-      { s:'DDOG',  n:'Datadog Inc.' },
-      { s:'SNOW',  n:'Snowflake Inc.' },
-      { s:'ZS',    n:'Zscaler Inc.' },
-      { s:'CRWD',  n:'CrowdStrike Holdings' },
-      { s:'OKTA',  n:'Okta Inc.' },
-      { s:'NET',   n:'Cloudflare Inc.' },
-      { s:'HUBS',  n:'HubSpot Inc.' },
-      { s:'VEEV',  n:'Veeva Systems' },
-      { s:'SPLK',  n:'Splunk Inc.' },
-      { s:'MDB',   n:'MongoDB Inc.' },
-      { s:'ESTC',  n:'Elastic NV' },
-      { s:'CFLT',  n:'Confluent Inc.' },
-      { s:'S',     n:'SentinelOne Inc.' },
-      { s:'ASAN',  n:'Asana Inc.' },
-      { s:'GTLB',  n:'GitLab Inc.' },
-      { s:'SMAR',  n:'Smartsheet Inc.' },
-      { s:'BOX',   n:'Box Inc.' },
-      { s:'DOCN',  n:'DigitalOcean Holdings' },
-      { s:'TWLO',  n:'Twilio Inc.' },
-      { s:'ZM',    n:'Zoom Video Communications' },
-      { s:'DOCU',  n:'DocuSign Inc.' },
-      { s:'FIVN',  n:'Five9 Inc.' },
-      { s:'RNG',   n:'RingCentral Inc.' },
-      { s:'PAYC',  n:'Paycom Software' },
-      { s:'PCTY',  n:'Paylocity Holding' },
-      { s:'COUP',  n:'Coupa Software' },
-      { s:'TTAN',  n:'Titan Machinery' },
-      { s:'TTD',   n:'Trade Desk Inc.' },
-      { s:'PUBM',  n:'PubMatic Inc.' },
-      { s:'APPS',  n:'Digital Turbine' },
-      { s:'RGEN',  n:'Repligen Corp.' },
-      { s:'GLBE',  n:'Global-E Online' },
-      { s:'SHOP',  n:'Shopify Inc.' },
-      { s:'MELI',  n:'MercadoLibre Inc.' },
-      { s:'SQ',    n:'Block Inc.' },
-      { s:'AFRM',  n:'Affirm Holdings' },
-      { s:'SOFI',  n:'SoFi Technologies' },
-      { s:'UPST',  n:'Upstart Holdings' },
-      { s:'LMND',  n:'Lemonade Inc.' },
-    ],
-
-    // ── Crypto & Blockchain ────────────────────────────────
-    'Crypto/Digital': [
-      { s:'COIN',  n:'Coinbase Global' },
-      { s:'MSTR',  n:'MicroStrategy' },
-      { s:'RIOT',  n:'Riot Platforms' },
-      { s:'MARA',  n:'Marathon Digital Holdings' },
-      { s:'HUT',   n:'Hut 8 Mining' },
-      { s:'CLSK',  n:'CleanSpark Inc.' },
-      { s:'BTBT',  n:'Bit Digital' },
-      { s:'CIFR',  n:'Cipher Mining' },
-      { s:'WULF',  n:'TeraWulf Inc.' },
-    ],
-
-    // ── ETFs ───────────────────────────────────────────────
-    ETFs: [
-      { s:'SPY',   n:'SPDR S&P 500 ETF' },
-      { s:'QQQ',   n:'Invesco Nasdaq 100 ETF' },
-      { s:'IWM',   n:'iShares Russell 2000 ETF' },
-      { s:'DIA',   n:'SPDR Dow Jones ETF' },
-      { s:'VTI',   n:'Vanguard Total Stock Market' },
-      { s:'VOO',   n:'Vanguard S&P 500 ETF' },
-      { s:'IVV',   n:'iShares Core S&P 500' },
-      { s:'EFA',   n:'iShares MSCI EAFE ETF' },
-      { s:'EEM',   n:'iShares MSCI Emerging Markets' },
-      { s:'GLD',   n:'SPDR Gold Shares' },
-      { s:'SLV',   n:'iShares Silver Trust' },
-      { s:'USO',   n:'United States Oil Fund' },
-      { s:'TLT',   n:'iShares 20+ Year Treasury' },
-      { s:'HYG',   n:'iShares High Yield Corporate Bond' },
-      { s:'LQD',   n:'iShares Investment Grade Corporate' },
-      { s:'VNQ',   n:'Vanguard Real Estate ETF' },
-      { s:'XLF',   n:'Financial Select Sector SPDR' },
-      { s:'XLK',   n:'Technology Select Sector SPDR' },
-      { s:'XLE',   n:'Energy Select Sector SPDR' },
-      { s:'XLV',   n:'Health Care Select Sector SPDR' },
-      { s:'XLI',   n:'Industrial Select Sector SPDR' },
-      { s:'XLP',   n:'Consumer Staples Select Sector' },
-      { s:'XLU',   n:'Utilities Select Sector SPDR' },
-      { s:'XLRE',  n:'Real Estate Select Sector SPDR' },
-      { s:'XLC',   n:'Communication Services Select' },
-      { s:'XLB',   n:'Materials Select Sector SPDR' },
-      { s:'XLY',   n:'Consumer Discret. Select Sector' },
-      { s:'XBI',   n:'SPDR Biotech ETF' },
-      { s:'IBB',   n:'iShares Nasdaq Biotech ETF' },
-      { s:'SMH',   n:'VanEck Semiconductor ETF' },
-      { s:'SOXX',  n:'iShares Semiconductor ETF' },
-      { s:'ARKK',  n:'ARK Innovation ETF' },
-      { s:'ARKG',  n:'ARK Genomic Revolution ETF' },
-      { s:'ARKW',  n:'ARK Next Gen Internet ETF' },
-      { s:'ARKF',  n:'ARK Fintech Innovation ETF' },
-      { s:'BOTZ',  n:'Global X Robotics & AI ETF' },
-      { s:'ICLN',  n:'iShares Global Clean Energy' },
-      { s:'FINX',  n:'Global X FinTech ETF' },
-      { s:'ROBO',  n:'ROBO Global Robotics ETF' },
-      { s:'VGT',   n:'Vanguard Information Technology' },
-      { s:'VOOG',  n:'Vanguard S&P 500 Growth ETF' },
-      { s:'VUG',   n:'Vanguard Growth ETF' },
-      { s:'VEA',   n:'Vanguard FTSE Developed Markets' },
-      { s:'VWO',   n:'Vanguard FTSE Emerging Markets' },
-      { s:'AGG',   n:'iShares Core US Aggregate Bond' },
-      { s:'BND',   n:'Vanguard Total Bond Market' },
-      { s:'SHY',   n:'iShares 1-3 Year Treasury' },
-      { s:'IEF',   n:'iShares 7-10 Year Treasury' },
-      { s:'GOVT',  n:'iShares US Treasury Bond ETF' },
-      { s:'BITO',  n:'ProShares Bitcoin Strategy ETF' },
-      { s:'SOXL',  n:'Direxion Semiconductor Bull 3x' },
-      { s:'TQQQ',  n:'ProShares UltraPro QQQ 3x' },
-      { s:'SPXL',  n:'Direxion Daily S&P 500 Bull 3x' },
-      { s:'SQQQ',  n:'ProShares UltraPro Short QQQ' },
-      { s:'SH',    n:'ProShares Short S&P 500' },
-    ],
-
-    // ── International ──────────────────────────────────────
-    International: [
-      { s:'TSM',   n:'Taiwan Semiconductor (ADR)' },
-      { s:'ASML',  n:'ASML Holding (ADR)' },
-      { s:'SAP',   n:'SAP SE (ADR)' },
-      { s:'NVO',   n:'Novo Nordisk (ADR)' },
-      { s:'NESN',  n:'Nestle SA (ADR)' },
-      { s:'TM',    n:'Toyota Motor (ADR)' },
-      { s:'HMC',   n:'Honda Motor (ADR)' },
-      { s:'SONY',  n:'Sony Group (ADR)' },
-      { s:'NMR',   n:'Nomura Holdings (ADR)' },
-      { s:'BIDU',  n:'Baidu Inc. (ADR)' },
-      { s:'BABA',  n:'Alibaba Group (ADR)' },
-      { s:'JD',    n:'JD.com Inc. (ADR)' },
-      { s:'NIO',   n:'NIO Inc. (ADR)' },
-      { s:'LI',    n:'Li Auto Inc. (ADR)' },
-      { s:'XPEV',  n:'XPeng Inc. (ADR)' },
-      { s:'RIO',   n:'Rio Tinto (ADR)' },
-      { s:'BHP',   n:'BHP Group (ADR)' },
-      { s:'VALE',  n:'Vale SA (ADR)' },
-      { s:'AZN',   n:'AstraZeneca PLC (ADR)' },
-      { s:'GSK',   n:'GSK PLC (ADR)' },
-      { s:'BP',    n:'BP PLC (ADR)' },
-      { s:'SHEL',  n:'Shell PLC (ADR)' },
-      { s:'SAN',   n:'Banco Santander (ADR)' },
-      { s:'DB',    n:'Deutsche Bank (ADR)' },
-      { s:'SHOP',  n:'Shopify Inc. (NYSE)' },
-      { s:'SE',    n:'Sea Limited (ADR)' },
-      { s:'GRAB',  n:'Grab Holdings (ADR)' },
-    ],
-
+    Technology:      ['AAPL','MSFT','NVDA','AVGO','ORCL','AMD','INTC','QCOM','TXN','AMAT','LRCX','KLAC','ADI','MU','ON','SWKS','CDNS','SNPS','FTNT','WDC','DELL','HPE','HPQ','EPAM'],
+    'Software/Cloud':['CRM','ADBE','NOW','INTU','TEAM','WDAY','DDOG','SNOW','ZS','CRWD','OKTA','NET','HUBS','VEEV','MDB','CFLT','S','ASAN','GTLB','TWLO','ZM','DOCU','PAYC','PCTY','TTD','SHOP','MELI','SQ','AFRM','SOFI'],
+    'Comm. Services':['GOOGL','GOOG','META','NFLX','DIS','CMCSA','VZ','T','TMUS','CHTR','LYV','EA','TTWO','SNAP','PINS','SPOT','PARA','WBD','MTCH','RBLX'],
+    'Cons. Discret.':['AMZN','TSLA','HD','MCD','NKE','LOW','SBUX','BKNG','TJX','CMG','ORLY','AZO','ROST','DHI','LEN','MAR','HLT','GM','F','UBER','LYFT','ABNB','EXPE','CCL','RCL','DAL','UAL','RIVN','DKNG','MGM','WYNN'],
+    'Cons. Staples': ['WMT','PG','KO','PEP','COST','PM','MO','MDLZ','CL','EL','KHC','GIS','HSY','CLX','KMB','TSN','HRL','STZ','KR'],
+    Healthcare:      ['UNH','JNJ','LLY','ABBV','MRK','TMO','ABT','DHR','BMY','AMGN','MDT','ISRG','SYK','BSX','EW','REGN','GILD','VRTX','BIIB','MRNA','PFE','DXCM','HOLX','BDX','HUM','CI','CVS','ELV','CNC','MCK'],
+    Financials:      ['JPM','BAC','WFC','GS','MS','BLK','SPGI','MCO','COF','AXP','V','MA','PYPL','SCHW','CB','PGR','ALL','TRV','MET','PRU','AFL','USB','PNC','TFC','STT','BK','CME','CBOE','ICE','NDAQ','MSCI','HOOD'],
+    Industrials:     ['HON','UPS','RTX','CAT','DE','ETN','GE','LMT','NOC','GD','BA','MMM','EMR','ITW','ROK','PH','FAST','SWK','XYL','ROP','FDX','NSC','UNP','CSX','ODFL','GWW','URI','PCAR','CTAS','AXON'],
+    Energy:          ['XOM','CVX','COP','EOG','MPC','VLO','PSX','HES','DVN','OXY','SLB','HAL','BKR','CTRA','EQT','FANG','MRO','KMI','WMB','OKE','LNG'],
+    Materials:       ['LIN','APD','SHW','PPG','ECL','NEM','FCX','NUE','STLD','ALB','CF','MOS','VMC','MLM','GOLD','WPM','AA','X','CLF'],
+    'Real Estate':   ['PLD','AMT','CCI','EQIX','SPG','O','WELL','EQR','AVB','ARE','BXP','IRM','SBAC','PSA','EXR','VICI'],
+    Utilities:       ['NEE','DUK','SO','D','EXC','AEP','XEL','SRE','ED','ETR','PPL','DTE','FE','CMS','WEC','ES','AES','NRG'],
+    'Crypto/Digital':['COIN','MSTR','RIOT','MARA','HUT','CLSK'],
+    ETFs:            ['SPY','QQQ','IWM','DIA','VTI','VOO','IVV','EFA','EEM','GLD','SLV','TLT','HYG','LQD','VNQ','XLF','XLK','XLE','XLV','XLI','XLP','XLU','XLRE','XLC','XLB','XLY','XBI','IBB','SMH','SOXX','ARKK','ARKG','SOXL','TQQQ','SPXL','SQQQ','SH','BITO'],
+    International:   ['TSM','ASML','SAP','NVO','TM','SONY','BABA','JD','NIO','LI','XPEV','RIO','BHP','VALE','AZN','GSK','BP','SHEL','SE'],
   };
 
-  // ── Flat list + lookup ────────────────────────────────────
+  // Lookup flat
+  const SYMBOL_META = {};
   const ALL_SYMBOLS_FLAT = [];
-  const SYMBOL_META      = {};    // { sym: { name, sector } }
-
   Object.entries(UNIVERSE).forEach(([sector, stocks]) => {
-    stocks.forEach(({ s, n }) => {
+    stocks.forEach(s => {
       if (!SYMBOL_META[s]) {
+        SYMBOL_META[s] = { name: s, sector };
         ALL_SYMBOLS_FLAT.push(s);
-        SYMBOL_META[s] = { name: n, sector };
       }
     });
   });
@@ -633,68 +64,164 @@ const WatchlistManager = (() => {
   // ════════════════════════════════════════════════════════
   // INIT
   // ════════════════════════════════════════════════════════
-  function init() {
-    _loadFromStorage();
+  async function init() {
+    // 1. Essai chargement depuis GitHub Pages (watchlist.json)
+    const ghData = await _loadFromGitHubPages();
+    if (ghData) {
+      _watchlist = Array.isArray(ghData.watchlist) ? ghData.watchlist : [];
+      _starred   = Array.isArray(ghData.starred)   ? ghData.starred   : [];
+      _saveLocal();
+      console.log(`[WatchlistManager] Loaded from GitHub Pages | ${_watchlist.length} symbols`);
+    } else {
+      // 2. Fallback localStorage
+      _loadLocal();
+      console.log(`[WatchlistManager] Loaded from localStorage | ${_watchlist.length} symbols`);
+    }
+
     _buildSectorTabs();
     _buildAddForm();
-    console.log(`✅ WatchlistManager — ${ALL_SYMBOLS_FLAT.length} symbols | watchlist: ${_watchlist.length}`);
+    _buildSearchBinding();
+
+    console.log(`[WatchlistManager] Init done | ${_watchlist.length} symbols in watchlist | ${ALL_SYMBOLS_FLAT.length} universe`);
   }
 
-  // ── Load from localStorage ───────────────────────────────
-  function _loadFromStorage() {
+  // ════════════════════════════════════════════════════════
+  // PERSISTANCE LOCALE
+  // ════════════════════════════════════════════════════════
+  function _loadLocal() {
     try {
-      const saved = localStorage.getItem(LS_KEY);
-      _watchlist  = saved ? JSON.parse(saved) : _defaultWatchlist();
-      const savedStarred = localStorage.getItem(LS_STARRED);
-      _starred    = savedStarred ? JSON.parse(savedStarred) : [];
+      const wl = localStorage.getItem(LS_KEY);
+      const st = localStorage.getItem(LS_STARRED);
+      _watchlist = wl ? JSON.parse(wl) : [];   // ✅ Vide par défaut
+      _starred   = st ? JSON.parse(st) : [];
     } catch(e) {
-      _watchlist  = _defaultWatchlist();
-      _starred    = [];
+      _watchlist = [];
+      _starred   = [];
     }
   }
 
-  function _defaultWatchlist() {
-    // Default: first 60 symbols across key sectors
-    return [
-      'SPY','QQQ','IWM',
-      'AAPL','MSFT','NVDA','GOOGL','META','AMZN','TSLA',
-      'JPM','GS','BAC','V','MA',
-      'UNH','LLY','JNJ','ABBV','MRK',
-      'XOM','CVX','COP',
-      'HD','MCD','COST','WMT',
-      'NEE','DUK',
-      'LIN','SHW',
-      'CRM','ADBE','NOW','INTU',
-      'AMD','INTC','QCOM','AMAT','MU',
-      'BA','LMT','RTX','CAT','DE',
-      'COIN','MSTR',
-      'ARKK','SMH','XLF','XLK','XLE',
-    ];
-  }
-
-  function _save() {
-    localStorage.setItem(LS_KEY, JSON.stringify(_watchlist));
-    localStorage.setItem(LS_STARRED, JSON.stringify(_starred));
+  function _saveLocal() {
+    try {
+      localStorage.setItem(LS_KEY,     JSON.stringify(_watchlist));
+      localStorage.setItem(LS_STARRED, JSON.stringify(_starred));
+    } catch(e) {}
   }
 
   // ════════════════════════════════════════════════════════
-  // WATCHLIST CRUD
+  // PERSISTANCE GITHUB
   // ════════════════════════════════════════════════════════
-  function addSymbol(sym) {
-    sym = sym.toUpperCase().trim();
-    if (!sym || _watchlist.includes(sym)) {
-      _showToast(`${sym || 'Symbol'} already in watchlist or invalid`, 'warn');
+  async function _loadFromGitHubPages() {
+    try {
+      // ApiClient détecte automatiquement la base URL GitHub Pages
+      const base = window.ApiClient ? ApiClient.getBase() : '/signals';
+      const resp = await fetch(`${base}/watchlist.json?_=${Date.now()}`, {
+        signal: AbortSignal.timeout(5000),
+        cache:  'no-store',
+      });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (data && (Array.isArray(data.watchlist) || Array.isArray(data.starred))) {
+        return data;
+      }
+      return null;
+    } catch(e) {
+      return null;
+    }
+  }
+
+  async function _pushToGitHub() {
+    const pat = localStorage.getItem('av_gh_pat') || '';
+    if (!pat || !pat.startsWith('ghp_')) {
+      console.log('[WatchlistManager] No PAT — GitHub save skipped (use localStorage only)');
       return false;
     }
+
+    const payload = {
+      watchlist:  _watchlist,
+      starred:    _starred,
+      updated_at: new Date().toISOString(),
+      n:          _watchlist.length,
+    };
+
+    // Encode en base64 UTF-8
+    const content = btoa(unescape(encodeURIComponent(
+      JSON.stringify(payload, null, 2)
+    )));
+
+    try {
+      // Récupère le SHA actuel du fichier (requis pour la mise à jour)
+      const getUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
+      const headers = {
+        'Authorization':        `Bearer ${pat}`,
+        'Accept':               'application/vnd.github.v3+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      };
+
+      let sha;
+      const getResp = await fetch(getUrl, { headers, signal: AbortSignal.timeout(8000) });
+      if (getResp.ok) {
+        const existing = await getResp.json();
+        sha = existing.sha;
+      }
+
+      // Écrit le fichier
+      const body = {
+        message: `Watchlist update — ${new Date().toISOString().slice(0, 16)} UTC`,
+        content,
+      };
+      if (sha) body.sha = sha;
+
+      const putResp = await fetch(getUrl, {
+        method:  'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body:    JSON.stringify(body),
+        signal:  AbortSignal.timeout(10000),
+      });
+
+      if (putResp.ok) {
+        console.log(`[WatchlistManager] Saved to GitHub | ${_watchlist.length} symbols`);
+        _showToast(`Watchlist saved to GitHub (${_watchlist.length} symbols)`, 'success');
+        return true;
+      } else {
+        const err = await putResp.json().catch(() => ({}));
+        console.warn(`[WatchlistManager] GitHub save failed: ${putResp.status} | ${err.message}`);
+        return false;
+      }
+    } catch(e) {
+      console.warn(`[WatchlistManager] GitHub save error: ${e.message}`);
+      return false;
+    }
+  }
+
+  // Debounce pour éviter trop d'appels API
+  function _scheduleSave() {
+    _saveLocal();
+    clearTimeout(_ghSaveTimeout);
+    _ghSaveTimeout = setTimeout(() => _pushToGitHub(), 2000);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // CRUD WATCHLIST
+  // ════════════════════════════════════════════════════════
+  function addSymbol(sym) {
+    sym = sym.toUpperCase().trim().replace(/[^A-Z.]/g, '');
+    if (!sym || sym.length > 10) {
+      _showToast('Invalid symbol', 'warn');
+      return false;
+    }
+    if (_watchlist.includes(sym)) {
+      _showToast(`${sym} already in watchlist`, 'warn');
+      return false;
+    }
+
     _watchlist.unshift(sym);
 
-    // Add to SYMBOL_META if unknown
     if (!SYMBOL_META[sym]) {
       SYMBOL_META[sym] = { name: sym, sector: 'Custom' };
       ALL_SYMBOLS_FLAT.push(sym);
     }
 
-    _save();
+    _scheduleSave();
     _showToast(`${sym} added to watchlist`, 'success');
     render(_signalData);
     return true;
@@ -703,8 +230,8 @@ const WatchlistManager = (() => {
   function removeSymbol(sym) {
     _watchlist = _watchlist.filter(s => s !== sym);
     _starred   = _starred.filter(s => s !== sym);
-    _save();
-    _showToast(`${sym} removed from watchlist`, 'info');
+    _scheduleSave();
+    _showToast(`${sym} removed`, 'info');
     render(_signalData);
   }
 
@@ -714,144 +241,252 @@ const WatchlistManager = (() => {
     } else {
       _starred.unshift(sym);
     }
-    _save();
+    _scheduleSave();
     render(_signalData);
   }
 
-  function isStarred(sym)  { return _starred.includes(sym); }
-  function isInWatchlist(sym) { return _watchlist.includes(sym); }
+  function isStarred(sym)    { return _starred.includes(sym); }
+  function isInWatchlist(sym){ return _watchlist.includes(sym); }
 
   function resetToDefault() {
-    _watchlist = _defaultWatchlist();
+    _watchlist = [];
     _starred   = [];
-    _save();
+    _scheduleSave();
     render(_signalData);
-    _showToast('Watchlist reset to defaults', 'info');
+    _showToast('Watchlist cleared', 'info');
   }
 
   // ════════════════════════════════════════════════════════
-  // RENDER WATCHLIST TABLE
+  // RENDER
   // ════════════════════════════════════════════════════════
   function render(signalData = {}) {
     _signalData = signalData;
-    const sigs  = signalData?.signals || {};
+    const sigs  = signalData?.signals || signalData || {};
 
-    // Get filtered + sorted list
-    let symbols = _getFilteredSymbols();
-
-    // Pagination
-    const total    = symbols.length;
-    const pages    = Math.ceil(total / PAGE_SIZE);
-    _currentPage   = Math.min(_currentPage, Math.max(1, pages));
-    const start    = (_currentPage - 1) * PAGE_SIZE;
-    const display  = symbols.slice(start, start + PAGE_SIZE);
-
-    // Update count
-    const countEl = document.getElementById('wl-sym-count');
-    if (countEl) countEl.textContent = `${total} symbols`;
-
-    // Render table
     const tbody = document.getElementById('watchlist-tbody');
     if (!tbody) return;
 
+    // Filtrage + pagination
+    let symbols = _getFilteredSymbols();
+    const total = symbols.length;
+    const pages = Math.ceil(total / PAGE_SIZE);
+    _currentPage = Math.min(_currentPage, Math.max(1, pages));
+    const start  = (_currentPage - 1) * PAGE_SIZE;
+    const display= symbols.slice(start, start + PAGE_SIZE);
+
+    // Compteur
+    const countEls = document.querySelectorAll('#wl-sym-count, #wl-count');
+    countEls.forEach(el => {
+      el.textContent = `${_watchlist.length} symbols`;
+    });
+
+    // Etat vide
+    if (!_watchlist.length) {
+      tbody.innerHTML = `<tr><td colspan="11" class="loading-row">
+        <i class="fa-solid fa-circle-info" style="color:var(--b1)"></i>
+        Your watchlist is empty — add symbols using the form above.
+      </td></tr>`;
+      _renderPagination(0);
+      return;
+    }
+
     if (!display.length) {
       tbody.innerHTML = `<tr><td colspan="11" class="loading-row">
-        No symbols match your filter. <button class="btn-sm" onclick="WatchlistManager.resetFilter()">Reset</button>
+        No results for "<strong>${_currentSearch}</strong>"
       </td></tr>`;
       _renderPagination(pages);
       return;
     }
 
+    // ── Render rows ─────────────────────────────────────
     tbody.innerHTML = display.map(sym => {
-      const s      = sigs[sym] || {};
-      const meta   = SYMBOL_META[sym] || { name: sym, sector: '--' };
-      const price  = parseFloat(s.price || 0);
-      const chg    = parseFloat(s.change_pct || 0);
-      const score  = parseFloat(s.final_score || 0);
-      const bp     = parseFloat(s.buy_prob || 0.5);
-      const dir    = s.direction || 'neutral';
-      const council= s.council   || (price > 0 ? 'wait' : '--');
-      const cls    = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
-      const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
-      const ccolor = council.includes('execute') ? '#10b981'
-                   : council === 'veto' ? '#ef4444' : '#f59e0b';
-      const starClass = isStarred(sym) ? 'starred' : '';
+      const s       = sigs[sym] || {};
+      const meta    = SYMBOL_META[sym] || { name: sym, sector: 'Custom' };
+      const price   = parseFloat(s.price   || 0);
+      const chg     = parseFloat(s.change_pct || s.change || 0);
+      const score   = parseFloat(s.final_score || 0);
+      const bp      = parseFloat(s.buy_prob   || 0.5);
+      const dir     = s.direction || 'neutral';
+      const council = s.council   || (price > 0 ? 'wait' : '');
+      const regime  = (s.regime   || '').replace(/_/g, ' ');
+      const cls     = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
+      const starred = isStarred(sym);
 
+      // Score color
+      const scolor  = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
+      const ccolor  = council.includes('execute') ? '#10b981'
+                    : council === 'veto'           ? '#ef4444'
+                    : '#f59e0b';
+
+      // Direction badge
       const dirBadge = dir === 'buy'
         ? `<span class="dir-badge buy"><i class="fa-solid fa-arrow-up"></i> BUY</span>`
         : dir === 'sell'
           ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
           : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i></span>`;
 
+      // Council badge
+      const councilBadge = council
+        ? `<span style="font-size:11px;font-weight:700;color:${ccolor}">${council.toUpperCase()}</span>`
+        : '<span style="color:var(--txt4);font-size:11px">—</span>';
+
       return `<tr data-sym="${sym}">
-        <td>
-          <button class="btn-wl-star ${starClass}" data-star="${sym}" title="Star">
-            <i class="fa-${isStarred(sym)?'solid':'regular'} fa-star"></i>
+        <!-- ★ Star button — ALWAYS VISIBLE -->
+        <td style="padding:8px 6px;text-align:center">
+          <button class="btn-wl-star ${starred ? 'starred' : ''}"
+                  data-star="${sym}" title="${starred ? 'Unstar' : 'Star'}">
+            <i class="${starred ? 'fa-solid' : 'fa-regular'} fa-star"></i>
           </button>
         </td>
-        <td>
-          <strong class="sym-link wl-detail-btn" data-sym="${sym}">${sym}</strong>
-          <span style="font-size:10px;color:var(--b1);margin-left:5px">${meta.sector}</span>
-        </td>
-        <td><span class="muted-sm">${meta.name}</span></td>
-        <td class="mono ${cls}">${price > 0 ? '$' + price.toFixed(2) : '<span style="color:var(--txt4)">--</span>'}</td>
-        <td class="mono ${cls}">${price > 0 ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%' : '--'}</td>
-        <td>
-          ${score > 0 ? `
-          <div class="score-bar-inline">
-            <div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div>
+
+        <!-- Symbol + Sector -->
+        <td style="padding:8px 10px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <strong class="sym-link wl-open-detail" data-sym="${sym}"
+                    style="cursor:pointer;color:var(--txt);font-size:13px">
+              ${sym}
+            </strong>
+            <span style="font-size:9px;color:var(--b1);font-weight:700">${meta.sector}</span>
           </div>
-          <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
-          ` : '<span style="color:var(--txt4);font-size:11px">--</span>'}
         </td>
-        <td>${price > 0 ? dirBadge : '<span style="color:var(--txt4);font-size:11px">--</span>'}</td>
-        <td class="mono">${bp > 0 && score > 0 ? (bp*100).toFixed(1)+'%' : '--'}</td>
-        <td><span class="regime-chip">${(s.regime||'--').replace(/_/g,' ')}</span></td>
-        <td>${price > 0 ? `<strong style="color:${ccolor};font-size:11px">${council.toUpperCase()}</strong>` : '--'}</td>
+
+        <!-- Name -->
+        <td><span class="muted-sm">${meta.name}</span></td>
+
+        <!-- Price -->
+        <td class="mono ${cls}" style="font-size:13px;font-weight:600">
+          ${price > 0 ? `$${price.toFixed(2)}` : '<span style="color:var(--txt4)">—</span>'}
+        </td>
+
+        <!-- % Change -->
+        <td class="mono ${cls}" style="font-size:12px;font-weight:600">
+          ${price > 0 ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '—'}
+        </td>
+
+        <!-- Score bar -->
+        <td style="padding:8px 10px">
+          ${score > 0 ? `
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="score-bar-inline">
+                <div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div>
+              </div>
+              <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
+            </div>` :
+            '<span style="color:var(--txt4);font-size:11px">—</span>'
+          }
+        </td>
+
+        <!-- Direction -->
+        <td>${price > 0 ? dirBadge : '<span style="color:var(--txt4);font-size:11px">—</span>'}</td>
+
+        <!-- Buy Prob -->
+        <td class="mono" style="font-size:12px">
+          ${score > 0 ? `${(bp*100).toFixed(1)}%` : '—'}
+        </td>
+
+        <!-- Regime -->
         <td>
-          <button class="btn-xs wl-detail-btn" data-sym="${sym}" title="Detail"><i class="fa-solid fa-chart-bar"></i></button>
-          <button class="btn-xs wl-trade-btn" data-sym="${sym}" title="Trade"><i class="fa-solid fa-paper-plane"></i></button>
-          <button class="btn-wl-remove" data-remove="${sym}" title="Remove"><i class="fa-solid fa-xmark"></i></button>
+          ${regime
+            ? `<span class="regime-chip">${regime}</span>`
+            : '<span style="color:var(--txt4);font-size:11px">—</span>'}
+        </td>
+
+        <!-- Council -->
+        <td>${councilBadge}</td>
+
+        <!-- Actions — ALWAYS VISIBLE -->
+        <td style="padding:6px 8px">
+          <div style="display:flex;align-items:center;gap:4px">
+            <button class="btn-xs wl-open-detail" data-sym="${sym}"
+                    title="Open detail panel"
+                    style="display:flex;align-items:center;gap:3px;padding:4px 8px">
+              <i class="fa-solid fa-chart-bar"></i>
+            </button>
+            <button class="btn-xs wl-quick-chart" data-sym="${sym}"
+                    title="View in main chart"
+                    style="display:flex;align-items:center;gap:3px;padding:4px 8px">
+              <i class="fa-solid fa-chart-line"></i>
+            </button>
+            <button class="btn-xs wl-trade" data-sym="${sym}"
+                    title="Trade"
+                    style="display:flex;align-items:center;gap:3px;padding:4px 8px">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+            <button class="btn-wl-remove" data-remove="${sym}" title="Remove from watchlist">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
         </td>
       </tr>`;
     }).join('');
 
-    // Bind table events
+    // ── Bind events ──────────────────────────────────────
+    // Star buttons
     tbody.querySelectorAll('[data-star]').forEach(btn => {
-      btn.addEventListener('click', () => toggleStar(btn.dataset.star));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleStar(btn.dataset.star);
+      });
     });
+
+    // Delete buttons
     tbody.querySelectorAll('[data-remove]').forEach(btn => {
-      btn.addEventListener('click', () => removeSymbol(btn.dataset.remove));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        removeSymbol(btn.dataset.remove);
+      });
     });
-    tbody.querySelectorAll('.wl-detail-btn').forEach(btn => {
-      btn.addEventListener('click', () => StockDetail.open(btn.dataset.sym));
+
+    // Open StockDetail (full-page panel)
+    tbody.querySelectorAll('.wl-open-detail').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sym = btn.dataset.sym;
+        if (window.StockDetail) {
+          StockDetail.open(sym);
+        } else {
+          console.error('[WatchlistManager] StockDetail not available');
+        }
+      });
     });
-    tbody.querySelectorAll('.wl-trade-btn').forEach(btn => {
+
+    // Quick chart (overview)
+    tbody.querySelectorAll('.wl-quick-chart').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (window.Terminal) {
+          Terminal.loadChartSymbol(btn.dataset.sym);
+          Terminal.showSection('overview');
+        }
+      });
+    });
+
+    // Trade button
+    tbody.querySelectorAll('.wl-trade').forEach(btn => {
       btn.addEventListener('click', () => {
         const sel = document.getElementById('order-symbol');
         if (sel) sel.value = btn.dataset.sym;
-        if (window.Terminal) window.Terminal.showSection('execution');
+        if (window.Terminal) Terminal.showSection('execution');
       });
     });
 
     _renderPagination(pages);
   }
 
-  // ── Filtered symbol list ─────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  // FILTERED SYMBOLS
+  // ════════════════════════════════════════════════════════
   function _getFilteredSymbols() {
     let symbols = [..._watchlist];
 
     // Starred first
-    symbols.sort((a, b) => {
-      const aS = isStarred(a) ? -1 : 0;
-      const bS = isStarred(b) ? -1 : 0;
-      return aS - bS;
-    });
+    symbols.sort((a, b) => (isStarred(b) ? 1 : 0) - (isStarred(a) ? 1 : 0));
 
     // Sector filter
-    if (_currentSector !== 'All') {
+    if (_currentSector === 'Starred') {
+      symbols = symbols.filter(s => isStarred(s));
+    } else if (_currentSector !== 'All') {
       symbols = symbols.filter(s =>
-        (SYMBOL_META[s]?.sector || '') === _currentSector
+        (SYMBOL_META[s]?.sector || 'Custom') === _currentSector
       );
     }
 
@@ -860,22 +495,26 @@ const WatchlistManager = (() => {
       const q = _currentSearch.toLowerCase();
       symbols = symbols.filter(s =>
         s.toLowerCase().includes(q) ||
-        (SYMBOL_META[s]?.name || '').toLowerCase().includes(q)
+        (SYMBOL_META[s]?.name || '').toLowerCase().includes(q) ||
+        (SYMBOL_META[s]?.sector || '').toLowerCase().includes(q)
       );
     }
 
     return symbols;
   }
 
-  // ── Sector Tabs ──────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  // SECTOR TABS
+  // ════════════════════════════════════════════════════════
   function _buildSectorTabs() {
     const container = document.getElementById('sector-tabs');
     if (!container) return;
 
-    const sectors = ['All', 'Starred', ...Object.keys(UNIVERSE)];
+    const sectors = ['All', 'Starred', ...Object.keys(UNIVERSE), 'Custom'];
     container.innerHTML = sectors.map(s => `
       <button class="sector-tab ${s === 'All' ? 'active' : ''}" data-sector="${s}">
-        ${s === 'Starred' ? '<i class="fa-solid fa-star"></i> ' : ''}${s}
+        ${s === 'Starred' ? '<i class="fa-solid fa-star" style="font-size:9px"></i> ' : ''}${s}
+        ${s === 'All' ? `<span style="font-size:9px;color:rgba(255,255,255,0.7);margin-left:2px">(${_watchlist.length})</span>` : ''}
       </button>`).join('');
 
     container.querySelectorAll('.sector-tab').forEach(btn => {
@@ -889,35 +528,43 @@ const WatchlistManager = (() => {
     });
   }
 
-  // ── Add Symbol Form ──────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  // ADD FORM + SEARCH
+  // ════════════════════════════════════════════════════════
   function _buildAddForm() {
     const form = document.getElementById('wl-add-form');
     if (!form) return;
-    form.addEventListener('submit', e => {
+
+    form.addEventListener('submit', async e => {
       e.preventDefault();
       const input = document.getElementById('wl-add-input');
-      if (input) {
-        addSymbol(input.value);
-        input.value = '';
+      const sym   = (input?.value || '').trim().toUpperCase();
+      if (sym) {
+        const added = addSymbol(sym);
+        if (added && input) input.value = '';
       }
     });
-
-    // Search input binding
-    const searchEl = document.getElementById('wl-search');
-    if (searchEl) {
-      searchEl.addEventListener('input', () => {
-        _currentSearch = searchEl.value.trim();
-        _currentPage   = 1;
-        render(_signalData);
-      });
-    }
   }
 
-  // ── Pagination ───────────────────────────────────────────
+  function _buildSearchBinding() {
+    const searchEl = document.getElementById('wl-search');
+    if (!searchEl) return;
+    searchEl.addEventListener('input', () => {
+      _currentSearch = searchEl.value.trim();
+      _currentPage   = 1;
+      render(_signalData);
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // PAGINATION
+  // ════════════════════════════════════════════════════════
   function _renderPagination(pages) {
     const container = document.getElementById('wl-pagination');
-    if (!container || pages <= 1) {
-      if (container) container.innerHTML = '';
+    if (!container) return;
+
+    if (pages <= 1) {
+      container.innerHTML = '';
       return;
     }
 
@@ -926,73 +573,51 @@ const WatchlistManager = (() => {
       <i class="fa-solid fa-chevron-left"></i>
     </button>`);
 
-    // Page numbers (max 7 shown)
-    const start = Math.max(1, _currentPage - 3);
-    const end   = Math.min(pages, start + 6);
-    for (let i = start; i <= end; i++) {
+    const startP = Math.max(1, _currentPage - 3);
+    const endP   = Math.min(pages, startP + 6);
+    for (let i = startP; i <= endP; i++) {
       items.push(`<button class="wl-page-btn ${i === _currentPage ? 'active' : ''}" data-pg="${i}">${i}</button>`);
     }
 
     items.push(`<button class="wl-page-btn" id="wl-next" ${_currentPage >= pages ? 'disabled' : ''}>
       <i class="fa-solid fa-chevron-right"></i>
     </button>`);
-
-    items.push(`<span class="wl-count">Page ${_currentPage}/${pages} · ${_watchlist.length} total</span>`);
+    items.push(`<span style="font-size:11px;color:var(--txt4)">
+      ${_watchlist.length} symbols · Page ${_currentPage}/${pages}
+    </span>`);
 
     container.innerHTML = items.join('');
 
     container.querySelectorAll('[data-pg]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        _currentPage = parseInt(btn.dataset.pg);
-        render(_signalData);
-      });
+      btn.addEventListener('click', () => { _currentPage = parseInt(btn.dataset.pg); render(_signalData); });
     });
-
-    const prev = document.getElementById('wl-prev');
-    const next = document.getElementById('wl-next');
-    if (prev) prev.addEventListener('click', () => { _currentPage--; render(_signalData); });
-    if (next) next.addEventListener('click', () => { _currentPage++; render(_signalData); });
+    document.getElementById('wl-prev')?.addEventListener('click', () => { _currentPage--; render(_signalData); });
+    document.getElementById('wl-next')?.addEventListener('click', () => { _currentPage++; render(_signalData); });
   }
+
+  // ════════════════════════════════════════════════════════
+  // LIVE DATA (inchangé)
+  // ════════════════════════════════════════════════════════
+  const _liveCache = {};
 
   async function fetchLiveQuote(sym) {
     if (_liveCache[sym] && (Date.now() - _liveCache[sym].ts) < 60000) {
-        return _liveCache[sym].data;
+      return _liveCache[sym].data;
     }
     try {
-        const data = await YahooFinance.getQuote(sym);
-        if (data) _liveCache[sym] = { data, ts: Date.now() };
-        return data;
-    } catch(e) {
-        console.warn(`Live quote ${sym}: ${e.message}`);
-        return null;
-    }
-    }
+      const data = await YahooFinance.getQuote(sym);
+      if (data) _liveCache[sym] = { data, ts: Date.now() };
+      return data;
+    } catch(e) { return null; }
+  }
 
-    async function fetchNews(sym) {
-    try {
-        return await YahooFinance.getNews(sym);
-    } catch(e) {
-        console.warn(`News ${sym}: ${e.message}`);
-        return [];
-    }
-    }
+  async function fetchNews(sym) {
+    try { return await YahooFinance.getNews(sym); } catch(e) { return []; }
+  }
 
-    async function fetchFinancials(sym) {
-    try {
-        return await YahooFinance.getFinancials(sym);
-    } catch(e) {
-        console.warn(`Financials ${sym}: ${e.message}`);
-        return null;
-    }
-    }
-
-    async function fetchProfile(sym) {
-    try {
-        return await YahooFinance.getProfile(sym);
-    } catch(e) {
-        return null;
-    }
-    }
+  async function fetchFinancials(sym) {
+    try { return await YahooFinance.getFinancials(sym); } catch(e) { return null; }
+  }
 
   // ════════════════════════════════════════════════════════
   // UTILS
@@ -1009,23 +634,16 @@ const WatchlistManager = (() => {
     render(_signalData);
   }
 
-  function _today()       { return new Date().toISOString().split('T')[0]; }
-  function _daysAgo(n)    {
-    const d = new Date();
-    d.setDate(d.getDate() - n);
-    return d.toISOString().split('T')[0];
-  }
-
   function _showToast(msg, type = 'info') {
     const wrap = document.getElementById('toast-wrap');
     if (!wrap) return;
+    const icons = { success:'fa-circle-check', warn:'fa-triangle-exclamation',
+                    info:'fa-circle-info', error:'fa-circle-exclamation' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    const icons = { success:'fa-circle-check', error:'fa-circle-exclamation',
-                    warn:'fa-triangle-exclamation', info:'fa-circle-info' };
     toast.innerHTML = `<i class="fa-solid ${icons[type]||'fa-info'}"></i> ${msg}`;
     wrap.appendChild(toast);
-    setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 3500);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3500);
   }
 
   // ════════════════════════════════════════════════════════
@@ -1044,18 +662,23 @@ const WatchlistManager = (() => {
     fetchLiveQuote,
     fetchNews,
     fetchFinancials,
-    fetchProfile,
 
-    // Getters
-    getWatchlist:    () => _watchlist,
-    getStarred:      () => _starred,
-    getAllSymbols:    () => ALL_SYMBOLS_FLAT,
-    getSymbolMeta:   (s) => SYMBOL_META[s] || { name: s, sector: '--' },
-    getUniverse:     () => UNIVERSE,
-    getTotalCount:   () => ALL_SYMBOLS_FLAT.length,
+    // State getters
+    getWatchlist:  () => _watchlist,
+    getStarred:    () => _starred,
+    getAllSymbols:  () => ALL_SYMBOLS_FLAT,
+    getSymbolMeta: (s) => SYMBOL_META[s] || { name: s, sector: 'Custom' },
+    getUniverse:   () => UNIVERSE,
+    getTotalCount: () => ALL_SYMBOLS_FLAT.length,
+
+    // Search state (accessible par terminal.js)
+    get _currentSearch() { return _currentSearch; },
+    set _currentSearch(v) { _currentSearch = v; },
+    get _currentPage()   { return _currentPage; },
+    set _currentPage(v)  { _currentPage = v; },
   };
 
 })();
 
 window.WatchlistManager = WatchlistManager;
-console.log(`✅ WatchlistManager loaded — ${WatchlistManager.getTotalCount()} total symbols available`);
+console.log(`[WatchlistManager] Loaded | ${WatchlistManager.getTotalCount()} symbols available`);

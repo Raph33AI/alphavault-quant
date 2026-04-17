@@ -497,351 +497,94 @@
     </section>
 
     <!-- ══════════════════════════════════════════════════════
-         SECTION: CHARTS (Multi-panel)
+        SECTION: CHARTS (Multi-panel)
     ══════════════════════════════════════════════════════ -->
     <section id="sec-charts" class="section">
       <div class="section-header">
         <h2><i class="fa-solid fa-chart-bar"></i> Chart Analysis</h2>
         <div class="sh-actions">
           <select class="select-input" id="chart-layout">
+            <option value="2x2" selected>2 × 2</option>
+            <option value="2x3">2 × 3</option>
             <option value="1">Single</option>
-            <option value="2x1">2 Side</option>
-            <option value="2x2" selected>4 Grid</option>
           </select>
+          <button class="btn-sm" id="btn-sync-all">
+            <i class="fa-solid fa-rotate"></i> Sync All
+          </button>
         </div>
       </div>
 
-      <div class="charts-grid" id="charts-grid">
-        <!-- Panel 0 -->
-        <div class="chart-panel" id="chart-panel-0">
-          <div class="cp-header">
-            <!-- Panel 0 — SPY selected -->
-            <select class="select-sm" id="cp-sym-0">
-              <optgroup label="ETFs">
-                <option value="SPY" selected>SPY</option>
-                <option value="QQQ">QQQ</option>
-                <option value="IWM">IWM</option>
-                <option value="DIA">DIA</option>
-                <option value="GLD">GLD</option>
-                <option value="TLT">TLT</option>
-                <option value="HYG">HYG</option>
-                <option value="SMH">SMH</option>
-                <option value="XLF">XLF</option>
-                <option value="XLK">XLK</option>
-                <option value="XLE">XLE</option>
-              </optgroup>
-              <optgroup label="Mega Cap Tech">
-                <option value="AAPL">AAPL</option>
-                <option value="MSFT">MSFT</option>
-                <option value="NVDA">NVDA</option>
-                <option value="GOOGL">GOOGL</option>
-                <option value="AMZN">AMZN</option>
-                <option value="META">META</option>
-                <option value="TSLA">TSLA</option>
-                <option value="AMD">AMD</option>
-                <option value="INTC">INTC</option>
-                <option value="QCOM">QCOM</option>
-                <option value="MU">MU</option>
-                <option value="CRM">CRM</option>
-                <option value="ADBE">ADBE</option>
-                <option value="NOW">NOW</option>
-              </optgroup>
-              <optgroup label="Financials">
-                <option value="JPM">JPM</option>
-                <option value="GS">GS</option>
-                <option value="BAC">BAC</option>
-                <option value="MS">MS</option>
-                <option value="V">V</option>
-                <option value="MA">MA</option>
-                <option value="BLK">BLK</option>
-                <option value="COIN">COIN</option>
-              </optgroup>
-              <optgroup label="Healthcare">
-                <option value="UNH">UNH</option>
-                <option value="LLY">LLY</option>
-                <option value="JNJ">JNJ</option>
-                <option value="ABBV">ABBV</option>
-                <option value="MRK">MRK</option>
-              </optgroup>
-              <optgroup label="Industrials &amp; Energy">
-                <option value="XOM">XOM</option>
-                <option value="CVX">CVX</option>
-                <option value="BA">BA</option>
-                <option value="CAT">CAT</option>
-                <option value="DE">DE</option>
-                <option value="LMT">LMT</option>
-              </optgroup>
-              <optgroup label="Consumer">
-                <option value="AMZN">AMZN</option>
-                <option value="HD">HD</option>
-                <option value="MCD">MCD</option>
-                <option value="WMT">WMT</option>
-                <option value="COST">COST</option>
-                <option value="NKE">NKE</option>
-              </optgroup>
-              <optgroup label="Leveraged ETF">
-                <option value="TQQQ">TQQQ</option>
-                <option value="SOXL">SOXL</option>
-                <option value="SPXL">SPXL</option>
-                <option value="SQQQ">SQQQ</option>
-              </optgroup>
-            </select>
-            <div class="cp-itabs" data-panel="0">
-              <button class="cp-itab" data-iv="1h">1H</button>
-              <button class="cp-itab active" data-iv="1day">1D</button>
-              <button class="cp-itab" data-iv="1week">1W</button>
-            </div>
-          </div>
-          <div class="cp-chart" id="chart-container-0"></div>
-        </div>
-        <!-- Panel 1 -->
-        <div class="chart-panel" id="chart-panel-1">
-          <div class="cp-header">
-            <!-- Panel 0 — SPY selected -->
-            <select class="select-sm" id="cp-sym-1">
-              <optgroup label="ETFs">
-                <option value="SPY" >SPY</option>
-                <option value="QQQ" selected>QQQ</option>
-                <option value="IWM">IWM</option>
-                <option value="DIA">DIA</option>
-                <option value="GLD">GLD</option>
-                <option value="TLT">TLT</option>
-                <option value="HYG">HYG</option>
-                <option value="SMH">SMH</option>
-                <option value="XLF">XLF</option>
-                <option value="XLK">XLK</option>
-                <option value="XLE">XLE</option>
-              </optgroup>
-              <optgroup label="Mega Cap Tech">
-                <option value="AAPL">AAPL</option>
-                <option value="MSFT">MSFT</option>
-                <option value="NVDA">NVDA</option>
-                <option value="GOOGL">GOOGL</option>
-                <option value="AMZN">AMZN</option>
-                <option value="META">META</option>
-                <option value="TSLA">TSLA</option>
-                <option value="AMD">AMD</option>
-                <option value="INTC">INTC</option>
-                <option value="QCOM">QCOM</option>
-                <option value="MU">MU</option>
-                <option value="CRM">CRM</option>
-                <option value="ADBE">ADBE</option>
-                <option value="NOW">NOW</option>
-              </optgroup>
-              <optgroup label="Financials">
-                <option value="JPM">JPM</option>
-                <option value="GS">GS</option>
-                <option value="BAC">BAC</option>
-                <option value="MS">MS</option>
-                <option value="V">V</option>
-                <option value="MA">MA</option>
-                <option value="BLK">BLK</option>
-                <option value="COIN">COIN</option>
-              </optgroup>
-              <optgroup label="Healthcare">
-                <option value="UNH">UNH</option>
-                <option value="LLY">LLY</option>
-                <option value="JNJ">JNJ</option>
-                <option value="ABBV">ABBV</option>
-                <option value="MRK">MRK</option>
-              </optgroup>
-              <optgroup label="Industrials &amp; Energy">
-                <option value="XOM">XOM</option>
-                <option value="CVX">CVX</option>
-                <option value="BA">BA</option>
-                <option value="CAT">CAT</option>
-                <option value="DE">DE</option>
-                <option value="LMT">LMT</option>
-              </optgroup>
-              <optgroup label="Consumer">
-                <option value="AMZN">AMZN</option>
-                <option value="HD">HD</option>
-                <option value="MCD">MCD</option>
-                <option value="WMT">WMT</option>
-                <option value="COST">COST</option>
-                <option value="NKE">NKE</option>
-              </optgroup>
-              <optgroup label="Leveraged ETF">
-                <option value="TQQQ">TQQQ</option>
-                <option value="SOXL">SOXL</option>
-                <option value="SPXL">SPXL</option>
-                <option value="SQQQ">SQQQ</option>
-              </optgroup>
-            </select>
-            <div class="cp-itabs" data-panel="1">
-              <button class="cp-itab" data-iv="1h">1H</button>
-              <button class="cp-itab active" data-iv="1day">1D</button>
-              <button class="cp-itab" data-iv="1week">1W</button>
-            </div>
-          </div>
-          <div class="cp-chart" id="chart-container-1"></div>
-        </div>
-        <!-- Panel 2 -->
-        <div class="chart-panel" id="chart-panel-2">
-          <div class="cp-header">
-            <!-- Panel 0 — SPY selected -->
-            <select class="select-sm" id="cp-sym-2">
-              <optgroup label="ETFs">
-                <option value="SPY">SPY</option>
-                <option value="QQQ">QQQ</option>
-                <option value="IWM">IWM</option>
-                <option value="DIA">DIA</option>
-                <option value="GLD">GLD</option>
-                <option value="TLT">TLT</option>
-                <option value="HYG">HYG</option>
-                <option value="SMH">SMH</option>
-                <option value="XLF">XLF</option>
-                <option value="XLK">XLK</option>
-                <option value="XLE">XLE</option>
-              </optgroup>
-              <optgroup label="Mega Cap Tech">
-                <option value="AAPL" selected>AAPL</option>
-                <option value="MSFT">MSFT</option>
-                <option value="NVDA">NVDA</option>
-                <option value="GOOGL">GOOGL</option>
-                <option value="AMZN">AMZN</option>
-                <option value="META">META</option>
-                <option value="TSLA">TSLA</option>
-                <option value="AMD">AMD</option>
-                <option value="INTC">INTC</option>
-                <option value="QCOM">QCOM</option>
-                <option value="MU">MU</option>
-                <option value="CRM">CRM</option>
-                <option value="ADBE">ADBE</option>
-                <option value="NOW">NOW</option>
-              </optgroup>
-              <optgroup label="Financials">
-                <option value="JPM">JPM</option>
-                <option value="GS">GS</option>
-                <option value="BAC">BAC</option>
-                <option value="MS">MS</option>
-                <option value="V">V</option>
-                <option value="MA">MA</option>
-                <option value="BLK">BLK</option>
-                <option value="COIN">COIN</option>
-              </optgroup>
-              <optgroup label="Healthcare">
-                <option value="UNH">UNH</option>
-                <option value="LLY">LLY</option>
-                <option value="JNJ">JNJ</option>
-                <option value="ABBV">ABBV</option>
-                <option value="MRK">MRK</option>
-              </optgroup>
-              <optgroup label="Industrials &amp; Energy">
-                <option value="XOM">XOM</option>
-                <option value="CVX">CVX</option>
-                <option value="BA">BA</option>
-                <option value="CAT">CAT</option>
-                <option value="DE">DE</option>
-                <option value="LMT">LMT</option>
-              </optgroup>
-              <optgroup label="Consumer">
-                <option value="AMZN">AMZN</option>
-                <option value="HD">HD</option>
-                <option value="MCD">MCD</option>
-                <option value="WMT">WMT</option>
-                <option value="COST">COST</option>
-                <option value="NKE">NKE</option>
-              </optgroup>
-              <optgroup label="Leveraged ETF">
-                <option value="TQQQ">TQQQ</option>
-                <option value="SOXL">SOXL</option>
-                <option value="SPXL">SPXL</option>
-                <option value="SQQQ">SQQQ</option>
-              </optgroup>
-            </select>
-            <div class="cp-itabs" data-panel="2">
-              <button class="cp-itab" data-iv="1h">1H</button>
-              <button class="cp-itab active" data-iv="1day">1D</button>
-              <button class="cp-itab" data-iv="1week">1W</button>
-            </div>
-          </div>
-          <div class="cp-chart" id="chart-container-2"></div>
-        </div>
-        <!-- Panel 3 -->
-        <div class="chart-panel" id="chart-panel-3">
-          <div class="cp-header">
-            <!-- Panel 0 — SPY selected -->
-            <select class="select-sm" id="cp-sym-3">
-              <optgroup label="ETFs">
-                <option value="SPY">SPY</option>
-                <option value="QQQ">QQQ</option>
-                <option value="IWM">IWM</option>
-                <option value="DIA">DIA</option>
-                <option value="GLD">GLD</option>
-                <option value="TLT">TLT</option>
-                <option value="HYG">HYG</option>
-                <option value="SMH">SMH</option>
-                <option value="XLF">XLF</option>
-                <option value="XLK">XLK</option>
-                <option value="XLE">XLE</option>
-              </optgroup>
-              <optgroup label="Mega Cap Tech">
-                <option value="AAPL">AAPL</option>
-                <option value="MSFT">MSFT</option>
-                <option value="NVDA" selected>NVDA</option>
-                <option value="GOOGL">GOOGL</option>
-                <option value="AMZN">AMZN</option>
-                <option value="META">META</option>
-                <option value="TSLA">TSLA</option>
-                <option value="AMD">AMD</option>
-                <option value="INTC">INTC</option>
-                <option value="QCOM">QCOM</option>
-                <option value="MU">MU</option>
-                <option value="CRM">CRM</option>
-                <option value="ADBE">ADBE</option>
-                <option value="NOW">NOW</option>
-              </optgroup>
-              <optgroup label="Financials">
-                <option value="JPM">JPM</option>
-                <option value="GS">GS</option>
-                <option value="BAC">BAC</option>
-                <option value="MS">MS</option>
-                <option value="V">V</option>
-                <option value="MA">MA</option>
-                <option value="BLK">BLK</option>
-                <option value="COIN">COIN</option>
-              </optgroup>
-              <optgroup label="Healthcare">
-                <option value="UNH">UNH</option>
-                <option value="LLY">LLY</option>
-                <option value="JNJ">JNJ</option>
-                <option value="ABBV">ABBV</option>
-                <option value="MRK">MRK</option>
-              </optgroup>
-              <optgroup label="Industrials &amp; Energy">
-                <option value="XOM">XOM</option>
-                <option value="CVX">CVX</option>
-                <option value="BA">BA</option>
-                <option value="CAT">CAT</option>
-                <option value="DE">DE</option>
-                <option value="LMT">LMT</option>
-              </optgroup>
-              <optgroup label="Consumer">
-                <option value="AMZN">AMZN</option>
-                <option value="HD">HD</option>
-                <option value="MCD">MCD</option>
-                <option value="WMT">WMT</option>
-                <option value="COST">COST</option>
-                <option value="NKE">NKE</option>
-              </optgroup>
-              <optgroup label="Leveraged ETF">
-                <option value="TQQQ">TQQQ</option>
-                <option value="SOXL">SOXL</option>
-                <option value="SPXL">SPXL</option>
-                <option value="SQQQ">SQQQ</option>
-              </optgroup>
-            </select>
-            <div class="cp-itabs" data-panel="3">
-              <button class="cp-itab" data-iv="1h">1H</button>
-              <button class="cp-itab active" data-iv="1day">1D</button>
-              <button class="cp-itab" data-iv="1week">1W</button>
-            </div>
-          </div>
-          <div class="cp-chart" id="chart-container-3"></div>
-        </div>
+      <!-- 6-panel grid -->
+      <div class="charts-grid layout-2-2" id="charts-grid">
+
+        <!-- Panels 0 à 5 générés par _buildChartPanels() -->
+
       </div>
     </section>
+
+    <!-- ══════════════════════════════════════════════════════════
+        QUANT ANALYSIS MODAL
+    ══════════════════════════════════════════════════════════════ -->
+    <div class="quant-modal-overlay" id="quant-modal" style="display:none"
+        onclick="if(event.target===this)closeQuantModal()">
+      <div class="quant-modal-panel">
+
+        <!-- Header -->
+        <div class="qm-header">
+          <div class="qm-sym-block">
+            <div class="qm-sym"  id="qm-sym">--</div>
+            <div class="qm-name" id="qm-name">Loading...</div>
+          </div>
+          <div class="qm-price-block">
+            <div class="qm-price"  id="qm-price">--</div>
+            <div class="qm-change" id="qm-change">--</div>
+          </div>
+          <button class="qm-close" onclick="closeQuantModal()">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="qm-tabs" id="qm-tabs">
+          <button class="qm-tab active" data-qmtab="signal">
+            <i class="fa-solid fa-robot"></i> ML Signal
+          </button>
+          <button class="qm-tab" data-qmtab="technicals">
+            <i class="fa-solid fa-chart-line"></i> Technicals
+          </button>
+          <button class="qm-tab" data-qmtab="regime">
+            <i class="fa-solid fa-crosshairs"></i> Regime
+          </button>
+          <button class="qm-tab" data-qmtab="risk">
+            <i class="fa-solid fa-shield-halved"></i> Risk
+          </button>
+          <button class="qm-tab" data-qmtab="structure">
+            <i class="fa-solid fa-sliders"></i> Structure
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="qm-body" id="qm-body">
+          <div class="qm-loading">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading analysis...
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="qm-footer">
+          <button class="btn-sm" onclick="StockDetail.open(document.getElementById('qm-sym').textContent)">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Full Yahoo Detail
+          </button>
+          <button class="btn-sm" onclick="Terminal.loadChartSymbol(document.getElementById('qm-sym').textContent);Terminal.showSection('overview');closeQuantModal()">
+            <i class="fa-solid fa-chart-bar"></i> View in Overview
+          </button>
+          <div style="margin-left:auto;font-size:10px;color:var(--txt4)">
+            <i class="fa-solid fa-database"></i> Source: AlphaVault ML Engine
+          </div>
+        </div>
+
+      </div>
+    </div>
 
     <!-- ══════════════════════════════════════════════════════
          SECTION: SIGNALS

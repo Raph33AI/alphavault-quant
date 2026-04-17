@@ -151,6 +151,16 @@ const Terminal = (() => {
       }
     }
 
+    // Charts section init
+    if (document.getElementById('charts-grid')) {
+    _buildChartPanels();
+    }
+
+    // Quant modal ESC key
+    document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeQuantModal();
+    });
+
     // Panel interval tabs
     document.querySelectorAll('.cp-itabs').forEach(container => {
       const panelIdx = parseInt(container.dataset.panel ?? '0');
@@ -481,8 +491,9 @@ const Terminal = (() => {
 
     // Lazy init charts section
     if (name === 'charts' && !_panelsInited) {
-      _panelsInited = true;
-      _initAllPanelCharts();
+    _panelsInited = true;
+    _buildChartPanels();  // ← Remplace l'ancien _initAllPanelCharts()
+    setTimeout(() => _initAllPanelCharts(), 200);
     }
 
     if (name === 'execution') _refreshExecLog();
@@ -628,72 +639,27 @@ const Terminal = (() => {
   // SECTION: WATCHLIST
   // ════════════════════════════════════════════════════════
   function _renderWatchlist(data) {
-    const sigs  = data.signals?.signals || {};
-    const tbody = document.getElementById('watchlist-tbody');
-    if (!tbody) return;
+    // ✅ FIX ROOT CAUSE — Délègue entièrement à WatchlistManager
+    // WatchlistManager gère : étoiles, delete, detail, secteurs, pagination
+    WatchlistManager.render(data.signals || {});
 
-    const symbols = Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE;
-    tbody.innerHTML = symbols.map(sym => {
-      const s      = sigs[sym] || {};
-      const price  = parseFloat(s.price || 0);
-      const chg    = parseFloat(s.change_pct || 0);
-      const score  = parseFloat(s.final_score || 0);
-      const bp     = parseFloat(s.buy_prob || 0.5);
-      const dir    = s.direction || 'neutral';
-      const council= s.council   || 'wait';
-      const cls    = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
-      const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
-      const ccolor = council.includes('execute') ? '#10b981'
-                   : council === 'veto' ? '#ef4444' : '#f59e0b';
-      const dirBadge = dir === 'buy'
-        ? `<span class="dir-badge buy"><i class="fa-solid fa-arrow-up"></i> BUY</span>`
-        : dir === 'sell'
-          ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
-          : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`;
-
-      return `<tr>
-        <td><strong class="sym-link" data-sym="${sym}">${sym}</strong></td>
-        <td><span class="muted-sm">${NAMES[sym]||''}</span></td>
-        <td class="mono ${cls}">${price > 0 ? '$' + price.toFixed(2) : '--'}</td>
-        <td class="mono ${cls}">${chg > 0 ? '+' : ''}${chg.toFixed(2)}</td>
-        <td class="mono ${cls}">${chg > 0 ? '+' : ''}${chg.toFixed(2)}%</td>
-        <td>
-          <div class="score-bar-inline"><div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div></div>
-          <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
-        </td>
-        <td>${dirBadge}</td>
-        <td class="mono">${(bp*100).toFixed(1)}%</td>
-        <td><span class="regime-chip">${(s.regime||'--').replace(/_/g,' ')}</span></td>
-        <td><strong style="color:${ccolor};font-size:11px">${council.toUpperCase()}</strong></td>
-        <td>
-          <button class="btn-xs chart-btn" data-sym="${sym}" title="View chart"><i class="fa-solid fa-chart-bar"></i></button>
-          <button class="btn-xs trade-btn" data-sym="${sym}" title="Trade"><i class="fa-solid fa-paper-plane"></i></button>
-        </td>
-      </tr>`;
-    }).join('');
-
-    // Bind table actions
-    tbody.querySelectorAll('.sym-link, .chart-btn').forEach(el => {
-      el.addEventListener('click', () => {
-        loadChartSymbol(el.dataset.sym);
-        showSection('overview');
-      });
+    // Update symbol count
+    const wl    = WatchlistManager.getWatchlist();
+    const total = WatchlistManager.getTotalCount();
+    const c1    = document.getElementById('wl-sym-count');
+    const c2    = document.getElementById('wl-sym-count');
+    [c1, c2].forEach(el => {
+        if (el) el.textContent = `${wl.length} symbols in watchlist`;
     });
-    tbody.querySelectorAll('.trade-btn').forEach(el => {
-      el.addEventListener('click', () => {
-        const sel = document.getElementById('order-symbol');
-        if (sel) sel.value = el.dataset.sym;
-        showSection('execution');
-      });
-    });
-  }
+    }
 
-  function filterWatchlist() {
-    const q = document.getElementById('wl-search')?.value.toLowerCase() || '';
-    document.querySelectorAll('#watchlist-tbody tr').forEach(tr => {
-      tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
-    });
-  }
+    function filterWatchlist() {
+    // Délègue la recherche à WatchlistManager
+    const q = document.getElementById('wl-search')?.value?.trim() || '';
+    WatchlistManager._currentSearch = q;
+    WatchlistManager._currentPage   = 1;
+    WatchlistManager.render(_state.signals || {});
+    }
 
   // ════════════════════════════════════════════════════════
   // SECTION: SIGNALS
@@ -1437,6 +1403,490 @@ const Terminal = (() => {
       </div>`;
     }
   }
+
+  // ════════════════════════════════════════════════════════
+    // CHARTS SECTION — 6 panels dynamiques
+    // ════════════════════════════════════════════════════════
+
+    const CHART_SYMBOLS_OPTIONS = [
+    { g:'ETFs',       s:['SPY','QQQ','IWM','DIA','GLD','TLT','HYG','SMH','XLF','XLK','XLE','XLV','ARKK','TQQQ','SOXL'] },
+    { g:'Mega Tech',  s:['AAPL','MSFT','NVDA','GOOGL','AMZN','META','TSLA','AMD','INTC','QCOM','MU','CRM','ADBE','NOW'] },
+    { g:'Financials', s:['JPM','GS','BAC','MS','V','MA','BLK','COIN','PYPL','SCHW','CME','ICE','NDAQ'] },
+    { g:'Healthcare', s:['UNH','LLY','JNJ','ABBV','MRK','TMO','AMGN','GILD','VRTX','MRNA','PFE','MDT','ISRG'] },
+    { g:'Energy',     s:['XOM','CVX','COP','EOG','SLB','OXY','DVN','MPC','VLO','LNG','KMI','WMB'] },
+    { g:'Consumer',   s:['HD','MCD','NKE','SBUX','COST','WMT','AMZN','BKNG','TJX','ROST','CMG'] },
+    { g:'Industrial', s:['HON','CAT','DE','LMT','BA','RTX','NOC','GE','EMR','UPS','FDX','NSC','UNP'] },
+    { g:'Crypto',     s:['COIN','MSTR','RIOT','MARA','BTBT','HUT'] },
+    ];
+
+    const PANEL_DEFAULTS = ['SPY','QQQ','AAPL','NVDA','GS','TSLA'];
+
+    function _buildChartPanels() {
+    const grid = document.getElementById('charts-grid');
+    if (!grid) return;
+
+    grid.innerHTML = PANEL_DEFAULTS.map((defaultSym, i) => `
+        <div class="chart-panel" id="chart-panel-${i}">
+        <div class="cp-header">
+            <select class="select-sm cp-sym-select" id="cp-sym-${i}">
+            ${CHART_SYMBOLS_OPTIONS.map(group => `
+                <optgroup label="${group.g}">
+                ${group.s.map(s =>
+                    `<option value="${s}" ${s === defaultSym ? 'selected' : ''}>${s}</option>`
+                ).join('')}
+                </optgroup>
+            `).join('')}
+            </select>
+            <div class="cp-header-right">
+            <div class="cp-itabs" data-panel="${i}">
+                <button class="cp-itab" data-iv="1h">1H</button>
+                <button class="cp-itab active" data-iv="1day">1D</button>
+                <button class="cp-itab" data-iv="1week">1W</button>
+            </div>
+            <button class="btn-quant-modal" data-qmsym="${defaultSym}"
+                    title="Quantitative analysis">
+                <i class="fa-solid fa-flask"></i> Quant
+            </button>
+            </div>
+        </div>
+        <div class="cp-chart" id="chart-container-${i}"></div>
+        </div>`).join('');
+
+    // Bind panel selectors
+    for (let i = 0; i < 6; i++) {
+        const sel = document.getElementById(`cp-sym-${i}`);
+        if (sel) {
+        sel.addEventListener('change', () => {
+            _loadPanelChart(i, sel.value);
+            // Update quant button
+            const qBtn = document.querySelector(`#chart-panel-${i} .btn-quant-modal`);
+            if (qBtn) qBtn.dataset.qmsym = sel.value;
+        });
+        }
+    }
+
+    // Bind interval tabs
+    document.querySelectorAll('.cp-itabs').forEach(container => {
+        const panelIdx = parseInt(container.dataset.panel ?? '0');
+        container.querySelectorAll('.cp-itab').forEach(btn => {
+        btn.addEventListener('click', () => {
+            container.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            _panelIv[panelIdx] = btn.dataset.iv;
+            const sym = document.getElementById(`cp-sym-${panelIdx}`)?.value || PANEL_DEFAULTS[panelIdx];
+            _loadPanelChart(panelIdx, sym);
+        });
+        });
+    });
+
+    // Bind quant modal buttons
+    document.querySelectorAll('.btn-quant-modal').forEach(btn => {
+        btn.addEventListener('click', () => openQuantModal(btn.dataset.qmsym));
+    });
+
+    // Bind layout selector
+    _on('chart-layout', 'change', e => _setChartLayout(e.target.value));
+
+    // Bind sync all
+    _on('btn-sync-all', 'click', () => {
+        for (let i = 0; i < 6; i++) {
+        const sym = document.getElementById(`cp-sym-${i}`)?.value || PANEL_DEFAULTS[i];
+        _loadPanelChart(i, sym);
+        }
+    });
+    }
+
+    function _setChartLayout(layout) {
+    const grid = document.getElementById('charts-grid');
+    if (!grid) return;
+    grid.className = `charts-grid ${
+        layout === '1'   ? 'layout-1' :
+        layout === '2x3' ? 'layout-2-3' :
+                        'layout-2-2'
+    }`;
+    setTimeout(() => {
+        for (let i = 0; i < 6; i++) {
+        const sym = document.getElementById(`cp-sym-${i}`)?.value || PANEL_DEFAULTS[i];
+        _loadPanelChart(i, sym);
+        }
+    }, 100);
+    }
+
+    // Remplace l'ancienne _initAllPanelCharts
+    async function _initAllPanelCharts() {
+    for (let i = 0; i < 6; i++) {
+        const sym = document.getElementById(`cp-sym-${i}`)?.value || PANEL_DEFAULTS[i];
+        await _loadPanelChart(i, sym);
+    }
+    }
+
+    // ════════════════════════════════════════════════════════
+    // QUANT ANALYSIS MODAL
+    // ════════════════════════════════════════════════════════
+    function openQuantModal(sym) {
+    if (!sym) return;
+    sym = sym.toUpperCase();
+
+    const modal = document.getElementById('quant-modal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Header
+    _txt('qm-sym',  sym);
+    _txt('qm-name', WatchlistManager.getSymbolMeta(sym)?.name || sym);
+
+    // Prix depuis l'état courant
+    const sigs  = _state.signals?.signals || {};
+    const sig   = sigs[sym] || {};
+    const price = parseFloat(sig.price || 0);
+    const chg   = parseFloat(sig.change_pct || 0);
+
+    _txt('qm-price', price > 0 ? `$${price.toFixed(2)}` : '--');
+    const chgEl = document.getElementById('qm-change');
+    if (chgEl) {
+        chgEl.textContent = price > 0 ? `${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%` : '--';
+        chgEl.className   = `qm-change ${chg >= 0 ? 'up' : 'down'}`;
+    }
+
+    // Init tabs
+    document.querySelectorAll('.qm-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.qmtab === 'signal');
+        t.addEventListener('click', () => {
+        document.querySelectorAll('.qm-tab').forEach(x => x.classList.remove('active'));
+        t.classList.add('active');
+        _renderQuantTab(sym, t.dataset.qmtab);
+        });
+    });
+
+    // Render first tab
+    _renderQuantTab(sym, 'signal');
+    }
+
+    function closeQuantModal() {
+    const modal = document.getElementById('quant-modal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+    }
+
+    function _renderQuantTab(sym, tab) {
+    const body = document.getElementById('qm-body');
+    if (!body) return;
+
+    const sigs  = _state.signals?.signals || {};
+    const sig   = sigs[sym] || {};
+    const regime= _state.regime?.per_symbol?.[sym] || _state.regime?.global || {};
+    const risk  = _state.risk || {};
+    const agents= _state.agents?.decisions?.[sym] || {};
+
+    switch(tab) {
+        case 'signal':    body.innerHTML = _quantTabSignal(sym, sig, agents);    break;
+        case 'technicals':body.innerHTML = _quantTabTechnicals(sym, sig);        break;
+        case 'regime':    body.innerHTML = _quantTabRegime(sym, regime);         break;
+        case 'risk':      body.innerHTML = _quantTabRisk(sym, sig, risk);        break;
+        case 'structure': body.innerHTML = _quantTabStructure(sym, sig, agents); break;
+        default:          body.innerHTML = `<div class="qm-loading">Tab not found</div>`;
+    }
+    }
+
+    function _qCard(label, value, icon = 'fa-chart-line', color = 'var(--b1)', sub = '') {
+    return `<div class="qm-metric-card">
+        <div class="qm-metric-lbl">
+        <i class="fa-solid ${icon}" style="color:${color}"></i> ${label}
+        </div>
+        <div class="qm-metric-val" style="color:${color}">${value}</div>
+        ${sub ? `<div style="font-size:9px;color:var(--txt4);margin-top:2px">${sub}</div>` : ''}
+    </div>`;
+    }
+
+    function _quantTabSignal(sym, sig, agents) {
+    const score   = parseFloat(sig.final_score  || 0);
+    const conf    = parseFloat(sig.confidence   || sig.adjusted_confidence || 0);
+    const bp      = parseFloat(sig.buy_prob     || sig.adjusted_buy_prob  || 0.5);
+    const sp      = 1 - bp;
+    const dir     = sig.direction   || 'neutral';
+    const council = sig.council     || agents?.council?.decision || 'wait';
+    const action  = sig.trade_action || 'wait';
+    const evol    = parseFloat(sig.expected_ret || 0);
+    const evol_vol= parseFloat(sig.expected_vol || sig.adjusted_vol || 0.15);
+    const model   = sig.model_used  || 'ensemble_ml';
+
+    const cColor  = dir === 'buy' ? 'var(--g)' : dir === 'sell' ? 'var(--r)' : 'var(--txt3)';
+    const sColor  = score > 0.65 ? 'var(--g)' : score > 0.40 ? 'var(--y)' : 'var(--txt3)';
+    const cncColor= council.includes('execute') ? 'var(--g)' : council === 'veto' ? 'var(--r)' : 'var(--y)';
+
+    const dirBadgeLarge = dir === 'buy'
+        ? `<span class="dir-badge buy" style="font-size:14px;padding:6px 16px">
+            <i class="fa-solid fa-arrow-up"></i> BUY
+        </span>`
+        : dir === 'sell'
+        ? `<span class="dir-badge sell" style="font-size:14px;padding:6px 16px">
+            <i class="fa-solid fa-arrow-down"></i> SELL
+            </span>`
+        : `<span class="dir-badge neutral" style="font-size:14px;padding:6px 16px">
+            <i class="fa-solid fa-minus"></i> NEUTRAL
+            </span>`;
+
+    return `
+        <div class="qm-section-title"><i class="fa-solid fa-robot"></i> ML Ensemble Signal</div>
+
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+        ${dirBadgeLarge}
+        <div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:3px">Council Decision</div>
+            <strong style="font-size:14px;color:${cncColor};font-family:var(--mono)">
+            ${council.toUpperCase()}
+            </strong>
+        </div>
+        <div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:3px">Trade Action</div>
+            <strong style="font-size:12px;color:var(--txt);font-family:var(--mono)">
+            ${action.toUpperCase()}
+            </strong>
+        </div>
+        <div style="margin-left:auto;font-size:10px;color:var(--txt4);text-align:right">
+            Model: <strong>${model}</strong><br>
+            Ensemble: XGBoost + LightGBM + LogReg
+        </div>
+        </div>
+
+        <div class="qm-metrics-grid">
+        ${_qCard('Final Score',    score.toFixed(4),             'fa-star-half-stroke', sColor, 'Composite ML score [0,1]')}
+        ${_qCard('Confidence',     `${(conf*100).toFixed(1)}%`,  'fa-gauge',            conf>0.6?'var(--g)':'var(--y)', 'Signal reliability')}
+        ${_qCard('Buy Probability',`${(bp*100).toFixed(1)}%`,    'fa-arrow-up',         'var(--g)', 'P(price up in 5d)')}
+        ${_qCard('Sell Probability',`${(sp*100).toFixed(1)}%`,   'fa-arrow-down',       'var(--r)', 'P(price down in 5d)')}
+        ${_qCard('Expected Return',`${evol>=0?'+':''}${(evol*100).toFixed(2)}%`, 'fa-chart-line', evol>=0?'var(--g)':'var(--r)', 'ML return estimate')}
+        ${_qCard('Expected Vol',   `${(evol_vol*100).toFixed(1)}%`, 'fa-wave-square',   'var(--y)', 'Expected volatility')}
+        </div>
+
+        <div class="qm-section-title"><i class="fa-solid fa-gauge-high"></i> Confidence Breakdown</div>
+        <div style="margin-bottom:12px">
+        ${[
+            { l:'Buy Prob',    v:bp,   c:'var(--g)' },
+            { l:'Confidence',  v:conf, c:'var(--b1)' },
+            { l:'Final Score', v:score,c:sColor },
+        ].map(m => `
+            <div class="qm-feat-row">
+            <span class="qm-feat-name">${m.l}</span>
+            <div class="qm-feat-bar-wrap">
+                <div class="qm-feat-bar" style="width:${(m.v*100).toFixed(1)}%;background:${m.c}"></div>
+            </div>
+            <span class="qm-feat-val" style="color:${m.c}">${(m.v*100).toFixed(1)}%</span>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    function _quantTabTechnicals(sym, sig) {
+    // Features extraits du signal (si disponibles)
+    const feat = sig.features || {};
+
+    const items = [
+        { l:'RSI (14)',        v:feat.rsi_14,          fmt: v => v.toFixed(1),
+        color: v => v>70?'var(--r)':v<30?'var(--g)':'var(--txt)', note:'Overbought>70 / Oversold<30' },
+        { l:'RSI Normalized',  v:feat.rsi_norm,        fmt: v => v.toFixed(3),
+        color: v => v>0.2?'var(--g)':v<-0.2?'var(--r)':'var(--txt)', note:'[-1, 1] centered on 0' },
+        { l:'RSI Divergence',  v:feat.rsi_divergence,  fmt: v => v.toFixed(1),
+        color: v => v>0?'var(--g)':v<0?'var(--r)':'var(--txt)', note:'+1 bullish / -1 bearish' },
+        { l:'MACD Histogram',  v:feat.macd_hist,       fmt: v => v.toFixed(4),
+        color: v => v>0?'var(--g)':'var(--r)', note:'Normalized by price std' },
+        { l:'MACD Acceleration',v:feat.macd_acceleration,fmt: v => v.toFixed(4),
+        color: v => v>0?'var(--g)':'var(--r)', note:'2nd derivative of MACD' },
+        { l:'MACD Crossover',  v:feat.macd_crossover,  fmt: v => v===1?'Bullish':v===-1?'Bearish':'None',
+        color: v => v>0?'var(--g)':v<0?'var(--r)':'var(--txt)', note:'+1 bullish / -1 bearish' },
+        { l:'BB Position',     v:feat.bb_position,     fmt: v => v.toFixed(3),
+        color: v => v>0.5?'var(--r)':v<-0.5?'var(--g)':'var(--txt)', note:'[-1=lower, 0=mid, 1=upper]' },
+        { l:'BB Squeeze',      v:feat.bb_squeeze,      fmt: v => v===1?'SQUEEZE':'Normal',
+        color: v => v===1?'var(--y)':'var(--txt)', note:'Bands tight = breakout soon' },
+        { l:'EMA 50 Slope',    v:feat.ema_50_slope,    fmt: v => v.toFixed(4),
+        color: v => v>0?'var(--g)':'var(--r)', note:'EMA trend direction' },
+        { l:'EMA 200 Slope',   v:feat.ema_200_slope,   fmt: v => v.toFixed(4),
+        color: v => v>0?'var(--g)':'var(--r)', note:'Long-term trend' },
+        { l:'EMA 21 Curvature',v:feat.ema21_curvature, fmt: v => v.toFixed(4),
+        color: v => v>0?'var(--g)':'var(--r)', note:'Acceleration of EMA 21' },
+        { l:'VWAP Deviation',  v:feat.vwap_deviation,  fmt: v => v.toFixed(4),
+        color: v => v>0.1?'var(--r)':v<-0.1?'var(--g)':'var(--txt)', note:'Price vs VWAP 20D' },
+        { l:'ATR % Rank',      v:feat.atr_pct_rank,    fmt: v => `${(v*100).toFixed(0)}th pct`,
+        color: v => v>0.75?'var(--r)':v<0.25?'var(--g)':'var(--txt)', note:'Volatility percentile (252D)' },
+        { l:'Momentum 20D',    v:feat.momentum_20d,    fmt: v => `${(v*100).toFixed(2)}%`,
+        color: v => v>0?'var(--g)':'var(--r)', note:'20-day price momentum' },
+        { l:'Momentum Align',  v:feat.momentum_alignment, fmt: v => v===1?'All Up':v===-1?'All Down':'Mixed',
+        color: v => v>0?'var(--g)':v<0?'var(--r)':'var(--y)', note:'5D/20D/60D alignment' },
+    ].filter(i => i.v != null && !isNaN(i.v));
+
+    if (!items.length) {
+        return `<div class="qm-loading" style="min-height:150px">
+        <i class="fa-solid fa-circle-info" style="color:var(--b1)"></i>
+        Technical features not available — run a full signal cycle with this symbol in the universe.
+        </div>`;
+    }
+
+    return `
+        <div class="qm-section-title"><i class="fa-solid fa-chart-line"></i> Technical Features (ML Input)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:20px">
+        ${items.map(i => {
+            const v     = i.v;
+            const color = typeof i.color === 'function' ? i.color(v) : 'var(--txt)';
+            return `<div class="qm-metric-card">
+            <div class="qm-metric-lbl">${i.l}</div>
+            <div class="qm-metric-val" style="font-size:14px;color:${color}">${i.fmt(v)}</div>
+            <div style="font-size:9px;color:var(--txt4);margin-top:2px">${i.note}</div>
+            </div>`;
+        }).join('')}
+        </div>
+
+        <div class="qm-section-title"><i class="fa-solid fa-wave-square"></i> Volatility Profile</div>
+        <div class="qm-metrics-grid">
+        ${_qCard('RVol 5D',  feat.rvol_5d  != null ? `${(feat.rvol_5d *100).toFixed(1)}%` : '--', 'fa-bolt',        'var(--y)', 'Realized vol 5D ann.')}
+        ${_qCard('RVol 21D', feat.rvol_21d != null ? `${(feat.rvol_21d*100).toFixed(1)}%` : '--', 'fa-chart-area',  'var(--b1)','Realized vol 21D ann.')}
+        ${_qCard('RVol 63D', feat.rvol_63d != null ? `${(feat.rvol_63d*100).toFixed(1)}%` : '--', 'fa-chart-area',  'var(--b2)','Realized vol 63D ann.')}
+        ${_qCard('Skewness', feat.skewness_21d != null ? feat.skewness_21d.toFixed(3) : '--',      'fa-wave-square', feat.skewness_21d>0?'var(--g)':'var(--r)', 'Return distribution skew')}
+        ${_qCard('Kurtosis', feat.kurtosis_21d != null ? feat.kurtosis_21d.toFixed(3) : '--',      'fa-triangle-exclamation', 'var(--o)', 'Fat tails indicator')}
+        </div>`;
+    }
+
+    function _quantTabRegime(sym, regime) {
+    const rl    = regime.regime_label  || 'unknown';
+    const rs    = parseFloat(regime.regime_score || 0);
+    const conf  = parseFloat(regime.confidence   || 0);
+    const probs = regime.probabilities || {};
+
+    const regimeColors = {
+        trend_up:'var(--g)', trend_down:'var(--r)', range_bound:'var(--txt3)',
+        low_volatility:'var(--c)', high_volatility:'var(--y)', crash:'#dc2626',
+        macro_tightening:'var(--o)', macro_easing:'var(--b2)', initializing:'var(--txt4)',
+    };
+    const color = regimeColors[rl] || 'var(--txt)';
+
+    return `
+        <div class="qm-section-title"><i class="fa-solid fa-crosshairs"></i> Market Regime Detection</div>
+
+        <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;flex-wrap:wrap">
+        <div style="text-align:center;padding:16px 24px;border-radius:12px;
+                    background:${color}15;border:2px solid ${color}50;min-width:160px">
+            <div style="font-size:24px;font-weight:900;color:${color};font-family:var(--mono)">
+            ${rl.replace(/_/g,' ').toUpperCase()}
+            </div>
+            <div style="font-size:11px;color:var(--txt3);margin-top:4px">Current Regime</div>
+        </div>
+        <div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:2px">Regime Score</div>
+            <div style="font-size:22px;font-weight:800;color:${rs>=0?'var(--g)':'var(--r)'};font-family:var(--mono)">
+            ${rs>=0?'+':''}${rs.toFixed(3)}
+            </div>
+        </div>
+        <div>
+            <div style="font-size:11px;color:var(--txt3);margin-bottom:2px">Confidence</div>
+            <div style="font-size:22px;font-weight:800;color:var(--b1);font-family:var(--mono)">
+            ${(conf*100).toFixed(0)}%
+            </div>
+        </div>
+        </div>
+
+        <div class="qm-metrics-grid">
+        ${_qCard('Long Allowed',  regime.allow_long?'Yes':'No',  'fa-arrow-up',   regime.allow_long?'var(--g)':'var(--r)')}
+        ${_qCard('Short Allowed', regime.allow_short?'Yes':'No', 'fa-arrow-down', regime.allow_short?'var(--g)':'var(--r)')}
+        ${_qCard('Reduce Exp.',   regime.reduce_exposure?'Yes':'No', 'fa-compress', regime.reduce_exposure?'var(--y)':'var(--g)')}
+        ${_qCard('Leverage OK',   regime.leverage_allowed?'Yes':'No','fa-chart-line', regime.leverage_allowed?'var(--g)':'var(--y)')}
+        ${_qCard('Favor Options', regime.favor_options?'Yes':'No',   'fa-shapes',   'var(--b2)')}
+        </div>
+
+        ${Object.keys(probs).length ? `
+        <div class="qm-section-title"><i class="fa-solid fa-chart-bar"></i> Regime Probabilities</div>
+        ${Object.entries(probs).sort((a,b)=>b[1]-a[1]).map(([r, p]) => `
+            <div class="qm-feat-row">
+            <span class="qm-feat-name" style="font-size:11px">${r.replace(/_/g,' ')}</span>
+            <div class="qm-feat-bar-wrap">
+                <div class="qm-feat-bar"
+                    style="width:${(parseFloat(p)*100).toFixed(1)}%;background:${regimeColors[r]||'var(--b1)'}"></div>
+            </div>
+            <span class="qm-feat-val" style="color:${regimeColors[r]||'var(--b1)'}">${(parseFloat(p)*100).toFixed(1)}%</span>
+            </div>`).join('')}
+        ` : `<div style="color:var(--txt4);font-size:12px;text-align:center;padding:20px">
+        Regime probabilities not available for this symbol
+        </div>`}`;
+    }
+
+    function _quantTabRisk(sym, sig, risk) {
+    const feat    = sig.features || {};
+    const hurst   = parseFloat(feat.hurst_exponent || 0);
+    const vr      = parseFloat(feat.variance_ratio || 0);
+    const atr     = parseFloat(feat.atr_pct        || 0);
+    const atrRank = parseFloat(feat.atr_pct_rank   || 0.5);
+    const dd      = risk.drawdown  || {};
+    const lev     = risk.leverage  || {};
+
+    const hurstColor  = hurst > 0.55 ? 'var(--g)' : hurst < 0.45 ? 'var(--r)' : 'var(--y)';
+    const hurstInterp = hurst > 0.55 ? 'Trending (momentum)' : hurst < 0.45 ? 'Mean-reverting' : 'Random walk';
+
+    const vrColor    = vr > 0.1 ? 'var(--g)' : vr < -0.1 ? 'var(--r)' : 'var(--y)';
+    const vrInterp   = vr > 0.1 ? 'Momentum dominant' : vr < -0.1 ? 'Mean-reversion dominant' : 'Near random';
+
+    return `
+        <div class="qm-section-title"><i class="fa-solid fa-shield-halved"></i> Quantitative Risk Metrics</div>
+        <div class="qm-metrics-grid">
+        ${_qCard('Hurst Exponent', hurst>0?hurst.toFixed(3):'--', 'fa-wave-square', hurstColor, hurstInterp)}
+        ${_qCard('Variance Ratio', vr!==0?`${vr>=0?'+':''}${vr.toFixed(3)}`:'--', 'fa-chart-area', vrColor, vrInterp)}
+        ${_qCard('ATR %',          atr>0?`${(atr*100).toFixed(2)}%`:'--',   'fa-expand', 'var(--o)', 'Daily range / price')}
+        ${_qCard('ATR Percentile', atrRank>0?`${(atrRank*100).toFixed(0)}th`:'--', 'fa-gauge', atrRank>0.75?'var(--r)':atrRank<0.25?'var(--g)':'var(--y)', '252-day lookback')}
+        ${_qCard('GARCH Forecast', feat.garch_forecast>0?`${(feat.garch_forecast*100).toFixed(1)}%`:'--', 'fa-robot', 'var(--b1)', 'GARCH(1,1) vol forecast')}
+        ${_qCard('IV Rank',        feat.iv_rank!=null?`${(feat.iv_rank*100).toFixed(0)}th`:'--', 'fa-bolt', feat.iv_rank>0.7?'var(--r)':'var(--b1)', 'Implied Vol rank')}
+        </div>
+
+        <div class="qm-section-title"><i class="fa-solid fa-chart-area"></i> Portfolio Risk (Global)</div>
+        <div class="qm-metrics-grid">
+        ${_qCard('Drawdown',    `${((parseFloat(dd.current_drawdown||0))*100).toFixed(2)}%`, 'fa-arrow-trend-down', Math.abs(parseFloat(dd.current_drawdown||0))>0.05?'var(--r)':'var(--g)', 'Current portfolio DD')}
+        ${_qCard('Leverage',    `${parseFloat(lev.current_leverage||0).toFixed(2)}x`, 'fa-layer-group', 'var(--b1)', `Max: ${parseFloat(lev.allowed_leverage||1.5).toFixed(1)}x`)}
+        ${_qCard('Daily P&L',   `${((parseFloat(dd.daily_pnl_pct||0))*100)>=0?'+':''}${((parseFloat(dd.daily_pnl_pct||0))*100).toFixed(2)}%`, 'fa-chart-line', parseFloat(dd.daily_pnl_pct||0)>=0?'var(--g)':'var(--r)', 'Today\'s performance')}
+        ${_qCard('Trading',     dd.halt_active?'HALTED':'ACTIVE', 'fa-circle-dot', dd.halt_active?'var(--r)':'var(--g)', 'Risk engine status')}
+        </div>`;
+    }
+
+    function _quantTabStructure(sym, sig, agents) {
+    const feat     = sig.features || {};
+    const council  = agents?.council  || {};
+    const strategy = _state.strategy?.weights || {};
+
+    return `
+        <div class="qm-section-title"><i class="fa-solid fa-sliders"></i> Strategy Allocation</div>
+        ${Object.keys(strategy).length ? `
+        <div class="qm-metrics-grid" style="margin-bottom:16px">
+            ${Object.entries(strategy).map(([k,v]) => {
+            const colors = {trend:'var(--b1)',mean_reversion:'var(--g)',vol_carry:'var(--b2)',options_convexity:'var(--o)'};
+            return _qCard(k.replace(/_/g,' '), `${(parseFloat(v)*100).toFixed(1)}%`, 'fa-pie-chart', colors[k]||'var(--b1)');
+            }).join('')}
+        </div>` : ''}
+
+        <div class="qm-section-title"><i class="fa-solid fa-vote-yea"></i> Council Decision Detail</div>
+        <div class="qm-metrics-grid" style="margin-bottom:16px">
+        ${_qCard('Decision',     (council.decision||'wait').toUpperCase(), 'fa-gavel',
+            council.decision?.includes('execute')?'var(--g)':council.decision==='veto'?'var(--r)':'var(--y)')}
+        ${_qCard('Council Score', council.weighted_score!=null?parseFloat(council.weighted_score).toFixed(4):'--', 'fa-star', 'var(--b1)')}
+        ${_qCard('Size Mult.',   council.size_multiplier!=null?`×${parseFloat(council.size_multiplier).toFixed(2)}`:'--', 'fa-expand', 'var(--c)')}
+        ${_qCard('Mode',         (council.mode||'deterministic').toUpperCase(), 'fa-microchip', 'var(--b2)')}
+        </div>
+
+        ${council.reason ? `
+        <div class="qm-section-title"><i class="fa-solid fa-comment-dots"></i> Council Reasoning</div>
+        <div style="font-size:12px;color:var(--txt2);background:var(--surf2);padding:14px 16px;
+                    border-radius:10px;border-left:3px solid var(--b1);line-height:1.7;margin-bottom:16px">
+            ${council.reason}
+        </div>` : ''}
+
+        <div class="qm-section-title"><i class="fa-solid fa-layer-group"></i> Market Structure Features</div>
+        <div class="qm-metrics-grid">
+        ${_qCard('Intraday Mom.', feat.intraday_momentum_30m!=null?feat.intraday_momentum_30m.toFixed(3):'--', 'fa-clock', 'var(--b1)', '30-min momentum')}
+        ${_qCard('Vol Spike',     feat.intraday_vol_spike!=null?feat.intraday_vol_spike.toFixed(3):'--', 'fa-bolt', 'var(--y)', 'Volume anomaly')}
+        ${_qCard('Sector RS',     feat.sector_rel_strength!=null?feat.sector_rel_strength.toFixed(3):'--', 'fa-chart-bar', 'var(--b2)', 'Relative to sector')}
+        ${_qCard('Sentiment',     feat.sentiment_score!=null?`${feat.sentiment_score>=0?'+':''}${feat.sentiment_score.toFixed(3)}`:'--', 'fa-face-smile', feat.sentiment_score>0?'var(--g)':feat.sentiment_score<0?'var(--r)':'var(--txt)', 'News sentiment score')}
+        ${_qCard('Analyst Score', feat.analyst_score!=null?`${feat.analyst_score>=0?'+':''}${feat.analyst_score.toFixed(3)}`:'--', 'fa-user-tie', feat.analyst_score>0.2?'var(--g)':'var(--y)', 'Buy/Hold/Sell consensus')}
+        ${_qCard('Earnings Risk', feat.earnings_upcoming?'UPCOMING':'Normal', 'fa-calendar', feat.earnings_upcoming?'var(--o)':'var(--g)', 'Upcoming earnings flag')}
+        </div>`;
+    }
+
+    // Expose globally pour le HTML inline onclick
+    window.openQuantModal  = openQuantModal;
+    window.closeQuantModal = closeQuantModal;
 
   // ════════════════════════════════════════════════════════
   // SIDEBAR TOGGLE
