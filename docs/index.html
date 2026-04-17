@@ -55,16 +55,34 @@
   </div>
 
   <div class="topbar-center">
+
+    <!-- Clock block -->
     <div class="market-clock">
-      <div class="clock-utc" id="clock">--:--:--</div>
+      <div class="clock-utc"   id="clock">--:--:--</div>
       <div class="clock-paris" id="clock-paris">--:--:-- Paris</div>
       <div class="market-session" id="session-badge">CLOSED</div>
     </div>
 
-    <!-- Exchange Status Bar -->
+    <!-- Exchange status bar (populated by _startClock() JS) -->
     <div class="exchange-bar" id="exchange-status-bar">
-      <!-- Populated by _startClock() -->
+      <span class="exch-pill exch-closed">
+        <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i> NYSE
+      </span>
+      <span class="exch-pill exch-closed">
+        <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i> LSE
+      </span>
+      <span class="exch-pill exch-closed">
+        <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i> Euronext
+      </span>
+      <span class="exch-pill exch-closed">
+        <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i> TSE
+      </span>
+      <span class="exch-pill exch-closed">
+        <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i> HKEX
+      </span>
     </div>
+
+    <!-- Mini quotes -->
     <div class="market-mini-bar" id="market-mini-bar">
       <div class="mini-quote" id="mini-spy">
         <span class="mq-sym">SPY</span>
@@ -79,6 +97,7 @@
         <span class="mq-val" id="mq-iwm-val">--</span>
       </div>
     </div>
+
   </div>
 
   <div class="topbar-right">
