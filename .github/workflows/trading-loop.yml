@@ -162,10 +162,11 @@ jobs:
           FIREBASE_API_KEY:     ${{ secrets.FIREBASE_API_KEY }}
           RESEND_ALERT_EMAIL:   ${{ secrets.RESEND_ALERT_EMAIL }}
         run: |
-          cd backend
-          python -m orchestrator.trading_loop
+          # ✅ On reste à la RACINE du repo (pas de cd backend)
+          # Python traite "backend" comme package top-level
+          # Les imports relatifs "from ..config" fonctionnent correctement
+          python -m backend.orchestrator.trading_loop
         timeout-minutes: 8
-        continue-on-error: false
 
       # ── Upload logs ──────────────────────────────────────────
       - name: 📊 Upload Logs

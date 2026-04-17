@@ -1,8 +1,9 @@
 # ============================================================
 # ALPHAVAULT QUANT — Trading Loop
-# ✅ Point d'entrée GitHub Actions
-# ✅ Import paths corrigés pour "cd backend && python -m ..."
-# ✅ Fallback complet si workers indisponibles
+# ✅ Exécuté depuis la RACINE du repo
+#    → python -m backend.orchestrator.trading_loop
+# ✅ "backend" = package Python top-level
+# ✅ Tous les imports relatifs (from ..core) fonctionnent
 # ============================================================
 
 import os
@@ -14,25 +15,25 @@ import time
 from pathlib import Path
 from loguru import logger
 
-# ── Correction du path Python ─────────────────────────────
-# Quand on fait "cd backend && python -m orchestrator.trading_loop"
-# le CWD est backend/ donc on ajoute le parent (racine du repo)
-_ROOT = Path(__file__).parent.parent.parent  # → alphavault-quant/
-_BACKEND = Path(__file__).parent.parent      # → alphavault-quant/backend/
+# ── Chemins ────────────────────────────────────────────────
+# __file__ = alphavault-quant/backend/orchestrator/trading_loop.py
+_ORCHESTRATOR_DIR = Path(__file__).parent          # backend/orchestrator/
+_BACKEND_DIR      = _ORCHESTRATOR_DIR.parent       # backend/
+_ROOT_DIR         = _BACKEND_DIR.parent            # alphavault-quant/  ← CWD
 
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
-if str(_BACKEND) not in sys.path:
-    sys.path.insert(0, str(_BACKEND))
+# La racine est déjà dans sys.path car on lance depuis là
+# Vérification de sécurité
+if str(_ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(_ROOT_DIR))
 
-# ── Import de l'agent principal ───────────────────────────
-# On importe APRÈS la correction du path
-from orchestrator.trading_agent import TradingAgent
-from config.settings import Settings
+# ── Imports du projet (depuis la racine, package "backend") ─
+from backend.orchestrator.trading_agent import TradingAgent
+from backend.config.settings import Settings
 
-# ── Logger ────────────────────────────────────────────────
-LOG_DIR = _BACKEND / "logs"
+# ── Logger ──────────────────────────────────────────────────
+LOG_DIR = _BACKEND_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
+
 logger.add(
     LOG_DIR / f"trading_{datetime.date.today()}.log",
     rotation="1 day",
@@ -41,12 +42,12 @@ logger.add(
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
 )
 
-# ── Répertoire des signaux ─────────────────────────────────
-SIGNALS_DIR = _ROOT / "signals"
+# ── Répertoire des signaux ───────────────────────────────────
+SIGNALS_DIR = _ROOT_DIR / "signals"
 SIGNALS_DIR.mkdir(exist_ok=True)
 
 # ════════════════════════════════════════════════════════════
-# FONCTIONS UTILITAIRES
+# UTILITAIRES
 # ════════════════════════════════════════════════════════════
 
 def save_signals(output: dict) -> list:
@@ -70,59 +71,51 @@ def save_signals(output: dict) -> list:
             with open(fpath, "w", encoding="utf-8") as f:
                 json.dump(output[key], f, indent=2, default=str)
             saved.append(filename)
-            logger.debug(f"💾 {filename} sauvegardé")
+            logger.debug(f"  💾 {filename}")
         except Exception as e:
-            logger.error(f"Erreur sauvegarde {filename}: {e}")
-    logger.info(f"💾 {len(saved)} fichiers signals sauvegardés")
+            logger.error(f"  ❌ Erreur sauvegarde {filename}: {e}")
+
+    logger.info(f"💾 {len(saved)}/{len(file_map)} fichiers sauvegardés")
     return saved
 
 def git_commit_signals() -> bool:
-    """Commit et push automatique des signals JSON."""
+    """Commit + push automatique depuis la racine du repo."""
     try:
         now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
-        subprocess.run(
-            ["git", "config", "--global", "user.name", "AlphaVault Quant Bot"],
-            check=True, capture_output=True, cwd=str(_ROOT)
-        )
-        subprocess.run(
-            ["git", "config", "--global", "user.email", "bot@alphavault-ai.com"],
-            check=True, capture_output=True, cwd=str(_ROOT)
-        )
-        subprocess.run(
-            ["git", "add", "signals/"],
-            check=True, capture_output=True, cwd=str(_ROOT)
-        )
+        def run_git(args, check=True):
+            return subprocess.run(
+                ["git"] + args,
+                check=check,
+                capture_output=True,
+                cwd=str(_ROOT_DIR),
+            )
 
-        diff = subprocess.run(
-            ["git", "diff", "--staged", "--quiet"],
-            capture_output=True, cwd=str(_ROOT)
-        )
+        run_git(["config", "--global", "user.name",  "AlphaVault Quant Bot"])
+        run_git(["config", "--global", "user.email", "bot@alphavault-ai.com"])
+        run_git(["add", "signals/"])
+
+        # Vérifie si des changements existent
+        diff = run_git(["diff", "--staged", "--quiet"], check=False)
         if diff.returncode == 0:
-            logger.info("📋 Aucun changement dans signals/ — pas de commit")
+            logger.info("📋 signals/ inchangé — pas de commit")
             return False
 
-        subprocess.run(
-            ["git", "commit", "-m", f"🤖 Signals update — {now}"],
-            check=True, capture_output=True, cwd=str(_ROOT)
-        )
-        subprocess.run(
-            ["git", "push"],
-            check=True, capture_output=True, cwd=str(_ROOT)
-        )
+        run_git(["commit", "-m", f"🤖 Signals update — {now}"])
+        run_git(["push"])
         logger.info(f"✅ Git push réussi — {now}")
         return True
 
     except subprocess.CalledProcessError as e:
-        stderr = e.stderr.decode() if e.stderr else str(e)
-        logger.error(f"Git commit/push failed: {stderr}")
+        stderr = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
+        logger.error(f"Git error: {stderr[:300]}")
         return False
     except Exception as e:
-        logger.error(f"Git error: {e}")
+        logger.error(f"Git error inattendu: {e}")
         return False
 
 def write_error_status(error: Exception):
-    """Écrit un system_status.json d'erreur."""
+    """Écrit un system_status.json d'erreur pour le dashboard."""
     status = {
         "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
         "overall":       "error",
@@ -133,31 +126,26 @@ def write_error_status(error: Exception):
         "session":       os.environ.get("MARKET_SESSION", "unknown"),
         "dry_run":       True,
     }
-    fpath = SIGNALS_DIR / "system_status.json"
     try:
-        with open(fpath, "w") as f:
+        with open(SIGNALS_DIR / "system_status.json", "w") as f:
             json.dump(status, f, indent=2)
     except Exception:
         pass
 
 def check_market_session() -> str:
-    """Détermine la session de marché actuelle (UTC)."""
+    """Détermine la session de marché (UTC)."""
     now      = datetime.datetime.utcnow()
-    weekday  = now.weekday()   # 0=Lundi, 6=Dimanche
+    weekday  = now.weekday()
     time_dec = now.hour + now.minute / 60
 
-    if weekday >= 5:
-        return "closed"
-    if 14.5 <= time_dec < 21.0:
-        return "regular"
-    if 13.0 <= time_dec < 14.5:
-        return "premarket"
-    if 21.0 <= time_dec < 24.0:
-        return "postmarket"
+    if weekday >= 5:           return "closed"
+    if 14.5 <= time_dec < 21: return "regular"
+    if 13.0 <= time_dec < 14.5: return "premarket"
+    if 21.0 <= time_dec < 24:   return "postmarket"
     return "closed"
 
 def run_with_retry(agent: TradingAgent, max_retries: int = 2) -> dict:
-    """Exécute le pipeline avec retry automatique."""
+    """Pipeline avec retry automatique."""
     last_err = None
     for attempt in range(1, max_retries + 1):
         try:
@@ -170,10 +158,7 @@ def run_with_retry(agent: TradingAgent, max_retries: int = 2) -> dict:
                 wait = 20 * attempt
                 logger.info(f"⏳ Retry dans {wait}s...")
                 time.sleep(wait)
-    raise RuntimeError(
-        f"Pipeline échoué après {max_retries} tentatives. "
-        f"Dernière erreur: {last_err}"
-    )
+    raise RuntimeError(f"Pipeline échoué x{max_retries}: {last_err}")
 
 # ════════════════════════════════════════════════════════════
 # POINT D'ENTRÉE
@@ -185,6 +170,7 @@ def main():
     logger.info("\n" + "═" * 60)
     logger.info("  🚀 ALPHAVAULT QUANT — Trading Loop")
     logger.info(f"  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    logger.info(f"  Root: {_ROOT_DIR}")
     logger.info("═" * 60)
 
     # ── 1. Configuration ──────────────────────────────────
@@ -201,10 +187,11 @@ def main():
     settings.MARKET_SESSION = session
     logger.info(f"📅 Session: {session.upper()}")
 
-    # Si marché fermé et pas de run manuel → exit propre
+    # Marché fermé → exit propre (sauf run manuel avec force)
     if session == "closed" and os.environ.get("EXECUTION_MODE") != "force":
-        logger.info("🌙 Marché fermé — écriture status et exit")
-        status = {
+        logger.info("🌙 Marché fermé — exit propre")
+        write_error_status(Exception("market_closed"))
+        closed_status = {
             "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
             "overall":       "closed",
             "session":       "closed",
@@ -212,16 +199,14 @@ def main():
             "workers":       {},
             "mode":          "deterministic",
             "dry_run":       True,
-            "message":       "Marché fermé — prochain cycle à l'ouverture 14:30 UTC",
+            "message":       "Marché fermé — prochain cycle 14:30 UTC",
         }
-        fpath = SIGNALS_DIR / "system_status.json"
-        with open(fpath, "w") as f:
-            json.dump(status, f, indent=2)
+        with open(SIGNALS_DIR / "system_status.json", "w") as f:
+            json.dump(closed_status, f, indent=2)
         git_commit_signals()
-        logger.info("✅ Status 'closed' écrit et pushé — exit 0")
         sys.exit(0)
 
-    # ── 3. Initialisation de l'agent ──────────────────────
+    # ── 3. Init Agent ─────────────────────────────────────
     try:
         logger.info("🔧 Initialisation TradingAgent...")
         agent = TradingAgent(settings)
@@ -231,39 +216,38 @@ def main():
         git_commit_signals()
         sys.exit(1)
 
-    # ── 4. Exécution du pipeline ──────────────────────────
+    # ── 4. Pipeline ───────────────────────────────────────
     try:
         output = run_with_retry(agent, max_retries=2)
     except Exception as e:
-        logger.error(f"💥 Pipeline échoué définitivement: {e}")
+        logger.error(f"💥 Pipeline définitivement échoué: {e}")
         write_error_status(e)
         git_commit_signals()
         sys.exit(1)
 
-    # ── 5. Sauvegarde des signaux ─────────────────────────
+    # ── 5. Sauvegarde ─────────────────────────────────────
     saved = save_signals(output)
     if not saved:
         logger.error("❌ Aucun signal sauvegardé")
         sys.exit(1)
 
-    # ── 6. Git push → GitHub Pages ────────────────────────
+    # ── 6. Git push ───────────────────────────────────────
     pushed = git_commit_signals()
 
-    # ── 7. Bilan final ────────────────────────────────────
-    elapsed  = time.time() - start_time
-    sigs     = output.get("current_signals", {})
-    n_sigs   = len(sigs.get("signals", {}))
-    n_exec   = len(output.get("agent_decisions", {}).get("executions", []))
-    regime   = output.get("regime", {}).get("global", {}).get("regime_label", "?")
-    llm_ok   = output.get("system_status", {}).get("llm_available", False)
+    # ── 7. Bilan ──────────────────────────────────────────
+    elapsed = time.time() - start_time
+    n_sigs  = len(output.get("current_signals", {}).get("signals", {}))
+    n_exec  = len(output.get("agent_decisions", {}).get("executions", []))
+    regime  = output.get("regime", {}).get("global", {}).get("regime_label", "?")
+    llm_ok  = output.get("system_status", {}).get("llm_available", False)
 
     logger.info("\n" + "═" * 60)
-    logger.info(f"  ✅ Cycle terminé en {elapsed:.1f}s")
-    logger.info(f"  📊 Signaux générés  : {n_sigs}")
-    logger.info(f"  💼 Ordres exécutés  : {n_exec}")
-    logger.info(f"  🎯 Régime global    : {regime.upper()}")
-    logger.info(f"  🤖 LLM disponible   : {'✅' if llm_ok else '❌ (déterministe)'}")
-    logger.info(f"  📡 Git push         : {'✅' if pushed else '⚠  skipped (no change)'}")
+    logger.info(f"  ✅ Terminé en {elapsed:.1f}s")
+    logger.info(f"  📊 Signaux  : {n_sigs}")
+    logger.info(f"  💼 Exécutés : {n_exec}")
+    logger.info(f"  🎯 Régime   : {regime.upper()}")
+    logger.info(f"  🤖 LLM      : {'✅' if llm_ok else '❌ mode déterministe'}")
+    logger.info(f"  📡 Git push : {'✅' if pushed else '⚠  no changes'}")
     logger.info("═" * 60 + "\n")
 
 if __name__ == "__main__":
