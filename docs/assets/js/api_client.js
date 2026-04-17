@@ -42,7 +42,7 @@ const ApiClient = (() => {
       timestamp: null,
       session:   'closed',
       llm_mode:  'deterministic',
-      dry_run:   true,
+      dry_run:   false,
       signals:   {},
     },
     'system_status.json': {
@@ -51,7 +51,7 @@ const ApiClient = (() => {
       workers:       {},
       mode:          'deterministic',
       session:       'closed',
-      dry_run:       true,
+      dry_run:       false,
       timestamp:     null,
     },
     'regime.json': {
