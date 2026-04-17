@@ -10,8 +10,8 @@ from typing import Dict, List, Optional, Tuple
 from loguru import logger
 from datetime import datetime, timedelta
 
-from .worker_client import WorkerClient
-from ..config.settings import Settings
+from backend.core.worker_client import WorkerClient
+from backend.config.settings import Settings
 
 class MarketDataClient:
     """
