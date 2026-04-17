@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AlphaVault Quant — Trading Dashboard</title>
 <link rel="stylesheet" href="assets/css/dashboard.css">
+<!-- ✅ Scripts chargés en HEAD pour éviter "Dashboard is not defined" -->
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
@@ -465,9 +466,29 @@
   </main>
 </div>
 
-<!-- Scripts -->
-<script src="assets/js/api_client.js"></script>
-<script src="assets/js/charts.js"></script>
-<script src="assets/js/dashboard.js"></script>
+<!-- ✅ Scripts dans l'ordre correct AVANT la fermeture body -->
+    <!-- 1. API Client (fetch JSON) -->
+    <script src="assets/js/api_client.js"></script>
+    <!-- 2. Charts (Chart.js + TradingView) -->
+    <script src="assets/js/charts.js"></script>
+    <!-- 3. Dashboard controller (définit window.Dashboard) -->
+    <script src="assets/js/dashboard.js"></script>
+
+    <!-- ✅ Vérification au chargement -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('📊 Dashboard loading...');
+        console.log('📡 ApiClient BASE:', ApiClient.getBase());
+
+        if (typeof Dashboard === 'undefined') {
+            console.error('❌ Dashboard not defined — check dashboard.js for errors');
+            document.body.innerHTML = '<div style="color:white;padding:40px;font-size:18px;">' +
+                '❌ Dashboard JS failed to load.<br>' +
+                'Check browser console for errors in dashboard.js</div>';
+            return;
+        }
+        console.log('✅ Dashboard loaded successfully');
+    });
+    </script>
 </body>
 </html>
