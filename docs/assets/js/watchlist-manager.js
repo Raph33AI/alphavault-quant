@@ -21,6 +21,19 @@ const WatchlistManager = (() => {
 
   const PAGE_SIZE  = 50;
 
+  // ════════════════════════════════════════════════════════
+    // LOGO HELPER (utilise window._getLogoHtml si disponible)
+    // ════════════════════════════════════════════════════════
+    function _logoHtml(sym, size = 20) {
+    // Utilise la fonction définie dans terminal.js si disponible
+    if (typeof window._getLogoHtml === 'function') {
+        return window._getLogoHtml(sym, size);
+    }
+    // Fallback simple : badge initial
+    return `<span class="sym-initial-badge"
+                    style="width:${size}px;height:${size}px;font-size:${Math.floor(size*0.4)}px">${sym.charAt(0)}</span>`;
+    }
+
   // ── State ─────────────────────────────────────────────────
   let _currentPage    = 1;
   let _currentSector  = 'All';
@@ -341,13 +354,16 @@ const WatchlistManager = (() => {
 
         <!-- Symbol + Sector -->
         <td style="padding:8px 10px">
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <strong class="sym-link wl-open-detail" data-sym="${sym}"
-                    style="cursor:pointer;color:var(--txt);font-size:13px">
-              ${sym}
-            </strong>
-            <span style="font-size:9px;color:var(--b1);font-weight:700">${meta.sector}</span>
-          </div>
+            <div style="display:flex;align-items:center;gap:7px">
+                ${_logoHtml(sym, 22)}
+                <div style="display:flex;flex-direction:column;gap:1px">
+                <strong class="sym-link wl-open-detail" data-sym="${sym}"
+                        style="cursor:pointer;color:var(--txt);font-size:13px;line-height:1.2">
+                    ${sym}
+                </strong>
+                <span style="font-size:9px;color:var(--b1);font-weight:700">${meta.sector}</span>
+                </div>
+            </div>
         </td>
 
         <!-- Name -->

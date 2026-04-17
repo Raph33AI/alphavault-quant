@@ -3929,3 +3929,323 @@ canvas.ic-spark {
   .quant-modal-overlay { padding: 0; }
   .qm-metrics-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CORRECTIONS v3.2 — Charts Watchlist + Logos + Cards + StockDetail Fix
+══════════════════════════════════════════════════════════════ */
+
+/* ── FIX STOCK DETAIL — z-index absolu + suppression conflits ── */
+.sdp-fullpage {
+  position:       fixed !important;
+  top:            calc(var(--ticker-h) + var(--topbar-h)) !important;
+  left:           0 !important;
+  right:          0 !important;
+  bottom:         0 !important;
+  width:          100vw !important;
+  height:         calc(100vh - var(--ticker-h) - var(--topbar-h)) !important;
+  background:     var(--bg) !important;
+  z-index:        9999 !important;
+  display:        none !important;
+  flex-direction: column !important;
+  overflow:       hidden !important;
+  pointer-events: all !important;
+}
+
+.sdp-fullpage.open {
+  display: flex !important;
+  animation: sdpFadeIn 0.18s ease forwards !important;
+}
+
+@keyframes sdpFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* ── FIX CARDS — gradient léger + suppression barre top ── */
+
+/* Supprime la barre horizontale colorée */
+.kpi-card::before {
+  display: none !important;
+}
+
+/* Gradient léger sur toutes les cards */
+.card {
+  background: linear-gradient(
+    160deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.025) 100%
+  ) !important;
+  border-radius: var(--r-lg);
+}
+
+/* Supprime le border-bottom dans le card-header */
+.card-header {
+  border-bottom: none !important;
+  padding-bottom: 10px !important;
+  margin-bottom: 12px !important;
+  /* Remplacé par un fond très léger */
+  background:    linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.04) 0%,
+    transparent 100%
+  );
+  border-radius: var(--r-md) var(--r-md) 0 0;
+  margin-left:   -20px;
+  margin-right:  -20px;
+  margin-top:    -20px;
+  padding-left:  20px;
+  padding-right: 20px;
+  padding-top:   14px;
+}
+
+/* Gradient coloré par type de kpi-card */
+.kpi-card {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.04) 100%
+  ) !important;
+  border: 1px solid var(--bord) !important;
+  transition: all var(--tr) !important;
+}
+
+.kpi-card.buy {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(16, 185, 129, 0.06) 100%
+  ) !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+.kpi-card.sell {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(239, 68, 68, 0.06) 100%
+  ) !important;
+  border-color: rgba(239, 68, 68, 0.2) !important;
+}
+
+.kpi-card.exec {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.07) 100%
+  ) !important;
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+.kpi-card.neutral {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(100, 116, 139, 0.05) 100%
+  ) !important;
+}
+
+/* Gradient index cards */
+.index-card {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.04) 100%
+  ) !important;
+}
+
+.index-card:hover {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.08) 100%
+  ) !important;
+}
+
+/* metric-card-sm gradient */
+.metric-card-sm {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.035) 100%
+  ) !important;
+}
+
+/* ── LOGOS STOCK — CSS ── */
+.stock-logo {
+  width:           20px;
+  height:          20px;
+  border-radius:   4px;
+  object-fit:      contain;
+  flex-shrink:     0;
+  vertical-align:  middle;
+  display:         inline-block;
+  background:      var(--surf2);
+}
+
+.sym-initial-badge {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  width:           20px;
+  height:          20px;
+  border-radius:   4px;
+  background:      var(--grad);
+  color:           #fff;
+  font-size:       8px;
+  font-weight:     800;
+  flex-shrink:     0;
+  vertical-align:  middle;
+  letter-spacing:  -0.3px;
+  line-height:     1;
+}
+
+.sym-with-logo {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+}
+
+/* Logo dans chart panel header */
+.cp-logo {
+  width:        18px;
+  height:       18px;
+  border-radius: 3px;
+  object-fit:   contain;
+  flex-shrink:  0;
+}
+
+.cp-logo-sym {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  font-size:   12px;
+  font-weight: 700;
+  color:       var(--txt);
+  flex:        1;
+  min-width:   0;
+}
+
+/* Charts section — layout 2×5 pour 10 panels */
+.charts-grid.layout-2-5 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Refresh watchlist banner dans charts */
+.charts-wl-banner {
+  display:       flex;
+  align-items:   center;
+  gap:           10px;
+  padding:       10px 16px;
+  background:    rgba(59, 130, 246, 0.06);
+  border:        1px solid rgba(59, 130, 246, 0.18);
+  border-radius: var(--r-md);
+  margin-bottom: 14px;
+  font-size:     12px;
+  color:         var(--txt2);
+}
+
+.charts-wl-banner i { color: var(--b1); }
+.charts-wl-banner strong { color: var(--txt); }
+
+/* ── MOBILE — 2 cards par ligne ── */
+@media (max-width: 768px) {
+  /* KPI row — 2 colonnes */
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Index cards — 2 colonnes */
+  .index-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Risk metrics — 2 colonnes */
+  .risk-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Charts grid — 1 colonne sur mobile */
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Signals analytics — 1 colonne */
+  .signals-analytics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Agent votes — 2 colonnes */
+  .agent-votes-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Card header — style compact */
+  .card-header {
+    font-size:    13px !important;
+    margin-left:  -14px !important;
+    margin-right: -14px !important;
+    padding-left: 14px !important;
+    padding-right:14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .kpi-row      { grid-template-columns: repeat(2, 1fr) !important; }
+  .index-cards  { grid-template-columns: repeat(2, 1fr) !important; }
+  .risk-metrics-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .agent-votes-grid  { grid-template-columns: 1fr !important; }
+  /* kpi-val plus petit sur très petit écran */
+  .kpi-val { font-size: 18px !important; }
+}
+
+/* ── Dark mode — gradients adaptés ── */
+[data-theme="dark"] .card {
+  background: linear-gradient(
+    160deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.04) 100%
+  ) !important;
+}
+
+[data-theme="dark"] .kpi-card {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.07) 100%
+  ) !important;
+}
+
+[data-theme="dark"] .kpi-card.buy {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(16, 185, 129, 0.10) 100%
+  ) !important;
+}
+
+[data-theme="dark"] .kpi-card.sell {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(239, 68, 68, 0.10) 100%
+  ) !important;
+}
+
+[data-theme="dark"] .index-card {
+  background: linear-gradient(
+    135deg,
+    var(--surf) 0%,
+    rgba(59, 130, 246, 0.07) 100%
+  ) !important;
+}
+
+[data-theme="dark"] .card-header {
+  background: linear-gradient(
+    90deg,
+    rgba(59, 130, 246, 0.07) 0%,
+    transparent 100%
+  ) !important;
+}

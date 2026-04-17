@@ -56,12 +56,60 @@ const Terminal = (() => {
     vol_carry:'#8b5cf6', options_convexity:'#f97316',
   };
 
+  // ════════════════════════════════════════════════════════
+    // LOGO HELPER — Logo.dev (supporte les tickers directement)
+    // ════════════════════════════════════════════════════════
+    const ETF_SYMBOLS = new Set([
+    'SPY','QQQ','IWM','DIA','VTI','VOO','IVV','EFA','EEM','GLD','SLV',
+    'TLT','HYG','LQD','VNQ','XLF','XLK','XLE','XLV','XLI','XLP','XLU',
+    'XLRE','XLC','XLB','XLY','XBI','IBB','SMH','SOXX','ARKK','ARKG',
+    'SOXL','TQQQ','SPXL','SQQQ','SH','BITO','BNDX','BND','AGG',
+    ]);
+
+    const ETF_COLORS = {
+    SPY:'#c0392b', QQQ:'#1a56db', IWM:'#047857', DIA:'#92400e',
+    GLD:'#d97706', SLV:'#64748b', TLT:'#7c3aed', HYG:'#db2777',
+    VTI:'#0891b2', XLF:'#1e40af', XLK:'#6d28d9', XLE:'#065f46',
+    XLV:'#be123c', XLI:'#b45309', ARKK:'#7c3aed', TQQQ:'#1a56db',
+    SOXL:'#0f766e', default:'#3b82f6',
+    };
+
+    function _getLogoHtml(sym, size = 20) {
+    const s = size;
+    const fs = Math.max(7, Math.floor(s * 0.42));
+
+    // ETFs → badge coloré avec initiales
+    if (ETF_SYMBOLS.has(sym)) {
+        const bg = ETF_COLORS[sym] || ETF_COLORS.default;
+        const label = sym.length <= 3 ? sym : sym.slice(0, 3);
+        return `<span class="sym-initial-badge"
+                    style="width:${s}px;height:${s}px;background:${bg};font-size:${fs}px;border-radius:3px"
+                    title="${sym}">${label}</span>`;
+    }
+
+    // Stocks → Logo.dev (supporte les tickers US directement)
+    const fallback = `<span class="sym-initial-badge"
+                            style="width:${s}px;height:${s}px;font-size:${fs}px;border-radius:3px"
+                            title="${sym}">${sym.charAt(0)}</span>`;
+    const escapedFallback = fallback.replace(/'/g, "\\'");
+
+    return `<img class="stock-logo"
+                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_Bl7HHDpkTWS5lOoNnGBEAg&size=${s * 2}&format=png"
+                style="width:${s}px;height:${s}px;border-radius:3px;vertical-align:middle;background:var(--surf2)"
+                onerror="this.outerHTML='${escapedFallback}'"
+                loading="lazy"
+                alt="${sym}">`;
+    }
+
+    // Expose globalement pour watchlist-manager.js
+    window._getLogoHtml = _getLogoHtml;
+
   // ── State ────────────────────────────────────────────────
   let _state       = {};
   let _refreshTimer = null;
   let _currentSide = 'BUY';
   let _currentIv   = '1day';
-  let _panelIv     = ['1day','1day','1day','1day'];
+  let _panelIv     = Array(10).fill('1day');
   let _sidebarOpen = true;
   let _mainInited  = false;
   let _panelsInited= false;
@@ -490,10 +538,17 @@ const Terminal = (() => {
     if (mob) mob.classList.add('active');
 
     // Lazy init charts section
-    if (name === 'charts' && !_panelsInited) {
-    _panelsInited = true;
-    _buildChartPanels();  // ← Remplace l'ancien _initAllPanelCharts()
-    setTimeout(() => _initAllPanelCharts(), 200);
+    if (name === 'charts') {
+        // Rebuild si watchlist a changé ou si 1er accès
+        const wl = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
+        const currentCount = document.querySelectorAll('#charts-grid .chart-panel').length;
+        const expectedCount = Math.min(Math.max(wl.length, 1), 10);
+
+        if (!_panelsInited || currentCount !== expectedCount) {
+            _panelsInited = true;
+            _buildChartPanels();
+            setTimeout(() => _initAllPanelCharts(), 200);
+        }
     }
 
     if (name === 'execution') _refreshExecLog();
@@ -694,41 +749,55 @@ const Terminal = (() => {
 
     const symbols = Object.keys(sigs);
     if (!symbols.length) {
-      tbody.innerHTML = `<tr><td colspan="10" class="loading-row">
+        tbody.innerHTML = `<tr><td colspan="10" class="loading-row">
         <i class="fa-solid fa-circle-notch fa-spin"></i> Awaiting first signal cycle...
-      </td></tr>`;
-      return;
+        </td></tr>`;
+        return;
     }
 
     const display = limit ? symbols.slice(0, limit) : symbols;
     tbody.innerHTML = display.map(sym => {
-      const s      = sigs[sym] || {};
-      const price  = parseFloat(s.price || 0);
-      const score  = parseFloat(s.final_score || 0);
-      const conf   = parseFloat(s.confidence || 0);
-      const bp     = parseFloat(s.buy_prob || 0.5);
-      const dir    = s.direction || 'neutral';
-      const council= s.council   || 'wait';
-      const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
-      const ccolor = council.includes('execute') ? '#10b981'
-                   : council === 'veto' ? '#ef4444' : '#f59e0b';
-      const dirBadge = dir === 'buy'
+        const s      = sigs[sym] || {};
+        const price  = parseFloat(s.price || 0);
+        const score  = parseFloat(s.final_score || 0);
+        const conf   = parseFloat(s.confidence || 0);
+        const bp     = parseFloat(s.buy_prob || 0.5);
+        const dir    = s.direction || 'neutral';
+        const council= s.council   || 'wait';
+        const scolor = score > 0.65 ? '#10b981' : score > 0.40 ? '#f59e0b' : '#64748b';
+        const ccolor = council.includes('execute') ? '#10b981'
+                    : council === 'veto' ? '#ef4444' : '#f59e0b';
+        const dirBadge = dir === 'buy'
         ? `<span class="dir-badge buy"><i class="fa-solid fa-arrow-up"></i> BUY</span>`
         : dir === 'sell'
-          ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
-          : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`;
+            ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
+            : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`;
 
-      const chartCell = showChart
-        ? `<td><button class="btn-xs sig-chart-btn" data-sym="${sym}"><i class="fa-solid fa-chart-bar"></i></button></td>`
+        const chartCell = showChart
+        ? `<td><button class="btn-xs sig-chart-btn" data-sym="${sym}">
+                <i class="fa-solid fa-chart-bar"></i>
+            </button></td>`
         : '';
 
-      return `<tr>
-        <td><strong class="sym-link sig-sym" data-sym="${sym}">${sym}</strong></td>
+        // Logo
+        const logoHtml = typeof _getLogoHtml === 'function'
+        ? _getLogoHtml(sym, 18)
+        : `<span class="sym-initial-badge" style="width:18px;height:18px;font-size:8px">${sym.charAt(0)}</span>`;
+
+        return `<tr>
+        <td>
+            <div class="sym-with-logo">
+            ${logoHtml}
+            <strong class="sym-link sig-sym" data-sym="${sym}">${sym}</strong>
+            </div>
+        </td>
         <td class="mono">${price > 0 ? '$' + price.toFixed(2) : '--'}</td>
         <td>${dirBadge}</td>
         <td>
-          <div class="score-bar-inline"><div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div></div>
-          <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
+            <div class="score-bar-inline">
+            <div class="sbi-fill" style="width:${(score*100).toFixed(0)}%;background:${scolor}"></div>
+            </div>
+            <span class="mono" style="color:${scolor};font-size:11px">${score.toFixed(3)}</span>
         </td>
         <td class="mono">${(conf*100).toFixed(1)}%</td>
         <td class="mono">${(bp*100).toFixed(1)}%</td>
@@ -736,17 +805,17 @@ const Terminal = (() => {
         <td><strong style="color:${ccolor};font-size:11px">${council.toUpperCase()}</strong></td>
         <td><span class="regime-chip">${(s.regime||'--').replace(/_/g,' ')}</span></td>
         ${chartCell}
-      </tr>`;
+        </tr>`;
     }).join('');
 
     // Bind clicks
     tbody.querySelectorAll('.sig-sym, .sig-chart-btn').forEach(el => {
-      el.addEventListener('click', () => {
+        el.addEventListener('click', () => {
         loadChartSymbol(el.dataset.sym);
         if (showChart) showSection('overview');
-      });
+        });
     });
-  }
+    }
 
   function filterSignals() {
     const q = document.getElementById('signal-search')?.value.toLowerCase() || '';
@@ -1130,13 +1199,20 @@ const Terminal = (() => {
   function _setChartLayout(layout) {
     const grid = document.getElementById('charts-grid');
     if (!grid) return;
-    const cls = layout === '1' ? 'layout-1'
-              : layout === '2x1' ? 'layout-2-1'
-              : 'layout-2-2';
-    grid.className = `charts-grid ${cls}`;
-    // Re-init panels after layout change
+
+    const n = _getChartSymbols().length;
+
+    if (layout === '1') {
+        grid.className = 'charts-grid layout-1';
+    } else if (layout === '2x3') {
+        grid.className = 'charts-grid layout-2-3';
+    } else {
+        // Auto : choisit selon le nombre de panels
+        grid.className = `charts-grid ${n <= 4 ? 'layout-2-2' : n <= 6 ? 'layout-2-3' : 'layout-2-5'}`;
+    }
+
     setTimeout(() => _initAllPanelCharts(), 100);
-  }
+    }
 
   // ════════════════════════════════════════════════════════
   // CHART DATA FETCHING
@@ -1421,51 +1497,86 @@ const Terminal = (() => {
 
     const PANEL_DEFAULTS = ['SPY','QQQ','AAPL','NVDA','GS','TSLA'];
 
+    // ── Symboles par défaut si watchlist vide ────────────────
+    const CHART_SYMBOLS_DEFAULTS_10 = [
+    'SPY','QQQ','IWM','AAPL','NVDA','MSFT','GOOGL','AMZN','META','TSLA'
+    ];
+
+    // ── Récupère les symboles à afficher (watchlist ou défauts) ──
+    function _getChartSymbols() {
+    const wl = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
+    return wl.length > 0
+        ? wl.slice(0, 10)
+        : CHART_SYMBOLS_DEFAULTS_10;
+    }
+
     function _buildChartPanels() {
     const grid = document.getElementById('charts-grid');
     if (!grid) return;
 
-    grid.innerHTML = PANEL_DEFAULTS.map((defaultSym, i) => `
+    const symbols = _getChartSymbols();
+    const n       = symbols.length;
+    const fromWL  = window.WatchlistManager && WatchlistManager.getWatchlist().length > 0;
+
+    // Détermine le layout en fonction du nombre de symboles
+    const layoutClass = n <= 2  ? 'layout-1'
+                        : n <= 6  ? 'layout-2-2'
+                        :           'layout-2-5';
+    grid.className = `charts-grid ${layoutClass}`;
+
+    // Banner info watchlist
+    const existingBanner = document.getElementById('charts-wl-banner');
+    if (existingBanner) existingBanner.remove();
+    const banner = document.createElement('div');
+    banner.id = 'charts-wl-banner';
+    banner.className = 'charts-wl-banner';
+    banner.innerHTML = fromWL
+        ? `<i class="fa-solid fa-list-ul"></i>
+        <span>Affichage de <strong>${n} symboles</strong> depuis votre watchlist</span>
+        <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
+            <i class="fa-solid fa-rotate"></i> Rafraîchir
+        </button>`
+        : `<i class="fa-solid fa-info-circle"></i>
+        <span>Watchlist vide — <strong>10 symboles prédéfinis</strong> affichés.
+        Ajoutez des symboles dans l'onglet <em>Watchlist</em>.</span>
+        <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
+            <i class="fa-solid fa-rotate"></i> Rafraîchir
+        </button>`;
+    grid.parentElement.insertBefore(banner, grid);
+
+    // Génère les panels dynamiquement
+    grid.innerHTML = symbols.map((sym, i) => {
+        const logoHtml = typeof _getLogoHtml === 'function'
+        ? `<img class="cp-logo"
+                src="https://img.logo.dev/ticker/${sym.toLowerCase()}?token=pk_Bl7HHDpkTWS5lOoNnGBEAg&size=36&format=png"
+                onerror="this.style.display='none'"
+                loading="lazy" alt="${sym}">`
+        : '';
+
+        return `
         <div class="chart-panel" id="chart-panel-${i}">
-        <div class="cp-header">
-            <select class="select-sm cp-sym-select" id="cp-sym-${i}">
-            ${CHART_SYMBOLS_OPTIONS.map(group => `
-                <optgroup label="${group.g}">
-                ${group.s.map(s =>
-                    `<option value="${s}" ${s === defaultSym ? 'selected' : ''}>${s}</option>`
-                ).join('')}
-                </optgroup>
-            `).join('')}
-            </select>
+            <div class="cp-header">
+            <div class="cp-logo-sym">
+                ${logoHtml}
+                <span>${sym}</span>
+            </div>
             <div class="cp-header-right">
-            <div class="cp-itabs" data-panel="${i}">
+                <div class="cp-itabs" data-panel="${i}">
                 <button class="cp-itab" data-iv="1h">1H</button>
                 <button class="cp-itab active" data-iv="1day">1D</button>
                 <button class="cp-itab" data-iv="1week">1W</button>
+                </div>
+                <button class="btn-quant-modal" data-qmsym="${sym}"
+                        title="Analyse quantitative">
+                <i class="fa-solid fa-flask"></i>
+                </button>
             </div>
-            <button class="btn-quant-modal" data-qmsym="${defaultSym}"
-                    title="Quantitative analysis">
-                <i class="fa-solid fa-flask"></i> Quant
-            </button>
             </div>
-        </div>
-        <div class="cp-chart" id="chart-container-${i}"></div>
-        </div>`).join('');
+            <div class="cp-chart" id="chart-container-${i}"></div>
+        </div>`;
+    }).join('');
 
-    // Bind panel selectors
-    for (let i = 0; i < 6; i++) {
-        const sel = document.getElementById(`cp-sym-${i}`);
-        if (sel) {
-        sel.addEventListener('change', () => {
-            _loadPanelChart(i, sel.value);
-            // Update quant button
-            const qBtn = document.querySelector(`#chart-panel-${i} .btn-quant-modal`);
-            if (qBtn) qBtn.dataset.qmsym = sel.value;
-        });
-        }
-    }
-
-    // Bind interval tabs
+    // ── Bind interval tabs ──────────────────────────────
     document.querySelectorAll('.cp-itabs').forEach(container => {
         const panelIdx = parseInt(container.dataset.panel ?? '0');
         container.querySelectorAll('.cp-itab').forEach(btn => {
@@ -1473,27 +1584,35 @@ const Terminal = (() => {
             container.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             _panelIv[panelIdx] = btn.dataset.iv;
-            const sym = document.getElementById(`cp-sym-${panelIdx}`)?.value || PANEL_DEFAULTS[panelIdx];
+            const sym = symbols[panelIdx] || CHART_SYMBOLS_DEFAULTS_10[0];
             _loadPanelChart(panelIdx, sym);
         });
         });
     });
 
-    // Bind quant modal buttons
+    // ── Bind quant modal buttons ────────────────────────
     document.querySelectorAll('.btn-quant-modal').forEach(btn => {
         btn.addEventListener('click', () => openQuantModal(btn.dataset.qmsym));
     });
 
-    // Bind layout selector
-    _on('chart-layout', 'change', e => _setChartLayout(e.target.value));
+    // ── Bind layout selector ────────────────────────────
+    const layoutSel = document.getElementById('chart-layout');
+    if (layoutSel) layoutSel.addEventListener('change', e => _setChartLayout(e.target.value));
 
-    // Bind sync all
-    _on('btn-sync-all', 'click', () => {
-        for (let i = 0; i < 6; i++) {
-        const sym = document.getElementById(`cp-sym-${i}`)?.value || PANEL_DEFAULTS[i];
-        _loadPanelChart(i, sym);
-        }
-    });
+    // ── Bind sync all ───────────────────────────────────
+    const syncBtn = document.getElementById('btn-sync-all');
+    if (syncBtn) {
+        syncBtn.onclick = () => _initAllPanelCharts();
+    }
+
+    // ── Bind refresh watchlist ──────────────────────────
+    const refreshBtn = document.getElementById('btn-refresh-chart-panels');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+        _buildChartPanels();
+        setTimeout(() => _initAllPanelCharts(), 100);
+        });
+    }
     }
 
     function _setChartLayout(layout) {
@@ -1514,10 +1633,10 @@ const Terminal = (() => {
 
     // Remplace l'ancienne _initAllPanelCharts
     async function _initAllPanelCharts() {
-    for (let i = 0; i < 6; i++) {
-        const sym = document.getElementById(`cp-sym-${i}`)?.value || PANEL_DEFAULTS[i];
-        await _loadPanelChart(i, sym);
-    }
+        const symbols = _getChartSymbols();
+        for (let i = 0; i < symbols.length; i++) {
+            await _loadPanelChart(i, symbols[i]);
+        }
     }
 
     // ════════════════════════════════════════════════════════

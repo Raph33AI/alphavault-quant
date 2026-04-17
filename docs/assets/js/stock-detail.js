@@ -231,6 +231,18 @@ const StockDetail = (() => {
 
       </div>`);
 
+    // ── Lazy logo dans le header ─────────────────────────
+    const logoContainer = document.createElement('div');
+    logoContainer.id    = 'sdp-fp-logo';
+    logoContainer.style.cssText = 'flex-shrink:0;margin-right:-4px';
+    const headerEl = document.querySelector('#sdp-fullpage .sdp-fp-header');
+    if (headerEl) {
+    const backBtn = document.getElementById('sdp-back');
+    if (backBtn && backBtn.nextSibling) {
+        headerEl.insertBefore(logoContainer, backBtn.nextSibling);
+    }
+    }
+
     // ── Event bindings ───────────────────────────────────
     document.getElementById('sdp-back')
       .addEventListener('click', close);
@@ -276,8 +288,16 @@ const StockDetail = (() => {
     _build();
 
     const fp = document.getElementById('sdp-fullpage');
+    if (!fp) {
+    console.error('[StockDetail] sdp-fullpage introuvable — _build() a échoué');
+    return;
+    }
+    // Double sécurité : CSS class + style direct
     fp.classList.add('open');
+    fp.style.setProperty('display', 'flex', 'important');
+    fp.style.setProperty('z-index', '9999', 'important');
     document.body.style.overflow = 'hidden';
+    console.log(`[StockDetail] open() → ${_sym}`);
 
     // Fix all chart heights immediately
     _fixChartHeights();
@@ -287,6 +307,13 @@ const StockDetail = (() => {
     _t('sdp-fp-sym',    _sym);
     _t('sdp-fp-name',   meta.name);
     _t('sdp-fp-sector', meta.sector);
+    // Mise à jour du logo dans le header
+    const logoSlot = document.getElementById('sdp-fp-logo');
+    if (logoSlot) {
+    logoSlot.innerHTML = typeof window._getLogoHtml === 'function'
+        ? window._getLogoHtml(_sym, 36)
+        : '';
+    }
     _updateWLBtn();
 
     // Reset tabs UI
