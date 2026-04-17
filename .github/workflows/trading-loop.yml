@@ -328,7 +328,7 @@ jobs:
           IBKR_CLIENT_ID:       ${{ secrets.IBKR_CLIENT_ID }}
           IBKR_ACCOUNT:         ${{ secrets.IBKR_ACCOUNT }}
           EXECUTION_MODE:       ${{ github.event.inputs.mode || 'signal_only' }}
-          DRY_RUN:              ${{ github.event.inputs.dry_run || 'true' }}
+          DRY_RUN:              ${{ github.event.inputs.dry_run || 'false' }}
           MARKET_SESSION:       ${{ needs.market-hours-check.outputs.market_session }}
           GITHUB_REPOSITORY:    ${{ github.repository }}
           GITHUB_RUN_NUMBER:    ${{ github.run_number }}
