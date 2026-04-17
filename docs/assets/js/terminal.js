@@ -121,6 +121,8 @@ const Terminal = (() => {
     // Chart layout selector
     _on('chart-layout', 'change', e => _setChartLayout(e.target.value));
 
+    _on('btn-wl-reset', 'click', () => WatchlistManager.resetToDefault());
+
     // Panel chart selectors (cp-sym-0 to 3)
     for (let i = 0; i < 4; i++) {
       const sel = document.getElementById(`cp-sym-${i}`);
@@ -164,6 +166,8 @@ const Terminal = (() => {
     _on('gh-pat','input', e => _savePAT(e.target.value));
   }
 
+  WatchlistManager.init();
+
   // ── One-liner event helper ───────────────────────────────
   function _on(id, event, fn) {
     const el = document.getElementById(id);
@@ -177,6 +181,9 @@ const Terminal = (() => {
     try {
       const data = await ApiClient.fetchAll(bust);
       _state = data;
+
+    WatchlistManager.render(data.signals);
+    window._terminalState = data;  // expose pour StockDetail
 
       _updateTopbar(data);
       _updateTicker(data);

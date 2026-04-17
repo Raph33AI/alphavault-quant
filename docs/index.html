@@ -407,18 +407,38 @@
       <div class="section-header">
         <h2><i class="fa-solid fa-list-ul"></i> Market Watchlist</h2>
         <div class="sh-actions">
-          <input type="text" class="search-input" id="wl-search" placeholder="Filter symbol...">
+          <span class="badge-count" id="wl-sym-count">-- symbols</span>
         </div>
       </div>
+
+      <!-- Toolbar add/search -->
+      <div class="wl-toolbar">
+        <form class="wl-add-form" id="wl-add-form">
+          <i class="fa-solid fa-plus" style="color:var(--b1);font-size:12px"></i>
+          <input type="text" class="wl-add-input" id="wl-add-input"
+                placeholder="Add symbol (e.g. AAPL)" maxlength="10" autocomplete="off">
+          <button type="submit" class="btn-wl-add">Add</button>
+        </form>
+        <input type="text" class="search-input" id="wl-search" placeholder="Search...">
+        <button class="btn-sm" id="btn-wl-reset">
+          <i class="fa-solid fa-rotate-left"></i> Reset
+        </button>
+        <span class="wl-count" id="wl-sym-count">0 symbols</span>
+      </div>
+
+      <!-- Sector Tabs -->
+      <div class="sector-tabs" id="sector-tabs"></div>
+
+      <!-- Table -->
       <div class="card">
         <div class="table-wrap">
           <table class="data-table watchlist-table">
             <thead>
               <tr>
+                <th>★</th>
                 <th>Symbol</th>
                 <th>Name</th>
                 <th>Price</th>
-                <th>Change</th>
                 <th>% Chg</th>
                 <th>Score</th>
                 <th>Direction</th>
@@ -437,6 +457,8 @@
             </tbody>
           </table>
         </div>
+        <!-- Pagination -->
+        <div class="wl-pagination" id="wl-pagination"></div>
       </div>
     </section>
 
@@ -1065,6 +1087,8 @@
 ═══════════════════════════════════════════════════════════ -->
 <script src="assets/js/api_client.js"></script>
 <script src="assets/js/charts.js"></script>
+<script src="assets/js/watchlist-manager.js"></script>
+<script src="assets/js/stock-detail.js"></script>
 <script src="assets/js/terminal.js"></script>
 
 </body>
