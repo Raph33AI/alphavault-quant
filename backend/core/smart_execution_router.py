@@ -186,42 +186,42 @@ class SmartExecutionRouter:
         }
 
     # ── Exécution IBKR ────────────────────────────────────────
-    def _execute_ibkr(
-        self,
-        symbol:       str,
-        direction:    str,
-        quantity:     int,
-        market_price: float,
-        fill_price:   float,
-        method:       ExecutionMethod,
-        slippage_bps: float,
-    ) -> Dict:
-        """Exécution réelle via Interactive Brokers (ib_insync)."""
+    def _execute_ibkr(self, symbol, direction, quantity,
+                  market_price, fill_price, method, slippage_bps):
+    """Exécution réelle via Interactive Brokers (ib_insync)."""
+    try:
+        # Import conditionnel — pas installé en GitHub Actions
         try:
             from ib_insync import Stock, MarketOrder, LimitOrder
-            contract = Stock(symbol, "SMART", "USD")
+        except ImportError:
+            logger.warning("⚠ ib_insync non installé → simulation forcée")
+            return self._simulate_fill(
+                symbol, direction, quantity, market_price,
+                fill_price, method, slippage_bps
+            )
 
-            if method == ExecutionMethod.MARKET:
-                action = "BUY" if direction == "buy" else "SELL"
-                order  = MarketOrder(action, quantity)
-            else:
-                action    = "BUY" if direction == "buy" else "SELL"
-                lmt_price = round(fill_price, 2)
-                order     = LimitOrder(action, quantity, lmt_price)
+        contract = Stock(symbol, "SMART", "USD")
+        if method.value == "market":
+            action = "BUY" if direction == "buy" else "SELL"
+            order  = MarketOrder(action, quantity)
+        else:
+            action    = "BUY" if direction == "buy" else "SELL"
+            lmt_price = round(fill_price, 2)
+            order     = LimitOrder(action, quantity, lmt_price)
 
-            trade = self.ibkr_client.placeOrder(contract, order)
-            self.ibkr_client.sleep(2)
+        trade = self.ibkr_client.placeOrder(contract, order)
+        self.ibkr_client.sleep(2)
 
-            return {
-                "status":        "submitted",
-                "symbol":        symbol,
-                "direction":     direction,
-                "quantity":      quantity,
-                "fill_price":    fill_price,
-                "method":        method.value,
-                "ibkr_order_id": trade.order.orderId,
-                "dry_run":       False,
-            }
-        except Exception as e:
-            logger.error(f"IBKR execution error: {e}")
-            return {"status": "ibkr_error", "error": str(e)}
+        return {
+            "status":        "submitted",
+            "symbol":        symbol,
+            "direction":     direction,
+            "quantity":      quantity,
+            "fill_price":    fill_price,
+            "method":        method.value,
+            "ibkr_order_id": trade.order.orderId,
+            "dry_run":       False,
+        }
+    except Exception as e:
+        logger.error(f"IBKR execution error: {e}")
+        return {"status": "ibkr_error", "error": str(e)}
