@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlphaVault Quant — Trading Dashboard</title>
+<link rel="stylesheet" href="assets/css/dashboard.css">
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     TOPBAR
+══════════════════════════════════════════════════════ -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">AlphaVault <strong>Quant</strong></span>
+    </div>
+    <div class="regime-badge" id="regime-badge">⏳ LOADING...</div>
+  </div>
+  <div class="topbar-center">
+    <div class="clock" id="clock">--:--:-- UTC</div>
+    <div class="session-badge" id="session-badge">CLOSED</div>
+  </div>
+  <div class="topbar-right">
+    <div class="status-dot-wrap">
+      <div class="status-dot" id="dot-llm" title="LLM Status"></div>
+      <span>LLM</span>
+    </div>
+    <div class="status-dot-wrap">
+      <div class="status-dot" id="dot-hub" title="Finance Hub"></div>
+      <span>Hub</span>
+    </div>
+    <div class="status-dot-wrap">
+      <div class="status-dot" id="dot-sys" title="System"></div>
+      <span>Sys</span>
+    </div>
+    <div class="refresh-info">
+      <span id="last-update">--</span>
+      <button class="btn-refresh" onclick="window.Dashboard.forceRefresh()">↻ Refresh</button>
+    </div>
+    <div class="dry-run-badge" id="dry-run-badge">DRY RUN</div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════
+     MAIN LAYOUT
+══════════════════════════════════════════════════════ -->
+<div class="layout">
+
+  <!-- ── SIDEBAR ────────────────────────────────────── -->
+  <nav class="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item active" onclick="Dashboard.showSection('signals')" data-sec="signals">
+        <span class="nav-icon">📡</span><span>Signals</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('portfolio')" data-sec="portfolio">
+        <span class="nav-icon">💼</span><span>Portfolio</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('regime')" data-sec="regime">
+        <span class="nav-icon">🎯</span><span>Regime</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('risk')" data-sec="risk">
+        <span class="nav-icon">🛡</span><span>Risk</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('agents')" data-sec="agents">
+        <span class="nav-icon">🤖</span><span>Agents</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('strategies')" data-sec="strategies">
+        <span class="nav-icon">⚖</span><span>Strategies</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('execution')" data-sec="execution">
+        <span class="nav-icon">⚡</span><span>Execution</span>
+      </li>
+      <li class="nav-item" onclick="Dashboard.showSection('performance')" data-sec="performance">
+        <span class="nav-icon">📈</span><span>Performance</span>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- ── CONTENT ────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : SIGNALS
+    ════════════════════════════════════════════════ -->
+    <section id="sec-signals" class="section active">
+      <div class="section-header">
+        <h2>📡 Live Signals</h2>
+        <span class="section-sub" id="signals-count">0 symbols</span>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="kpi-row">
+        <div class="kpi-card buy">
+          <div class="kpi-val" id="kpi-buy">0</div>
+          <div class="kpi-lbl">BUY Signals</div>
+        </div>
+        <div class="kpi-card sell">
+          <div class="kpi-val" id="kpi-sell">0</div>
+          <div class="kpi-lbl">SELL Signals</div>
+        </div>
+        <div class="kpi-card neutral">
+          <div class="kpi-val" id="kpi-neutral">0</div>
+          <div class="kpi-lbl">NEUTRAL</div>
+        </div>
+        <div class="kpi-card exec">
+          <div class="kpi-val" id="kpi-exec">0</div>
+          <div class="kpi-lbl">Executed</div>
+        </div>
+      </div>
+
+      <!-- Signals Table -->
+      <div class="card">
+        <div class="card-header">
+          <span>Signal Grid</span>
+          <input type="text" class="search-box" id="signal-search"
+                 placeholder="🔍 Filter symbol..." onkeyup="Dashboard.filterSignals()">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table" id="signals-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Price</th>
+                <th>Direction</th>
+                <th>Score</th>
+                <th>Confidence</th>
+                <th>Buy Prob</th>
+                <th>Action</th>
+                <th>Council</th>
+                <th>Regime</th>
+              </tr>
+            </thead>
+            <tbody id="signals-tbody">
+              <tr><td colspan="9" class="loading-row">⏳ Loading signals...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Signal Chart (TradingView Lightweight) -->
+      <div class="card">
+        <div class="card-header">
+          <span id="chart-title">Price Chart</span>
+          <div class="chart-controls">
+            <select id="chart-symbol" onchange="Dashboard.loadChart()">
+              <option value="SPY">SPY</option>
+            </select>
+            <select id="chart-interval" onchange="Dashboard.loadChart()">
+              <option value="1day">Daily</option>
+              <option value="1h">1H</option>
+              <option value="4h">4H</option>
+            </select>
+          </div>
+        </div>
+        <div id="price-chart" style="height:320px;"></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : PORTFOLIO
+    ════════════════════════════════════════════════ -->
+    <section id="sec-portfolio" class="section">
+      <div class="section-header">
+        <h2>💼 Portfolio</h2>
+        <span class="section-sub" id="portfolio-value-header">$100,000</span>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-val" id="p-total-value">$100,000</div>
+          <div class="kpi-lbl">Total Value</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="p-cash">100%</div>
+          <div class="kpi-lbl">Cash</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="p-positions">0</div>
+          <div class="kpi-lbl">Positions</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="p-leverage">0.0x</div>
+          <div class="kpi-lbl">Leverage</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span>Allocation Weights</span></div>
+          <canvas id="portfolio-donut" height="260"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><span>Positions</span></div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>Symbol</th><th>Shares</th><th>Value</th><th>Weight</th></tr>
+              </thead>
+              <tbody id="positions-tbody">
+                <tr><td colspan="4" class="loading-row">No positions</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : REGIME
+    ════════════════════════════════════════════════ -->
+    <section id="sec-regime" class="section">
+      <div class="section-header">
+        <h2>🎯 Market Regime</h2>
+      </div>
+
+      <!-- Global Regime Card -->
+      <div class="card regime-main-card">
+        <div class="regime-display">
+          <div class="regime-icon" id="regime-icon">❓</div>
+          <div class="regime-info">
+            <div class="regime-label" id="regime-label-big">UNKNOWN</div>
+            <div class="regime-score-bar-wrap">
+              <div class="regime-score-bar" id="regime-score-bar"></div>
+            </div>
+            <div class="regime-meta">
+              <span>Score: <strong id="regime-score-val">0.00</strong></span>
+              <span>Confidence: <strong id="regime-conf-val">0%</strong></span>
+              <span>Next: <strong id="regime-next-val">—</strong></span>
+            </div>
+          </div>
+        </div>
+        <div class="regime-flags" id="regime-flags"></div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Regime Probabilities -->
+        <div class="card">
+          <div class="card-header"><span>Regime Probabilities</span></div>
+          <canvas id="regime-chart" height="260"></canvas>
+        </div>
+
+        <!-- Macro Snapshot -->
+        <div class="card">
+          <div class="card-header"><span>Macro Indicators</span></div>
+          <div id="macro-grid" class="macro-grid"></div>
+        </div>
+      </div>
+
+      <!-- Per-Symbol Regime -->
+      <div class="card">
+        <div class="card-header"><span>Per-Symbol Regime</span></div>
+        <div id="per-symbol-regime" class="symbol-regime-grid"></div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : RISK
+    ════════════════════════════════════════════════ -->
+    <section id="sec-risk" class="section">
+      <div class="section-header">
+        <h2>🛡 Risk Dashboard</h2>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card" id="dd-kpi">
+          <div class="kpi-val" id="risk-dd">0.00%</div>
+          <div class="kpi-lbl">Current Drawdown</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="risk-lever">0.0x</div>
+          <div class="kpi-lbl">Leverage</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="risk-daily-pnl">0.00%</div>
+          <div class="kpi-lbl">Daily P&L</div>
+        </div>
+        <div class="kpi-card" id="halt-kpi">
+          <div class="kpi-val" id="risk-halt">✅ ACTIVE</div>
+          <div class="kpi-lbl">Trading Status</div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span>Leverage Gauge</span></div>
+          <div class="gauge-wrap">
+            <canvas id="leverage-gauge" height="200"></canvas>
+          </div>
+          <div class="gauge-labels">
+            <span>0x</span>
+            <span id="lever-current-label">Current: 0.0x</span>
+            <span id="lever-max-label">Max: 1.5x</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span>Risk Limits</span></div>
+          <div class="risk-limits-grid" id="risk-limits-grid"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>Drawdown Monitor</span></div>
+        <canvas id="drawdown-chart" height="160"></canvas>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : AGENTS
+    ════════════════════════════════════════════════ -->
+    <section id="sec-agents" class="section">
+      <div class="section-header">
+        <h2>🤖 Agent Council</h2>
+        <span class="section-sub" id="council-mode-badge">MODE: —</span>
+      </div>
+
+      <!-- Council Decision Panel -->
+      <div class="card council-panel">
+        <div class="council-header">
+          <div class="council-decision" id="council-decision-main">WAITING</div>
+          <div class="council-meta">
+            <span>Mode: <strong id="council-mode">—</strong></span>
+            <span>Score: <strong id="council-score">—</strong></span>
+          </div>
+        </div>
+        <div class="council-reason" id="council-reason">No decisions yet</div>
+      </div>
+
+      <!-- Agent Votes Grid -->
+      <div class="card">
+        <div class="card-header"><span>Agent Votes & Scores</span></div>
+        <div id="agent-votes-grid" class="agent-votes-grid"></div>
+      </div>
+
+      <!-- Agent Execution Table -->
+      <div class="card">
+        <div class="card-header"><span>Recent Executions</span></div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Time</th><th>Symbol</th><th>Action</th>
+                <th>Council</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="executions-tbody">
+              <tr><td colspan="5" class="loading-row">No executions yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LLM Status -->
+      <div class="card">
+        <div class="card-header"><span>LLM Availability Status</span></div>
+        <div class="llm-status-panel" id="llm-status-panel">
+          <div class="llm-indicator" id="llm-big-indicator">
+            <div class="llm-dot" id="llm-main-dot"></div>
+            <div class="llm-text">
+              <strong id="llm-status-text">Checking...</strong>
+              <span id="llm-mode-text">Mode: —</span>
+            </div>
+          </div>
+          <div class="llm-fallback-info" id="llm-fallback-info"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : STRATEGIES
+    ════════════════════════════════════════════════ -->
+    <section id="sec-strategies" class="section">
+      <div class="section-header">
+        <h2>⚖ Strategy Allocation</h2>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span>Strategy Weights</span></div>
+          <canvas id="strategy-donut" height="260"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><span>Strategy Details</span></div>
+          <div id="strategy-details" class="strategy-details"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>Strategy Performance</span></div>
+        <canvas id="strategy-perf-chart" height="180"></canvas>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : EXECUTION
+    ════════════════════════════════════════════════ -->
+    <section id="sec-execution" class="section">
+      <div class="section-header">
+        <h2>⚡ Execution Alpha</h2>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-header"><span>Execution Quality</span></div>
+          <canvas id="exec-quality-chart" height="180"></canvas>
+        </div>
+        <div class="card">
+          <div class="card-header"><span>Slippage Estimates</span></div>
+          <div id="slippage-grid" class="slippage-grid"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span>Timing Windows</span></div>
+          <div id="timing-grid" class="timing-grid"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>Order Methods Distribution</span></div>
+        <canvas id="order-methods-chart" height="160"></canvas>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════
+         SECTION : PERFORMANCE
+    ════════════════════════════════════════════════ -->
+    <section id="sec-performance" class="section">
+      <div class="section-header">
+        <h2>📈 Performance</h2>
+      </div>
+
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-val" id="perf-value">$100,000</div>
+          <div class="kpi-lbl">Portfolio Value</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="perf-signals">0</div>
+          <div class="kpi-lbl">Signals Generated</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="perf-exec">0</div>
+          <div class="kpi-lbl">Orders Executed</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-val" id="perf-mode">—</div>
+          <div class="kpi-lbl">Engine Mode</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>Strategy Sharpe (5d)</span></div>
+        <canvas id="strategy-sharpe-chart" height="180"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span>System Timeline</span></div>
+        <div id="system-timeline" class="system-timeline"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Scripts -->
+<script src="assets/js/api_client.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+# ============================================================
+# ALPHAVAULT QUANT — HEALTH CHECK & MONITORING
+# Vérification du système toutes les heures
+# ============================================================
+
+name: 🏥 Health Check — AlphaVault Quant
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Toutes les heures
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: 🏥 System Health Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: 📦 Install Dependencies
+        run: pip install -r requirements.txt --quiet
+
+      - name: 🔍 Run Health Check
+        env:
+          FINANCE_HUB_URL:   ${{ secrets.FINANCE_HUB_URL }}
+          AI_PROXY_URL:      ${{ secrets.AI_PROXY_URL }}
+          ECONOMIC_DATA_URL: ${{ secrets.ECONOMIC_DATA_URL }}
+          IBKR_HOST:         ${{ secrets.IBKR_HOST }}
+          IBKR_PORT:         ${{ secrets.IBKR_PORT }}
+          IBKR_ACCOUNT:      ${{ secrets.IBKR_ACCOUNT }}
+        run: |
+          cd backend
+          python3 << 'EOF'
+          import sys
+          sys.path.insert(0, '.')
+          from core.worker_client import WorkerClient
+          from config.settings import Settings
+          import json, os, datetime
+          
+          print("🏥 AlphaVault Quant — Health Check")
+          print("=" * 50)
+          
+          status = {
+              "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+              "checks": {}
+          }
+          
+          settings = Settings()
+          client = WorkerClient(settings)
+          
+          # Test chaque worker
+          workers = {
+              "finance_hub":    settings.FINANCE_HUB_URL,
+              "ai_proxy":       settings.AI_PROXY_URL,
+              "economic_data":  settings.ECONOMIC_DATA_URL,
+          }
+          
+          overall_ok = True
+          for name, url in workers.items():
+              if not url:
+                  status["checks"][name] = {"status": "not_configured", "ok": False}
+                  overall_ok = False
+                  continue
+              try:
+                  result = client.health_check(url)
+                  status["checks"][name] = {"status": "ok", "ok": True, "response": result}
+                  print(f"  ✅ {name}: OK")
+              except Exception as e:
+                  status["checks"][name] = {"status": "error", "ok": False, "error": str(e)}
+                  print(f"  ❌ {name}: {e}")
+                  overall_ok = False
+          
+          status["overall"] = "healthy" if overall_ok else "degraded"
+          status["llm_available"] = status["checks"].get("ai_proxy", {}).get("ok", False)
+          
+          # Sauvegarde du status
+          os.makedirs("../signals", exist_ok=True)
+          with open("../signals/system_status.json", "w") as f:
+              json.dump(status, f, indent=2)
+          
+          print(f"\n📊 Overall: {status['overall'].upper()}")
+          EOF
+
+      - name: 💾 Push System Status
+        run: |
+          git config --global user.name  "AlphaVault Health Bot"
+          git config --global user.email "bot@alphavault-ai.com"
+          git add signals/system_status.json
+          git diff --staged --quiet || git commit -m "🏥 Health check — $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
