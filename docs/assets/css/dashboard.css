@@ -3158,3 +3158,264 @@ strong { font-weight: 600; }
   .sdp-fp-price  { font-size: 22px; }
   .sdp-fp-chart  { height: 280px !important; min-height: 280px !important; max-height: 280px !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   CLOCK PARIS + EXCHANGE BAR
+══════════════════════════════════════════════════════════════ */
+.clock-paris {
+  font-family:    var(--mono);
+  font-size:      11px;
+  font-weight:    600;
+  color:          var(--b1);
+  letter-spacing: 0.3px;
+  line-height:    1;
+}
+
+.exchange-bar {
+  display:     flex;
+  align-items: center;
+  gap:         4px;
+  flex-wrap:   nowrap;
+  overflow:    hidden;
+}
+
+.exch-pill {
+  display:        inline-flex;
+  align-items:    center;
+  gap:            4px;
+  padding:        2px 7px;
+  border-radius:  10px;
+  font-size:      10px;
+  font-weight:    700;
+  letter-spacing: 0.3px;
+  white-space:    nowrap;
+  border:         1px solid var(--bord);
+  background:     var(--surf2);
+  color:          var(--txt3);
+  transition:     all 0.3s ease;
+  cursor:         default;
+}
+
+.exch-pill.exch-open {
+  background:   rgba(16,185,129,0.08);
+  border-color: rgba(16,185,129,0.3);
+  color:        var(--g);
+}
+
+.exch-pill.exch-closed {
+  background:   var(--surf2);
+  border-color: var(--bord);
+  color:        var(--txt4);
+}
+
+/* Hide exchange bar on small screens */
+@media (max-width: 1280px) { .exchange-bar { display: none; } }
+@media (max-width: 1024px) { .clock-paris  { display: none; } }
+
+/* ══════════════════════════════════════════════════════════════
+   FIX #3 — Chart containers: contain:strict pour stopper
+   la boucle infinie ResizeObserver de LightweightCharts
+══════════════════════════════════════════════════════════════ */
+.chart-container {
+  width:      100%     !important;
+  height:     360px    !important;
+  min-height: 360px    !important;
+  max-height: 360px    !important;
+  overflow:   hidden   !important;
+  display:    block    !important;
+  position:   relative !important;
+  contain:    strict   !important; /* KEY — casse le feedback loop */
+}
+
+.cp-chart {
+  width:      100%     !important;
+  height:     200px    !important; /* Réduit de 220 → 200px */
+  min-height: 200px    !important;
+  max-height: 200px    !important;
+  overflow:   hidden   !important;
+  display:    block    !important;
+  contain:    strict   !important;
+}
+
+.sdp-fp-chart {
+  width:      100%     !important;
+  height:     400px    !important;
+  min-height: 400px    !important;
+  max-height: 400px    !important;
+  overflow:   hidden   !important;
+  contain:    strict   !important;
+}
+
+/* Prevent overview-grid from stretching chart vertically */
+.overview-grid {
+  align-items: start !important;
+}
+
+.chart-main-card {
+  overflow:  hidden !important;
+  min-width: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FIX #5 — Réduction hauteurs graphiques non-overview
+══════════════════════════════════════════════════════════════ */
+#leverage-gauge       { max-height: 180px; }
+#drawdown-chart       { max-height: 120px; }
+#strategy-donut       { max-height: 220px; }
+#portfolio-donut      { max-height: 220px; }
+#strategy-perf-chart  { max-height: 150px; }
+#strategy-sharpe-chart{ max-height: 150px; }
+#exec-quality-chart   { max-height: 130px; }
+
+/* ══════════════════════════════════════════════════════════════
+   NOUVELLES SECTIONS DE GRAPHIQUES (#5 — pages plus pros)
+══════════════════════════════════════════════════════════════ */
+
+/* Conteneur générique pour canvases dynamiques */
+.chart-panel-sm {
+  width:         100%;
+  height:        160px;
+  min-height:    160px;
+  max-height:    160px;
+  overflow:      hidden;
+  display:       block;
+  position:      relative;
+  contain:       strict;
+  border-radius: var(--r-md);
+  background:    var(--surf2);
+  border:        1px solid var(--bord);
+}
+
+.chart-panel-md {
+  width:         100%;
+  height:        200px;
+  min-height:    200px;
+  max-height:    200px;
+  overflow:      hidden;
+  display:       block;
+  position:      relative;
+  contain:       strict;
+  border-radius: var(--r-md);
+  background:    var(--surf2);
+}
+
+/* Grid 3 colonnes pour métriques risk */
+.risk-metrics-grid {
+  display:   grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:       12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1024px) { .risk-metrics-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 768px)  { .risk-metrics-grid { grid-template-columns: 1fr; } }
+
+/* Metric card small */
+.metric-card-sm {
+  background:    var(--surf);
+  border:        1px solid var(--bord);
+  border-radius: var(--r-md);
+  padding:       12px 14px;
+  transition:    all var(--tr);
+}
+
+.metric-card-sm:hover { border-color: var(--b1); transform: translateY(-1px); box-shadow: var(--shad-sm); }
+
+.metric-card-sm .mc-lbl {
+  font-size:      10px;
+  font-weight:    700;
+  color:          var(--txt4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom:  4px;
+  display:        flex;
+  align-items:    center;
+  gap:            5px;
+}
+
+.metric-card-sm .mc-val {
+  font-size:   17px;
+  font-weight: 800;
+  font-family: var(--mono);
+  color:       var(--txt);
+  line-height: 1.2;
+}
+
+.metric-card-sm .mc-sub {
+  font-size:  10px;
+  color:      var(--txt4);
+  margin-top: 2px;
+}
+
+/* Signal distribution + regime prob sections */
+.signals-analytics-grid {
+  display:   grid;
+  grid-template-columns: 1fr 1fr;
+  gap:       14px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 1024px) { .signals-analytics-grid { grid-template-columns: 1fr; } }
+
+/* Feature importance section */
+.feature-importance-container {
+  width:         100%;
+  height:        280px;
+  min-height:    280px;
+  max-height:    280px;
+  overflow:      hidden;
+  contain:       strict;
+  position:      relative;
+}
+
+/* Rolling metrics section */
+.rolling-metrics-container {
+  width:         100%;
+  height:        160px;
+  min-height:    160px;
+  max-height:    160px;
+  overflow:      hidden;
+  contain:       strict;
+  position:      relative;
+}
+
+/* Sector exposure */
+.sector-exposure-container {
+  width:         100%;
+  height:        220px;
+  min-height:    220px;
+  max-height:    220px;
+  overflow:      hidden;
+  contain:       strict;
+  position:      relative;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GAUGE WRAP — hauteur réduite
+══════════════════════════════════════════════════════════════ */
+.gauge-wrap {
+  display:         flex;
+  justify-content: center;
+  align-items:     center;
+  padding:         4px 0;
+  height:          160px;    /* Réduit de auto */
+  overflow:        hidden;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — Chart containers mobile
+══════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .chart-container {
+    height:     280px !important;
+    min-height: 280px !important;
+    max-height: 280px !important;
+  }
+  .cp-chart {
+    height:     160px !important;
+    min-height: 160px !important;
+    max-height: 160px !important;
+  }
+  .signals-analytics-grid { grid-template-columns: 1fr; }
+  .risk-metrics-grid      { grid-template-columns: 1fr 1fr; }
+}

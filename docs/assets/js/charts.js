@@ -170,73 +170,102 @@ const Charts = (() => {
   // ════════════════════════════════════════════════════════
   function initPriceChart(containerId, options = {}) {
     const container = document.getElementById(containerId);
-    if (!container) { console.error(`❌ #${containerId} not found`); return null; }
-    if (typeof LightweightCharts === 'undefined') { console.error('❌ LightweightCharts not loaded'); return null; }
+    if (!container) {
+      console.error(`[Charts] #${containerId} not found`);
+      return null;
+    }
+    if (typeof LightweightCharts === 'undefined') {
+      console.error('[Charts] LightweightCharts not loaded — check CDN');
+      return null;
+    }
 
     const H = options.height || 360;
 
-    // ✅ FIX: Force height AVANT création du chart — évite le feedback loop
-    const _lockHeight = (el, h) => {
-      el.style.setProperty('height',    `${h}px`, 'important');
-      el.style.setProperty('min-height',`${h}px`, 'important');
-      el.style.setProperty('max-height',`${h}px`, 'important');
-      el.style.setProperty('overflow',  'hidden',  'important');
-      el.style.setProperty('display',   'block',   'important');
-      el.style.setProperty('position',  'relative','important');
+    // ✅ FIX #3 — contain:strict casse le feedback loop du ResizeObserver interne LWC
+    const _lockContainer = (el, h) => {
+      el.style.setProperty('height',     `${h}px`, 'important');
+      el.style.setProperty('min-height', `${h}px`, 'important');
+      el.style.setProperty('max-height', `${h}px`, 'important');
+      el.style.setProperty('overflow',   'hidden',  'important');
+      el.style.setProperty('display',    'block',   'important');
+      el.style.setProperty('position',   'relative','important');
+      el.style.setProperty('contain',    'strict',  'important'); // KEY: breaks resize loop
     };
 
-    _lockHeight(container, H);
+    _lockContainer(container, H);
 
     const v = _getLWCVersion();
-    console.log(`📊 LightweightCharts v${v} detected`);
+    console.log(`[Charts] LightweightCharts v${v} | #${containerId} | ${H}px`);
 
-    if (_mainChart) { try { _mainChart.remove(); } catch(e) {} _mainChart = null; }
+    if (_mainChart) {
+      try { _mainChart.remove(); } catch(e) {}
+      _mainChart = null; _mainCandle = null; _mainVolume = null;
+    }
+
+    // Disconnect previous observer
+    if (container._avRO) {
+      try { container._avRO.disconnect(); } catch(e) {}
+      delete container._avRO;
+    }
 
     try {
+      const isDark = _isDark();
+      const initW  = Math.max(container.getBoundingClientRect().width || 600, 300);
+
       _mainChart = LightweightCharts.createChart(container, {
-        width:  Math.max(container.clientWidth || 600, 300),
-        height: H,
+        width:  initW,
+        height: H,  // TOUJOURS explicite — jamais container.clientHeight
         layout: {
-          background:  { color: 'transparent' },
-          textColor:   _isDark() ? '#9db3d8' : '#3d4f7c',
-          fontSize:    11,
-          fontFamily:  "'Inter', sans-serif",
+          background: { color: 'transparent' },
+          textColor:  isDark ? '#9db3d8' : '#3d4f7c',
+          fontSize:   11,
+          fontFamily: "'Inter', sans-serif",
         },
         grid: {
-          vertLines: { color: _isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
-          horzLines: { color: _isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+          vertLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
+          horzLines: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' },
         },
         crosshair:       { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
-        rightPriceScale: { borderColor: 'rgba(128,128,128,0.15)', scaleMargins: { top: 0.08, bottom: 0.28 } },
-        timeScale:       { borderColor: 'rgba(128,128,128,0.15)', timeVisible: true, secondsVisible: false },
+        rightPriceScale: {
+          borderColor:  'rgba(128,128,128,0.15)',
+          scaleMargins: { top: 0.08, bottom: 0.28 },
+        },
+        timeScale: {
+          borderColor:    'rgba(128,128,128,0.15)',
+          timeVisible:    true,
+          secondsVisible: false,
+        },
       });
 
       _mainCandle = _addCandleSeries(_mainChart);
       _mainVolume = _addHistoSeries(_mainChart);
-
       try { _mainChart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } }); } catch(e) {}
 
-      // ✅ FIX: window.resize UNIQUEMENT (pas ResizeObserver → évite feedback)
-      if (!window._avChartResizeHandler) {
-        window._avChartResizeHandler = _debounce(() => {
-          if (_mainChart && container.isConnected) {
-            _lockHeight(container, H);  // re-lock height
-            const w = container.clientWidth;
-            if (w > 0) _mainChart.applyOptions({ width: w });
+      // ✅ ResizeObserver — WIDTH uniquement, jamais de lecture de hauteur
+      if (typeof ResizeObserver !== 'undefined') {
+        let _lastW = 0;
+        container._avRO = new ResizeObserver(entries => {
+          if (!_mainChart || !entries[0]) return;
+          const newW = Math.floor(entries[0].contentRect.width);
+          if (newW > 50 && newW !== _lastW) {
+            _lastW = newW;
+            _lockContainer(container, H);  // re-verrou hauteur à chaque resize
+            try { _mainChart.applyOptions({ width: newW }); } catch(e) {}
           }
-        }, 120);
-        window.addEventListener('resize', window._avChartResizeHandler);
+        });
+        container._avRO.observe(container);
       }
 
-      // ✅ FIX: Re-lock height après 100ms (LWC peut modifier le container)
-      setTimeout(() => _lockHeight(container, H), 100);
-      setTimeout(() => _lockHeight(container, H), 500);
+      // Re-lock après que LWC ait potentiellement modifié le container
+      setTimeout(() => _lockContainer(container, H), 80);
+      setTimeout(() => _lockContainer(container, H), 400);
+      setTimeout(() => _lockContainer(container, H), 1000);
 
-      console.log('✅ Main price chart initialized');
+      console.log('[Charts] Main price chart initialized successfully');
       return { chart: _mainChart, candleSeries: _mainCandle };
 
     } catch(err) {
-      console.error('❌ initPriceChart:', err);
+      console.error('[Charts] initPriceChart error:', err);
       return null;
     }
   }
@@ -344,62 +373,86 @@ const Charts = (() => {
   // PANEL CHARTS (4-grid section)
   // ════════════════════════════════════════════════════════
   function initPanelChart(panelIdx, containerId) {
-    if (_panels[panelIdx]?.chart) return _panels[panelIdx];
+    // Destroy existing
+    if (_panels[panelIdx]?.chart) {
+      try { _panels[panelIdx].chart.remove(); } catch(e) {}
+      delete _panels[panelIdx];
+    }
 
     const container = document.getElementById(containerId);
     if (!container || typeof LightweightCharts === 'undefined') return null;
 
-    const H = 220;
+    const H = 200; // ✅ Réduit de 220 → 200px
 
-    // ✅ FIX: Lock height avant création
-    container.style.setProperty('height',    `${H}px`, 'important');
-    container.style.setProperty('min-height',`${H}px`, 'important');
-    container.style.setProperty('max-height',`${H}px`, 'important');
-    container.style.setProperty('overflow',  'hidden',  'important');
+    // Lock container
+    const _lock = (el, h) => {
+      el.style.setProperty('height',     `${h}px`, 'important');
+      el.style.setProperty('min-height', `${h}px`, 'important');
+      el.style.setProperty('max-height', `${h}px`, 'important');
+      el.style.setProperty('overflow',   'hidden',  'important');
+      el.style.setProperty('contain',    'strict',  'important');
+      el.style.setProperty('display',    'block',   'important');
+    };
+
+    _lock(container, H);
+
+    // Disconnect previous observer
+    if (container._avRO) {
+      try { container._avRO.disconnect(); } catch(e) {}
+      delete container._avRO;
+    }
 
     try {
+      const isDark = _isDark();
+      const initW  = Math.max(container.getBoundingClientRect().width || 300, 200);
+
       const chart = LightweightCharts.createChart(container, {
-        width:  Math.max(container.clientWidth || 300, 200),
+        width:  initW,
         height: H,
         layout: {
           background: { color: 'transparent' },
-          textColor:  _isDark() ? '#9db3d8' : '#3d4f7c',
+          textColor:  isDark ? '#9db3d8' : '#3d4f7c',
           fontSize:   10,
           fontFamily: "'Inter', sans-serif",
         },
         grid: {
-          vertLines: { color: _isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
-          horzLines: { color: _isDark() ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+          vertLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
+          horzLines: { color: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)' },
         },
         timeScale:       { borderColor: 'rgba(128,128,128,0.12)', timeVisible: true },
-        rightPriceScale: { borderColor: 'rgba(128,128,128,0.12)', scaleMargins: { top: 0.1, bottom: 0.15 } },
+        rightPriceScale: {
+          borderColor:  'rgba(128,128,128,0.12)',
+          scaleMargins: { top: 0.10, bottom: 0.15 },
+        },
       });
 
       const series    = _addCandleSeries(chart);
       const volSeries = _addHistoSeries(chart);
       try { chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } }); } catch(e) {}
 
-      // ✅ FIX: Resize via window uniquement
-      window.addEventListener('resize', _debounce(() => {
-        if (chart && container.isConnected) {
-          container.style.setProperty('height',    `${H}px`, 'important');
-          container.style.setProperty('max-height',`${H}px`, 'important');
-          const w = container.clientWidth;
-          if (w > 0) chart.applyOptions({ width: w });
-        }
-      }, 180));
+      // Width-only ResizeObserver
+      if (typeof ResizeObserver !== 'undefined') {
+        let _lw = 0;
+        container._avRO = new ResizeObserver(entries => {
+          if (!chart || !entries[0]) return;
+          const newW = Math.floor(entries[0].contentRect.width);
+          if (newW > 50 && newW !== _lw) {
+            _lw = newW;
+            _lock(container, H);
+            try { chart.applyOptions({ width: newW }); } catch(e) {}
+          }
+        });
+        container._avRO.observe(container);
+      }
 
-      // Re-lock après creation
-      setTimeout(() => {
-        container.style.setProperty('height',    `${H}px`, 'important');
-        container.style.setProperty('max-height',`${H}px`, 'important');
-      }, 200);
+      setTimeout(() => _lock(container, H), 80);
+      setTimeout(() => _lock(container, H), 500);
 
       _panels[panelIdx] = { chart, series, volSeries };
       return _panels[panelIdx];
 
     } catch(err) {
-      console.warn(`❌ Panel chart ${panelIdx}:`, err);
+      console.warn(`[Charts] Panel chart ${panelIdx} error:`, err);
       return null;
     }
   }
@@ -678,37 +731,34 @@ const Charts = (() => {
         }],
       },
       options: {
-        responsive:  true,
-        cutout:      '78%',
-        animation:   { duration: 600, easing: 'easeOutQuart' },
-        plugins: {
-          legend:  { display: false },
-          tooltip: { enabled: false },
-        },
+        responsive:          true,
+        maintainAspectRatio: true,
+        cutout: '80%',
+        animation: { duration: 600, easing: 'easeOutQuart' },
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
       },
       plugins: [{
         id: 'gaugeCenter',
         afterDraw(chart) {
           const { ctx, chartArea: { left, top, width, height } } = chart;
-          const cx = left + width  / 2;
-          const cy = top  + height / 2 + 16;
+          const cx = left + width / 2;
+          const cy = top  + height / 2 + 14;
           ctx.save();
-          ctx.fillStyle   = color;
-          ctx.font        = `bold 24px Inter, sans-serif`;
-          ctx.textAlign   = 'center';
+          ctx.fillStyle    = color;
+          ctx.font         = `bold 20px Inter, sans-serif`;
+          ctx.textAlign    = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(`${cur}x`, cx, cy);
-          ctx.fillStyle   = C.text();
-          ctx.font        = `11px Inter, sans-serif`;
-          ctx.fillText(`/ ${mx}x max`, cx, cy + 20);
+          ctx.fillStyle = C.text();
+          ctx.font      = `10px Inter, sans-serif`;
+          ctx.fillText(`max ${mx}x`, cx, cy + 17);
           ctx.restore();
         },
       }],
     });
 
-    // Update labels
-    _txt('lever-current-label', `Current: ${cur}x`);
-    _txt('lever-max-label',     `Max: ${mx}x`);
+    _txt('lever-current-label', `${cur}x`);
+    _txt('lever-max-label',     `${mx}x`);
   }
 
   // ════════════════════════════════════════════════════════
@@ -720,9 +770,9 @@ const Charts = (() => {
 
     const now   = new Date();
     const label = `${_pad(now.getHours())}:${_pad(now.getMinutes())}`;
-    const pct   = (currentDD * 100);
+    const pct   = currentDD * 100;
 
-    _ddHistory.push({ x: label, y: pct.toFixed(3) });
+    _ddHistory.push({ x: label, y: +pct.toFixed(3) });
     if (_ddHistory.length > DD_MAX) _ddHistory.shift();
 
     _destroyCJ('drawdown-chart');
@@ -738,29 +788,38 @@ const Charts = (() => {
           label:            'Drawdown (%)',
           data:             _ddHistory.map(d => d.y),
           borderColor:      color,
-          backgroundColor:  color + '20',
-          borderWidth:      2,
+          backgroundColor:  color + '1a',
+          borderWidth:      1.5,
           fill:             true,
           tension:          0.4,
           pointRadius:      0,
-          pointHoverRadius: 4,
+          pointHoverRadius: 3,
         }],
       },
       options: {
-        ..._baseOpts({
-          animation: { duration: 300 },
-          plugins:   { legend: { display: false } },
-          scales: {
-            x: {
-              ticks: { color: C.text(), maxTicksLimit: 10, maxRotation: 0, font: { size: 10 } },
-              grid:  { color: C.grid() },
-            },
-            y: {
-              ticks: { color: C.text(), callback: v => v + '%', font: { size: 10 } },
-              grid:  { color: C.grid() },
-            },
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           { duration: 200 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: { label: ctx => ` DD: ${parseFloat(ctx.parsed.y).toFixed(3)}%` },
           },
-        }),
+        },
+        scales: {
+          x: {
+            ticks: { color: C.text(), maxTicksLimit: 8, maxRotation: 0, font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+          y: {
+            ticks: { color: C.text(), callback: v => v + '%', font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+        },
       },
     });
   }
@@ -915,6 +974,352 @@ const Charts = (() => {
   function getCJ(id) { return _cj[id] || null; }
 
   // ════════════════════════════════════════════════════════
+  // SIGNAL SCORE DISTRIBUTION (histogram)
+  // Pour la section Signals
+  // ════════════════════════════════════════════════════════
+  function renderSignalDistribution(canvasId, signals = {}) {
+    const c = _ctx(canvasId);
+    if (!c || typeof Chart === 'undefined') return;
+    _destroyCJ(canvasId);
+
+    const scores = Object.values(signals)
+      .map(s => parseFloat(s.final_score || 0))
+      .filter(v => v > 0);
+
+    if (!scores.length) return;
+
+    // Build histogram buckets [0.0, 0.1, ..., 1.0]
+    const buckets = Array.from({ length: 10 }, (_, i) => ({
+      label: `${(i * 0.10).toFixed(1)}–${((i + 1) * 0.10).toFixed(1)}`,
+      count: 0,
+    }));
+    scores.forEach(s => {
+      const idx = Math.min(Math.floor(s * 10), 9);
+      buckets[idx].count++;
+    });
+
+    const bgs = buckets.map((_, i) => {
+      const v = i / 9;
+      return v > 0.6 ? C.green : v > 0.35 ? C.yellow : C.gray;
+    });
+
+    _cj[canvasId] = new Chart(c, {
+      type: 'bar',
+      data: {
+        labels:   buckets.map(b => b.label),
+        datasets: [{
+          label:           'Signals',
+          data:            buckets.map(b => b.count),
+          backgroundColor: bgs.map(b => b + 'aa'),
+          borderColor:     bgs,
+          borderWidth:     1,
+          borderRadius:    4,
+        }],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: { label: ctx => ` ${ctx.parsed.y} signal(s)` },
+          },
+        },
+        scales: {
+          x: { ticks: { color: C.text(), font: { size: 9 } },  grid: { color: C.grid() } },
+          y: { ticks: { color: C.text(), font: { size: 10 }, stepSize: 1 }, grid: { color: C.grid() }, beginAtZero: true },
+        },
+      },
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // REGIME PROBABILITY BAR (horizontal)
+  // ════════════════════════════════════════════════════════
+  function renderRegimeProbabilities(canvasId, probs = {}) {
+    const c = _ctx(canvasId);
+    if (!c || typeof Chart === 'undefined') return;
+    _destroyCJ(canvasId);
+
+    const DEFAULTS = {
+      trend_up:         0.40, trend_down:       0.10,
+      range_bound:      0.15, low_volatility:   0.10,
+      high_volatility:  0.10, crash:            0.05,
+      macro_tightening: 0.05, macro_easing:     0.05,
+    };
+    const src    = Object.keys(probs).length ? probs : DEFAULTS;
+    const labels = Object.keys(src).map(k => k.replace(/_/g, ' '));
+    const data   = Object.values(src).map(v => +(parseFloat(v) * 100).toFixed(1));
+    const COLOR_MAP = {
+      trend_up:'#10b981', trend_down:'#ef4444', range_bound:'#64748b',
+      low_volatility:'#06b6d4', high_volatility:'#f59e0b', crash:'#dc2626',
+      macro_tightening:'#f97316', macro_easing:'#8b5cf6',
+    };
+    const bgs = Object.keys(src).map(k => COLOR_MAP[k] || C.blue);
+
+    _cj[canvasId] = new Chart(c, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label:           'Probability (%)',
+          data,
+          backgroundColor: bgs.map(b => b + '99'),
+          borderColor:     bgs,
+          borderWidth:     1,
+          borderRadius:    4,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive:          true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(1)}%` },
+          },
+        },
+        scales: {
+          x: {
+            min: 0, max: 100,
+            ticks: { color: C.text(), callback: v => v + '%', font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+          y: { ticks: { color: C.text(), font: { size: 10 } }, grid: { color: C.grid() } },
+        },
+      },
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ROLLING METRICS LINE CHART (Sharpe, Win Rate, etc.)
+  // ════════════════════════════════════════════════════════
+  function renderRollingMetrics(canvasId, historyData = []) {
+    const c = _ctx(canvasId);
+    if (!c || typeof Chart === 'undefined') return;
+    _destroyCJ(canvasId);
+
+    // If no real data, generate placeholder
+    const n    = 30;
+    const data = historyData.length ? historyData : Array.from({ length: n }, (_, i) => ({
+      label:  `T-${n - i}`,
+      sharpe: parseFloat((Math.random() * 2 - 0.2).toFixed(3)),
+      winrate: parseFloat((0.45 + Math.random() * 0.2).toFixed(3)),
+    }));
+
+    _cj[canvasId] = new Chart(c, {
+      type: 'line',
+      data: {
+        labels: data.map(d => d.label),
+        datasets: [
+          {
+            label:           'Rolling Sharpe',
+            data:            data.map(d => d.sharpe),
+            borderColor:     C.blue,
+            backgroundColor: C.blue + '18',
+            borderWidth:     2,
+            fill:            false,
+            tension:         0.4,
+            pointRadius:     0,
+            yAxisID:         'y',
+          },
+          {
+            label:           'Win Rate',
+            data:            data.map(d => +(d.winrate * 100).toFixed(1)),
+            borderColor:     C.green,
+            backgroundColor: C.green + '18',
+            borderWidth:     2,
+            fill:            false,
+            tension:         0.4,
+            pointRadius:     0,
+            yAxisID:         'y1',
+            borderDash:      [4, 2],
+          },
+        ],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           { duration: 300 },
+        interaction:         { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: { color: C.text(), font: { size: 11 }, padding: 10 },
+          },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+          },
+        },
+        scales: {
+          x:  { ticks: { color: C.text(), maxTicksLimit: 10, font: { size: 10 } }, grid: { color: C.grid() } },
+          y:  {
+            type: 'linear', position: 'left',
+            title: { display: true, text: 'Sharpe', color: C.text(), font: { size: 10 } },
+            ticks: { color: C.blue, font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+          y1: {
+            type: 'linear', position: 'right',
+            title: { display: true, text: 'Win Rate %', color: C.text(), font: { size: 10 } },
+            ticks: { color: C.green, callback: v => v + '%', font: { size: 10 } },
+            grid:  { drawOnChartArea: false },
+            min:   0, max: 100,
+          },
+        },
+      },
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // SECTOR EXPOSURE CHART (horizontal bar)
+  // ════════════════════════════════════════════════════════
+  function renderSectorExposure(canvasId, weights = {}, symbolMeta = {}) {
+    const c = _ctx(canvasId);
+    if (!c || typeof Chart === 'undefined') return;
+    _destroyCJ(canvasId);
+
+    // Aggregate weights by sector
+    const sectorMap = {};
+    Object.entries(weights).forEach(([sym, w]) => {
+      const sector = symbolMeta[sym]?.sector || 'Other';
+      sectorMap[sector] = (sectorMap[sector] || 0) + parseFloat(w || 0);
+    });
+
+    if (!Object.keys(sectorMap).length) {
+      sectorMap['Cash'] = 1.0;
+    }
+
+    const sorted  = Object.entries(sectorMap).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    const labels  = sorted.map(([k]) => k);
+    const data    = sorted.map(([, v]) => +(v * 100).toFixed(2));
+
+    _cj[canvasId] = new Chart(c, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label:           'Exposure (%)',
+          data,
+          backgroundColor: PALETTE.slice(0, labels.length).map(b => b + 'bb'),
+          borderColor:     PALETTE.slice(0, labels.length),
+          borderWidth:     1,
+          borderRadius:    4,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive:          true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(2)}%` },
+          },
+        },
+        scales: {
+          x: {
+            min: 0,
+            ticks: { color: C.text(), callback: v => v + '%', font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+          y: { ticks: { color: C.text(), font: { size: 10 } }, grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // FEATURE IMPORTANCE (for ML transparency)
+  // ════════════════════════════════════════════════════════
+  function renderFeatureImportance(canvasId, features = {}, signals = {}) {
+    const c = _ctx(canvasId);
+    if (!c || typeof Chart === 'undefined') return;
+    _destroyCJ(canvasId);
+
+    // Aggregate feature absolute values across all signals
+    const aggr = {};
+    Object.values(signals).forEach(sig => {
+      if (!sig.features) return;
+      Object.entries(sig.features).forEach(([k, v]) => {
+        aggr[k] = (aggr[k] || 0) + Math.abs(parseFloat(v) || 0);
+      });
+    });
+
+    // Default features if no real data
+    if (!Object.keys(aggr).length) {
+      Object.assign(aggr, {
+        momentum_20d: 0.72, rsi_norm: 0.65, ema_50_slope: 0.61,
+        macd_hist: 0.58, hurst_exponent: 0.55, rvol_21d: 0.51,
+        vwap_deviation: 0.48, sentiment_score: 0.44, atr_pct_rank: 0.41,
+        variance_ratio: 0.38,
+      });
+    }
+
+    const sorted = Object.entries(aggr)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12);
+    const labels = sorted.map(([k]) => k.replace(/_/g, ' '));
+    const data   = sorted.map(([, v]) => +parseFloat(v).toFixed(4));
+    const max    = Math.max(...data) || 1;
+    const norm   = data.map(v => +(v / max * 100).toFixed(1));
+    const bgs    = norm.map(v => v > 70 ? C.blue : v > 40 ? C.purple : C.gray);
+
+    _cj[canvasId] = new Chart(c, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label:           'Importance (normalized)',
+          data:            norm,
+          backgroundColor: bgs.map(b => b + 'aa'),
+          borderColor:     bgs,
+          borderWidth:     1,
+          borderRadius:    4,
+        }],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive:          true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: _isDark() ? '#0d1530' : '#fff',
+            bodyColor:       C.text(),
+            borderColor:     _isDark() ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: { label: ctx => ` ${ctx.parsed.x.toFixed(1)}% relative importance` },
+          },
+        },
+        scales: {
+          x: {
+            min: 0, max: 100,
+            ticks: { color: C.text(), callback: v => v + '%', font: { size: 10 } },
+            grid:  { color: C.grid() },
+          },
+          y: { ticks: { color: C.text(), font: { size: 9 } }, grid: { display: false } },
+        },
+      },
+    });
+  }
+
+  // ════════════════════════════════════════════════════════
   // PUBLIC API
   // ════════════════════════════════════════════════════════
   return {
@@ -924,19 +1329,19 @@ const Charts = (() => {
     setMarkers,
     destroyMainChart,
     refreshChartTheme,
-    getMainChart:   () => _mainChart,
+    getMainChart:    () => _mainChart,
     getCandleSeries: () => _mainCandle,
 
     // ── Panel Charts ──
     initPanelChart,
     updatePanelChart,
     destroyPanelChart,
-    getPanels:      () => _panels,
+    getPanels:       () => _panels,
 
     // ── Sparklines ──
     renderSparkline,
 
-    // ── Chart.js ──
+    // ── Chart.js — Existing ──
     renderPortfolioDonut,
     renderStrategyDonut,
     renderStrategyDonutMini,
@@ -946,11 +1351,18 @@ const Charts = (() => {
     renderStrategySharpe,
     renderExecQuality,
 
+    // ── Chart.js — New ──
+    renderSignalDistribution,
+    renderRegimeProbabilities,
+    renderRollingMetrics,
+    renderSectorExposure,
+    renderFeatureImportance,
+
     // ── Utils ──
     destroyAllCJ,
     getCJ,
-    parseCandles:   _parseCandles,
-    isDark:         _isDark,
+    parseCandles: _parseCandles,
+    isDark:       _isDark,
   };
 
 })();

@@ -75,19 +75,20 @@ const Terminal = (() => {
     _restorePAT();
     _startClock();
     _bindEvents();
-    _togglePriceFields(); // init price field visibility
+    _togglePriceFields();
+
+    // ✅ FIX #1 — Init watchlist APRÈS que le DOM soit prêt
+    WatchlistManager.init();
 
     // First data load
     await _refresh();
-
-    // Init main chart after first data
     await _loadMainChart();
 
-    // Start auto-refresh
+    // Auto-refresh every 60s
     _refreshTimer = setInterval(_refresh, REFRESH_MS);
 
-    console.log('✅ Terminal initialized | Auto-refresh: 60s');
-  }
+    console.log('[AlphaVault] Terminal initialized | Auto-refresh: 60s');
+    }
 
   // ── Bind ALL event listeners (no inline handlers) ────────
   function _bindEvents() {
@@ -166,8 +167,6 @@ const Terminal = (() => {
     _on('gh-pat','input', e => _savePAT(e.target.value));
   }
 
-  WatchlistManager.init();
-
   // ── One-liner event helper ───────────────────────────────
   function _on(id, event, fn) {
     const el = document.getElementById(id);
@@ -219,43 +218,109 @@ const Terminal = (() => {
     const regime = data.regime?.global || {};
     const rl     = regime.regime_label || 'initializing';
 
+    // ════════════════════════════════════════════════════
+    // DEBUG LOGS — #4 Status indicators explanation
+    // ════════════════════════════════════════════════════
+    console.groupCollapsed('%c[AlphaVault] Status Debug', 'color:#3b82f6;font-weight:bold;font-size:11px');
+
+    // LLM
+    const llmAvail = status.llm_available;
+    console.log(
+        `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
+        `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
+    );
+    if (!llmAvail) {
+        console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
+        console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
+        console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
+    }
+
+    // Hub
+    const hubOk = !!(status.workers?.finance_hub);
+    console.log(
+        `%c HUB: ${hubOk ? 'ONLINE' : 'OFFLINE'} → dot ${hubOk ? 'GREEN' : 'ORANGE'}`,
+        `color:${hubOk ? '#10b981' : '#f59e0b'};font-weight:bold`
+    );
+    if (!hubOk) {
+        console.warn(' → Worker finance-hub-api non joignable depuis GitHub Actions');
+        console.log(' → URL configurée:', status.workers?.finance_hub_url || 'N/A');
+    }
+
+    // IBKR
+    console.log('%c IBKR: ALWAYS ORANGE in cloud (expected)', 'color:#f59e0b;font-weight:bold');
+    console.log('%c → GitHub Actions ne peut pas atteindre TWS Gateway (firewall). Normal en paper mode cloud.', 'color:#94a3b8');
+    console.log('%c → L\'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=', status.dry_run, 'color:#94a3b8');
+
+    // SYS
+    const overall = status.overall;
+    console.log(
+        `%c SYS: ${overall || 'unknown'} → dot ${overall === 'healthy' ? 'GREEN' : overall === 'degraded' ? 'ORANGE' : 'RED'}`,
+        `color:${overall === 'healthy' ? '#10b981' : overall === 'degraded' ? '#f59e0b' : '#ef4444'};font-weight:bold`
+    );
+    if (overall !== 'healthy') {
+        console.warn(' → Vérifier: docs/signals/system_status.json');
+        console.log(' Workers:', JSON.stringify(status.workers, null, 2));
+    }
+
+    console.log(`%c Mode: ${status.mode || 'deterministic'}`, 'color:#8b5cf6');
+    console.log(`%c Session: ${status.session || 'closed'} | DryRun: ${status.dry_run}`, 'color:#64748b');
+    console.log(' Full status:', status);
+    console.groupEnd();
+
+    // ════════════════════════════════════════════════════
+    // DOM UPDATES
+    // ════════════════════════════════════════════════════
+
     // Regime pill
     const badge = document.getElementById('regime-badge');
     if (badge) {
-      badge.innerHTML = `<i class="fa-solid ${REGIME_ICON[rl]||'fa-question'}" style="margin-right:5px"></i>${REGIME_MAP[rl]||rl.replace(/_/g,' ').toUpperCase()}`;
-      badge.style.borderColor = REGIME_COLOR[rl] || '#64748b';
-      badge.style.color       = REGIME_COLOR[rl] || '#64748b';
+        badge.innerHTML = `<i class="fa-solid ${REGIME_ICON[rl] || 'fa-question'}" style="margin-right:5px"></i>${REGIME_MAP[rl] || rl.replace(/_/g,' ').toUpperCase()}`;
+        badge.style.borderColor = REGIME_COLOR[rl] || '#64748b';
+        badge.style.color       = REGIME_COLOR[rl] || '#64748b';
     }
 
     // Status dots
-    _setDot('llm',  status.llm_available ? 'ok' : 'error');
-    _setDot('hub',  status.workers?.finance_hub ? 'ok' : 'warn');
-    _setDot('ibkr', 'warn');  // Always paper in cloud
-    _setDot('sys',  status.overall === 'healthy' ? 'ok'
-                  : status.overall === 'degraded' ? 'warn' : 'error');
+    _setDot('llm',  llmAvail ? 'ok' : 'error');
+    _setDot('hub',  hubOk    ? 'ok' : 'warn');
+    _setDot('ibkr', 'warn');   // Always paper/unreachable in cloud — expected
+    _setDot('sys',
+        overall === 'healthy'  ? 'ok'   :
+        overall === 'degraded' ? 'warn' : 'error'
+    );
+
+    // Tooltips dynamiques
+    const pillLLM  = document.getElementById('pill-llm');
+    const pillIBKR = document.getElementById('pill-ibkr');
+    const pillSys  = document.getElementById('pill-sys');
+
+    if (pillLLM)  pillLLM.title  = llmAvail
+        ? 'LLM Online — Gemini active'
+        : 'LLM Offline — Deterministic ML mode active (see console for details)';
+    if (pillIBKR) pillIBKR.title = 'IBKR Paper Mode — TWS unreachable from GitHub Actions (expected in cloud)';
+    if (pillSys)  pillSys.title  = `System: ${overall || 'unknown'} | Mode: ${status.mode || 'deterministic'}`;
 
     // Session badge
     const sess   = status.session || 'closed';
     const sessEl = document.getElementById('session-badge');
     if (sessEl) {
-      sessEl.textContent = sess.toUpperCase();
-      sessEl.className   = `market-session ${sess}`;
+        sessEl.textContent = sess.toUpperCase();
+        sessEl.className   = `market-session ${sess}`;
     }
 
     // Dry run badge
     const drEl = document.getElementById('dry-run-badge');
     if (drEl) {
-      drEl.textContent = status.dry_run === false ? 'LIVE' : 'PAPER';
-      drEl.className   = status.dry_run === false ? 'dry-run-badge live' : 'dry-run-badge';
+        drEl.textContent = status.dry_run === false ? 'LIVE' : 'PAPER';
+        drEl.className   = status.dry_run === false ? 'dry-run-badge live' : 'dry-run-badge';
     }
 
     // Sidebar session
     const swSess = document.getElementById('sw-session');
     if (swSess) {
-      swSess.textContent = sess.toUpperCase();
-      swSess.className   = `sw-session ${sess}`;
+        swSess.textContent = sess.toUpperCase();
+        swSess.className   = `sw-session ${sess}`;
     }
-  }
+    }
 
   function _setDot(key, state) {
     const dot  = document.getElementById(`dot-${key}`);
@@ -509,9 +574,15 @@ const Terminal = (() => {
     }
 
     // Health grid
-    _txt('hg-llm',  status.llm_available ? '✅ Available' : '⚙ Deterministic');
-    _txt('hg-ibkr', status.dry_run === false ? 'Live Paper' : '✅ Paper Sim');
-    _txt('hg-hub',  status.workers?.finance_hub ? '✅ Online' : '⚠ Offline');
+    _txt('hg-llm',  status.llm_available
+    ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Available'
+    : '<i class="fa-solid fa-gears"></i> Deterministic ML', true);
+    _txt('hg-ibkr', status.dry_run === false
+    ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Live Paper'
+    : '<i class="fa-solid fa-flask"></i> Paper Simulation', true);
+    _txt('hg-hub',  status.workers?.finance_hub
+    ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
+    : '<i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i> Offline', true);
 
     const ts = data.signals?.timestamp;
     _txt('hg-last', ts ? _fmtTime(ts) : '--');
@@ -873,15 +944,31 @@ const Terminal = (() => {
     const llmAvail = status.llm_available;
     const dot = document.getElementById('llm-main-dot');
     if (dot) dot.className = `llm-dot-big ${llmAvail ? 'ok' : 'error'}`;
-    _txt('llm-status-text', llmAvail ? '✅ LLM Available' : '❌ LLM Unavailable');
+
+    _txt('llm-status-text',
+    llmAvail
+        ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> LLM Available'
+        : '<i class="fa-solid fa-circle-xmark" style="color:var(--r)"></i> LLM Unavailable',
+    true
+    );
     _txt('llm-mode-text',
-      `Running: ${status.mode === 'llm' ? 'AI-Assisted Reasoning' : 'Deterministic Fallback (ML Ensemble)'}`);
+    `Running: ${status.mode === 'llm'
+        ? '<strong style="color:var(--b1)">AI-Assisted Reasoning</strong>'
+        : '<strong style="color:var(--y)">Deterministic Fallback — ML Ensemble (XGBoost + LightGBM + LogReg)</strong>'}`,
+    true
+    );
+
     const fbEl = document.getElementById('llm-fallback-info');
     if (fbEl) {
-      fbEl.style.display = llmAvail ? 'none' : 'block';
-      fbEl.innerHTML     = llmAvail ? '' :
-        '<i class="fa-solid fa-triangle-exclamation"></i> LLM rate limited (429). ' +
-        'System fully operational in deterministic mode — ML ensemble + regime detection active.';
+    fbEl.style.display = llmAvail ? 'none' : 'block';
+    fbEl.innerHTML     = llmAvail ? '' : `
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        <strong>Gemini quota exceeded (HTTP 429)</strong> — System fully operational in deterministic mode.<br>
+        ML ensemble + regime detection active. All signals generated normally.<br>
+        <span style="font-size:10px;color:var(--txt4)">
+        To restore LLM: wait for quota reset or upgrade Gemini plan.
+        Python backend continues generating signals regardless.
+        </span>`;
     }
   }
 
@@ -1362,8 +1449,8 @@ const Terminal = (() => {
     const el = document.getElementById(id);
     if (!el) return;
     if (html) el.innerHTML = val;
-    else el.textContent    = val;
-  }
+    else      el.textContent = val;
+    }
 
   function _fmtTime(ts) {
     if (!ts) return '--';
@@ -1373,13 +1460,70 @@ const Terminal = (() => {
   function _pad(n) { return String(n).padStart(2, '0'); }
 
   function _startClock() {
+    // ── Exchange schedules (UTC hours) ─────────────────────
+    const EXCHANGES = [
+        { id:'nyse',     name:'NYSE',      tz:'America/New_York',  open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
+        { id:'nasdaq',   name:'NASDAQ',    tz:'America/New_York',  open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
+        { id:'lse',      name:'LSE',       tz:'Europe/London',     open:[8,0],   close:[16,30], days:[1,2,3,4,5] },
+        { id:'euronext', name:'Euronext',  tz:'Europe/Paris',      open:[9,0],   close:[17,30], days:[1,2,3,4,5] },
+        { id:'tse',      name:'TSE',       tz:'Asia/Tokyo',        open:[9,0],   close:[15,30], days:[1,2,3,4,5] },
+        { id:'hkex',     name:'HKEX',      tz:'Asia/Hong_Kong',    open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
+    ];
+
+    function _isOpen(ex) {
+        try {
+        const now   = new Date();
+        const parts = new Intl.DateTimeFormat('en-US', {
+            hour:'numeric', minute:'numeric', weekday:'short',
+            hour12:false, timeZone: ex.tz,
+        }).formatToParts(now);
+        const get = (t) => parseInt(parts.find(p => p.type === t)?.value || '0');
+        const DAY_MAP = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+        const wdStr   = parts.find(p => p.type === 'weekday')?.value || 'Sun';
+        const weekday = DAY_MAP[wdStr] ?? 0;
+        const timeDec = get('hour') + get('minute') / 60;
+        const openDec = ex.open[0]  + ex.open[1]  / 60;
+        const closDec = ex.close[0] + ex.close[1] / 60;
+        return ex.days.includes(weekday) && timeDec >= openDec && timeDec < closDec;
+        } catch(e) { return false; }
+    }
+
+    function _getLocalTime(tz) {
+        return new Intl.DateTimeFormat('en-GB', {
+        hour:'2-digit', minute:'2-digit', second:'2-digit',
+        hour12:false, timeZone: tz,
+        }).format(new Date());
+    }
+
     const update = () => {
-      const n = new Date();
-      _txt('clock', `${_pad(n.getUTCHours())}:${_pad(n.getUTCMinutes())}:${_pad(n.getUTCSeconds())} UTC`);
+        const n = new Date();
+
+        // ── UTC Clock ──────────────────────────────────────
+        _txt('clock', `${_pad(n.getUTCHours())}:${_pad(n.getUTCMinutes())}:${_pad(n.getUTCSeconds())} UTC`);
+
+        // ── Paris Time ─────────────────────────────────────
+        const parisEl = document.getElementById('clock-paris');
+        if (parisEl) {
+        parisEl.textContent = `${_getLocalTime('Europe/Paris')} Paris`;
+        }
+
+        // ── Exchange Status Bar ────────────────────────────
+        const exchEl = document.getElementById('exchange-status-bar');
+        if (exchEl) {
+        exchEl.innerHTML = EXCHANGES.map(ex => {
+            const open = _isOpen(ex);
+            return `<span class="exch-pill ${open ? 'exch-open' : 'exch-closed'}"
+                        title="${ex.name} — ${_getLocalTime(ex.tz)}">
+            <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i>
+            ${ex.name}
+            </span>`;
+        }).join('');
+        }
     };
+
     update();
     setInterval(update, 1000);
-  }
+    }
 
   function _savePAT(val) {
     const clean = (val || '').trim();
