@@ -663,12 +663,22 @@ const Dashboard = (() => {
     el('last-update', `Updated ${new Date().toLocaleTimeString()}`);
   }
 
-  // ── Auto-init ─────────────────────────────────────────
-  document.addEventListener('DOMContentLoaded', init);
+  // ════════════════════════════════════════════════════════
+    // ── Auto-init ─────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', init);
 
-  return { showSection, forceRefresh, filterSignals, loadChart };
+    // ✅ CORRECTION : isReady ajouté, window.Dashboard DANS le return
+    return {
+        showSection,
+        forceRefresh,
+        filterSignals,
+        loadChart,
+        isReady: () => true      // ← FIX "Dashboard.isReady is not a function"
+    };
+
+    })(); // ← fin IIFE
+
+    // ✅ CORRECTION : window.Dashboard assigné ICI (après IIFE, pas dedans)
     window.Dashboard = Dashboard;
 
     console.log('✅ Dashboard controller loaded');
-    console.log('📡 API Base:', ApiClient.getBase());
-})();
