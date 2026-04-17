@@ -1,13 +1,728 @@
 {
-  "timestamp": "2025-01-01T00:00:00Z",
+  "timestamp": "2026-04-17T17:23:35.250880Z",
   "global": {
-    "regime_label": "initializing",
-    "regime_score": 0.0,
-    "confidence": 0.0,
-    "allow_long": false,
+    "regime": "trend_up",
+    "regime_label": "trend_up",
+    "probabilities": {
+      "trend_up": 0.52,
+      "trend_down": 0.0,
+      "range_bound": 0.16,
+      "low_volatility": 0.24,
+      "high_volatility": 0.0,
+      "crash": 0.0,
+      "macro_tightening": 0.08,
+      "macro_easing": 0.0
+    },
+    "confidence": 0.52,
+    "regime_score": 0.6,
+    "next_regime": "trend_up",
+    "signals": {
+      "technical": {
+        "trend_up_score": 0.857,
+        "trend_down_score": 0.0,
+        "range_score": 0.0,
+        "adx": 29.2,
+        "strong_trend": true,
+        "above_ema200": "True"
+      },
+      "volatility": {
+        "rvol_21d": 0.1867,
+        "rvol_pct_rank": 0.5,
+        "crash_score": 0.0,
+        "high_vol": 0.0,
+        "low_vol": 0.0
+      },
+      "macro": {
+        "tight_score": 0.0,
+        "ease_score": 0.0,
+        "risk_off_score": 0.0,
+        "yield_curve": 0.6380000114440918,
+        "fed_rate": null,
+        "vix": 17.399999618530273
+      },
+      "momentum": {
+        "mom_20d": 0.07973668922514551,
+        "mom_60d": 0.03940804047929598,
+        "mom_120d": 0.06364680208943839,
+        "momentum_aligned_up": true,
+        "momentum_aligned_down": false,
+        "momentum_divergent": false
+      }
+    },
+    "allow_long": true,
     "allow_short": false,
-    "reduce_exposure": true
+    "reduce_exposure": false,
+    "favor_options": false,
+    "leverage_allowed": false
   },
-  "macro": {},
-  "per_symbol": {}
+  "macro": {
+    "VIXCLS": 17.399999618530273,
+    "T10Y": 4.236000061035156,
+    "T3M": 3.5980000495910645,
+    "DTWEXBGS": 98.03399658203125,
+    "T10Y2Y": 0.6380000114440918,
+    "yield_curve_inverted": false
+  },
+  "per_symbol": {
+    "SPY": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.52,
+        "trend_down": 0.0,
+        "range_bound": 0.16,
+        "low_volatility": 0.24,
+        "high_volatility": 0.0,
+        "crash": 0.0,
+        "macro_tightening": 0.08,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.52,
+      "regime_score": 0.6,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 29.2,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.1867,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.07973668922514551,
+          "mom_60d": 0.03940804047929598,
+          "mom_120d": 0.06364680208943839,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "QQQ": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.351,
+        "trend_down": 0.0,
+        "range_bound": 0.108,
+        "low_volatility": 0.162,
+        "high_volatility": 0.324,
+        "crash": 0.0,
+        "macro_tightening": 0.054,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.351,
+      "regime_score": 0.308,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 31.5,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.2311,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.0,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.09417399609472739,
+          "mom_60d": 0.052877033236233016,
+          "mom_120d": 0.06407521369645637,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "IWM": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.368,
+        "trend_down": 0.0,
+        "range_bound": 0.105,
+        "low_volatility": 0.158,
+        "high_volatility": 0.316,
+        "crash": 0.0,
+        "macro_tightening": 0.053,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.368,
+      "regime_score": 0.326,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 1.0,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 24.1,
+          "strong_trend": false,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.239,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.0,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.11694863661123393,
+          "mom_60d": 0.03469887814875994,
+          "mom_120d": 0.12820055435964764,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "AAPL": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.332,
+        "trend_down": 0.026,
+        "range_bound": 0.131,
+        "low_volatility": 0.153,
+        "high_volatility": 0.307,
+        "crash": 0.0,
+        "macro_tightening": 0.051,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.332,
+      "regime_score": 0.273,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.143,
+          "range_score": 0.143,
+          "adx": 12.4,
+          "strong_trend": false,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.2224,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.0,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.08684117639523743,
+          "mom_60d": 0.09361264492762114,
+          "mom_120d": 0.04436298659498795,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "NVDA": {
+      "regime": "crash",
+      "regime_label": "crash",
+      "probabilities": {
+        "trend_up": 0.333,
+        "trend_down": 0.0,
+        "range_bound": 0.103,
+        "low_volatility": 0.154,
+        "high_volatility": 0.0,
+        "crash": 0.359,
+        "macro_tightening": 0.051,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.359,
+      "regime_score": 0.026,
+      "next_regime": "crash",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 29.2,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.3523,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 1.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.12046376601549054,
+          "mom_60d": 0.0914293277262659,
+          "mom_120d": 0.09844080374796206,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "MSFT": {
+      "regime": "high_volatility",
+      "regime_label": "high_volatility",
+      "probabilities": {
+        "trend_up": 0.102,
+        "trend_down": 0.152,
+        "range_bound": 0.203,
+        "low_volatility": 0.0,
+        "high_volatility": 0.305,
+        "crash": 0.187,
+        "macro_tightening": 0.051,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.305,
+      "regime_score": -0.309,
+      "next_regime": "high_volatility",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.571,
+          "trend_down_score": 0.429,
+          "range_score": 0.0,
+          "adx": 44.5,
+          "strong_trend": true,
+          "above_ema200": "False"
+        },
+        "volatility": {
+          "rvol_21d": 0.3026,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.526,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.09101074438119063,
+          "mom_60d": -0.04214331446026628,
+          "mom_120d": -0.1812857448299507,
+          "momentum_aligned_up": false,
+          "momentum_aligned_down": false,
+          "momentum_divergent": true
+        }
+      },
+      "allow_long": false,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "favor_options": true,
+      "leverage_allowed": false
+    },
+    "GOOGL": {
+      "regime": "crash",
+      "regime_label": "crash",
+      "probabilities": {
+        "trend_up": 0.333,
+        "trend_down": 0.0,
+        "range_bound": 0.103,
+        "low_volatility": 0.154,
+        "high_volatility": 0.0,
+        "crash": 0.359,
+        "macro_tightening": 0.051,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.359,
+      "regime_score": 0.026,
+      "next_regime": "crash",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 32.7,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.3667,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 1.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.1051997429261978,
+          "mom_60d": 0.034408102755127574,
+          "mom_120d": 0.3430580166451835,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "AMZN": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.35,
+        "trend_down": 0.0,
+        "range_bound": 0.1,
+        "low_volatility": 0.15,
+        "high_volatility": 0.0,
+        "crash": 0.35,
+        "macro_tightening": 0.05,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.35,
+      "regime_score": 0.05,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 1.0,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 32.0,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.3508,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 1.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.21594176574659052,
+          "mom_60d": 0.09740175097096589,
+          "mom_120d": 0.14812972338173255,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "META": {
+      "regime": "crash",
+      "regime_label": "crash",
+      "probabilities": {
+        "trend_up": 0.225,
+        "trend_down": 0.025,
+        "range_bound": 0.2,
+        "low_volatility": 0.15,
+        "high_volatility": 0.0,
+        "crash": 0.35,
+        "macro_tightening": 0.05,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.35,
+      "regime_score": -0.093,
+      "next_regime": "crash",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.143,
+          "range_score": 0.0,
+          "adx": 34.6,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.5152,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 1.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.1282016922643097,
+          "mom_60d": 0.11763572106684515,
+          "mom_120d": -0.06590635491563769,
+          "momentum_aligned_up": false,
+          "momentum_aligned_down": false,
+          "momentum_divergent": true
+        }
+      },
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "TSLA": {
+      "regime": "crash",
+      "regime_label": "crash",
+      "probabilities": {
+        "trend_up": 0.2,
+        "trend_down": 0.05,
+        "range_bound": 0.2,
+        "low_volatility": 0.15,
+        "high_volatility": 0.0,
+        "crash": 0.35,
+        "macro_tightening": 0.05,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.35,
+      "regime_score": -0.135,
+      "next_regime": "crash",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.714,
+          "trend_down_score": 0.286,
+          "range_score": 0.0,
+          "adx": 28.1,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.5087,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 1.0,
+          "high_vol": 0.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.05954538998384647,
+          "mom_60d": -0.06604603978121619,
+          "mom_120d": -0.10253220852359239,
+          "momentum_aligned_up": false,
+          "momentum_aligned_down": false,
+          "momentum_divergent": true
+        }
+      },
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "JPM": {
+      "regime": "trend_up",
+      "regime_label": "trend_up",
+      "probabilities": {
+        "trend_up": 0.351,
+        "trend_down": 0.0,
+        "range_bound": 0.108,
+        "low_volatility": 0.162,
+        "high_volatility": 0.324,
+        "crash": 0.0,
+        "macro_tightening": 0.054,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.351,
+      "regime_score": 0.308,
+      "next_regime": "trend_up",
+      "signals": {
+        "technical": {
+          "trend_up_score": 0.857,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 25.8,
+          "strong_trend": true,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.2391,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.0,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.09129461539567679,
+          "mom_60d": 0.04045850583343675,
+          "mom_120d": 0.07176491067373028,
+          "momentum_aligned_up": true,
+          "momentum_aligned_down": false,
+          "momentum_divergent": false
+        }
+      },
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "favor_options": false,
+      "leverage_allowed": false
+    },
+    "GS": {
+      "regime": "high_volatility",
+      "regime_label": "high_volatility",
+      "probabilities": {
+        "trend_up": 0.221,
+        "trend_down": 0.0,
+        "range_bound": 0.177,
+        "low_volatility": 0.133,
+        "high_volatility": 0.265,
+        "crash": 0.16,
+        "macro_tightening": 0.044,
+        "macro_easing": 0.0
+      },
+      "confidence": 0.265,
+      "regime_score": 0.025,
+      "next_regime": "high_volatility",
+      "signals": {
+        "technical": {
+          "trend_up_score": 1.0,
+          "trend_down_score": 0.0,
+          "range_score": 0.0,
+          "adx": 22.2,
+          "strong_trend": false,
+          "above_ema200": "True"
+        },
+        "volatility": {
+          "rvol_21d": 0.3018,
+          "rvol_pct_rank": 0.5,
+          "crash_score": 0.518,
+          "high_vol": 1.0,
+          "low_vol": 0.0
+        },
+        "macro": {
+          "tight_score": 0.0,
+          "ease_score": 0.0,
+          "risk_off_score": 0.0,
+          "yield_curve": 0.6380000114440918,
+          "fed_rate": null,
+          "vix": 17.399999618530273
+        },
+        "momentum": {
+          "mom_20d": 0.14307598187056053,
+          "mom_60d": -0.023945471821981097,
+          "mom_120d": 0.24510661119150592,
+          "momentum_aligned_up": false,
+          "momentum_aligned_down": false,
+          "momentum_divergent": true
+        }
+      },
+      "allow_long": false,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "favor_options": true,
+      "leverage_allowed": false
+    }
+  }
 }
