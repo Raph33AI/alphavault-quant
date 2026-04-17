@@ -492,17 +492,49 @@ const Charts = (() => {
   // SPARKLINES (Index Cards)
   // ════════════════════════════════════════════════════════
   function renderSparkline(canvasId, priceData = [], isPositive = null) {
-    const c = _ctx(canvasId);
-    if (!c) return;
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
 
     _destroyCJ(canvasId);
     if (!priceData.length) return;
 
-    const first   = priceData[0];
-    const last    = priceData[priceData.length - 1];
-    const isUp    = isPositive !== null ? isPositive : (last >= first);
-    const color   = isUp ? C.green : C.red;
+    // ════════════════════════════════════════════════════
+    // ✅ FIX DÉFINITIF — Verrouillage AVANT toute initialisation Chart.js
+    // ════════════════════════════════════════════════════
+    const SPARK_H = 40;
 
+    // 1. Verrouiller les dimensions CSS du canvas avec !important
+    canvas.style.setProperty('height',     `${SPARK_H}px`, 'important');
+    canvas.style.setProperty('min-height', `${SPARK_H}px`, 'important');
+    canvas.style.setProperty('max-height', `${SPARK_H}px`, 'important');
+    canvas.style.setProperty('display',    'block',         'important');
+    canvas.style.setProperty('overflow',   'hidden',        'important');
+
+    // 2. Verrouiller les attributs HTML du canvas (utilisés par Chart.js responsive:false)
+    const parentW = canvas.parentElement
+      ? Math.floor(canvas.parentElement.getBoundingClientRect().width) || 200
+      : 200;
+    canvas.setAttribute('width',  String(parentW));
+    canvas.setAttribute('height', String(SPARK_H));
+
+    // 3. Verrouiller le parent (index-card contenu) pour empêcher la propagation
+    const parent = canvas.parentElement;
+    if (parent) {
+      parent.style.setProperty('overflow', 'hidden', 'important');
+      parent.style.setProperty('contain',  'layout',  'important');
+    }
+
+    // 4. Obtenir le contexte 2D
+    const c = canvas.getContext('2d');
+    if (!c) return;
+
+    // 5. Données
+    const first  = priceData[0];
+    const last   = priceData[priceData.length - 1];
+    const isUp   = isPositive !== null ? isPositive : (last >= first);
+    const color  = isUp ? '#10b981' : '#ef4444';
+
+    // 6. Créer le chart AVEC responsive:false
     _cj[canvasId] = new Chart(c, {
       type: 'line',
       data: {
@@ -515,19 +547,31 @@ const Charts = (() => {
           fill:            true,
           tension:         0.3,
           pointRadius:     0,
+          pointHoverRadius:0,
         }],
       },
       options: {
-        responsive:          true,
+        responsive:          false,  // ✅ KEY: Chart.js ne touche PLUS aux dimensions
         maintainAspectRatio: false,
         animation:           false,
-        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        events:              [],     // Désactive tous les events souris
+        plugins: {
+          legend:  { display: false },
+          tooltip: { enabled: false },
+        },
         scales: {
           x: { display: false },
           y: { display: false },
         },
       },
     });
+
+    // 7. Re-verrouiller après 50ms (Chart.js peut modifier les styles à la création)
+    setTimeout(() => {
+      if (!canvas) return;
+      canvas.style.setProperty('height',     `${SPARK_H}px`, 'important');
+      canvas.style.setProperty('max-height', `${SPARK_H}px`, 'important');
+    }, 50);
   }
 
   // ════════════════════════════════════════════════════════

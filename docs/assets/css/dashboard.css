@@ -3556,3 +3556,73 @@ strong { font-weight: 600; }
   contain:    strict;
   position:   relative;
 }
+
+/* ══════════════════════════════════════════════════════════════
+   FIX CRITIQUE — Sparklines + Index Cards (infinite growth)
+   Cause: Chart.js responsive:true + ResizeObserver feedback loop
+   Solution: contain:strict + overflow:hidden + align-items:start
+══════════════════════════════════════════════════════════════ */
+
+/* Index cards grid — empêche le stretch vertical entre cartes */
+.index-cards {
+  align-items: start !important;
+}
+
+/* Chaque carte — bloque la propagation de hauteur */
+.index-card {
+  overflow: hidden          !important;
+  contain:  layout          !important;
+  /* NE PAS mettre contain:strict ici — empêcherait le hover */
+}
+
+/* Canvas sparkline — dimensions absolument fixes */
+.ic-spark {
+  display:    block         !important;
+  width:      100%          !important;
+  height:     40px          !important;
+  min-height: 40px          !important;
+  max-height: 40px          !important;
+  overflow:   hidden        !important;
+  contain:    strict        !important;
+  /* contain:strict sur le canvas lui-même casse la boucle
+     ResizeObserver sans bloquer le layout parent */
+}
+
+/* ── Protection overview-grid ─────────────────────────────── */
+.overview-grid {
+  align-items: start !important;
+}
+
+/* ── Protection des cartes de l'overview right ────────────── */
+.overview-right .card {
+  overflow: hidden !important;
+}
+
+/* ── Main chart container — double lock ───────────────────── */
+#main-price-chart {
+  width:      100%   !important;
+  height:     360px  !important;
+  min-height: 360px  !important;
+  max-height: 360px  !important;
+  overflow:   hidden !important;
+  contain:    strict !important;
+}
+
+/* ── Panel charts — double lock ───────────────────────────── */
+.cp-chart {
+  width:      100%   !important;
+  height:     200px  !important;
+  min-height: 200px  !important;
+  max-height: 200px  !important;
+  overflow:   hidden !important;
+  contain:    strict !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   GLOBAL ANTI-GROWTH RULE
+   S'applique à tout canvas géré par Chart.js ou LWC
+   → Lance un re-lock toutes les 5s via JS (voir ci-dessous)
+══════════════════════════════════════════════════════════════ */
+canvas.ic-spark {
+  contain: strict !important;
+}

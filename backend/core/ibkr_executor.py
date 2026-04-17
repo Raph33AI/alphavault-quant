@@ -14,7 +14,7 @@ from loguru import logger
 
 try:
     from ib_insync import (
-        IB, Stock, Option, Future, ETF,
+        IB, Stock, Option, Future,
         MarketOrder, LimitOrder, StopOrder, StopLimitOrder,
         TagValue
     )

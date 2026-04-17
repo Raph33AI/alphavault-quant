@@ -88,6 +88,24 @@ const Terminal = (() => {
     _refreshTimer = setInterval(_refresh, REFRESH_MS);
 
     console.log('[AlphaVault] Terminal initialized | Auto-refresh: 60s');
+
+    // ✅ FIX OVERVIEW CHARTS — Re-lock des sparklines toutes les 3s
+    // Empêche toute reprise de la boucle infinie après un refresh
+    (function _lockSparklines() {
+    const SPARK_IDS = ['spark-spy', 'spark-qqq', 'spark-iwm'];
+    const lock = () => {
+        SPARK_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.style.setProperty('height',     '40px', 'important');
+        el.style.setProperty('max-height', '40px', 'important');
+        el.style.setProperty('min-height', '40px', 'important');
+        el.style.setProperty('overflow',   'hidden','important');
+        });
+    };
+    lock();
+    setInterval(lock, 3000);
+    })();
     }
 
   // ── Bind ALL event listeners (no inline handlers) ────────

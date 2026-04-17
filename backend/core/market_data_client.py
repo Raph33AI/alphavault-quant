@@ -305,102 +305,214 @@ class MarketDataClient:
     interval: str = "1day",
     period:   str = "1y",
 ) -> Dict[str, Optional[pd.DataFrame]]:
-    """Télécharge OHLCV pour TOUS les symboles en un seul appel yfinance.
-    Beaucoup plus rapide que des appels individuels.
-    Timing approximatif:
-    - 300 symboles, 1y daily  → ~20-35 secondes
-    - 30 symboles,  5d 5min   → ~8-12 secondes
-    """
+    """Télécharge OHLCV pour tous les symboles en batch yfinance.
+    Gère les deux formats MultiIndex selon la version yfinance :
+    - (Ticker, PriceType) : raw['AAPL']['Close']
+    - (PriceType, Ticker) : raw['Close']['AAPL']
+    Fallback individuel si le batch échoue."""
     if not YFINANCE_AVAILABLE:
-        logger.warning("yfinance non disponible — batch impossible")
+        logger.warning("[Batch] yfinance not available")
         return {s: None for s in symbols}
 
+    if not symbols:
+        return {}
+
     YF_IV = {
-        "5min": ("5m",  "5d"),
-        "15min":("15m", "30d"),
-        "1h":   ("1h",  "60d"),
-        "4h":   ("1h",  "60d"),   # resampled
-        "1day": ("1d",  period),
-        "1week":("1wk", "5y"),
+        "5min":  ("5m",  "5d"),
+        "15min": ("15m", "30d"),
+        "1h":    ("1h",  "60d"),
+        "4h":    ("1h",  "60d"),
+        "1day":  ("1d",  period),
+        "1week": ("1wk", "5y"),
     }
     yf_interval, yf_period = YF_IV.get(interval, ("1d", period))
 
     logger.info(
-        f"[Batch] Downloading {len(symbols)} symbols "
-        f"| interval={yf_interval} | period={yf_period}"
+        f"[Batch] {len(symbols)} symbols | "
+        f"interval={yf_interval} | period={yf_period}"
     )
 
+    # ── Cas d'un seul symbole : bypass de la complexité MultiIndex ──
+    if len(symbols) == 1:
+        sym = symbols[0]
+        df  = self._get_ohlcv_yfinance(sym, interval, 500)
+        return {sym: df}
+
+    # ── Batch multi-symboles ────────────────────────────────────────
     try:
-        import time
-        t0 = time.time()
+        import time as _time
+        t0 = _time.time()
 
         raw = yf.download(
-            tickers      = " ".join(symbols),
-            period       = yf_period,
-            interval     = yf_interval,
-            group_by     = "ticker",
-            auto_adjust  = True,
-            prepost      = False,
-            progress     = False,
-            threads      = True,
+            tickers     = symbols,      # Liste Python directe (pas de join)
+            period      = yf_period,
+            interval    = yf_interval,
+            group_by    = "ticker",
+            auto_adjust = True,
+            prepost     = False,
+            progress    = False,
+            threads     = True,
         )
 
-        elapsed = time.time() - t0
-        logger.info(f"[Batch] yfinance download done in {elapsed:.1f}s")
+        elapsed = _time.time() - t0
+        logger.info(f"[Batch] Download done in {elapsed:.1f}s | shape={raw.shape}")
+
+        if raw is None or raw.empty:
+            logger.warning("[Batch] Empty result — falling back to individual")
+            return self._batch_fallback(symbols, interval)
+
+        # ── Détection du format MultiIndex ──────────────────────────
+        if not isinstance(raw.columns, pd.MultiIndex):
+            logger.warning("[Batch] No MultiIndex columns — fallback")
+            return self._batch_fallback(symbols, interval)
+
+        level_0_vals = set(str(v) for v in raw.columns.get_level_values(0).unique())
+        price_types  = {
+            'Open','High','Low','Close','Volume',
+            'Adj Close','adj close','open','high','low','close','volume',
+        }
+        # Si le niveau 0 contient des prix → format (PriceType, Ticker)
+        price_in_level0 = bool(level_0_vals & price_types)
 
         result: Dict[str, Optional[pd.DataFrame]] = {}
-        single = len(symbols) == 1
 
         for sym in symbols:
             try:
-                df = raw.copy() if single else raw[sym].copy()
-                df = df.reset_index()
-                df.columns = [c.lower().replace(" ", "_") for c in df.columns]
+                # ── Extraction selon le format ───────────────────────
+                if price_in_level0:
+                    # Format (PriceType, Ticker) → ex: raw['Close']['AAPL']
+                    level_1_syms = set(
+                        str(v) for v in raw.columns.get_level_values(1).unique()
+                    )
+                    if sym not in level_1_syms:
+                        result[sym] = None
+                        continue
+                    df_sym = raw.xs(sym, axis=1, level=1).copy()
+                else:
+                    # Format (Ticker, PriceType) → ex: raw['AAPL']['Close']
+                    level_0_syms = set(
+                        str(v) for v in raw.columns.get_level_values(0).unique()
+                    )
+                    if sym not in level_0_syms:
+                        result[sym] = None
+                        continue
+                    df_sym = raw[sym].copy()
 
-                # Rename date/datetime column
-                for col in ("date", "datetime", "index"):
-                    if col in df.columns:
-                        df = df.rename(columns={col: "datetime"})
+                # ── Normalisation des colonnes ───────────────────────
+                df_sym = df_sym.reset_index()
+
+                # Aplatir les colonnes si encore MultiIndex
+                if isinstance(df_sym.columns, pd.MultiIndex):
+                    df_sym.columns = [
+                        str(col[0]) if col[1] == '' else str(col[0])
+                        for col in df_sym.columns
+                    ]
+
+                # Lowercase + underscore
+                df_sym.columns = [
+                    str(c).lower().replace(" ", "_") for c in df_sym.columns
+                ]
+
+                # Rename date/index → datetime
+                for col in ("date", "index", "datetime"):
+                    if col in df_sym.columns:
+                        if col != "datetime":
+                            df_sym = df_sym.rename(columns={col: "datetime"})
                         break
 
-                # Timezone-naive
-                if "datetime" in df.columns:
-                    df["datetime"] = pd.to_datetime(df["datetime"])
-                    if hasattr(df["datetime"].dt, "tz") and df["datetime"].dt.tz is not None:
-                        df["datetime"] = df["datetime"].dt.tz_localize(None)
+                # Adj_close → close si nécessaire
+                if "adj_close" in df_sym.columns and "close" not in df_sym.columns:
+                    df_sym = df_sym.rename(columns={"adj_close": "close"})
 
-                # Resample 4h from 1h
-                if interval == "4h" and yf_interval == "1h" and "datetime" in df.columns:
-                    df = df.set_index("datetime")
-                    df = df.resample("4h").agg({
-                        "open":"first", "high":"max",
-                        "low":"min",   "close":"last",
+                # ── Datetime normalization ───────────────────────────
+                if "datetime" in df_sym.columns:
+                    df_sym["datetime"] = pd.to_datetime(df_sym["datetime"])
+                    try:
+                        if df_sym["datetime"].dt.tz is not None:
+                            df_sym["datetime"] = df_sym["datetime"].dt.tz_localize(None)
+                    except Exception:
+                        pass
+
+                # ── Resample 4h depuis 1h ────────────────────────────
+                if (interval == "4h" and yf_interval == "1h"
+                        and "datetime" in df_sym.columns):
+                    df_sym = df_sym.set_index("datetime")
+                    df_sym = df_sym.resample("4h").agg({
+                        "open":  "first",
+                        "high":  "max",
+                        "low":   "min",
+                        "close": "last",
                         "volume":"sum",
                     }).dropna().reset_index()
 
+                # ── Conversion numérique ─────────────────────────────
                 for col in ["open", "high", "low", "close", "volume"]:
-                    if col in df.columns:
-                        df[col] = pd.to_numeric(df[col], errors="coerce")
+                    if col in df_sym.columns:
+                        df_sym[col] = pd.to_numeric(df_sym[col], errors="coerce")
 
-                df = df.dropna(subset=["close"])
+                # ── Nettoyage ────────────────────────────────────────
+                df_sym = df_sym.dropna(subset=["close"])
 
-                if len(df) < 5:
-                    result[sym] = None
-                else:
-                    result[sym] = df.reset_index(drop=True)
+                # Suppression doublons de timestamps
+                if "datetime" in df_sym.columns:
+                    df_sym = df_sym.drop_duplicates(subset=["datetime"])
+                    df_sym = df_sym.sort_values("datetime").reset_index(drop=True)
+
+                # Filtre valeurs aberrantes (prix ≤ 0)
+                if "close" in df_sym.columns:
+                    df_sym = df_sym[df_sym["close"] > 0]
+
+                result[sym] = df_sym.reset_index(drop=True) if len(df_sym) >= 5 else None
 
             except Exception as e:
-                logger.debug(f"[Batch] {sym}: {e}")
+                logger.debug(f"[Batch] {sym}: {type(e).__name__}: {e}")
                 result[sym] = None
 
-        n_ok  = sum(1 for v in result.values() if v is not None)
-        n_fail= len(symbols) - n_ok
-        logger.info(f"[Batch] {n_ok}/{len(symbols)} symbols OK | {n_fail} failed")
+        n_ok   = sum(1 for v in result.values() if v is not None)
+        n_fail = len(symbols) - n_ok
+        logger.info(f"[Batch] {n_ok}/{len(symbols)} OK | {n_fail} failed")
+
+        # Si trop d'échecs (>50%), fallback individuel pour les manquants
+        if n_fail > len(symbols) * 0.50:
+            logger.warning(
+                f"[Batch] >50% failures — retrying failed symbols individually"
+            )
+            failed_syms = [s for s, v in result.items() if v is None]
+            fallback    = self._batch_fallback(failed_syms, interval)
+            result.update(fallback)
+
         return result
 
     except Exception as e:
-        logger.error(f"[Batch] Download error: {e}")
-        return {s: None for s in symbols}
+        logger.error(f"[Batch] Fatal error: {type(e).__name__}: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
+        return self._batch_fallback(symbols, interval)
+
+def _batch_fallback(
+    self,
+    symbols:  List[str],
+    interval: str,
+    bars:     int = 252,
+) -> Dict[str, Optional[pd.DataFrame]]:
+    """
+    Fallback individuel quand le batch yfinance échoue.
+    Télécharge chaque symbole séparément.
+    """
+    logger.info(f"[Batch] Individual fallback | {len(symbols)} symbols")
+    result = {}
+    for sym in symbols:
+        try:
+            df = self._get_ohlcv_yfinance(sym, interval, bars)
+            result[sym] = df
+            if df is not None:
+                logger.debug(f"[Fallback] {sym}: {len(df)} bars")
+        except Exception as e:
+            logger.debug(f"[Fallback] {sym}: {e}")
+            result[sym] = None
+    n_ok = sum(1 for v in result.values() if v is not None)
+    logger.info(f"[Batch] Fallback done | {n_ok}/{len(symbols)} OK")
+    return result
 
     # ── VWAP Proxy ────────────────────────────────────────────
     def compute_vwap(self, df: pd.DataFrame, period: int = 14) -> pd.Series:
