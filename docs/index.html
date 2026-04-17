@@ -41,7 +41,9 @@
     </div>
     <div class="refresh-info">
       <span id="last-update">--</span>
-      <button class="btn-refresh" onclick="window.Dashboard.forceRefresh()">↻ Refresh</button>
+      <button id="btn-refresh" onclick="Dashboard && Dashboard.isReady() && Dashboard.forceRefresh()">
+          🔄 Refresh
+      </button>
     </div>
     <div class="dry-run-badge" id="dry-run-badge">DRY RUN</div>
   </div>
