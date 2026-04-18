@@ -1,19 +1,19 @@
 // ============================================================
-// trading-mode.js — AlphaVault Quant v1.1
-// ✅ Toggle Paper/Live depuis le dashboard
-// ✅ Sync automatique avec Oracle VM toutes les 30s
-// ✅ Confirmation modale custom pour LIVE
-// ✅ Clé API hardcodée (système tourne 24/7 sans navigateur)
-// ✅ Mise à jour de tous les éléments UI
+// trading-mode.js — AlphaVault Quant v2.0
+// ✅ 100% gratuit — GitHub API + GitHub Pages JSON
+// ✅ Zéro appel direct Oracle VM
+// ✅ Switch via workflow_dispatch GitHub Actions
+// ✅ Statut via ibkr_status.json (GitHub Pages)
 // ============================================================
 
 const TradingModeManager = (() => {
 
   // ── Configuration ─────────────────────────────────────────
-    const ORACLE_URL     = 'https://oracle-ibkr-proxy.raphnardone.workers.dev'; // ← HTTPS via Cloudflare
-    const SWITCH_API_KEY = 'ALPHAVAULT_SWITCH_2026_SECRET';
-    const POLL_MS        = 30_000;
-    const SWITCH_TIMEOUT = 15_000;
+  const GH_OWNER    = 'Raph33AI';
+  const GH_REPO     = 'alphavault-quant';
+  const GH_WORKFLOW = 'switch-mode.yml';
+  const POLL_MS     = 30_000;   // Poll statut GitHub Pages 30s
+  const PAT_KEY     = 'av_gh_pat'; // localStorage — même clé que terminal.js
 
   const MODES = {
     paper: {
@@ -21,84 +21,79 @@ const TradingModeManager = (() => {
       username: 'vtsdxs036',
       label:    'PAPER',
       color:    '#f59e0b',
-      tooltip:  'Paper Trading — Argent virtuel | Oracle: 141.253.96.130',
     },
     live: {
       account:  'U21160314',
       username: 'raphnardone',
       label:    'LIVE',
       color:    '#ef4444',
-      tooltip:  '⚠ LIVE Trading — Argent réel | Oracle: 141.253.96.130',
     },
   };
 
   // ── State ──────────────────────────────────────────────────
-  let _mode         = 'paper';
-  let _account      = 'DUM895161';
-  let _connected    = false;
-  let _oracleOnline = false;
-  let _switching    = false;
-  let _pollTimer    = null;
+  let _mode       = 'paper';
+  let _account    = 'DUM895161';
+  let _connected  = false;
+  let _switching  = false;
+  let _pollTimer  = null;
+  let _switchedAt = null;
 
   // ── Init ───────────────────────────────────────────────────
   function init() {
     const checkbox = document.getElementById('mode-toggle-checkbox');
-    if (checkbox) {
-      checkbox.addEventListener('change', _handleToggle);
-    }
+    if (checkbox) checkbox.addEventListener('change', _handleToggle);
 
-    _fetchCurrentMode();
-    _pollTimer = setInterval(_fetchCurrentMode, POLL_MS);
+    _fetchStatus();
+    _pollTimer = setInterval(_fetchStatus, POLL_MS);
 
-    console.log('✅ TradingModeManager | Oracle:', ORACLE_URL, '| Poll:', POLL_MS / 1000 + 's');
+    console.log('✅ TradingModeManager v2.0 | GitHub-only | Poll: 30s');
   }
 
-  // ── Fetch mode depuis Oracle VM ────────────────────────────
-  async function _fetchCurrentMode() {
+  // ── Lire ibkr_status.json depuis GitHub Pages ─────────────
+  // Utilise ApiClient (déjà chargé)
+  async function _fetchStatus() {
     try {
-      const res = await fetch(`${ORACLE_URL}/current-mode`, {
-        signal:  AbortSignal.timeout(6000),
-        headers: { 'Accept': 'application/json' },
-      });
+      const data = await ApiClient.getIBKRStatus(true); // force bust cache
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      _mode      = data.trading_mode || 'paper';
+      _account   = data.account      || MODES[_mode].account;
+      _connected = data.ibkr_connected || false;
 
-      const data    = await res.json();
-      _mode         = data.trading_mode || 'paper';
-      _account      = data.account      || MODES[_mode].account;
-      _connected    = data.connected    || false;
-      _oracleOnline = true;
+      // Détecter fin de switch (si switch en cours)
+      if (_switching && _switchedAt) {
+        const elapsed = Date.now() - _switchedAt;
+        if (elapsed > 20_000) {
+          // Le workflow a eu le temps de pousser le nouveau statut
+          _switching  = false;
+          _switchedAt = null;
+          _showToast(
+            `✅ Switch terminé — Mode ${MODES[_mode].label} actif`,
+            'success'
+          );
+        }
+      }
 
       _updateAllUI();
 
     } catch (e) {
-      _oracleOnline = false;
-      _updateOracleDot('offline');
-
-      const wrap = document.getElementById('mode-toggle-wrap');
-      if (wrap) wrap.title = `Oracle VM inaccessible — ${e.message}`;
-
-      if (e.name !== 'AbortError') {
-        console.warn('[TradingMode] Oracle offline:', e.message);
-      }
+      console.warn('[TradingMode] Erreur fetch statut:', e.message);
     }
   }
 
-  // ── Handler du toggle ──────────────────────────────────────
+  // ── Handler toggle ─────────────────────────────────────────
   async function _handleToggle(e) {
     if (_switching) {
       e.target.checked = _mode === 'live';
+      _showToast('⏳ Switch en cours — patiente...', 'warn');
       return;
     }
 
     const targetMode = e.target.checked ? 'live' : 'paper';
 
-    if (!_oracleOnline) {
-      e.target.checked = _mode === 'live';
-      _showToast('❌ Oracle VM inaccessible — impossible de switcher', 'error');
-      return;
-    }
+    // Même mode → rien à faire
+    if (targetMode === _mode) return;
 
+    // Confirmation modale LIVE
     if (targetMode === 'live') {
       const confirmed = await _showLiveConfirmModal();
       if (!confirmed) {
@@ -107,111 +102,151 @@ const TradingModeManager = (() => {
       }
     }
 
-    await _doSwitch(targetMode);
+    // Vérifier PAT
+    const pat = _getPAT();
+    if (!pat || !pat.startsWith('ghp_')) {
+      e.target.checked = _mode === 'live'; // rollback
+      _showNoPATModal();
+      return;
+    }
+
+    await _dispatchSwitch(targetMode, pat);
   }
 
-  // ── Switch effectif ────────────────────────────────────────
-  async function _doSwitch(mode) {
-    _switching = true;
+  // ── Dispatch workflow GitHub ───────────────────────────────
+  async function _dispatchSwitch(mode, pat) {
+    _switching  = true;
+    _switchedAt = Date.now();
+
     const checkbox = document.getElementById('mode-toggle-checkbox');
     if (checkbox) checkbox.disabled = true;
 
-    _setSwitchingUI();
+    _setSwitchingUI(mode);
 
     try {
-      const res = await fetch(`${ORACLE_URL}/switch-mode`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ mode, api_key: SWITCH_API_KEY }),
-        signal:  AbortSignal.timeout(SWITCH_TIMEOUT),
-      });
+      const res = await fetch(
+        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/${GH_WORKFLOW}/dispatches`,
+        {
+          method:  'POST',
+          headers: {
+            'Authorization':        `Bearer ${pat}`,
+            'Accept':               'application/vnd.github.v3+json',
+            'Content-Type':         'application/json',
+            'X-GitHub-Api-Version': '2022-11-28',
+          },
+          body: JSON.stringify({
+            ref:    'main',
+            inputs: { mode },
+          }),
+        }
+      );
 
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        _mode      = mode;
-        _account   = data.account || MODES[mode].account;
-        _connected = false;
-
-        _updateAllUI();
+      if (res.status === 204) {
+        // ✅ Workflow déclenché
         _showToast(
           mode === 'live'
-            ? '🔴 Live Trading activé — IBeam redémarre (90s)...'
-            : '🟡 Paper Trading activé — IBeam redémarre (90s)...',
-          mode === 'live' ? 'warn' : 'success'
+            ? '🔴 Switch LIVE déclenché — GitHub Actions en cours (~2 min)...'
+            : '🟡 Switch PAPER déclenché — GitHub Actions en cours (~2 min)...',
+          mode === 'live' ? 'warn' : 'info',
+          8000
         );
 
-        setTimeout(_fetchCurrentMode, 95_000);
+        // Polling accéléré pendant le switch (toutes les 10s)
+        _startFastPoll();
 
       } else if (res.status === 401) {
-        _showToast('❌ Clé API invalide — vérifier SWITCH_API_KEY', 'error');
+        _switching = false;
         if (checkbox) checkbox.checked = _mode === 'live';
+        _showToast('❌ PAT invalide ou expiré', 'error');
+
+      } else if (res.status === 404) {
+        _switching = false;
+        if (checkbox) checkbox.checked = _mode === 'live';
+        _showToast(`❌ Workflow "${GH_WORKFLOW}" introuvable`, 'error');
 
       } else {
-        _showToast(`❌ Switch échoué: ${data.error || `HTTP ${res.status}`}`, 'error');
+        _switching = false;
         if (checkbox) checkbox.checked = _mode === 'live';
+        const body = await res.text().catch(() => '');
+        _showToast(`❌ GitHub API erreur ${res.status}`, 'error');
+        console.error('[TradingMode] GitHub API:', res.status, body);
       }
 
     } catch (e) {
-      if (e.name === 'TimeoutError') {
-        _showToast('⏳ Timeout — switch peut être en cours, vérifier dans 2 min', 'warn');
-      } else {
-        _showToast(`❌ Oracle inaccessible: ${e.message}`, 'error');
-        if (checkbox) checkbox.checked = _mode === 'live';
-      }
-    } finally {
       _switching = false;
+      if (checkbox) checkbox.checked = _mode === 'live';
+      _showToast(`❌ Erreur réseau: ${e.message}`, 'error');
+    } finally {
       if (checkbox) checkbox.disabled = false;
-      _updateAllUI();
     }
+  }
+
+  // ── Poll accéléré pendant le switch (toutes les 10s) ──────
+  function _startFastPoll() {
+    clearInterval(_pollTimer);
+    let ticks = 0;
+    const MAX_TICKS = 24; // 24 × 10s = 4 minutes max
+
+    const fastTimer = setInterval(async () => {
+      ticks++;
+      await _fetchStatus();
+
+      // Arrêter le fast poll si switch terminé OU timeout
+      if (!_switching || ticks >= MAX_TICKS) {
+        clearInterval(fastTimer);
+        _switching  = false;
+        _switchedAt = null;
+
+        // Reprendre le poll normal
+        _pollTimer = setInterval(_fetchStatus, POLL_MS);
+
+        if (ticks >= MAX_TICKS) {
+          _showToast('⚠ Timeout switch — vérifie GitHub Actions', 'warn');
+        }
+      }
+    }, 10_000);
   }
 
   // ── Mise à jour de TOUTE l'UI ─────────────────────────────
   function _updateAllUI() {
-    const cfg = MODES[_mode];
+    const cfg = MODES[_mode] || MODES.paper;
 
-    // 1. Wrapper
-    const wrap = document.getElementById('mode-toggle-wrap');
-    if (wrap) {
-      wrap.dataset.mode    = _mode;
-      wrap.dataset.tooltip = cfg.tooltip;
-    }
-
-    // 2. Checkbox
+    // 1. Checkbox
     const checkbox = document.getElementById('mode-toggle-checkbox');
     if (checkbox && !_switching) checkbox.checked = _mode === 'live';
 
-    // 3. Label PAPER / LIVE
+    // 2. Label PAPER / LIVE
     const label = document.getElementById('mode-toggle-label');
-    if (label) {
+    if (label && !_switching) {
       label.textContent = cfg.label;
       label.className   = `mode-toggle-label ${_mode}`;
     }
 
-    // 4. Account
+    // 3. Account
     const accEl = document.getElementById('mode-toggle-account');
     if (accEl) accEl.textContent = _account;
 
-    // 5. Oracle dot
-    const dotState = !_oracleOnline ? 'offline'
-                   : _connected     ? 'online'
-                   :                  'pending';
-    _updateOracleDot(dotState);
+    // 4. Oracle dot → statut GitHub (toujours accessible)
+    _updateOracleDot(_connected ? 'online' : 'pending');
 
-    // 6. dry-run-badge (compat terminal.js)
+    // 5. dry-run-badge (compat terminal.js)
     const drBadge = document.getElementById('dry-run-badge');
     if (drBadge) {
       drBadge.textContent = cfg.label;
       drBadge.className   = _mode === 'live' ? 'dry-run-badge live' : 'dry-run-badge';
     }
 
-    // 7. IBKR status pill (Execution header)
+    // 6. Wrapper data-mode
+    const wrap = document.getElementById('mode-toggle-wrap');
+    if (wrap) wrap.dataset.mode = _mode;
+
+    // 7. IBKR status pill (Execution)
     const ibkrPill = document.getElementById('ibkr-status-pill');
     if (ibkrPill) {
       ibkrPill.className = `ibkr-status-pill ${_mode} ${_connected ? 'connected' : ''}`;
     }
 
-    // 8. Mode text Execution
+    // 8. ibkr-mode-text (Execution)
     const ibkrModeTxt = document.getElementById('ibkr-mode-text');
     if (ibkrModeTxt) {
       ibkrModeTxt.innerHTML = _mode === 'live'
@@ -219,14 +254,14 @@ const TradingModeManager = (() => {
         : 'PAPER MODE';
     }
 
-    // 9. icp-status
+    // 9. icp-status (Execution log)
     const icpStatus = document.getElementById('icp-status');
     if (icpStatus) {
-      icpStatus.innerHTML = _oracleOnline
-        ? (_connected
-          ? `<span style="color:var(--g)">✅ Connected — ${_mode.toUpperCase()}</span>`
-          : `<span style="color:var(--y)">⏳ ${cfg.label} — Auth pending</span>`)
-        : `<span style="color:var(--r)">❌ Oracle offline</span>`;
+      icpStatus.innerHTML = _switching
+        ? `<span style="color:var(--y)">⏳ Switch en cours...</span>`
+        : _connected
+          ? `<span style="color:var(--g)">✅ Connected — ${cfg.label}</span>`
+          : `<span style="color:var(--y)">⏳ ${cfg.label} — Auth pending</span>`;
     }
 
     // 10. icp-account
@@ -236,29 +271,22 @@ const TradingModeManager = (() => {
     // 11. hg-ibkr (System Health)
     const hgIbkr = document.getElementById('hg-ibkr');
     if (hgIbkr) {
-      const icon = _oracleOnline
-        ? (_connected
+      const icon = _switching
+        ? '<i class="fa-solid fa-rotate fa-spin" style="color:var(--y)"></i>'
+        : _connected
           ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i>'
-          : '<i class="fa-solid fa-hourglass-half" style="color:var(--y)"></i>')
-        : '<i class="fa-solid fa-plug-circle-xmark" style="color:var(--r)"></i>';
+          : '<i class="fa-solid fa-hourglass-half" style="color:var(--y)"></i>';
       hgIbkr.innerHTML = `${icon} ${cfg.label} — <span class="mono" style="font-size:10px">${_account}</span>`;
     }
 
     // 12. dot-ibkr + pill-ibkr (topbar)
     const dotIbkr  = document.getElementById('dot-ibkr');
     const pillIbkr = document.getElementById('pill-ibkr');
-    if (_oracleOnline && _connected) {
-      if (dotIbkr)  dotIbkr.className  = 's-dot ok';
-      if (pillIbkr) pillIbkr.className = 'status-pill ok';
-      if (pillIbkr) pillIbkr.title = `IBKR ${cfg.label} — Connected (${_account})`;
-    } else if (_oracleOnline) {
-      if (dotIbkr)  dotIbkr.className  = 's-dot warn';
-      if (pillIbkr) pillIbkr.className = 'status-pill warn';
-      if (pillIbkr) pillIbkr.title = `IBKR ${cfg.label} — IBeam auth pending`;
-    } else {
-      if (dotIbkr)  dotIbkr.className  = 's-dot error';
-      if (pillIbkr) pillIbkr.className = 'status-pill error';
-      if (pillIbkr) pillIbkr.title = 'Oracle VM inaccessible';
+    const state    = _connected ? 'ok' : 'warn';
+    if (dotIbkr)  dotIbkr.className  = `s-dot ${state}`;
+    if (pillIbkr) {
+      pillIbkr.className = `status-pill ${state}`;
+      pillIbkr.title     = `IBKR ${cfg.label} — ${_account}`;
     }
   }
 
@@ -267,27 +295,32 @@ const TradingModeManager = (() => {
     const dot = document.getElementById('mode-oracle-dot');
     if (!dot) return;
     dot.className = `mode-oracle-dot ${state}`;
-    dot.title     = state === 'online'  ? 'Oracle VM online | IBKR connecté'
-                  : state === 'pending' ? 'Oracle VM online | IBeam auth pending'
-                  :                       'Oracle VM offline';
+    dot.title = state === 'online'  ? 'IBKR connecté'
+              : state === 'pending' ? 'IBeam auth pending (normal sans IBEAM_KEY)'
+              : 'Offline';
   }
 
   // ── UI état switching ──────────────────────────────────────
-  function _setSwitchingUI() {
+  function _setSwitchingUI(targetMode) {
     const label = document.getElementById('mode-toggle-label');
     if (label) {
       label.className   = 'mode-toggle-label switching';
       label.textContent = '...';
     }
     _updateOracleDot('pending');
+
+    const checkbox = document.getElementById('mode-toggle-checkbox');
+    if (checkbox) checkbox.checked = targetMode === 'live';
   }
 
-  // ════════════════════════════════════════════════════════════
-  // MODAL CONFIRMATION LIVE
-  // ════════════════════════════════════════════════════════════
+  // ── PAT (partagé avec terminal.js) ────────────────────────
+  function _getPAT() {
+    return localStorage.getItem(PAT_KEY) || '';
+  }
+
+  // ── Modal LIVE confirm ─────────────────────────────────────
   function _showLiveConfirmModal() {
     return new Promise((resolve) => {
-
       const overlay = document.createElement('div');
       overlay.className = 'live-confirm-overlay';
 
@@ -298,8 +331,8 @@ const TradingModeManager = (() => {
           </div>
           <div class="live-confirm-title">Live Trading — Confirmation</div>
           <div class="live-confirm-subtitle">
-            Cette action bascule vers le trading réel.<br>
-            Les ordres seront exécutés avec de l'argent réel.
+            GitHub Actions va switcher vers le trading réel.<br>
+            <strong>~2 minutes</strong> pour que le switch soit effectif.
           </div>
           <div class="live-confirm-warning">
             <div class="live-confirm-warning-row">
@@ -312,11 +345,11 @@ const TradingModeManager = (() => {
             </div>
             <div class="live-confirm-warning-row">
               <i class="fa-solid fa-circle-dot"></i>
-              Tous les ordres en attente exécutés en LIVE
+              Tous les ordres exécutés en LIVE (argent réel)
             </div>
             <div class="live-confirm-warning-row">
               <i class="fa-solid fa-circle-dot"></i>
-              Retour au PAPER possible à tout moment
+              Retour PAPER possible à tout moment
             </div>
           </div>
           <div class="live-confirm-input-label">
@@ -346,17 +379,13 @@ const TradingModeManager = (() => {
 
       setTimeout(() => input?.focus(), 100);
 
-      function _checkInput() {
-        const valid = input?.value?.trim().toUpperCase() === 'LIVE';
-        if (okBtn) okBtn.classList.toggle('ready', valid);
-      }
-
-      input?.addEventListener('input', _checkInput);
+      input?.addEventListener('input', () => {
+        const valid = input.value.trim().toUpperCase() === 'LIVE';
+        okBtn?.classList.toggle('ready', valid);
+      });
 
       input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && input.value.trim().toUpperCase() === 'LIVE') {
-          _cleanup(true);
-        }
+        if (e.key === 'Enter' && input.value.trim().toUpperCase() === 'LIVE') _cleanup(true);
         if (e.key === 'Escape') _cleanup(false);
       });
 
@@ -364,20 +393,64 @@ const TradingModeManager = (() => {
         if (input?.value?.trim().toUpperCase() === 'LIVE') _cleanup(true);
       });
 
-      cancelBtn?.addEventListener('click', () => _cleanup(false));
-
+      cancelBtn?.addEventListener('click',  () => _cleanup(false));
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) _cleanup(false);
       });
 
       function _cleanup(confirmed) {
-        overlay.style.opacity = '0';
+        overlay.style.opacity    = '0';
         overlay.style.transition = 'opacity 0.15s';
-        setTimeout(() => {
-          overlay.remove();
-          resolve(confirmed);
-        }, 150);
+        setTimeout(() => { overlay.remove(); resolve(confirmed); }, 150);
       }
+    });
+  }
+
+  // ── Modal PAT manquant ─────────────────────────────────────
+  function _showNoPATModal() {
+    const overlay = document.createElement('div');
+    overlay.className = 'live-confirm-overlay';
+    overlay.innerHTML = `
+      <div class="live-confirm-modal">
+        <div class="live-confirm-icon" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4)">
+          <i class="fa-solid fa-key" style="color:#f59e0b"></i>
+        </div>
+        <div class="live-confirm-title" style="color:#f59e0b">GitHub PAT requis</div>
+        <div class="live-confirm-subtitle">
+          Le switch mode utilise GitHub Actions.<br>
+          Configure ton PAT dans la section <strong>Execution → Terminal</strong>.
+        </div>
+        <div class="live-confirm-warning" style="border-color:rgba(245,158,11,0.3)">
+          <div class="live-confirm-warning-row">
+            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
+            Génère un PAT sur <strong>github.com/settings/tokens</strong>
+          </div>
+          <div class="live-confirm-warning-row">
+            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
+            Scope requis : <strong>workflow</strong>
+          </div>
+          <div class="live-confirm-warning-row">
+            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
+            Saisis-le dans Execution → champ GitHub PAT
+          </div>
+        </div>
+        <div class="live-confirm-btns">
+          <button class="live-confirm-cancel"
+                  onclick="this.closest('.live-confirm-overlay').remove()">
+            Fermer
+          </button>
+          <a href="https://github.com/settings/tokens"
+             target="_blank"
+             style="flex:2;display:block;padding:10px;border-radius:10px;
+                    background:#f59e0b;color:white;font-weight:700;
+                    text-align:center;text-decoration:none;font-size:13px">
+            <i class="fa-solid fa-external-link-alt"></i> Générer un PAT
+          </a>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
     });
   }
 
@@ -385,28 +458,12 @@ const TradingModeManager = (() => {
   function _showToast(msg, type = 'info', duration = 5000) {
     const wrap = document.getElementById('toast-wrap');
     if (!wrap) return;
-
-    const icons = {
-      success: 'fa-circle-check',
-      error:   'fa-circle-exclamation',
-      warn:    'fa-triangle-exclamation',
-      info:    'fa-circle-info',
-    };
-    const colors = {
-      success: 'var(--g)',
-      error:   'var(--r)',
-      warn:    'var(--y)',
-      info:    'var(--b1)',
-    };
-
-    const toast = document.createElement('div');
+    const icons  = { success:'fa-circle-check', error:'fa-circle-exclamation', warn:'fa-triangle-exclamation', info:'fa-circle-info' };
+    const colors = { success:'var(--g)', error:'var(--r)', warn:'var(--y)', info:'var(--b1)' };
+    const toast  = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `
-      <i class="fa-solid ${icons[type] || 'fa-circle-info'}"
-         style="color:${colors[type] || 'var(--b1)'}"></i>
-      ${msg}`;
+    toast.innerHTML = `<i class="fa-solid ${icons[type]||'fa-circle-info'}" style="color:${colors[type]||'var(--b1)'}"></i> ${msg}`;
     wrap.appendChild(toast);
-
     setTimeout(() => {
       toast.style.transition = 'opacity 0.3s';
       toast.style.opacity    = '0';
@@ -420,9 +477,9 @@ const TradingModeManager = (() => {
     getCurrentMode:    () => _mode,
     getCurrentAccount: () => _account,
     isConnected:       () => _connected,
-    isOracleOnline:    () => _oracleOnline,
-    refresh:           _fetchCurrentMode,
-    switchMode:        _doSwitch,
+    isSwitching:       () => _switching,
+    refresh:           _fetchStatus,
+    switchMode:        (mode) => _dispatchSwitch(mode, _getPAT()),
   };
 
 })();
@@ -430,4 +487,4 @@ const TradingModeManager = (() => {
 window.TradingModeManager = TradingModeManager;
 document.addEventListener('DOMContentLoaded', () => TradingModeManager.init());
 
-console.log('✅ TradingModeManager v1.1 | Oracle: http://141.253.96.130:5000');
+console.log('✅ TradingModeManager v2.0 | GitHub-only | 100% gratuit');
