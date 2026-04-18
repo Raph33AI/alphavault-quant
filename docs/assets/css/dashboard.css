@@ -4407,3 +4407,188 @@ canvas.ic-spark {
     max-height: 90px !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   OVERVIEW GRID — Layout 2 rows : chart + right panel spanning
+══════════════════════════════════════════════════════════════ */
+
+#overview-main-grid {
+  display:               grid;
+  grid-template-columns: 1fr 300px;
+  grid-template-rows:    auto auto;
+  gap:                   16px;
+  margin-bottom:         16px;
+  align-items:           start;
+}
+
+/* Col 1 row 1 : Main chart */
+#overview-main-grid .chart-main-card {
+  grid-column: 1;
+  grid-row:    1;
+}
+
+/* Col 1 row 2 : Top Signals — comble le creux */
+#overview-main-grid .ov-top-signals-card {
+  grid-column: 1;
+  grid-row:    2;
+  overflow:    hidden;
+}
+
+/* Col 2 rows 1+2 : Right panel spans both rows */
+#overview-main-grid .overview-right {
+  grid-column: 2;
+  grid-row:    1 / 3;
+}
+
+/* ── Signal KPI inline (dans header Top Signals) ── */
+.signal-kpi-grid-inline {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  flex-wrap:   wrap;
+}
+
+.skpi-inline {
+  font-size:   11px;
+  font-weight: 700;
+  padding:     2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.skpi-inline.buy  {
+  background: rgba(16,185,129,0.1);
+  color:      var(--g);
+  border:     1px solid rgba(16,185,129,0.25);
+}
+.skpi-inline.sell {
+  background: rgba(239,68,68,0.1);
+  color:      var(--r);
+  border:     1px solid rgba(239,68,68,0.25);
+}
+.skpi-inline.neutral {
+  background: var(--surf3);
+  color:      var(--txt3);
+  border:     1px solid var(--bord);
+}
+.skpi-inline.exec {
+  background: rgba(59,130,246,0.1);
+  color:      var(--b1);
+  border:     1px solid rgba(59,130,246,0.25);
+}
+
+/* ── Top Signals table scroll interne ── */
+.ov-top-signals-card .table-wrap {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 260px;
+}
+
+.ov-top-signals-card .table-wrap::-webkit-scrollbar {
+  height: 4px;
+  width:  4px;
+}
+
+/* ── Responsive overview grid ── */
+@media (max-width: 1200px) {
+  #overview-main-grid {
+    grid-template-columns: 1fr 260px;
+  }
+}
+
+@media (max-width: 1024px) {
+  #overview-main-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows:    auto auto auto;
+  }
+  #overview-main-grid .chart-main-card  { grid-column: 1; grid-row: 1; }
+  #overview-main-grid .overview-right   { grid-column: 1; grid-row: 2; }
+  #overview-main-grid .ov-top-signals-card { grid-column: 1; grid-row: 3; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STOCK DETAIL — Overview sans creux (layout mono-colonne)
+══════════════════════════════════════════════════════════════ */
+
+.sdp-fp-body.layout-overview-v2 {
+  grid-template-columns: 1fr;
+  gap:                   12px;
+}
+
+/* Réduction hauteurs TA charts dans stock detail */
+#sd-rsi-chart,
+#sd-macd-chart {
+  width:      100% !important;
+  height:     80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
+  display:    block !important;
+}
+
+#sd-ichi-chart {
+  width:      100% !important;
+  height:     150px !important;
+  min-height: 150px !important;
+  max-height: 150px !important;
+  display:    block !important;
+}
+
+/* Mini chart dans overview stock detail */
+.sdp-fp-chart-mini-sm {
+  width:      100% !important;
+  height:     180px !important;
+  min-height: 180px !important;
+  max-height: 180px !important;
+  overflow:   hidden !important;
+  border-radius: var(--r-md);
+  border:     1px solid var(--bord);
+  background: var(--surf2);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   WATCHLIST — Sync Status UI
+══════════════════════════════════════════════════════════════ */
+.wl-sync-bar {
+  display:       flex;
+  align-items:   center;
+  gap:           8px;
+  padding:       8px 12px;
+  background:    var(--surf2);
+  border:        1px solid var(--bord);
+  border-radius: var(--r-md);
+  margin-bottom: 10px;
+  font-size:     11px;
+  flex-wrap:     wrap;
+}
+
+.wl-sync-dot {
+  width:         8px;
+  height:        8px;
+  border-radius: 50%;
+  flex-shrink:   0;
+}
+
+.wl-sync-dot.synced  { background: var(--g); box-shadow: 0 0 5px rgba(16,185,129,0.5); }
+.wl-sync-dot.error   { background: var(--r); }
+.wl-sync-dot.loading { background: var(--y); animation: pulseGreen 1.5s ease-in-out infinite; }
+.wl-sync-dot.local   { background: var(--txt4); }
+
+.wl-pat-input-mini {
+  padding:       3px 8px;
+  border-radius: var(--r-sm);
+  border:        1px solid var(--bord2);
+  background:    var(--surf);
+  color:         var(--txt);
+  font-size:     11px;
+  font-family:   var(--mono);
+  width:         160px;
+  outline:       none;
+}
+
+.wl-pat-input-mini:focus {
+  border-color: var(--b1);
+}
+
+.wl-pat-input-mini::placeholder {
+  color: var(--txt4);
+}

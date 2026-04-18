@@ -42,6 +42,8 @@ const WatchlistManager = (() => {
   let _watchlist      = [];
   let _starred        = [];
   let _ghSaveTimeout  = null;
+  let _syncTimestamp  = 0;      // Timestamp de la dernière sync GitHub réussie
+  let _syncStatus     = 'local'; // 'local' | 'synced' | 'error' | 'loading'
 
   // ── Universe (copie du UNIVERSE JS) ───────────────────────
   const UNIVERSE = {
@@ -78,24 +80,43 @@ const WatchlistManager = (() => {
   // INIT
   // ════════════════════════════════════════════════════════
   async function init() {
-    // 1. Essai chargement depuis GitHub Pages (watchlist.json)
+    // 1. Essai chargement depuis GitHub Pages (source de vérité cross-device)
     const ghData = await _loadFromGitHubPages();
     if (ghData) {
-      _watchlist = Array.isArray(ghData.watchlist) ? ghData.watchlist : [];
-      _starred   = Array.isArray(ghData.starred)   ? ghData.starred   : [];
+      _watchlist     = Array.isArray(ghData.watchlist) ? ghData.watchlist : [];
+      _starred       = Array.isArray(ghData.starred)   ? ghData.starred   : [];
+      _syncTimestamp = ghData.updated_at ? new Date(ghData.updated_at).getTime() : Date.now();
+      _syncStatus    = 'synced';
       _saveLocal();
-      console.log(`[WatchlistManager] Loaded from GitHub Pages | ${_watchlist.length} symbols`);
+      console.log(`[WatchlistManager] ✅ Loaded from GitHub Pages | ${_watchlist.length} symbols`);
     } else {
-      // 2. Fallback localStorage
+      // 2. Fallback localStorage (device-local)
       _loadLocal();
-      console.log(`[WatchlistManager] Loaded from localStorage | ${_watchlist.length} symbols`);
+      _syncStatus = 'local';
+      console.log(`[WatchlistManager] ⚠ GitHub Pages unavailable — loaded from localStorage | ${_watchlist.length} symbols`);
     }
 
     _buildSectorTabs();
     _buildAddForm();
     _buildSearchBinding();
+    _buildSyncUI();  // ← NOUVEAU : UI de sync dans la toolbar
 
-    console.log(`[WatchlistManager] Init done | ${_watchlist.length} symbols in watchlist | ${ALL_SYMBOLS_FLAT.length} universe`);
+    // ── Sync automatique quand l'utilisateur revient sur l'onglet ──
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        _autoSyncFromGitHub();
+      }
+    });
+
+    // ── Sync toutes les 5 minutes si PAT disponible ───────────
+    setInterval(() => {
+      const pat = localStorage.getItem('av_gh_pat') || '';
+      if (pat.startsWith('ghp_')) {
+        _autoSyncFromGitHub();
+      }
+    }, 5 * 60 * 1000);
+
+    console.log(`[WatchlistManager] Init done | ${_watchlist.length} symbols | sync:${_syncStatus}`);
   }
 
   // ════════════════════════════════════════════════════════
@@ -125,16 +146,26 @@ const WatchlistManager = (() => {
   // ════════════════════════════════════════════════════════
   async function _loadFromGitHubPages() {
     try {
-      // ApiClient détecte automatiquement la base URL GitHub Pages
       const base = window.ApiClient ? ApiClient.getBase() : '/signals';
-      const resp = await fetch(`${base}/watchlist.json?_=${Date.now()}`, {
-        signal: AbortSignal.timeout(5000),
-        cache:  'no-store',
-      });
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      if (data && (Array.isArray(data.watchlist) || Array.isArray(data.starred))) {
-        return data;
+      // Essai 1 : GitHub Pages public URL
+      const urls = [
+        `${base}/watchlist.json?_=${Date.now()}`,
+        `https://raw.githubusercontent.com/${GH_OWNER}/${GH_REPO}/main/docs/signals/watchlist.json?_=${Date.now()}`,
+      ];
+
+      for (const url of urls) {
+        try {
+          const resp = await fetch(url, {
+            signal: AbortSignal.timeout(6000),
+            cache:  'no-store',
+          });
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          if (data && (Array.isArray(data.watchlist) || Array.isArray(data.starred))) {
+            console.log(`[WatchlistManager] GitHub source: ${url}`);
+            return data;
+          }
+        } catch(e) {}
       }
       return null;
     } catch(e) {
@@ -142,27 +173,56 @@ const WatchlistManager = (() => {
     }
   }
 
+  async function _autoSyncFromGitHub() {
+    try {
+      const ghData = await _loadFromGitHubPages();
+      if (!ghData) return;
+
+      const ghTime = ghData.updated_at ? new Date(ghData.updated_at).getTime() : 0;
+
+      // Sync seulement si GitHub est plus récent que notre dernière sync
+      if (ghTime > _syncTimestamp && Array.isArray(ghData.watchlist)) {
+        const prevLen  = _watchlist.length;
+        _watchlist     = ghData.watchlist;
+        _starred       = Array.isArray(ghData.starred) ? ghData.starred : _starred;
+        _syncTimestamp = ghTime;
+        _syncStatus    = 'synced';
+        _saveLocal();
+        render(_signalData);
+        _updateSyncUI();
+
+        if (_watchlist.length !== prevLen) {
+          _showToast(`Watchlist synced from GitHub (${_watchlist.length} symbols)`, 'info');
+        }
+      }
+    } catch(e) {}
+  }
+
   async function _pushToGitHub() {
     const pat = localStorage.getItem('av_gh_pat') || '';
     if (!pat || !pat.startsWith('ghp_')) {
-      console.log('[WatchlistManager] No PAT — GitHub save skipped (use localStorage only)');
+      _syncStatus = 'local';
+      _updateSyncUI();
+      console.log('[WatchlistManager] No PAT — enter it in the watchlist sync bar to enable cross-device sync.');
       return false;
     }
+
+    _syncStatus = 'loading';
+    _updateSyncUI();
 
     const payload = {
       watchlist:  _watchlist,
       starred:    _starred,
       updated_at: new Date().toISOString(),
       n:          _watchlist.length,
+      device:     navigator.userAgent.slice(0, 50),
     };
 
-    // Encode en base64 UTF-8
     const content = btoa(unescape(encodeURIComponent(
       JSON.stringify(payload, null, 2)
     )));
 
     try {
-      // Récupère le SHA actuel du fichier (requis pour la mise à jour)
       const getUrl = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_FILE_PATH}`;
       const headers = {
         'Authorization':        `Bearer ${pat}`,
@@ -175,11 +235,17 @@ const WatchlistManager = (() => {
       if (getResp.ok) {
         const existing = await getResp.json();
         sha = existing.sha;
+      } else if (getResp.status === 401) {
+        // PAT invalide
+        localStorage.removeItem('av_gh_pat');
+        _syncStatus = 'error';
+        _updateSyncUI();
+        _showToast('GitHub PAT invalid or expired — please re-enter', 'error');
+        return false;
       }
 
-      // Écrit le fichier
       const body = {
-        message: `Watchlist update — ${new Date().toISOString().slice(0, 16)} UTC`,
+        message: `Watchlist update — ${new Date().toISOString().slice(0, 16)} UTC (${_watchlist.length} symbols)`,
         content,
       };
       if (sha) body.sha = sha;
@@ -188,20 +254,27 @@ const WatchlistManager = (() => {
         method:  'PUT',
         headers: { ...headers, 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),
-        signal:  AbortSignal.timeout(10000),
+        signal:  AbortSignal.timeout(12000),
       });
 
       if (putResp.ok) {
-        console.log(`[WatchlistManager] Saved to GitHub | ${_watchlist.length} symbols`);
-        _showToast(`Watchlist saved to GitHub (${_watchlist.length} symbols)`, 'success');
+        _syncTimestamp = Date.now();
+        _syncStatus    = 'synced';
+        _updateSyncUI();
+        console.log(`[WatchlistManager] ✅ Saved to GitHub | ${_watchlist.length} symbols`);
+        _showToast(`Watchlist synced to GitHub (${_watchlist.length} symbols)`, 'success');
         return true;
       } else {
         const err = await putResp.json().catch(() => ({}));
         console.warn(`[WatchlistManager] GitHub save failed: ${putResp.status} | ${err.message}`);
+        _syncStatus = 'error';
+        _updateSyncUI();
         return false;
       }
     } catch(e) {
       console.warn(`[WatchlistManager] GitHub save error: ${e.message}`);
+      _syncStatus = 'error';
+      _updateSyncUI();
       return false;
     }
   }
@@ -570,6 +643,156 @@ const WatchlistManager = (() => {
       _currentPage   = 1;
       render(_signalData);
     });
+  }
+
+  // ════════════════════════════════════════════════════════
+  // SYNC UI — Barre de statut + PAT input cross-device
+  // ════════════════════════════════════════════════════════
+  function _buildSyncUI() {
+    // Insère la barre de sync AVANT le tableau watchlist
+    const tableCard = document.querySelector('#sec-watchlist .card');
+    if (!tableCard) return;
+
+    // Évite les doublons
+    const existing = document.getElementById('wl-sync-bar');
+    if (existing) existing.remove();
+
+    const bar       = document.createElement('div');
+    bar.id          = 'wl-sync-bar';
+    bar.className   = 'wl-sync-bar';
+
+    const savedPAT  = localStorage.getItem('av_gh_pat') || '';
+    const hasPAT    = savedPAT.startsWith('ghp_');
+
+    bar.innerHTML = `
+      <div class="wl-sync-dot ${_getSyncDotClass()}" id="wl-sync-dot"></div>
+      <span id="wl-sync-text" style="color:var(--txt2);font-weight:600">
+        ${_getSyncText()}
+      </span>
+
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+
+        <!-- PAT input (masqué si déjà configuré) -->
+        ${!hasPAT ? `
+          <input type="password" class="wl-pat-input-mini" id="wl-pat-quick"
+                 placeholder="ghp_... (PAT for cross-device sync)"
+                 title="Enter your GitHub PAT (workflow scope) to sync your watchlist across all devices">
+          <button class="btn-sm" id="wl-pat-save-btn" style="font-size:10px">
+            <i class="fa-solid fa-key"></i> Save PAT
+          </button>
+        ` : `
+          <span style="font-size:10px;color:var(--g)">
+            <i class="fa-solid fa-key"></i> PAT configured
+          </span>
+          <button class="btn-xs" id="wl-pat-clear-btn" title="Remove saved PAT" style="font-size:10px">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        `}
+
+        <!-- Sync from GitHub -->
+        <button class="btn-sm" id="wl-sync-pull-btn" style="font-size:10px" title="Pull latest watchlist from GitHub">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Pull from GitHub
+        </button>
+
+        <!-- Force push to GitHub -->
+        <button class="btn-sm" id="wl-sync-push-btn" style="font-size:10px" title="Push your watchlist to GitHub (requires PAT)">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Push to GitHub
+        </button>
+
+      </div>`;
+
+    // Insert avant la card table
+    tableCard.parentElement.insertBefore(bar, tableCard);
+
+    // ── Bind events ──────────────────────────────────────────
+    // Save PAT
+    const patSaveBtn = document.getElementById('wl-pat-save-btn');
+    const patInput   = document.getElementById('wl-pat-quick');
+    if (patSaveBtn && patInput) {
+      patSaveBtn.addEventListener('click', () => {
+        const val = patInput.value.trim();
+        if (val.startsWith('ghp_')) {
+          localStorage.setItem('av_gh_pat', val);
+          _showToast('PAT saved — pushing to GitHub...', 'success');
+          _buildSyncUI(); // Rebuild pour cacher le champ
+          _pushToGitHub();
+        } else {
+          _showToast('Invalid PAT — must start with ghp_', 'error');
+        }
+      });
+
+      patInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') patSaveBtn.click();
+      });
+    }
+
+    // Clear PAT
+    document.getElementById('wl-pat-clear-btn')?.addEventListener('click', () => {
+      localStorage.removeItem('av_gh_pat');
+      _showToast('PAT removed — sync disabled', 'warn');
+      _syncStatus = 'local';
+      _buildSyncUI();
+    });
+
+    // Pull from GitHub
+    document.getElementById('wl-sync-pull-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('wl-sync-pull-btn');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Pulling...';
+      const ghData = await _loadFromGitHubPages();
+      if (ghData && Array.isArray(ghData.watchlist)) {
+        _watchlist     = ghData.watchlist;
+        _starred       = Array.isArray(ghData.starred) ? ghData.starred : _starred;
+        _syncTimestamp = ghData.updated_at ? new Date(ghData.updated_at).getTime() : Date.now();
+        _syncStatus    = 'synced';
+        _saveLocal();
+        render(_signalData);
+        _updateSyncUI();
+        _showToast(`Pulled ${_watchlist.length} symbols from GitHub`, 'success');
+      } else {
+        _showToast('Could not reach GitHub Pages — check your connection', 'error');
+        _syncStatus = 'error';
+        _updateSyncUI();
+      }
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-down"></i> Pull from GitHub';
+    });
+
+    // Push to GitHub
+    document.getElementById('wl-sync-push-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('wl-sync-push-btn');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Pushing...';
+      await _pushToGitHub();
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Push to GitHub';
+    });
+  }
+
+  function _updateSyncUI() {
+    const dot  = document.getElementById('wl-sync-dot');
+    const text = document.getElementById('wl-sync-text');
+    if (dot)  dot.className = `wl-sync-dot ${_getSyncDotClass()}`;
+    if (text) text.textContent = _getSyncText();
+  }
+
+  function _getSyncDotClass() {
+    switch(_syncStatus) {
+      case 'synced':  return 'synced';
+      case 'loading': return 'loading';
+      case 'error':   return 'error';
+      default:        return 'local';
+    }
+  }
+
+  function _getSyncText() {
+    switch(_syncStatus) {
+      case 'synced': {
+        const ago = _syncTimestamp
+          ? Math.round((Date.now() - _syncTimestamp) / 60000)
+          : 0;
+        return `Synced with GitHub${ago > 0 ? ` (${ago}m ago)` : ' (just now)'}`;
+      }
+      case 'loading': return 'Syncing...';
+      case 'error':   return 'Sync error — check PAT or connection';
+      default:        return 'Local only — enter PAT above for cross-device sync';
+    }
   }
 
   // ════════════════════════════════════════════════════════

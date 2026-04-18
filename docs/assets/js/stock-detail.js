@@ -209,14 +209,8 @@ const StockDetail = (() => {
           <button class="sdp-fp-tab active" data-tab="overview">
             <i class="fa-solid fa-chart-pie"></i> Overview
           </button>
-          <button class="sdp-fp-tab" data-tab="chart">
-            <i class="fa-solid fa-chart-candlestick"></i> Chart
-          </button>
           <button class="sdp-fp-tab" data-tab="financials">
-            <i class="fa-solid fa-dollar-sign"></i> Financials
-          </button>
-          <button class="sdp-fp-tab" data-tab="earnings">
-            <i class="fa-solid fa-calendar-check"></i> Earnings
+            <i class="fa-solid fa-dollar-sign"></i> Financials &amp; Earnings
           </button>
           <button class="sdp-fp-tab" data-tab="news">
             <i class="fa-solid fa-newspaper"></i> News
@@ -360,7 +354,7 @@ const StockDetail = (() => {
     const [quoteRes, summaryRes, newsRes] = await Promise.allSettled([
       YahooFinance.getQuote(sym),
       YahooFinance.getFinancials(sym),
-      YahooFinance.getNews(sym),
+      YahooFinance.getNews(sym, 50),
     ]);
 
     _data[sym].quote   = quoteRes.status   === 'fulfilled' ? quoteRes.value   : null;
@@ -395,14 +389,12 @@ const StockDetail = (() => {
     );
 
     switch(tab) {
-      case 'overview':   _renderOverview();   break;
-      case 'chart':      _renderChart();      break;
-      case 'financials': _renderFinancials(); break;
-      case 'earnings':   _renderEarnings();   break;
-      case 'news':       _renderNews();       break;
+      case 'overview':   _renderOverview();          break;
+      case 'financials': _renderFinancialsEarnings(); break; // ← fusionné
+      case 'news':       _renderNews();              break;
+      // 'chart' et 'earnings' supprimés
     }
 
-    // Re-apply height fix after render
     setTimeout(_fixChartHeights, 50);
   }
 
@@ -448,105 +440,122 @@ const StockDetail = (() => {
       { l:'Short %',      v: _f(stats.shortPercentOfFloat?.raw != null ? stats.shortPercentOfFloat.raw * 100 : null, '', 2, '%') },
     ].filter(i => i.v && i.v !== '--');
 
-    // ── AlphaVault Signal block ──
-    const sigBlock = signal ? `
-      <div class="sdp-fp-stat-section" style="background:var(--grad-soft);border-color:rgba(59,130,246,0.25)">
-        <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-robot"></i> AlphaVault ML Signal
+    // ── Row 1 : Signal + Mini chart côte à côte ──────────────
+    const sigBg    = signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.06)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.06)' : 'var(--surf2)') : 'var(--surf2)';
+    const sigBorder= signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.25)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.25)' : 'var(--bord)') : 'var(--bord)';
+
+    const row1 = `
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start">
+
+        <!-- Signal block -->
+        <div class="sdp-fp-stat-section" style="background:${sigBg};border-color:${sigBorder};padding:14px">
+          <div class="sdp-fp-stat-title" style="margin-bottom:10px">
+            <i class="fa-solid fa-robot"></i> AlphaVault ML Signal
+          </div>
+          ${signal ? `
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              ${signal.direction === 'buy'
+                ? `<span class="dir-badge buy" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-arrow-up"></i> BUY</span>`
+                : signal.direction === 'sell'
+                  ? `<span class="dir-badge sell" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
+                  : `<span class="dir-badge neutral" style="font-size:13px;padding:5px 14px"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`}
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;flex:1">
+                <div style="background:var(--surf);border:1px solid var(--bord);border-radius:7px;padding:7px 10px">
+                  <div style="font-size:9px;color:var(--txt4);margin-bottom:2px">Score</div>
+                  <div style="font-size:14px;font-weight:800;font-family:var(--mono);color:var(--b1)">${parseFloat(signal.final_score||0).toFixed(3)}</div>
+                </div>
+                <div style="background:var(--surf);border:1px solid var(--bord);border-radius:7px;padding:7px 10px">
+                  <div style="font-size:9px;color:var(--txt4);margin-bottom:2px">Confidence</div>
+                  <div style="font-size:14px;font-weight:800;font-family:var(--mono)">${(parseFloat(signal.confidence||0)*100).toFixed(1)}%</div>
+                </div>
+                <div style="background:var(--surf);border:1px solid var(--bord);border-radius:7px;padding:7px 10px">
+                  <div style="font-size:9px;color:var(--txt4);margin-bottom:2px">Buy Prob</div>
+                  <div style="font-size:14px;font-weight:800;font-family:var(--mono);color:var(--g)">${(parseFloat(signal.buy_prob||0.5)*100).toFixed(1)}%</div>
+                </div>
+                <div style="background:var(--surf);border:1px solid var(--bord);border-radius:7px;padding:7px 10px">
+                  <div style="font-size:9px;color:var(--txt4);margin-bottom:2px">Council</div>
+                  <div style="font-size:12px;font-weight:800;color:${(signal.council||'').includes('execute')?'var(--g)':'var(--y)'}">${(signal.council||'wait').toUpperCase()}</div>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top:8px">
+              <span class="regime-chip">${(signal.regime||'--').replace(/_/g,' ')}</span>
+            </div>
+          ` : `<div style="color:var(--txt4);font-size:12px"><i class="fa-solid fa-clock"></i> Awaiting signal cycle...</div>`}
         </div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
-          ${signal.direction === 'buy'
-            ? `<span class="dir-badge buy"><i class="fa-solid fa-arrow-up"></i> BUY</span>`
-            : signal.direction === 'sell'
-              ? `<span class="dir-badge sell"><i class="fa-solid fa-arrow-down"></i> SELL</span>`
-              : `<span class="dir-badge neutral"><i class="fa-solid fa-minus"></i> NEUTRAL</span>`}
-          <div style="display:flex;gap:16px;flex-wrap:wrap">
-            <span style="font-size:12px;color:var(--txt3)">Score <strong class="mono" style="color:var(--b1)">${parseFloat(signal.final_score||0).toFixed(3)}</strong></span>
-            <span style="font-size:12px;color:var(--txt3)">Conf <strong class="mono">${(parseFloat(signal.confidence||0)*100).toFixed(1)}%</strong></span>
-            <span style="font-size:12px;color:var(--txt3)">BP <strong class="mono">${(parseFloat(signal.buy_prob||0.5)*100).toFixed(1)}%</strong></span>
-            <strong style="font-size:12px;color:${(signal.council||'').includes('execute')?'var(--g)':'var(--y)'}">
-              ${(signal.council||'wait').toUpperCase()}
-            </strong>
-            <span class="regime-chip">${(signal.regime||'--').replace(/_/g,' ')}</span>
+
+        <!-- Mini chart -->
+        <div class="sdp-fp-stat-section" style="padding:12px">
+          <div class="sdp-fp-stat-title" style="margin-bottom:8px">
+            <i class="fa-solid fa-chart-line"></i> Price Chart (1Y)
+          </div>
+          <div id="sdp-fp-chart-mini" class="sdp-fp-chart-mini-sm"></div>
+          <div style="font-size:9px;color:var(--txt4);text-align:center;margin-top:4px">
+            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · Daily
           </div>
         </div>
-      </div>` : '';
 
-    // ── Company description block ──
+      </div>`;
+
+    // ── Row 2 : Company profile ───────────────────────────────
     const descBlock = profile.longBusinessSummary ? `
-      <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title">
+      <div class="sdp-fp-stat-section" style="padding:14px">
+        <div class="sdp-fp-stat-title" style="margin-bottom:8px">
           <i class="fa-solid fa-building"></i> About ${sym}
         </div>
-        ${profile.industry || profile.sector || profile.country ? `
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-            ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
-            ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
-            ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
-            ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
-          </div>` : ''}
-        <p class="sdp-desc" id="sdp-desc-p"
-          style="font-size:13px;color:var(--txt2);line-height:1.8;
-                 display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
+          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
+          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
+          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+        </div>
+        <p id="sdp-desc-p" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
           ${profile.longBusinessSummary}
         </p>
         <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>
       </div>` : '';
 
-    // ── Stats grid ──
+    // ── Row 3 : Key stats grid ────────────────────────────────
     const statsBlock = `
-      <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title">
+      <div class="sdp-fp-stat-section" style="padding:14px">
+        <div class="sdp-fp-stat-title" style="margin-bottom:10px">
           <i class="fa-solid fa-table"></i> Key Statistics
-          ${isFallback ? `<span style="font-size:10px;color:var(--y);margin-left:8px">(partial data — proxy fallback)</span>` : ''}
+          ${isFallback ? `<span style="font-size:9px;color:var(--y);margin-left:8px">(partial data)</span>` : ''}
         </div>
-        <div class="sdp-fp-stats">
-          ${kstats.map(i => `
-            <div class="sdp-fp-stat-item">
-              <div class="sdp-fp-stat-lbl">${i.l}</div>
-              <div class="sdp-fp-stat-val">${i.v}</div>
-            </div>`).join('')}
-        </div>
-        ${!kstats.length ? `<div style="color:var(--txt4);font-size:12px;padding:16px;text-align:center">
-          <i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i>
-          Yahoo Finance data unavailable. Check yahoo-proxy Worker deployment.
-        </div>` : ''}
+        ${kstats.length ? `
+          <div class="sdp-fp-stats">
+            ${kstats.map(i => `
+              <div class="sdp-fp-stat-item">
+                <div class="sdp-fp-stat-lbl">${i.l}</div>
+                <div class="sdp-fp-stat-val">${i.v}</div>
+              </div>`).join('')}
+          </div>` : `<div style="color:var(--txt4);font-size:12px;text-align:center;padding:12px">
+            <i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i>
+            Yahoo Finance data unavailable.
+          </div>`}
       </div>`;
 
-    // ── Mini chart right column ──
-    const miniChartBlock = `
-      <div>
-        ${sigBlock}
-        <div class="sdp-fp-stat-section" style="margin-top:${signal?'16px':'0'}">
-          <div class="sdp-fp-stat-title">
-            <i class="fa-solid fa-chart-line"></i> Price Chart (1Y)
-          </div>
-          <div class="sdp-fp-chart" id="sdp-fp-chart-mini" style="height:260px!important;min-height:260px!important;max-height:260px!important"></div>
-          <div style="font-size:10px;color:var(--txt4);text-align:center;margin-top:6px">
-            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · Daily
-          </div>
-        </div>
-      </div>`;
+    // ── Assemble en layout mono-colonne ───────────────────────
+    _bodyHtml(row1 + descBlock + statsBlock, 'layout-overview-v2');
 
-    _bodyHtml(descBlock + statsBlock, 'layout-overview', miniChartBlock);
-
-    // Bind description toggle
-    const tog = document.getElementById('sdp-desc-toggle');
+    // ── Description toggle ───────────────────────────────────
+    const tog  = document.getElementById('sdp-desc-toggle');
     const para = document.getElementById('sdp-desc-p');
     if (tog && para) {
       let expanded = false;
       tog.addEventListener('click', () => {
         expanded = !expanded;
-        para.style.webkitLineClamp = expanded ? 'unset' : '3';
+        para.style.webkitLineClamp = expanded ? 'unset' : '2';
         para.style.overflow        = expanded ? 'visible' : 'hidden';
         tog.textContent            = expanded ? 'Show less' : 'Show more';
       });
     }
 
-    // Load mini chart
-    setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', _sym, '1d', '1y', 260), 80);
-    // ── TA Charts — chargement différé ───────────────────
-    setTimeout(() => _appendSDTASection(_sym), 120);
+    // ── Mini chart (hauteur réduite 180px) ───────────────────
+    setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', _sym, '1d', '1y', 180), 80);
+
+    // ── TA Charts ────────────────────────────────────────────
+    setTimeout(() => _appendSDTASection(_sym), 150);
   }
 
   // ════════════════════════════════════════════════════════
@@ -828,24 +837,222 @@ const StockDetail = (() => {
   }
 
   // ════════════════════════════════════════════════════════
+  // TAB: FINANCIALS & EARNINGS (fusionné)
+  // ════════════════════════════════════════════════════════
+  function _renderFinancialsEarnings() {
+    const sum    = _data[_sym]?.summary || {};
+    const q      = _data[_sym]?.quote   || {};
+    const fin    = sum.financialData          || {};
+    const stats  = sum.defaultKeyStatistics   || {};
+    const detail = sum.summaryDetail          || {};
+    const price  = sum.price                  || {};
+    const profile= sum.assetProfile           || {};
+    const trend  = sum.earningsTrend?.trend   || sum.earnings?.earningsChart?.quarterly || [];
+    const calendar = sum.calendarEvents?.earnings || {};
+    const nextDates = (calendar.earningsDate || [])
+      .map(d => new Date((d.raw || d) * 1000))
+      .filter(d => d > new Date());
+    const nextEarnings = nextDates[0]?.toLocaleDateString('en-US', {
+      month:'long', day:'numeric', year:'numeric'
+    });
+    const epsFromStats = stats.trailingEps?.raw || stats.forwardEps?.raw;
+
+    const kstats = [
+      { l:'Market Cap',       v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
+      { l:'Price',            v: _f(q.price || detail.regularMarketPrice?.raw, '$') },
+      { l:'52W High',         v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, '$') },
+      { l:'52W Low',          v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw, '$') },
+      { l:'P/E (TTM)',        v: _f(detail.trailingPE?.raw,  '', 2) },
+      { l:'Forward P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
+      { l:'EPS (TTM)',        v: _f(epsFromStats,             '$', 2) },
+      { l:'Beta',             v: _f(detail.beta?.raw,         '', 2) },
+      { l:'Div Yield',        v: _fPct(detail.dividendYield?.raw) },
+      { l:'P/S Ratio',        v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
+      { l:'P/B Ratio',        v: _f(stats.priceToBook?.raw, '', 2) },
+      { l:'EV/EBITDA',        v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
+      { l:'PEG Ratio',        v: _f(stats.pegRatio?.raw, '', 2) },
+      { l:'Revenue (TTM)',    v: _fmtMCap(fin.totalRevenue?.raw) },
+      { l:'Gross Margin',     v: _fPct(fin.grossMargins?.raw) },
+      { l:'Operating Margin', v: _fPct(fin.operatingMargins?.raw) },
+      { l:'Profit Margin',    v: _fPct(fin.profitMargins?.raw) },
+      { l:'EBITDA',           v: _fmtMCap(fin.ebitda?.raw) },
+      { l:'Revenue Growth',   v: _fPct(fin.revenueGrowth?.raw) },
+      { l:'Earnings Growth',  v: _fPct(fin.earningsGrowth?.raw) },
+      { l:'Total Cash',       v: _fmtMCap(fin.totalCash?.raw) },
+      { l:'Total Debt',       v: _fmtMCap(fin.totalDebt?.raw) },
+      { l:'Debt/Equity',      v: _f(fin.debtToEquity?.raw, '', 2) },
+      { l:'Free Cash Flow',   v: _fmtMCap(fin.freeCashflow?.raw) },
+      { l:'Current Ratio',    v: _f(fin.currentRatio?.raw, '', 2) },
+      { l:'ROE',              v: _fPct(fin.returnOnEquity?.raw) },
+      { l:'ROA',              v: _fPct(fin.returnOnAssets?.raw) },
+      { l:'Short % Float',    v: _fPct(stats.shortPercentOfFloat?.raw) },
+      { l:'Insider Own.',     v: _fPct(stats.heldPercentInsiders?.raw) },
+      { l:'Institution Own.', v: _fPct(stats.heldPercentInstitutions?.raw) },
+    ].filter(i => i.v && i.v !== '--');
+
+    const hasFull = fin.totalRevenue || stats.enterpriseValue;
+    const srcBadge = hasFull
+      ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)"><i class="fa-solid fa-circle-check"></i> Full Data</span>`
+      : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)"><i class="fa-solid fa-triangle-exclamation"></i> Quote Only</span>`;
+
+    // ── Section 1 : Key Stats ─────────────────────────────────
+    const statsBlock = `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-table"></i> Key Statistics &amp; Financials
+          <div style="margin-left:auto">${srcBadge}</div>
+        </div>
+        ${kstats.length ? `
+          <div class="sdp-fp-stats">
+            ${kstats.map(i => `
+              <div class="sdp-fp-stat-item">
+                <div class="sdp-fp-stat-lbl">${i.l}</div>
+                <div class="sdp-fp-stat-val">${i.v}</div>
+              </div>`).join('')}
+          </div>` : `
+          <div style="text-align:center;padding:24px;color:var(--txt4)">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:22px;color:var(--y);margin-bottom:8px;display:block"></i>
+            <strong style="color:var(--txt)">Financial data unavailable</strong><br>
+            <span style="font-size:11px;margin-top:4px;display:block">The Yahoo Finance proxy needs to return full quoteSummary modules.</span>
+            <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:10px">
+              <i class="fa-solid fa-rotate"></i> Retry
+            </button>
+          </div>`}
+      </div>`;
+
+    // ── Section 2 : Next Earnings Date ───────────────────────
+    const calSection = nextEarnings ? `
+      <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-calendar-check"></i> Next Earnings Date</div>
+        <div style="font-size:24px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:4px">${nextEarnings}</div>
+        <div style="font-size:11px;color:var(--txt4)">Market will be watching closely</div>
+      </div>` : '';
+
+    // ── Section 3 : EPS Summary ───────────────────────────────
+    const epsCard = epsFromStats ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-dollar-sign"></i> EPS Summary</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">EPS (TTM)</div>
+            <div class="sdp-fp-stat-val" style="color:${epsFromStats>0?'var(--g)':'var(--r)'}">$${epsFromStats.toFixed(2)}</div>
+          </div>
+          ${q.price && epsFromStats ? `
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">P/E (TTM)</div>
+            <div class="sdp-fp-stat-val">${(q.price / epsFromStats).toFixed(2)}</div>
+          </div>` : ''}
+          ${stats.forwardEps?.raw ? `
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">Fwd EPS</div>
+            <div class="sdp-fp-stat-val" style="color:var(--b1)">$${parseFloat(stats.forwardEps.raw).toFixed(2)}</div>
+          </div>` : ''}
+        </div>
+      </div>` : '';
+
+    // ── Section 4 : EPS & Revenue Estimates par période ───────
+    const PERIOD_LABELS = {
+      '0q':'Current Quarter', '+1q':'Next Quarter',
+      '0y':'Current Year',    '+1y':'Next Year',
+    };
+
+    const epsSection = trend.length ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-chart-bar"></i> EPS &amp; Revenue Estimates</div>
+        ${trend.map(t => {
+          const epsEst  = t.earningsEstimate?.avg?.raw;
+          const epsYago = t.earningsEstimate?.yearAgoEps?.raw;
+          const revEst  = t.revenueEstimate?.avg?.raw;
+          const revGrow = t.revenueEstimate?.growth?.raw;
+          const period  = PERIOD_LABELS[t.period] || t.period;
+          if (!epsEst && !revEst) return '';
+          return `
+            <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bord)">
+              <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px">
+                <span class="regime-chip">${period}</span>
+                ${revGrow != null ? `<span style="font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY</span>` : ''}
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+                ${epsEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">EPS Estimate</div><div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div></div>` : ''}
+                ${epsYago != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Year Ago EPS</div><div class="sdp-fp-stat-val">$${epsYago.toFixed(2)}</div></div>` : ''}
+                ${revEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Rev Estimate</div><div class="sdp-fp-stat-val">${_fmtMCap(revEst)}</div></div>` : ''}
+              </div>
+            </div>`;
+        }).join('')}
+      </div>` : '';
+
+    // ── Section 5 : Company Profile ───────────────────────────
+    const profileBlock = profile.longBusinessSummary ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-building"></i> About ${_sym}</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
+          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
+          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
+          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+        </div>
+        <p id="sdp-desc-p2" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+          ${profile.longBusinessSummary}
+        </p>
+        <button class="sdp-desc-toggle" id="sdp-desc-toggle2">Show more</button>
+      </div>` : '';
+
+    // ── Fallback si rien n'est disponible ─────────────────────
+    const nothingAvailable = !kstats.length && !nextEarnings && !epsFromStats && !trend.length;
+    const fallback = nothingAvailable ? `
+      <div style="text-align:center;padding:40px;color:var(--txt4)">
+        <i class="fa-solid fa-circle-info" style="font-size:28px;color:var(--b1);margin-bottom:12px;display:block"></i>
+        <strong style="color:var(--txt)">Data not yet available for ${_sym}</strong><br>
+        <span style="font-size:12px;margin-top:6px;display:block">
+          ${_sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT)$/)
+            ? 'ETFs show limited financial data.'
+            : 'The Yahoo proxy may need the /summary endpoint with full modules.'}
+        </span>
+        <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:12px">
+          <i class="fa-solid fa-rotate"></i> Retry
+        </button>
+      </div>` : '';
+
+    // ── Layout mono-colonne (pas de creux) ────────────────────
+    _bodyHtml(
+      calSection + epsCard + statsBlock + epsSection + profileBlock + fallback,
+      'layout-overview-v2'
+    );
+
+    // Description toggle
+    const tog2  = document.getElementById('sdp-desc-toggle2');
+    const para2 = document.getElementById('sdp-desc-p2');
+    if (tog2 && para2) {
+      let expanded = false;
+      tog2.addEventListener('click', () => {
+        expanded = !expanded;
+        para2.style.webkitLineClamp = expanded ? 'unset' : '3';
+        para2.style.overflow        = expanded ? 'visible' : 'hidden';
+        tog2.textContent            = expanded ? 'Show less' : 'Show more';
+      });
+    }
+  }
+
+  // ════════════════════════════════════════════════════════
   // TAB: NEWS
   // ════════════════════════════════════════════════════════
   function _renderNews() {
-    const news = _data[_sym]?.news || [];
-    const MAX_NEWS = 50;
+    const news    = _data[_sym]?.news || [];
+    const MAX_NEWS = 50; // ← déjà 50
 
-    if (!news.length) {
-      YahooFinance.getNews(_sym, MAX_NEWS).then(articles => {
+    // Si le cache a < 10 articles, force un rechargement
+    if (news.length < 10) {
+      YahooFinance.getNews(_sym, 50).then(articles => {
         if (_tab === 'news') {
           if (_data[_sym]) _data[_sym].news = articles;
           _renderNews();
         }
       });
       _bodyHtml(`
-        <div style="text-align:center;padding:60px;color:var(--txt4)">
-          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1);margin-bottom:12px;display:block"></i>
+        <div style="text-align:center;padding:40px;color:var(--txt4)">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:20px;color:var(--b1);margin-bottom:10px;display:block"></i>
           Loading news for ${_sym}...
-        </div>`, 'layout-news');
+        </div>`, 'layout-overview-v2');
       return;
     }
 
@@ -1228,7 +1435,7 @@ const StockDetail = (() => {
               <span><i class="fa-solid fa-gauge" style="color:var(--b1)"></i> RSI (14)</span>
               <span id="sd-rsi-val" style="color:var(--txt)">--</span>
             </div>
-            <div style="height:110px;position:relative;overflow:hidden;contain:strict">
+            <div style="height:80px;position:relative;overflow:hidden;contain:strict">
               <canvas id="sd-rsi-chart"></canvas>
             </div>
           </div>
@@ -1237,7 +1444,7 @@ const StockDetail = (() => {
               <span><i class="fa-solid fa-wave-square" style="color:var(--b2)"></i> MACD (12,26,9)</span>
               <span id="sd-macd-val" style="color:var(--txt)">--</span>
             </div>
-            <div style="height:110px;position:relative;overflow:hidden;contain:strict">
+            <div style="height:80px;position:relative;overflow:hidden;contain:strict">
               <canvas id="sd-macd-chart"></canvas>
             </div>
           </div>
@@ -1260,7 +1467,7 @@ const StockDetail = (() => {
             <i class="fa-solid fa-layer-group" style="color:var(--b2)"></i> Fibonacci Retracement (60D)
           </div>
           <div id="sd-fib-viz">
-            <div style="color:var(--txt4);font-size:11px;text-align:center;padding:16px">
+            <div style="height:150px;position:relative;overflow:hidden;contain:strict">
               <i class="fa-solid fa-circle-notch fa-spin"></i>
             </div>
           </div>

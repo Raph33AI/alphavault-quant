@@ -273,9 +273,14 @@
         </div>
       </div>
 
-      <!-- Main Chart + Right Panel -->
-      <div class="overview-grid">
-        <div class="card chart-main-card">
+      <!-- ══════════════════════════════════════════════════
+           OVERVIEW GRID — Main chart + Right panel + Top Signals
+           Le Top Signals est en col 1 row 2 pour combler le creux
+      ══════════════════════════════════════════════════════ -->
+      <div class="overview-grid" id="overview-main-grid">
+
+        <!-- ── Col 1 Row 1 : Main Chart ───────────────── -->
+        <div class="card chart-main-card" style="margin-bottom:0">
           <div class="card-header">
             <div class="ch-controls">
               <select class="select-input" id="ov-symbol">
@@ -311,38 +316,55 @@
           <div class="chart-legend" id="main-chart-legend"></div>
         </div>
 
-        <div class="overview-right">
-          <!-- Signal Summary -->
-          <div class="card">
-            <div class="card-header">
-              <i class="fa-solid fa-satellite-dish"></i> Signal Summary
-            </div>
-            <div class="signal-kpi-grid">
-              <div class="skpi buy">
-                <div class="skpi-val" id="ov-buy">0</div>
-                <div class="skpi-lbl">BUY</div>
+        <!-- ── Col 1 Row 2 : Top Signals (comble le creux) ──── -->
+        <div class="card ov-top-signals-card" style="margin-bottom:0">
+          <div class="card-header">
+            <span><i class="fa-solid fa-satellite-dish"></i> Top Signals</span>
+            <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+              <div class="signal-kpi-grid-inline">
+                <span class="skpi-inline buy"><span id="ov-buy">0</span> BUY</span>
+                <span class="skpi-inline sell"><span id="ov-sell">0</span> SELL</span>
+                <span class="skpi-inline neutral"><span id="ov-neutral">0</span> NEUTRAL</span>
+                <span class="skpi-inline exec"><span id="ov-exec">0</span> EXECUTE</span>
               </div>
-              <div class="skpi sell">
-                <div class="skpi-val" id="ov-sell">0</div>
-                <div class="skpi-lbl">SELL</div>
-              </div>
-              <div class="skpi neutral">
-                <div class="skpi-val" id="ov-neutral">0</div>
-                <div class="skpi-lbl">NEUTRAL</div>
-              </div>
-              <div class="skpi exec">
-                <div class="skpi-val" id="ov-exec">0</div>
-                <div class="skpi-lbl">EXECUTE</div>
-              </div>
+              <button class="btn-sm" id="btn-view-all-signals" style="font-size:11px">
+                View All <i class="fa-solid fa-arrow-right"></i>
+              </button>
             </div>
           </div>
+          <div class="table-wrap" style="overflow-x:auto;max-height:260px;overflow-y:auto">
+            <table class="data-table" style="min-width:680px">
+              <thead>
+                <tr>
+                  <th>Symbol</th>
+                  <th>Price</th>
+                  <th>Direction</th>
+                  <th>Score</th>
+                  <th>Confidence</th>
+                  <th>Council</th>
+                  <th>Regime</th>
+                </tr>
+              </thead>
+              <tbody id="ov-signals-tbody">
+                <tr>
+                  <td colspan="7" class="loading-row">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Col 2 Rows 1+2 : Right Panel ─────────────── -->
+        <div class="overview-right">
 
           <!-- Strategy Allocation mini donut -->
           <div class="card">
             <div class="card-header">
               <i class="fa-solid fa-sliders"></i> Allocation
             </div>
-            <canvas id="ov-strategy-donut" height="160"></canvas>
+            <canvas id="ov-strategy-donut" height="140"></canvas>
           </div>
 
           <!-- Portfolio Snapshot -->
@@ -377,7 +399,7 @@
             </div>
             <div class="health-grid">
               <div class="hg-row">
-                <span class="hg-lbl"><i class="fa-solid fa-brain"></i> Auto-Trade</span>
+                <span class="hg-lbl"><i class="fa-solid fa-robot"></i> Auto-Trade</span>
                 <span class="hg-val" id="hg-auto" style="color:var(--g)">GitHub Actions</span>
               </div>
               <div class="hg-row">
@@ -399,42 +421,12 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Top Signals Table Preview -->
-      <div class="card">
-        <div class="card-header">
-          <span><i class="fa-solid fa-satellite-dish"></i> Top Signals</span>
-          <button class="btn-sm" id="btn-view-all-signals">
-            View All <i class="fa-solid fa-arrow-right"></i>
-          </button>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Symbol</th>
-                <th>Price</th>
-                <th>Direction</th>
-                <th>Score</th>
-                <th>Confidence</th>
-                <th>Council</th>
-                <th>Regime</th>
-              </tr>
-            </thead>
-            <tbody id="ov-signals-tbody">
-              <tr>
-                <td colspan="7" class="loading-row">
-                  <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
+      <!-- /overview-main-grid -->
 
-      <!-- ══════════════════════════════════════════════════════
-          TECHNICAL ANALYSIS — Wall Street Indicators
+      <!-- ══════════════════════════════════════════════════
+           TECHNICAL ANALYSIS — Wall Street Indicators
       ══════════════════════════════════════════════════════ -->
       <div class="card" id="ta-panel-card" style="margin-bottom:16px">
         <div class="card-header">
@@ -449,15 +441,15 @@
           </div>
         </div>
         <div id="ta-panel">
-          <div style="text-align:center;padding:32px;color:var(--txt4)">
-            <i class="fa-solid fa-chart-candlestick" style="font-size:24px;color:var(--b1);margin-bottom:10px;display:block;opacity:0.5"></i>
+          <div style="text-align:center;padding:24px;color:var(--txt4)">
+            <i class="fa-solid fa-chart-candlestick" style="font-size:20px;color:var(--b1);margin-bottom:8px;display:block;opacity:0.5"></i>
             Select a symbol and load a chart to see technical analysis
           </div>
         </div>
       </div>
 
-      <!-- ══════════════════════════════════════════════════════
-          WATCHLIST CHARTS (déplacé depuis sec-charts)
+      <!-- ══════════════════════════════════════════════════
+           WATCHLIST CHARTS (déplacé depuis sec-charts)
       ══════════════════════════════════════════════════════ -->
       <div class="card" style="margin-bottom:16px">
         <div class="card-header">
@@ -475,11 +467,12 @@
           </div>
         </div>
         <div class="charts-grid layout-2-2" id="ov-charts-grid" style="margin-bottom:0">
-          <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--txt4)">
+          <div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--txt4)">
             <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i> Loading charts...
           </div>
         </div>
       </div>
+
     </section>
 
     <!-- ══════════════════════════════════════════════════════
