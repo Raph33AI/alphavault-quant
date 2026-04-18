@@ -10,10 +10,10 @@
 const TradingModeManager = (() => {
 
   // ── Configuration ─────────────────────────────────────────
-  const ORACLE_URL     = 'http://141.253.96.130:5000';
-  const SWITCH_API_KEY = 'ALPHAVAULT_SWITCH_2026_SECRET';
-  const POLL_MS        = 30_000;
-  const SWITCH_TIMEOUT = 15_000;
+    const ORACLE_URL     = 'https://oracle-ibkr-proxy.raphnardone.workers.dev'; // ← HTTPS via Cloudflare
+    const SWITCH_API_KEY = 'ALPHAVAULT_SWITCH_2026_SECRET';
+    const POLL_MS        = 30_000;
+    const SWITCH_TIMEOUT = 15_000;
 
   const MODES = {
     paper: {
