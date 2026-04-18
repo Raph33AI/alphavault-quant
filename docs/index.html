@@ -122,7 +122,21 @@
     <div class="auto-trading-badge inactive" id="auto-trading-badge" title="Automated trading status">
       <i class="fa-solid fa-brain"></i> AUTO
     </div>
-    <div class="dry-run-badge" id="dry-run-badge">PAPER</div>
+    <!-- Toggle Paper / Live Trading -->
+    <div class="mode-toggle-wrap" id="mode-toggle-wrap"
+        data-mode="paper"
+        data-tooltip="Paper: DUM895161 | Oracle: 141.253.96.130">
+      <div class="mode-oracle-dot offline" id="mode-oracle-dot"
+          title="Oracle VM connection status"></div>
+      <span class="mode-toggle-label paper" id="mode-toggle-label">PAPER</span>
+      <label class="mode-switch" title="Switch Paper/Live">
+        <input type="checkbox" id="mode-toggle-checkbox">
+        <span class="mode-switch-slider"></span>
+      </label>
+      <span class="mode-toggle-account" id="mode-toggle-account">DUM895161</span>
+      <!-- Badge caché pour compatibilité terminal.js -->
+      <span id="dry-run-badge" style="display:none">PAPER</span>
+    </div>
     <button class="btn-icon" id="btn-refresh" title="Force refresh">
       <i class="fa-solid fa-rotate"></i>
     </button>
@@ -1309,6 +1323,7 @@
 <script src="assets/js/watchlist-manager.js"></script>
 <script src="assets/js/stock-detail.js"></script>
 <script src="assets/js/terminal.js"></script>
+<script src="assets/js/trading-mode.js"></script>
 
 </body>
 </html>
