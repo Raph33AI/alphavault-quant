@@ -1,13 +1,12 @@
 # ============================================================
-# ALPHAVAULT QUANT — Worker Client
-# Client universel pour tous les Cloudflare Workers existants
-# ✅ Détection automatique de disponibilité
-# ✅ Fallback automatique si worker indisponible
-# ✅ Retry avec backoff exponentiel
+# ALPHAVAULT QUANT — Worker Client v2.0
+# ✅ Multi-provider LLM : Gemini → Groq → Ollama → Deterministic
+# ✅ Groq free tier (llama3.1-8b, 14 400 tok/min)
+# ✅ Ollama local sur Oracle VM (phi3:mini, phi3, gemma2)
+# ✅ Rotation automatique en cas de quota dépassé
 # ============================================================
 
 import httpx
-import asyncio
 import time
 import json
 from typing import Optional, Dict, Any, List, Tuple
@@ -15,95 +14,123 @@ from loguru import logger
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 class WorkerStatus:
-    """Suivi de l'état de disponibilité d'un worker."""
     def __init__(self, url: str):
-        self.url           = url
-        self.available     = None   # None = pas encore testé
-        self.last_check    = 0.0
-        self.latency_ms    = 0.0
-        self.fail_count    = 0
-        self.check_interval = 300   # Re-check toutes les 5 minutes
+        self.url            = url
+        self.available      = None
+        self.last_check     = 0.0
+        self.latency_ms     = 0.0
+        self.fail_count     = 0
+        self.check_interval = 300
 
     @property
     def needs_recheck(self) -> bool:
         return (time.time() - self.last_check) > self.check_interval
 
     def mark_ok(self, latency_ms: float):
-        self.available  = True
-        self.latency_ms = latency_ms
-        self.fail_count = 0
-        self.last_check = time.time()
+        self.available      = True
+        self.latency_ms     = latency_ms
+        self.fail_count     = 0
+        self.last_check     = time.time()
+        self.check_interval = 300
 
     def mark_failed(self):
-        self.available  = False
-        self.fail_count += 1
-        self.last_check = time.time()
-        # Backoff : plus d'échecs = intervalle plus long
-        self.check_interval = min(300 * (2 ** self.fail_count), 1800)
+        self.available       = False
+        self.fail_count     += 1
+        self.last_check      = time.time()
+        self.check_interval  = min(300 * (2 ** self.fail_count), 1800)
 
 class WorkerClient:
     """
-    Client centralisé pour consommer les Cloudflare Workers AlphaVault.
-    
-    Fonctionnalités :
-    - Détection automatique de disponibilité de chaque worker
-    - Retry avec backoff exponentiel (tenacity)
-    - Fallback LLM automatique (Gemini → Claude → OpenAI)
-    - Cache mémoire léger pour éviter les requêtes répétitives
-    - Timeout configurable par endpoint
+    Client centralisé pour tous les LLMs et Workers AlphaVault.
+
+    Ordre de priorité LLM :
+    1. Gemini via Cloudflare proxy   (primaire)
+    2. Groq API free tier            (fallback quota Gemini)
+    3. Ollama local Oracle VM        (fallback total)
+    4. None → mode déterministe      (fallback final)
     """
 
-    # Timeouts par type d'endpoint (secondes)
     TIMEOUTS = {
-        "quote":          8,
-        "time_series":   15,
-        "indicators":    15,
-        "news":          10,
-        "sentiment":     10,
-        "options":       12,
-        "ai":            20,
-        "economic":      12,
-        "health":         5,
-        "default":       10,
+        "quote":        8,
+        "time_series": 15,
+        "indicators":  15,
+        "news":        10,
+        "sentiment":   10,
+        "ai":          25,
+        "economic":    12,
+        "health":       5,
+        "groq":        20,
+        "ollama":      60,
+        "default":     10,
+    }
+
+    # ── Groq modèles disponibles (free tier) ─────────────────
+    GROQ_MODELS = {
+        "fast":    "llama3-8b-8192",
+        "smart":   "llama3-70b-8192",
+        "default": "llama3-8b-8192",
+    }
+
+    # ── Ollama modèles (Oracle AMD Micro 4GB) ─────────────────
+    OLLAMA_MODELS = {
+        "default": "phi3:mini",   # 3.8B Q4, ~2.3GB → OK sur 4GB
+        "fast":    "phi3:mini",
+        "smart":   "gemma2:2b",   # 2B Q4, ~1.5GB
     }
 
     def __init__(self, settings):
         self.settings = settings
         self._cache: Dict[str, Tuple[Any, float]] = {}
-        self._cache_ttl = 60  # 60 secondes par défaut
+        self._cache_ttl = 60
 
-        # Status de chaque worker
+        # Workers Cloudflare
         self._workers: Dict[str, WorkerStatus] = {
             "finance_hub":   WorkerStatus(settings.FINANCE_HUB_URL),
             "ai_proxy":      WorkerStatus(settings.AI_PROXY_URL),
             "economic_data": WorkerStatus(settings.ECONOMIC_DATA_URL),
         }
 
-        # Client HTTP synchrone (pour GitHub Actions)
+        # LLM provider status
+        self._llm_provider_status: Dict[str, Dict] = {
+            "gemini": {"available": None, "quota_reset": 0, "calls_today": 0},
+            "groq":   {"available": None, "quota_reset": 0, "calls_today": 0},
+            "ollama": {"available": None, "quota_reset": 0, "calls_today": 0},
+        }
+
+        # HTTP client
         self._http = httpx.Client(
             timeout=httpx.Timeout(30.0),
             headers={
                 "Content-Type": "application/json",
-                "User-Agent":   "AlphaVault-Quant/1.0",
+                "User-Agent":   "AlphaVault-Quant/2.0",
             },
             follow_redirects=True,
         )
-        logger.info("✅ WorkerClient initialisé")
 
-    # ── Health Check ─────────────────────────────────────────
+        # Groq API key (from settings ou env)
+        self._groq_key   = getattr(settings, "GROQ_API_KEY",   None)
+        self._ollama_url = getattr(settings, "OLLAMA_URL",     "http://localhost:11434")
+
+        logger.info(
+            f"✅ WorkerClient v2.0 | "
+            f"Groq: {'✅' if self._groq_key else '❌'} | "
+            f"Ollama: {self._ollama_url}"
+        )
+
+    # ════════════════════════════════════════════════════════
+    # HEALTH CHECKS
+    # ════════════════════════════════════════════════════════
     def health_check(self, url: str) -> Dict[str, Any]:
-        """Teste la disponibilité d'un worker via /health."""
         try:
-            t0 = time.time()
+            t0   = time.time()
             resp = self._http.get(f"{url}/health", timeout=5)
-            latency = (time.time() - t0) * 1000
+            lat  = (time.time() - t0) * 1000
             resp.raise_for_status()
-            return {"ok": True, "latency_ms": round(latency, 1), "data": resp.json()}
+            return {"ok": True, "latency_ms": round(lat, 1), "data": resp.json()}
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
     def check_all_workers(self) -> Dict[str, bool]:
-        """Vérifie la disponibilité de tous les workers. Retourne un dict {nom: bool}."""
         results = {}
         for name, status in self._workers.items():
             if not status.url:
@@ -117,20 +144,27 @@ class WorkerClient:
             if result["ok"]:
                 status.mark_ok(result.get("latency_ms", 0))
                 results[name] = True
-                logger.info(f"✅ Worker [{name}] OK — {result['latency_ms']:.0f}ms")
             else:
                 status.mark_failed()
                 results[name] = False
-                logger.warning(f"❌ Worker [{name}] UNAVAILABLE — {result.get('error', 'unknown')}")
         return results
 
     @property
     def llm_available(self) -> bool:
-        """True si le proxy LLM est disponible."""
+        """True si AU MOINS UN provider LLM est disponible."""
+        # Gemini
         s = self._workers["ai_proxy"]
         if s.needs_recheck or s.available is None:
             self.check_all_workers()
-        return self._workers["ai_proxy"].available or False
+        if self._workers["ai_proxy"].available:
+            return True
+        # Groq
+        if self._groq_key:
+            return True
+        # Ollama
+        if self._check_ollama_available():
+            return True
+        return False
 
     @property
     def finance_hub_available(self) -> bool:
@@ -139,7 +173,277 @@ class WorkerClient:
             self.check_all_workers()
         return self._workers["finance_hub"].available or False
 
-    # ── Cache Helpers ─────────────────────────────────────────
+    # ════════════════════════════════════════════════════════
+    # MULTI-PROVIDER LLM — POINT D'ENTRÉE PRINCIPAL
+    # ════════════════════════════════════════════════════════
+    def call_llm(
+        self,
+        prompt:     str,
+        system:     str  = "",
+        model:      str  = "auto",
+        provider:   str  = "auto",
+        max_tokens: int  = 2048,
+    ) -> Optional[str]:
+        """
+        Appel LLM avec fallback automatique multi-provider.
+
+        Ordre : Gemini → Groq → Ollama → None (déterministe)
+
+        Returns None si tous les providers sont indisponibles.
+        Jamais d'exception levée — le système continue en déterministe.
+        """
+        providers = self._get_provider_order(provider)
+
+        if not providers:
+            logger.warning("⚠ Aucun provider LLM disponible → mode déterministe")
+            return None
+
+        for prov in providers:
+            try:
+                result = self._call_provider(
+                    provider   = prov,
+                    prompt     = prompt,
+                    system     = system,
+                    max_tokens = max_tokens,
+                )
+                if result:
+                    self._llm_provider_status[prov]["calls_today"] = \
+                        self._llm_provider_status[prov].get("calls_today", 0) + 1
+                    logger.debug(f"✅ LLM [{prov}] répondu | {len(result)} chars")
+                    return result
+            except Exception as e:
+                logger.warning(f"⚠ Provider [{prov}] failed: {type(e).__name__}: {e}")
+                self._llm_provider_status[prov]["available"] = False
+                continue
+
+        logger.warning("⚠ Tous les providers LLM ont échoué → mode déterministe")
+        return None
+
+    # ── Ordre des providers ────────────────────────────────
+    def _get_provider_order(self, preferred: str = "auto") -> List[str]:
+        """Construit la liste ordonnée des providers disponibles."""
+        order = []
+
+        # 1. Gemini (si proxy disponible)
+        gemini_ok = self._workers["ai_proxy"].available
+        if gemini_ok is None:
+            self.check_all_workers()
+            gemini_ok = self._workers["ai_proxy"].available
+        if gemini_ok:
+            order.append("gemini")
+
+        # 2. Groq (si clé API configurée)
+        if self._groq_key:
+            order.append("groq")
+
+        # 3. Ollama (local Oracle)
+        if self._check_ollama_available():
+            order.append("ollama")
+
+        # Si preferred spécifié → mettre en tête
+        if preferred != "auto" and preferred in order:
+            order.remove(preferred)
+            order.insert(0, preferred)
+
+        return order
+
+    # ── Dispatcher par provider ────────────────────────────
+    def _call_provider(
+        self,
+        provider:   str,
+        prompt:     str,
+        system:     str,
+        max_tokens: int,
+    ) -> Optional[str]:
+        if provider == "gemini":
+            return self._call_gemini(prompt, system, max_tokens)
+        elif provider == "groq":
+            return self._call_groq(prompt, system, max_tokens)
+        elif provider == "ollama":
+            return self._call_ollama(prompt, system, max_tokens)
+        return None
+
+    # ════════════════════════════════════════════════════════
+    # PROVIDER 1 — GEMINI (Cloudflare Proxy)
+    # ════════════════════════════════════════════════════════
+    def _call_gemini(
+        self,
+        prompt:     str,
+        system:     str,
+        max_tokens: int,
+    ) -> Optional[str]:
+        """Appel Gemini via le proxy Cloudflare Workers."""
+        url = f"{self.settings.AI_PROXY_URL}/api/chat"
+        payload = {
+            "model":   "gemini-2.5-flash",
+            "messages": [{"role": "user", "content": prompt}],
+            "generationConfig": {
+                "temperature":     0.3,
+                "maxOutputTokens": max_tokens,
+            },
+        }
+        if system:
+            payload["systemInstruction"] = {"parts": [{"text": system}]}
+
+        resp = self._http.post(url, json=payload, timeout=self.TIMEOUTS["ai"])
+        resp.raise_for_status()
+        data = resp.json()
+
+        # Vérif quota (429)
+        if resp.status_code == 429:
+            logger.warning("⚠ Gemini 429 — quota dépassé, switch Groq")
+            self._workers["ai_proxy"].mark_failed()
+            return None
+
+        candidates = data.get("candidates", [])
+        if candidates:
+            parts = candidates[0].get("content", {}).get("parts", [])
+            if parts:
+                return parts[0].get("text")
+        return None
+
+    # ════════════════════════════════════════════════════════
+    # PROVIDER 2 — GROQ (Free Tier)
+    # ════════════════════════════════════════════════════════
+    def _call_groq(
+        self,
+        prompt:     str,
+        system:     str,
+        max_tokens: int,
+    ) -> Optional[str]:
+        """
+        Appel Groq API (OpenAI-compatible).
+        Free tier : 14 400 tokens/minute, llama3-8b-8192.
+        Largement suffisant pour 1 décision/30s.
+        """
+        if not self._groq_key:
+            return None
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        payload = {
+            "model":       self.GROQ_MODELS["default"],
+            "messages":    messages,
+            "max_tokens":  min(max_tokens, 4096),  # Groq limit
+            "temperature": 0.3,
+            "stream":      False,
+        }
+
+        resp = self._http.post(
+            url,
+            json    = payload,
+            timeout = self.TIMEOUTS["groq"],
+            headers = {
+                "Authorization": f"Bearer {self._groq_key}",
+                "Content-Type":  "application/json",
+            },
+        )
+
+        if resp.status_code == 429:
+            logger.warning("⚠ Groq 429 — rate limit, switch Ollama")
+            return None
+
+        resp.raise_for_status()
+        data = resp.json()
+
+        choices = data.get("choices", [])
+        if choices:
+            content = choices[0].get("message", {}).get("content")
+            if content:
+                logger.debug(
+                    f"✅ Groq [{self.GROQ_MODELS['default']}] | "
+                    f"tokens={data.get('usage', {}).get('total_tokens', '?')}"
+                )
+                return content
+        return None
+
+    # ════════════════════════════════════════════════════════
+    # PROVIDER 3 — OLLAMA (Local Oracle VM)
+    # ════════════════════════════════════════════════════════
+    def _call_ollama(
+        self,
+        prompt:     str,
+        system:     str,
+        max_tokens: int,
+    ) -> Optional[str]:
+        """
+        Appel Ollama local sur Oracle VM.
+
+        Installation sur Oracle VM (AMD Micro) :
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama pull phi3:mini   # 3.8B Q4 ≈ 2.3GB, adapté 4GB total
+          ollama serve            # démarre sur :11434
+
+        Performance : ~5-15 tok/s sur OCPU → ~15-30s pour 150 tokens
+        Suffisant pour 1 décision toutes les 30s.
+        """
+        if not self._ollama_url:
+            return None
+
+        url = f"{self._ollama_url}/api/generate"
+
+        full_prompt = f"{system}\n\n{prompt}" if system else prompt
+        payload = {
+            "model":  self.OLLAMA_MODELS["default"],
+            "prompt": full_prompt,
+            "stream": False,
+            "options": {
+                "temperature":  0.3,
+                "num_predict":  min(max_tokens, 512),  # Limité pour rapidité
+                "num_ctx":      2048,
+            },
+        }
+
+        resp = self._http.post(url, json=payload, timeout=self.TIMEOUTS["ollama"])
+        resp.raise_for_status()
+        data = resp.json()
+
+        response = data.get("response", "")
+        if response:
+            logger.info(
+                f"✅ Ollama [{self.OLLAMA_MODELS['default']}] local | "
+                f"{len(response)} chars"
+            )
+            return response
+        return None
+
+    def _check_ollama_available(self) -> bool:
+        """Vérifie si Ollama est actif sur Oracle VM."""
+        try:
+            resp = self._http.get(
+                f"{self._ollama_url}/api/tags",
+                timeout=3
+            )
+            if resp.status_code == 200:
+                models = [m["name"] for m in resp.json().get("models", [])]
+                return any(
+                    m.startswith("phi3") or m.startswith("gemma")
+                    for m in models
+                )
+        except Exception:
+            pass
+        return False
+
+    def get_llm_status(self) -> Dict:
+        """Retourne le statut complet des providers LLM."""
+        providers = self._get_provider_order()
+        return {
+            "available_providers": providers,
+            "primary":            providers[0] if providers else "none",
+            "gemini_ok":          self._workers["ai_proxy"].available or False,
+            "groq_ok":            bool(self._groq_key),
+            "ollama_ok":          self._check_ollama_available(),
+            "deterministic_always": True,
+        }
+
+    # ════════════════════════════════════════════════════════
+    # CACHE HELPERS
+    # ════════════════════════════════════════════════════════
     def _cache_get(self, key: str) -> Optional[Any]:
         if key in self._cache:
             data, ts = self._cache[key]
@@ -151,9 +455,10 @@ class WorkerClient:
     def _cache_set(self, key: str, data: Any, ttl: int = 60):
         self._cache[key] = (data, time.time())
 
-    # ── Finance Hub — Market Data ─────────────────────────────
+    # ════════════════════════════════════════════════════════
+    # FINANCE HUB — MARKET DATA
+    # ════════════════════════════════════════════════════════
     def get_quote(self, symbol: str) -> Optional[Dict]:
-        """Prix temps réel via Finance Hub Worker."""
         cache_key = f"quote:{symbol}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -176,7 +481,6 @@ class WorkerClient:
         interval:   str = "1day",
         outputsize: int = 252,
     ) -> Optional[Dict]:
-        """Série temporelle OHLCV via Finance Hub Worker."""
         cache_key = f"ts:{symbol}:{interval}:{outputsize}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -185,7 +489,8 @@ class WorkerClient:
             url  = f"{self.settings.FINANCE_HUB_URL}/api/time-series"
             resp = self._http.get(
                 url,
-                params={"symbol": symbol, "interval": interval, "outputsize": str(outputsize)},
+                params={"symbol": symbol, "interval": interval,
+                        "outputsize": str(outputsize)},
                 timeout=self.TIMEOUTS["time_series"],
             )
             resp.raise_for_status()
@@ -203,11 +508,7 @@ class WorkerClient:
         interval:   str = "1day",
         outputsize: int = 252,
     ) -> Dict[str, Optional[Dict]]:
-        """Récupère les séries temporelles pour plusieurs symboles."""
-        results = {}
-        for symbol in symbols:
-            results[symbol] = self.get_time_series(symbol, interval, outputsize)
-        return results
+        return {s: self.get_time_series(s, interval, outputsize) for s in symbols}
 
     def get_technical_indicator(
         self,
@@ -216,7 +517,6 @@ class WorkerClient:
         interval:    str = "1day",
         time_period: int = 14,
     ) -> Optional[Dict]:
-        """Indicateur technique via Finance Hub Worker."""
         cache_key = f"ind:{symbol}:{indicator}:{interval}:{time_period}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -237,24 +537,19 @@ class WorkerClient:
             logger.error(f"get_technical_indicator({symbol},{indicator}): {e}")
             return None
 
-    def get_company_news(
-        self,
-        symbol: str,
-        days:   int = 7,
-    ) -> Optional[List[Dict]]:
-        """Actualités entreprise via Finance Hub Worker (FinnHub)."""
+    def get_company_news(self, symbol: str, days: int = 7) -> Optional[List[Dict]]:
         cache_key = f"news:{symbol}:{days}"
         cached = self._cache_get(cache_key)
         if cached:
             return cached
         try:
             from datetime import datetime, timedelta
-            to_date   = datetime.utcnow().strftime("%Y-%m-%d")
-            from_date = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
-            url  = f"{self.settings.FINANCE_HUB_URL}/api/finnhub/company-news"
-            resp = self._http.get(
+            to_d   = datetime.utcnow().strftime("%Y-%m-%d")
+            from_d = (datetime.utcnow() - timedelta(days=days)).strftime("%Y-%m-%d")
+            url    = f"{self.settings.FINANCE_HUB_URL}/api/finnhub/company-news"
+            resp   = self._http.get(
                 url,
-                params={"symbol": symbol, "from": from_date, "to": to_date},
+                params={"symbol": symbol, "from": from_d, "to": to_d},
                 timeout=self.TIMEOUTS["news"],
             )
             resp.raise_for_status()
@@ -266,7 +561,6 @@ class WorkerClient:
             return []
 
     def get_market_news(self, category: str = "general") -> Optional[List[Dict]]:
-        """Actualités marché via Finance Hub Worker (FinnHub)."""
         cache_key = f"market_news:{category}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -284,7 +578,6 @@ class WorkerClient:
             return []
 
     def get_sentiment(self, symbol: str) -> Optional[Dict]:
-        """Sentiment de marché via Finance Hub Worker (FinnHub)."""
         cache_key = f"sentiment:{symbol}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -302,7 +595,6 @@ class WorkerClient:
             return None
 
     def get_recommendation(self, symbol: str) -> Optional[List[Dict]]:
-        """Recommandations analystes via Finance Hub Worker (FinnHub)."""
         cache_key = f"rec:{symbol}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -320,7 +612,6 @@ class WorkerClient:
             return []
 
     def get_earnings(self, symbol: str) -> Optional[List[Dict]]:
-        """Earnings historiques via Finance Hub Worker (FinnHub)."""
         cache_key = f"earnings:{symbol}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -338,7 +629,6 @@ class WorkerClient:
             return []
 
     def get_company_profile(self, symbol: str) -> Optional[Dict]:
-        """Profil entreprise via Finance Hub Worker (FinnHub)."""
         cache_key = f"profile:{symbol}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -356,7 +646,6 @@ class WorkerClient:
             return None
 
     def get_basic_financials(self, symbol: str, metric: str = "all") -> Optional[Dict]:
-        """Métriques financières fondamentales via Finance Hub (FinnHub)."""
         cache_key = f"financials:{symbol}:{metric}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -373,30 +662,10 @@ class WorkerClient:
             logger.error(f"get_basic_financials({symbol}): {e}")
             return None
 
-    def get_earnings_calendar(self, days_ahead: int = 14) -> Optional[Dict]:
-        """Calendrier des earnings à venir."""
-        cache_key = f"earnings_cal:{days_ahead}"
-        cached = self._cache_get(cache_key)
-        if cached:
-            return cached
-        try:
-            from datetime import datetime, timedelta
-            from_date = datetime.utcnow().strftime("%Y-%m-%d")
-            to_date   = (datetime.utcnow() + timedelta(days=days_ahead)).strftime("%Y-%m-%d")
-            url  = f"{self.settings.FINANCE_HUB_URL}/api/finnhub/earnings-calendar"
-            resp = self._http.get(url, params={"from": from_date, "to": to_date},
-                                  timeout=self.TIMEOUTS["indicators"])
-            resp.raise_for_status()
-            data = resp.json()
-            self._cache_set(cache_key, data, ttl=3600)
-            return data
-        except Exception as e:
-            logger.error(f"get_earnings_calendar: {e}")
-            return None
-
-    # ── Economic Data Worker ──────────────────────────────────
+    # ════════════════════════════════════════════════════════
+    # ECONOMIC DATA WORKER
+    # ════════════════════════════════════════════════════════
     def get_fred_series(self, series_id: str, limit: int = 100) -> Optional[Dict]:
-        """Données macroéconomiques FRED via Economic Data Worker."""
         cache_key = f"fred:{series_id}:{limit}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -417,7 +686,6 @@ class WorkerClient:
             return None
 
     def get_multiple_fred_series(self, series_ids: List[str]) -> Dict[str, Optional[Dict]]:
-        """Récupère plusieurs séries FRED en une fois."""
         cache_key = f"fred_multi:{','.join(sorted(series_ids))}"
         cached = self._cache_get(cache_key)
         if cached:
@@ -438,7 +706,6 @@ class WorkerClient:
             return {sid: None for sid in series_ids}
 
     def get_ecb_rates(self) -> Optional[Dict]:
-        """Taux de change ECB via Economic Data Worker."""
         cache_key = "ecb_rates"
         cached = self._cache_get(cache_key)
         if cached:
@@ -452,58 +719,6 @@ class WorkerClient:
             return data
         except Exception as e:
             logger.error(f"get_ecb_rates: {e}")
-            return None
-
-    # ── AI Proxy Worker ───────────────────────────────────────
-    def call_llm(
-        self,
-        prompt:   str,
-        system:   str   = "",
-        model:    str   = "gemini-2.5-flash",
-        provider: str   = "gemini",
-        max_tokens: int = 2048,
-    ) -> Optional[str]:
-        """
-        Appel LLM via AI Proxy Worker.
-        Retourne None automatiquement si le worker est indisponible
-        (fallback déterministe automatique).
-        """
-        if not self.llm_available:
-            logger.warning("⚠ LLM indisponible — mode déterministe activé")
-            return None
-        try:
-            payload = {
-                "provider": provider,
-                "model":    model,
-                "messages": [{"role": "user", "content": prompt}],
-                "generationConfig": {
-                    "temperature":     0.3,
-                    "maxOutputTokens": max_tokens,
-                },
-            }
-            if system:
-                payload["systemInstruction"] = {"parts": [{"text": system}]}
-
-            url  = f"{self.settings.AI_PROXY_URL}/api/chat"
-            resp = self._http.post(url, json=payload,
-                                   timeout=self.TIMEOUTS["ai"])
-            resp.raise_for_status()
-            data = resp.json()
-
-            # Normalise la réponse (format Gemini unifié)
-            candidates = data.get("candidates", [])
-            if candidates:
-                parts = candidates[0].get("content", {}).get("parts", [])
-                if parts:
-                    return parts[0].get("text", "")
-            return None
-        except httpx.TimeoutException:
-            logger.warning(f"⏱ LLM timeout — mode déterministe")
-            self._workers["ai_proxy"].mark_failed()
-            return None
-        except Exception as e:
-            logger.error(f"call_llm: {e}")
-            self._workers["ai_proxy"].mark_failed()
             return None
 
     def __del__(self):

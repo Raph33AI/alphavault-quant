@@ -1,9 +1,7 @@
 # ============================================================
-# ALPHAVAULT QUANT — Trading Loop
-# ✅ Exécuté depuis la RACINE du repo
-#    → python -m backend.orchestrator.trading_loop
-# ✅ "backend" = package Python top-level
-# ✅ Tous les imports relatifs (from ..core) fonctionnent
+# ALPHAVAULT QUANT — Trading Loop v2.1
+# ✅ Fix: Bridge ML → ibkr_watcher (pending_orders.json)
+# ✅ Optimisé AMD Micro (1GB RAM + 3GB swap)
 # ============================================================
 
 import os
@@ -16,17 +14,13 @@ from pathlib import Path
 from loguru import logger
 
 # ── Chemins ────────────────────────────────────────────────
-# __file__ = alphavault-quant/backend/orchestrator/trading_loop.py
-_ORCHESTRATOR_DIR = Path(__file__).parent          # backend/orchestrator/
-_BACKEND_DIR      = _ORCHESTRATOR_DIR.parent       # backend/
-_ROOT_DIR         = _BACKEND_DIR.parent            # alphavault-quant/  ← CWD
+_ORCHESTRATOR_DIR = Path(__file__).parent
+_BACKEND_DIR      = _ORCHESTRATOR_DIR.parent
+_ROOT_DIR         = _BACKEND_DIR.parent
 
-# La racine est déjà dans sys.path car on lance depuis là
-# Vérification de sécurité
 if str(_ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(_ROOT_DIR))
 
-# ── Imports du projet (depuis la racine, package "backend") ─
 from backend.orchestrator.trading_agent import TradingAgent
 from backend.config.settings import Settings
 from backend.core.performance_tracker import PerformanceTracker
@@ -44,7 +38,6 @@ logger.add(
     format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}",
 )
 
-# ── Répertoire des signaux ───────────────────────────────────
 SIGNALS_DIR = _ROOT_DIR / "signals"
 SIGNALS_DIR.mkdir(exist_ok=True)
 
@@ -53,12 +46,6 @@ SIGNALS_DIR.mkdir(exist_ok=True)
 # ════════════════════════════════════════════════════════════
 
 def save_signals(output: dict) -> list:
-    """
-    Sauvegarde les JSON dans /signals/ ET dans /docs/signals/.
-    
-    - /signals/     → historique Git + source de vérité
-    - /docs/signals/ → servi par GitHub Pages (accessible au dashboard)
-    """
     file_map = {
         "current_signals":     "current_signals.json",
         "portfolio":           "portfolio.json",
@@ -70,9 +57,8 @@ def save_signals(output: dict) -> list:
         "system_status":       "system_status.json",
     }
 
-    # Dossiers de destination
-    signals_dir     = _ROOT_DIR / "signals"
-    docs_signals_dir= _ROOT_DIR / "docs" / "signals"
+    signals_dir      = _ROOT_DIR / "signals"
+    docs_signals_dir = _ROOT_DIR / "docs" / "signals"
 
     signals_dir.mkdir(exist_ok=True)
     docs_signals_dir.mkdir(parents=True, exist_ok=True)
@@ -83,14 +69,9 @@ def save_signals(output: dict) -> list:
             continue
         data = output[key]
         try:
-            # 1. Sauvegarde dans /signals/
-            with open(signals_dir / filename, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, default=str)
-
-            # 2. Sauvegarde dans /docs/signals/ (GitHub Pages)
-            with open(docs_signals_dir / filename, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2, default=str)
-
+            for path in (signals_dir / filename, docs_signals_dir / filename):
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2, default=str)
             saved.append(filename)
             logger.debug(f"  💾 {filename}")
         except Exception as e:
@@ -99,8 +80,194 @@ def save_signals(output: dict) -> list:
     logger.info(f"💾 {len(saved)}/{len(file_map)} fichiers → signals/ + docs/signals/")
     return saved
 
+def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
+    """
+    ═══════════════════════════════════════════════════════════
+    BRIDGE ML → IBKR WATCHER (Fix critique v2.1)
+    ═══════════════════════════════════════════════════════════
+
+    Extrait les décisions EXECUTE du pipeline ML et les écrit
+    dans signals/pending_orders.json pour que ibkr_watcher.py
+    sur Oracle VM les lise et les transmette à IBeam → IBKR.
+
+    Sans cette fonction, le ML génère des signaux mais AUCUN
+    ordre réel n'est jamais transmis au watcher Oracle.
+    ═══════════════════════════════════════════════════════════
+    """
+    signals   = output.get("current_signals", {}).get("signals", {})
+    dry_run   = output.get("current_signals", {}).get("dry_run", True)
+    portfolio = output.get("portfolio", {})
+    risk      = output.get("risk_metrics", {})
+
+    portfolio_value = float(portfolio.get("total_value", 100_000))
+
+    # Vérification risque global — ne pas envoyer si DD > limite
+    current_dd = abs(float(
+        risk.get("drawdown", {}).get("current_drawdown", 0)
+    ))
+    if current_dd > settings.MAX_DRAWDOWN_PCT * 0.80:
+        logger.warning(
+            f"[Bridge] Skip — drawdown élevé: {current_dd:.2%} "
+            f"(limite: {settings.MAX_DRAWDOWN_PCT:.2%})"
+        )
+        return 0
+
+    # Vérification levier
+    lever_data    = risk.get("leverage", {})
+    over_leveraged = lever_data.get("is_over_leveraged", False)
+    if over_leveraged:
+        logger.warning("[Bridge] Skip — portefeuille sur-levérisé")
+        return 0
+
+    # ── Construction des ordres ───────────────────────────────
+    orders = []
+    ts     = datetime.datetime.utcnow().isoformat() + "Z"
+
+    for sym, sig in signals.items():
+        council = sig.get("council", "wait")
+        if council not in ("execute", "execute_strong"):
+            continue
+
+        direction = sig.get("direction", "neutral")
+        if direction == "neutral":
+            continue
+
+        action = "BUY" if direction == "buy" else "SELL"
+
+        # Prix
+        price = float(sig.get("price", 0))
+        if price <= 0:
+            logger.debug(f"[Bridge] Skip {sym} — prix nul")
+            continue
+
+        # ── Sizing basé sur le score ML ───────────────────────
+        # execute_strong → 8% du portefeuille max
+        # execute        → 5% du portefeuille max
+        # Capé par MAX_SINGLE_POSITION_PCT des settings
+        score    = float(sig.get("final_score",  0))
+        conf     = float(sig.get("confidence",   0))
+
+        if council == "execute_strong" and score > 0.70:
+            base_pct = 0.08
+        elif council == "execute" and score > 0.50:
+            base_pct = 0.05
+        else:
+            base_pct = 0.03
+
+        # Modulé par la confiance du signal
+        position_pct = base_pct * min(conf / 0.60, 1.0)
+        position_pct = min(position_pct, settings.MAX_SINGLE_POSITION_PCT)
+
+        quantity = int((portfolio_value * position_pct) / price)
+        if quantity < 1:
+            logger.debug(
+                f"[Bridge] Skip {sym} — quantité insuffisante "
+                f"({portfolio_value * position_pct:.0f}$ / {price:.2f}$)"
+            )
+            continue
+
+        order_id = (
+            f"ml-{sym.lower()}-"
+            f"{action.lower()[:1]}-"
+            f"{int(time.time())}"
+        )
+
+        orders.append({
+            "id":           order_id,
+            "symbol":       sym,
+            "action":       action,
+            "quantity":     quantity,
+            "order_type":   "MARKET",
+            "dry_run":      dry_run,
+            "source":       "ml_pipeline",
+            "council":      council,
+            "score":        round(score, 4),
+            "confidence":   round(conf, 4),
+            "position_pct": round(position_pct, 4),
+            "position_usd": round(portfolio_value * position_pct, 2),
+            "price_at_signal": round(price, 4),
+            "timestamp":    ts,
+        })
+
+    if not orders:
+        logger.info("[Bridge] Aucune décision EXECUTE ce cycle")
+        return 0
+
+    # ── Anti-doublon : ne pas remettre un ordre en file si
+    #    le même symbole y est déjà depuis moins de 5 minutes ───
+    pending_path = _ROOT_DIR / "signals" / "pending_orders.json"
+    docs_path    = _ROOT_DIR / "docs" / "signals" / "pending_orders.json"
+
+    existing_orders    = []
+    existing_processed = []
+
+    if pending_path.exists():
+        try:
+            existing = json.loads(pending_path.read_text())
+            existing_orders    = existing.get("orders",    [])
+            existing_processed = existing.get("processed", [])
+        except Exception as e:
+            logger.warning(f"[Bridge] Lecture pending_orders: {e}")
+
+    # Symboles déjà en file d'attente
+    now_ts         = time.time()
+    recent_syms    = set()
+    COOLDOWN_SECS  = 300  # 5 minutes entre deux ordres sur le même symbole
+
+    for o in existing_orders:
+        o_sym = o.get("symbol")
+        o_ts  = o.get("timestamp", "")
+        try:
+            o_age = now_ts - datetime.datetime.fromisoformat(
+                o_ts.replace("Z", "+00:00")
+            ).timestamp()
+            if o_age < COOLDOWN_SECS:
+                recent_syms.add(o_sym)
+        except Exception:
+            recent_syms.add(o_sym)  # Par sécurité
+
+    new_orders = [o for o in orders if o["symbol"] not in recent_syms]
+
+    if not new_orders:
+        logger.info(
+            f"[Bridge] {len(orders)} ordres générés mais tous en cooldown "
+            f"({recent_syms})"
+        )
+        return 0
+
+    all_orders = existing_orders + new_orders
+    payload    = {
+        "orders":     all_orders,
+        "processed":  existing_processed,
+        "updated_at": ts,
+        "source":     "ml_pipeline",
+        "cycle_run":  os.environ.get("GITHUB_RUN_NUMBER", "local"),
+    }
+
+    for path in (pending_path, docs_path):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            path.write_text(json.dumps(payload, indent=2, default=str))
+        except Exception as e:
+            logger.error(f"[Bridge] Écriture {path.name}: {e}")
+
+    syms_log = [o["symbol"] for o in new_orders]
+    logger.info(
+        f"[Bridge] ✅ {len(new_orders)} ordres → pending_orders.json | "
+        f"dry_run={dry_run} | Symboles: {syms_log}"
+    )
+
+    for o in new_orders:
+        logger.info(
+            f"  → {o['action']} {o['quantity']}x {o['symbol']} | "
+            f"score={o['score']:.3f} | "
+            f"council={o['council']} | "
+            f"${o['position_usd']:.0f} ({o['position_pct']:.1%})"
+        )
+
+    return len(new_orders)
+
 def git_commit_signals() -> bool:
-    """Commit + push signals/ ET docs/signals/."""
     try:
         now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
@@ -113,7 +280,6 @@ def git_commit_signals() -> bool:
         run_git(["config", "--global", "user.name",  "AlphaVault Quant Bot"])
         run_git(["config", "--global", "user.email", "bot@alphavault-ai.com"])
 
-        # Stage les deux dossiers
         run_git(["add", "signals/", "docs/signals/"])
 
         diff = run_git(["diff", "--staged", "--quiet"], check=False)
@@ -135,7 +301,6 @@ def git_commit_signals() -> bool:
         return False
 
 def write_error_status(error: Exception):
-    """Écrit un system_status.json d'erreur pour le dashboard."""
     status = {
         "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
         "overall":       "error",
@@ -153,19 +318,17 @@ def write_error_status(error: Exception):
         pass
 
 def check_market_session() -> str:
-    """Détermine la session de marché (UTC)."""
     now      = datetime.datetime.utcnow()
     weekday  = now.weekday()
     time_dec = now.hour + now.minute / 60
 
-    if weekday >= 5:           return "closed"
-    if 14.5 <= time_dec < 21: return "regular"
-    if 13.0 <= time_dec < 14.5: return "premarket"
-    if 21.0 <= time_dec < 24:   return "postmarket"
+    if weekday >= 5:               return "closed"
+    if 14.5  <= time_dec < 21.0:   return "regular"
+    if 13.0  <= time_dec < 14.5:   return "premarket"
+    if 21.0  <= time_dec < 24.0:   return "postmarket"
     return "closed"
 
 def run_with_retry(agent: TradingAgent, max_retries: int = 2) -> dict:
-    """Pipeline avec retry automatique."""
     last_err = None
     for attempt in range(1, max_retries + 1):
         try:
@@ -188,7 +351,7 @@ def main():
     start_time = time.time()
 
     logger.info("\n" + "═" * 60)
-    logger.info("  🚀 ALPHAVAULT QUANT — Trading Loop")
+    logger.info("  🚀 ALPHAVAULT QUANT — Trading Loop v2.1")
     logger.info(f"  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     logger.info(f"  Root: {_ROOT_DIR}")
     logger.info("═" * 60)
@@ -207,10 +370,8 @@ def main():
     settings.MARKET_SESSION = session
     logger.info(f"📅 Session: {session.upper()}")
 
-    # Marché fermé → exit propre (sauf run manuel avec force)
     if session == "closed" and os.environ.get("EXECUTION_MODE") != "force":
         logger.info("🌙 Marché fermé — exit propre")
-        write_error_status(Exception("market_closed"))
         closed_status = {
             "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
             "overall":       "closed",
@@ -251,10 +412,24 @@ def main():
         logger.error("No signals saved")
         sys.exit(1)
 
-    # ── 6. Performance Tracker ────────────────────────────
+    # ── 6. Bridge ML → ibkr_watcher ✅ FIX CRITIQUE ──────
     try:
-        tracker = PerformanceTracker(root_dir=_ROOT_DIR)
-        # batch_quotes disponible depuis agent si exposé, sinon None
+        n_orders = push_execute_orders_to_watcher(output, settings)
+        if n_orders > 0:
+            logger.info(
+                f"🎯 {n_orders} ordres transmis au watcher Oracle "
+                f"(dry_run={settings.DRY_RUN})"
+            )
+        else:
+            logger.info("📭 Aucun ordre à transmettre ce cycle")
+    except Exception as e:
+        logger.error(f"[Bridge] Erreur transmission ordres: {e}")
+        # Non bloquant — le pipeline continue
+
+    # ── 7. Performance Tracker ────────────────────────────
+    perf_metrics = {}
+    try:
+        tracker      = PerformanceTracker(root_dir=_ROOT_DIR)
         batch_quotes = getattr(agent, "_last_batch_quotes", None)
         tracker.record_cycle(
             output       = output,
@@ -262,8 +437,8 @@ def main():
             run_id       = f"run_{os.environ.get('GITHUB_RUN_NUMBER', '0')}",
         )
         tracker.save()
-        # Injecter les métriques dans performance_metrics.json
         perf_metrics = tracker.compute_metrics()
+
         perf_path    = _ROOT_DIR / "docs" / "signals" / "performance_metrics.json"
         existing_perf= json.loads(perf_path.read_text()) if perf_path.exists() else {}
         existing_perf.update({
@@ -275,26 +450,25 @@ def main():
         logger.info("[Loop] Performance tracker updated")
     except Exception as e:
         logger.warning(f"[Loop] Performance tracker error: {e}")
-        perf_metrics = {}
 
-    # ── 7. Alert Engine ───────────────────────────────────
+    # ── 8. Alert Engine ───────────────────────────────────
     try:
         alert_engine = AlertEngine(settings=settings, root_dir=_ROOT_DIR)
         alert_engine.check_all(output=output, perf_metrics=perf_metrics)
 
-        # Résumé quotidien si fin de session regular (après 20h UTC)
         now_h = datetime.datetime.utcnow().hour
         if now_h >= 20 and settings.MARKET_SESSION in ("regular", "postmarket"):
-            alert_engine.send_daily_summary(output=output, perf_metrics=perf_metrics)
-
+            alert_engine.send_daily_summary(
+                output=output, perf_metrics=perf_metrics
+            )
         logger.info("[Loop] Alert engine checked")
     except Exception as e:
         logger.warning(f"[Loop] Alert engine error: {e}")
 
-    # ── 8. Git push ───────────────────────────────────────
+    # ── 9. Git push ───────────────────────────────────────
     pushed = git_commit_signals()
 
-    # ── 7. Bilan ──────────────────────────────────────────
+    # ── 10. Bilan ─────────────────────────────────────────
     elapsed = time.time() - start_time
     n_sigs  = len(output.get("current_signals", {}).get("signals", {}))
     n_exec  = len(output.get("agent_decisions", {}).get("executions", []))
@@ -303,11 +477,11 @@ def main():
 
     logger.info("\n" + "═" * 60)
     logger.info(f"  ✅ Terminé en {elapsed:.1f}s")
-    logger.info(f"  📊 Signaux  : {n_sigs}")
-    logger.info(f"  💼 Exécutés : {n_exec}")
-    logger.info(f"  🎯 Régime   : {regime.upper()}")
-    logger.info(f"  🤖 LLM      : {'✅' if llm_ok else '❌ mode déterministe'}")
-    logger.info(f"  📡 Git push : {'✅' if pushed else '⚠  no changes'}")
+    logger.info(f"  📊 Signaux   : {n_sigs}")
+    logger.info(f"  💼 Exécutés  : {n_exec}")
+    logger.info(f"  🎯 Régime    : {regime.upper()}")
+    logger.info(f"  🤖 LLM       : {'✅' if llm_ok else '❌ mode déterministe'}")
+    logger.info(f"  📡 Git push  : {'✅' if pushed else '⚠  no changes'}")
     logger.info("═" * 60 + "\n")
 
 if __name__ == "__main__":
