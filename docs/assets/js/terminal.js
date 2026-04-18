@@ -1282,37 +1282,72 @@ const Terminal = (() => {
   // ════════════════════════════════════════════════════════
   // SIDEBAR WATCHLIST
   // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════
+  // SIDEBAR WATCHLIST — Utilise la vraie watchlist user
+  // ════════════════════════════════════════════════════════
   function _updateSidebarWatchlist(data) {
     const sigs = data.signals?.signals || {};
     const list = document.getElementById('sw-list');
     if (!list) return;
 
-    const symbols = Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE;
+    // ✅ Source 1 : vraie watchlist de l'utilisateur (WatchlistManager)
+    const wlSymbols = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
+
+    // ✅ Source 2 : fallback sur les signaux ML, puis UNIVERSE hardcodé
+    const symbols = wlSymbols.length
+      ? wlSymbols.slice(0, 35)
+      : (Object.keys(sigs).length ? Object.keys(sigs) : UNIVERSE);
+
+    if (!symbols.length) {
+      list.innerHTML = `<div class="sw-loading">
+        <i class="fa-solid fa-circle-info" style="color:var(--b1)"></i>
+        Watchlist empty
+      </div>`;
+      return;
+    }
+
     list.innerHTML = symbols.map(sym => {
+      // Prix depuis signaux ML (si disponible) ou placeholder
       const s     = sigs[sym] || {};
       const price = parseFloat(s.price || 0);
-      const chg   = parseFloat(s.change_pct || 0);
+      const chg   = parseFloat(s.change_pct || s.change || 0);
       const dir   = s.direction || 'neutral';
       const cls   = chg > 0 ? 'up' : chg < 0 ? 'down' : '';
+      const starred = window.WatchlistManager ? WatchlistManager.isStarred(sym) : false;
+
       const dirIcon = dir === 'buy'
         ? '<i class="fa-solid fa-arrow-up"></i>'
         : dir === 'sell'
           ? '<i class="fa-solid fa-arrow-down"></i>'
           : '<i class="fa-solid fa-minus"></i>';
 
+      // Logo
+      const logoHtml = typeof _getLogoHtml === 'function'
+        ? _getLogoHtml(sym, 16)
+        : '';
+
       return `<div class="sw-item" data-sym="${sym}">
         <div class="sw-sym-row">
-          <span class="sw-sym">${sym}</span>
+          <div style="display:flex;align-items:center;gap:5px;overflow:hidden">
+            ${logoHtml}
+            <span class="sw-sym" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              ${sym}${starred ? ' <i class="fa-solid fa-star" style="font-size:7px;color:var(--y);vertical-align:middle"></i>' : ''}
+            </span>
+          </div>
           <span class="sw-dir ${dir}">${dirIcon}</span>
         </div>
         <div class="sw-price-row">
-          <span class="sw-price mono ${cls}">${price > 0 ? '$' + price.toFixed(2) : '--'}</span>
-          <span class="sw-chg mono ${cls}">${chg > 0 ? '+' : ''}${chg !== 0 ? chg.toFixed(2) + '%' : ''}</span>
+          <span class="sw-price mono ${cls}">
+            ${price > 0 ? '$' + price.toFixed(2) : '<span style="color:var(--txt4);font-size:10px">No signal</span>'}
+          </span>
+          <span class="sw-chg mono ${cls}">
+            ${price > 0 && chg !== 0 ? (chg > 0 ? '+' : '') + chg.toFixed(2) + '%' : ''}
+          </span>
         </div>
       </div>`;
     }).join('');
 
-    // Bind click to load chart
+    // Bind click → load chart + switch to overview
     list.querySelectorAll('.sw-item[data-sym]').forEach(el => {
       el.addEventListener('click', () => {
         loadChartSymbol(el.dataset.sym);

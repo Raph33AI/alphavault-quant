@@ -1036,60 +1036,117 @@ const StockDetail = (() => {
   // ════════════════════════════════════════════════════════
   // TAB: NEWS
   // ════════════════════════════════════════════════════════
+  // ════════════════════════════════════════════════════════
+  // TAB: NEWS — Modern full-width render
+  // ════════════════════════════════════════════════════════
   function _renderNews() {
-    const news    = _data[_sym]?.news || [];
-    const MAX_NEWS = 50; // ← déjà 50
+    const news     = _data[_sym]?.news || [];
+    const MAX_NEWS = 50;
 
-    // Si le cache a < 10 articles, force un rechargement
-    if (news.length < 10) {
+    // ── Chargement si articles insuffisants ──────────────
+    if (news.length < 5) {
       YahooFinance.getNews(_sym, 50).then(articles => {
         if (_tab === 'news') {
           if (_data[_sym]) _data[_sym].news = articles;
           _renderNews();
         }
       });
+
       _bodyHtml(`
-        <div style="text-align:center;padding:40px;color:var(--txt4)">
-          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:20px;color:var(--b1);margin-bottom:10px;display:block"></i>
-          Loading news for ${_sym}...
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    gap:12px;padding:60px 20px;color:var(--txt4)">
+          <i class="fa-solid fa-circle-notch fa-spin" style="font-size:24px;color:var(--b1)"></i>
+          <span style="font-size:13px">Loading news for <strong style="color:var(--txt)">${_sym}</strong>...</span>
         </div>`, 'layout-overview-v2');
       return;
     }
 
+    // ── Render complet ────────────────────────────────────
     const html = `
-      <div style="max-width:900px;width:100%;margin:0 auto">
-        <div style="font-size:13px;font-weight:700;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px">
-          <i class="fa-solid fa-newspaper" style="color:var(--b1)"></i>
-          ${news.length} articles — ${_sym}
-          <button onclick="StockDetail._refreshNews()" class="btn-sm" style="margin-left:auto;font-size:11px">
+      <div class="sdp-news-page">
+
+        <!-- Header -->
+        <div class="sdp-news-header">
+          <div style="display:flex;align-items:center;gap:8px">
+            <i class="fa-solid fa-newspaper" style="color:var(--b1);font-size:14px"></i>
+            <span class="sdp-news-count">${news.slice(0, MAX_NEWS).length} articles</span>
+            <span style="color:var(--bord2)">·</span>
+            <span style="font-size:13px;font-weight:700;color:var(--b1);font-family:var(--mono)">${_sym}</span>
+          </div>
+          <button class="sdp-news-refresh-btn" id="sd-news-refresh-btn">
             <i class="fa-solid fa-rotate"></i> Refresh
           </button>
         </div>
-        ${news.slice(0, MAX_NEWS).map(a => {
-          const thumb = a.thumbnail?.resolutions?.find(r => r.width >= 80)?.url;
-          const pub   = a.publisher || 'Yahoo Finance';
-          const time  = a.providerPublishTime ? _timeAgo(a.providerPublishTime * 1000) : '';
-          const sent  = _sentiment(a.title || '');
-          return `
-            <a href="${a.link || '#'}" target="_blank" rel="noopener" class="sdp-fp-news-item">
-              ${thumb ? `<img src="${thumb}" alt="" class="sdp-fp-news-thumb" onerror="this.style.display='none'">` : ''}
-              <div style="flex:1;min-width:0">
-                <div class="sdp-fp-news-headline">${a.title || 'No title'}</div>
-                <div class="sdp-fp-news-meta">
-                  <span><i class="fa-solid fa-newspaper" style="font-size:10px"></i> ${pub}</span>
-                  <span>${time}</span>
-                  <span class="sdp-news-sentiment ${sent.cls}">${sent.label}</span>
+
+        <!-- News list -->
+        <div class="sdp-news-list">
+          ${news.slice(0, MAX_NEWS).map((a, idx) => {
+            const thumb = a.thumbnail?.resolutions
+              ?.sort((x, y) => (y.width || 0) - (x.width || 0))
+              ?.find(r => r.url && (r.width || 0) >= 60)?.url;
+            const pub   = a.publisher || 'Yahoo Finance';
+            const time  = a.providerPublishTime ? _timeAgo(a.providerPublishTime * 1000) : '';
+            const sent  = _sentiment(a.title || '');
+            const title = a.title || 'No title';
+            const summ  = a.summary || '';
+
+            return `
+              <a href="${a.link || '#'}"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 class="sdp-news-card"
+                 style="animation-delay:${idx * 0.03}s">
+
+                <!-- Thumbnail -->
+                <div class="sdp-news-card-thumb">
+                  ${thumb
+                    ? `<img src="${thumb}" alt="${pub}" loading="lazy"
+                            onerror="this.parentNode.innerHTML='<i class=\\'fa-solid fa-newspaper sdp-news-thumb-icon\\'></i>'">`
+                    : `<i class="fa-solid fa-newspaper sdp-news-thumb-icon"></i>`}
                 </div>
-                ${a.summary ? `<div style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${a.summary}</div>` : ''}
-              </div>
-              <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--txt4);font-size:12px;flex-shrink:0;align-self:center"></i>
-            </a>`;
-        }).join('')}
-        <div style="font-size:10px;color:var(--txt4);text-align:center;padding:12px">
-          <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance News
+
+                <!-- Content -->
+                <div class="sdp-news-card-body">
+                  <div class="sdp-news-card-title">${title}</div>
+                  ${summ ? `<div class="sdp-news-card-summary">${summ}</div>` : ''}
+                  <div class="sdp-news-card-meta">
+                    <span class="sdp-news-source">
+                      <i class="fa-solid fa-circle" style="font-size:4px;color:var(--b1);vertical-align:middle"></i>
+                      ${pub}
+                    </span>
+                    ${time ? `<span class="sdp-news-time">${time}</span>` : ''}
+                    <span class="sdp-news-sent ${sent.cls}">${sent.label}</span>
+                  </div>
+                </div>
+
+                <!-- Link icon -->
+                <div class="sdp-news-card-action">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </div>
+
+              </a>`;
+          }).join('')}
         </div>
+
+        <!-- Footer -->
+        <div class="sdp-news-footer">
+          <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance &nbsp;·&nbsp;
+          Showing ${Math.min(news.length, MAX_NEWS)} articles
+        </div>
+
       </div>`;
-    _bodyHtml(html, 'layout-news');
+
+    _bodyHtml(html, 'layout-overview-v2');
+
+    // Bind refresh button
+    document.getElementById('sd-news-refresh-btn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('sd-news-refresh-btn');
+      if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Loading...';
+      if (_data[_sym]) delete _data[_sym].news;
+      const articles = await YahooFinance.getNews(_sym, 50);
+      if (_data[_sym]) _data[_sym].news = articles;
+      _renderNews();
+    });
   }
 
   // ════════════════════════════════════════════════════════
