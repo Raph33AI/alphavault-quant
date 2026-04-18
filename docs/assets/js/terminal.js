@@ -136,6 +136,7 @@ const Terminal = (() => {
   let _mainInited  = false;
   let _panelsInited= false;
   let _activeSection = 'overview';
+  let _currentChartSym = 'SPY';
 
   // ════════════════════════════════════════════════════════
   // TECHNICAL ANALYSIS ENGINE — Wall Street Indicators
@@ -851,8 +852,26 @@ const Terminal = (() => {
 
     // ── Init symbol search widgets ──────────────────────────
     setTimeout(() => {
-      _createSymbolSearchWidget('ov-symbol-widget-host',     'ov-symbol',     'SPY');
-      _createSymbolSearchWidget('order-symbol-widget-host',  'order-symbol',  '');
+      // ✅ FIX — Callback direct + stockage de l'API sur le DOM
+      const ovApi = _createSymbolSearchWidget(
+        'ov-symbol-widget-host',
+        'ov-symbol',
+        'SPY',
+        (sym) => {                        // ← callback déclenché au pick
+          _currentChartSym = sym;         // ← mise à jour variable locale
+          _loadMainChart(true);           // ← reload chart immédiatement
+        }
+      );
+      const ovHost = document.getElementById('ov-symbol-widget-host');
+      if (ovHost && ovApi) ovHost._widgetApi = ovApi;   // ← stocké sur le DOM
+
+      const orApi = _createSymbolSearchWidget(
+        'order-symbol-widget-host',
+        'order-symbol',
+        ''
+      );
+      const orHost = document.getElementById('order-symbol-widget-host');
+      if (orHost && orApi) orHost._widgetApi = orApi;
     }, 200);
 
     // First data load
@@ -963,26 +982,23 @@ const Terminal = (() => {
   // SYMBOL SEARCH WIDGET
   // Remplace un <select> par un dropdown recherchable
   // ════════════════════════════════════════════════════════════
-  function _createSymbolSearchWidget(hostId, hiddenSelectId, initialSym = '') {
+  function _createSymbolSearchWidget(hostId, hiddenSelectId, initialSym = '', onPickCallback = null) {
     const host   = document.getElementById(hostId);
     const select = document.getElementById(hiddenSelectId);
     if (!host || !select) return null;
 
-    // Empêche double initialisation
     if (host.dataset.init) return null;
     host.dataset.init = '1';
 
-    // ── Source de symboles ────────────────────────────────────
     function _getAllSyms() {
       if (window.WatchlistManager) return WatchlistManager.getAllSymbols();
       return Object.values(UNIVERSE).flat ? Object.values(UNIVERSE).flat() : UNIVERSE;
     }
 
-    let _open       = false;
-    let _currentSym = initialSym;
+    let _open        = false;
+    let _currentSym  = initialSym;
     let _highlighted = -1;
 
-    // ── Build HTML ────────────────────────────────────────────
     host.innerHTML = `
       <div class="sym-widget" id="${hostId}-inner">
         <div class="sym-widget-trigger" id="${hostId}-trigger" tabindex="0" role="combobox"
@@ -1022,7 +1038,6 @@ const Terminal = (() => {
     const dropdown = document.getElementById(`${hostId}-dropdown`);
     const list     = document.getElementById(`${hostId}-list`);
 
-    // ── Render list ───────────────────────────────────────────
     function _renderList(q = '') {
       const allSyms = _getAllSyms();
       const qLow    = q.toLowerCase().trim();
@@ -1030,13 +1045,11 @@ const Terminal = (() => {
 
       let filtered;
       if (!qLow) {
-        // Vide : montre les starred en premier puis tous
         const starred = window.WatchlistManager ? WatchlistManager.getStarred() : [];
         const wl      = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
         const rest    = allSyms.filter(s => !wl.includes(s));
         filtered = [...new Set([...starred, ...wl, ...rest])].slice(0, 80);
       } else {
-        // Filtre : starts-with d'abord, puis contains
         const startsWith = allSyms.filter(s => s.toLowerCase().startsWith(qLow));
         const contains   = allSyms.filter(s =>
           !s.toLowerCase().startsWith(qLow) &&
@@ -1056,12 +1069,12 @@ const Terminal = (() => {
       }
 
       list.innerHTML = filtered.map((s, idx) => {
-        const meta     = window.WatchlistManager ? WatchlistManager.getSymbolMeta(s) : { name: s, sector: '' };
-        const logoHtml = typeof _getLogoHtml === 'function' ? _getLogoHtml(s, 18) : '';
-        const isActive = s === _currentSym;
-        const isStarred= window.WatchlistManager ? WatchlistManager.isStarred(s) : false;
-        const name     = (meta.name || s).slice(0, 28);
-        const sector   = meta.sector || '';
+        const meta      = window.WatchlistManager ? WatchlistManager.getSymbolMeta(s) : { name: s, sector: '' };
+        const logoHtml  = typeof _getLogoHtml === 'function' ? _getLogoHtml(s, 18) : '';
+        const isActive  = s === _currentSym;
+        const isStarred = window.WatchlistManager ? WatchlistManager.isStarred(s) : false;
+        const name      = (meta.name || s).slice(0, 28);
+        const sector    = meta.sector || '';
 
         return `
           <div class="sym-widget-item${isActive ? ' selected' : ''}"
@@ -1079,7 +1092,6 @@ const Terminal = (() => {
           </div>`;
       }).join('');
 
-      // Bind clicks
       list.querySelectorAll('.sym-widget-item').forEach(item => {
         item.addEventListener('mousedown', e => {
           e.preventDefault();
@@ -1088,20 +1100,39 @@ const Terminal = (() => {
       });
     }
 
-    // ── Pick a symbol ─────────────────────────────────────────
+    // ════════════════════════════════════════════════════════
+    // ✅ FIX CRITIQUE — _pick corrigé
+    // Problème : select.value = sym ne fonctionne que si
+    // l'option existe déjà dans le <select>. On l'ajoute
+    // dynamiquement + on déclenche un callback direct.
+    // ════════════════════════════════════════════════════════
     function _pick(sym) {
-      _currentSym       = sym;
-      select.value      = sym;
-      tag.textContent   = sym;
-      tag.style.display = sym ? 'inline-flex' : 'none';
+      _currentSym = sym;
+
+      // ✅ FIX ROOT CAUSE — Ajouter l'option si elle n'existe pas
+      if (sym && select) {
+        if (!select.querySelector(`option[value="${sym}"]`)) {
+          const opt       = document.createElement('option');
+          opt.value       = sym;
+          opt.textContent = sym;
+          select.appendChild(opt);
+        }
+        select.value = sym;
+      }
+
+      tag.textContent        = sym;
+      tag.style.display      = sym ? 'inline-flex' : 'none';
       clearBtn.style.display = sym ? 'flex' : 'none';
-      input.value       = '';
+      input.value            = '';
       _close();
-      // Dispatche l'event change sur le select caché
+
+      // Event sur le select (compatibilité listeners existants)
       select.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // ✅ Callback direct — ne dépend PAS du select
+      if (onPickCallback && sym) onPickCallback(sym);
     }
 
-    // ── Open / Close ──────────────────────────────────────────
     function _openDD() {
       _open = true;
       dropdown.style.display = 'block';
@@ -1118,7 +1149,6 @@ const Terminal = (() => {
       trigger.setAttribute('aria-expanded', 'false');
     }
 
-    // ── Events ────────────────────────────────────────────────
     trigger.addEventListener('click', e => {
       if (e.target === clearBtn || clearBtn.contains(e.target)) return;
       _open ? _close() : _openDD();
@@ -1168,12 +1198,10 @@ const Terminal = (() => {
       _openDD();
     });
 
-    // Ferme sur clic extérieur
     document.addEventListener('click', e => {
       if (_open && !inner.contains(e.target)) _close();
     });
 
-    // ── API publique ──────────────────────────────────────────
     return {
       pick:     _pick,
       getValue: () => _currentSym || select.value,
@@ -1190,7 +1218,14 @@ const Terminal = (() => {
     _on('btn-theme',      'click',  toggleTheme);
 
     // Overview chart controls
-    document.getElementById('ov-symbol')?.addEventListener('change', () => _loadMainChart());
+    // ✅ FIX — Met à jour _currentChartSym quand le select change programmatiquement
+    document.getElementById('ov-symbol')?.addEventListener('change', (e) => {
+      const v = e.target.value;
+      if (v && v !== _currentChartSym) {
+        _currentChartSym = v;
+        _loadMainChart(true);
+      }
+    });
     _on('btn-refresh-chart','click', () => _loadMainChart(true));
     _on('btn-view-all-signals','click', () => showSection('signals'));
 
@@ -2208,9 +2243,13 @@ const Terminal = (() => {
   // CHARTS — Main Chart
   // ════════════════════════════════════════════════════════
   async function _loadMainChart(force = false) {
-    const sym      = document.getElementById('ov-symbol')?.value || 'SPY';
+    // ✅ FIX — Utilise la variable locale, pas le select (qui peut rester "SPY")
+    const sym = _currentChartSym || document.getElementById('ov-symbol')?.value || 'SPY';
     const interval = _currentIv;
+
+    // Sync UI
     _txt('main-chart-title', `${sym} — ${interval}`);
+    _txt('ta-sym', sym);   // ← TA panel header synced aussi
 
     if (!_mainInited) {
       Charts.initPriceChart('main-price-chart', { height: 360 });
@@ -2226,7 +2265,6 @@ const Terminal = (() => {
         })), {}
       );
 
-      // ── Déclenche l'analyse technique ──────────────────
       const analysis = _analyzeTA(candles, sym);
       if (analysis) {
         _renderTechnicalAnalysis(analysis);
@@ -2235,31 +2273,79 @@ const Terminal = (() => {
   }
 
   function loadChartSymbol(sym) {
-    // Met à jour le select caché
-    const sel = document.getElementById('ov-symbol');
-    if (sel) sel.value = sym;
+    if (!sym) return;
+    sym = sym.toUpperCase();
 
-    // Met à jour le widget visuellement (sans déclencher un double event)
-    const widgetHost = document.getElementById('ov-symbol-widget-host');
-    if (widgetHost?._widgetApi) {
-      widgetHost._widgetApi.pick(sym);
+    // ✅ FIX — Mise à jour de la variable locale EN PREMIER
+    _currentChartSym = sym;
+
+    // Sync select caché (avec ajout d'option si nécessaire)
+    const sel = document.getElementById('ov-symbol');
+    if (sel) {
+      if (!sel.querySelector(`option[value="${sym}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = sym; opt.textContent = sym;
+        sel.appendChild(opt);
+      }
+      sel.value = sym;
+    }
+
+    // Sync widget visuel overview
+    const ovHost = document.getElementById('ov-symbol-widget-host');
+    if (ovHost?._widgetApi) {
+      // pick() sans déclencher le callback (évite double load)
+      const tag      = ovHost.querySelector('.sym-widget-tag');
+      const clearBtn = ovHost.querySelector('.sym-widget-clear');
+      if (tag)      { tag.textContent = sym; tag.style.display = 'inline-flex'; }
+      if (clearBtn) clearBtn.style.display = 'flex';
+      // Forcer la valeur interne du widget
+      ovHost._widgetApi.pick && (ovHost._widgetApi._sym = sym);
     } else {
-      // Cherche le tag directement
-      const tag = document.querySelector('#ov-symbol-widget-host .sym-widget-tag');
-      if (tag) { tag.textContent = sym; tag.style.display = 'inline-flex'; }
+      const tag      = document.querySelector('#ov-symbol-widget-host .sym-widget-tag');
       const clearBtn = document.querySelector('#ov-symbol-widget-host .sym-widget-clear');
+      if (tag)      { tag.textContent = sym; tag.style.display = 'inline-flex'; }
       if (clearBtn) clearBtn.style.display = 'flex';
     }
 
+    // ✅ Load du chart avec le nouveau ticker
     _loadMainChart(true);
 
-    // Sync order form
-    const orderSym = document.getElementById('order-symbol');
-    if (orderSym) orderSym.value = sym;
-    const orderTag = document.querySelector('#order-symbol-widget-host .sym-widget-tag');
-    if (orderTag) { orderTag.textContent = sym; orderTag.style.display = 'inline-flex'; }
-    const orderClear = document.querySelector('#order-symbol-widget-host .sym-widget-clear');
-    if (orderClear) orderClear.style.display = 'flex';
+    // ✅ Sync formulaire d'ordre (buy/sell)
+    const orderSel = document.getElementById('order-symbol');
+    if (orderSel) {
+      if (!orderSel.querySelector(`option[value="${sym}"]`)) {
+        const opt = document.createElement('option');
+        opt.value = sym; opt.textContent = sym;
+        orderSel.appendChild(opt);
+      }
+      orderSel.value = sym;
+    }
+
+    // Sync widget order form
+    const orHost = document.getElementById('order-symbol-widget-host');
+    if (orHost?._widgetApi) {
+      const tag      = orHost.querySelector('.sym-widget-tag');
+      const clearBtn = orHost.querySelector('.sym-widget-clear');
+      if (tag)      { tag.textContent = sym; tag.style.display = 'inline-flex'; }
+      if (clearBtn) clearBtn.style.display = 'flex';
+    }
+
+    // ✅ Sync TA panel header
+    _txt('ta-sym', sym);
+
+    // ✅ Afficher le signal ML du ticker dans un toast discret
+    const sig = _state.signals?.signals?.[sym];
+    if (sig) {
+      const dir   = sig.direction || 'neutral';
+      const score = parseFloat(sig.final_score || 0).toFixed(3);
+      const price = parseFloat(sig.price || 0);
+      const icon  = dir === 'buy' ? '▲' : dir === 'sell' ? '▼' : '●';
+      _showToast(
+        `${sym} — ${icon} ${dir.toUpperCase()} | Score: ${score} | $${price > 0 ? price.toFixed(2) : '--'}`,
+        dir === 'buy' ? 'success' : dir === 'sell' ? 'error' : 'info',
+        3000
+      );
+    }
   }
 
   // ════════════════════════════════════════════════════════
