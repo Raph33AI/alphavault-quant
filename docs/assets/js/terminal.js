@@ -131,6 +131,7 @@ const Terminal = (() => {
   let _currentSide = 'BUY';
   let _currentIv   = '1day';
   let _panelIv     = Array(10).fill('1day');
+  const _termCJ = {}; // Chart.js instances dans le TA Panel
   let _sidebarOpen = true;
   let _mainInited  = false;
   let _panelsInited= false;
@@ -374,6 +375,15 @@ const Terminal = (() => {
     };
   }
 
+  function _destroyTermCJ() {
+    Object.keys(_termCJ).forEach(id => {
+      if (_termCJ[id]) {
+        try { _termCJ[id].destroy(); } catch(e) {}
+        delete _termCJ[id];
+      }
+    });
+  }
+
   // ── Render Technical Analysis ──────────────────────────
   function _renderTechnicalAnalysis(a) {
     const el = document.getElementById('ta-panel');
@@ -533,6 +543,285 @@ const Terminal = (() => {
             <i class="fa-solid ${s.bull===true?'fa-circle-check':s.bull===false?'fa-circle-xmark':'fa-circle-minus'}"
               style="font-size:12px;color:${s.bull===true?'var(--g)':s.bull===false?'var(--r)':'var(--y)'}"></i>
           </div>`).join('')}
+      </div>
+      
+      <!-- ── TA Charts Section (RSI, MACD, Ichimoku, Fibonacci) ── -->
+      <div style="margin-top:16px">
+
+        <!-- RSI + MACD en 2 colonnes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+              <i class="fa-solid fa-gauge" style="color:var(--b1)"></i>
+              RSI (14) — ${a.rsi.toFixed(1)}
+              <span style="float:right;color:${a.rsi<30?'var(--g)':a.rsi>70?'var(--r)':'var(--y)'}">
+                ${a.rsi<30?'Oversold':a.rsi>70?'Overbought':'Neutral'}
+              </span>
+            </div>
+            <div style="height:100px;position:relative;overflow:hidden;contain:strict">
+              <canvas id="ta-rsi-chart"></canvas>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+              <i class="fa-solid fa-wave-square" style="color:var(--b2)"></i>
+              MACD — ${a.macd.hist >= 0 ? '▲ Bullish' : '▼ Bearish'}
+              <span style="float:right;color:${a.macd.hist>=0?'var(--g)':'var(--r)'}">
+                ${a.macd.hist.toFixed(4)}
+              </span>
+            </div>
+            <div style="height:100px;position:relative;overflow:hidden;contain:strict">
+              <canvas id="ta-macd-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ichimoku Chart full width -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+            <i class="fa-solid fa-cloud" style="color:var(--c)"></i>
+            Ichimoku Cloud —
+            <span style="color:${a.ich.cloudSig==='bullish'?'var(--g)':a.ich.cloudSig==='bearish'?'var(--r)':'var(--y)'}">
+              ${a.ich.cloudSig.toUpperCase()}
+            </span>
+          </div>
+          <div style="height:180px;position:relative;overflow:hidden;contain:strict">
+            <canvas id="ta-ichi-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Fibonacci Visualization -->
+        <div id="ta-fib-viz-container" style="background:var(--surf2);border:1px solid var(--bord);border-radius:12px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+            <i class="fa-solid fa-layer-group" style="color:var(--b2)"></i> Fibonacci Retracement (60D)
+            <span style="font-weight:400;font-size:9px;margin-left:6px;color:var(--txt4)">
+              Hi: $${a.fib.hi.toFixed(2)} · Lo: $${a.fib.lo.toFixed(2)} · Range: $${(a.fib.hi-a.fib.lo).toFixed(2)}
+            </span>
+          </div>
+          <div id="ta-fib-viz"></div>
+        </div>
+      </div>
+    `;
+    // ── Render TA Charts (différé pour laisser le DOM se stabiliser) ──
+    setTimeout(() => {
+      _destroyTermCJ();
+      const isDark = _isDark();
+      _termRenderRSI('ta-rsi-chart', isDark, a);
+      _termRenderMACD('ta-macd-chart', isDark, a);
+      _termRenderIchimoku('ta-ichi-chart', isDark, a);
+      _termRenderFibViz('ta-fib-viz', a);
+    }, 60);
+  }
+
+  // ── TA Chart renderers — TA Panel (terminal.js) ──────────
+
+  function _isDark() {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  }
+
+  function _termCJCreate(id, config) {
+    const canvas = document.getElementById(id);
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_termCJ[id]) { try { _termCJ[id].destroy(); } catch(e) {} }
+    try {
+      _termCJ[id] = new Chart(canvas.getContext('2d'), config);
+    } catch(e) { console.warn('[TermCJ]', id, e); }
+  }
+
+  function _termRenderRSI(canvasId, isDark, a) {
+    // Recalcule RSI depuis les données historiques stockées dans l'analyse
+    // Si pas de données historiques, on affiche juste la valeur actuelle sur une jauge
+    const txtC  = isDark ? '#9db3d8' : '#64748b';
+    const gridC = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    const rsiV  = a.rsi;
+    const color = rsiV > 70 ? '#ef4444' : rsiV < 30 ? '#10b981' : '#f59e0b';
+
+    // Jauge simple (doughnut) si pas de série historique
+    _termCJCreate(canvasId, {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data:            [rsiV, 100 - rsiV],
+          backgroundColor: [color, isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'],
+          borderWidth:     0,
+          circumference:   270,
+          rotation:        225,
+        }],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        cutout:              '75%',
+        animation:           { duration: 500 },
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false },
+        },
+      },
+      plugins: [{
+        id: 'rsiCenter',
+        afterDraw(chart) {
+          const { ctx, chartArea: { left, top, width, height } } = chart;
+          const cx = left + width / 2;
+          const cy = top + height / 2 + 12;
+          ctx.save();
+          ctx.fillStyle    = color;
+          ctx.font         = `bold 18px Inter, sans-serif`;
+          ctx.textAlign    = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(rsiV.toFixed(1), cx, cy);
+          ctx.fillStyle = txtC;
+          ctx.font      = '9px Inter, sans-serif';
+          ctx.fillText(rsiV > 70 ? 'OVERBOUGHT' : rsiV < 30 ? 'OVERSOLD' : 'NEUTRAL', cx, cy + 14);
+          ctx.restore();
+        },
+      }],
+    });
+  }
+
+  function _termRenderMACD(canvasId, isDark, a) {
+    const txtC  = isDark ? '#9db3d8' : '#64748b';
+    const gridC = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    const hist  = a.macd.hist;
+    const histColor = hist >= 0 ? 'rgba(16,185,129,0.8)' : 'rgba(239,68,68,0.8)';
+
+    // Mini bar chart avec les 3 valeurs MACD principales
+    _termCJCreate(canvasId, {
+      type: 'bar',
+      data: {
+        labels: ['MACD Line', 'Signal Line', 'Histogram'],
+        datasets: [{
+          data:            [a.macd.line, a.macd.signal, hist],
+          backgroundColor: [
+            'rgba(59,130,246,0.7)',
+            'rgba(249,115,22,0.7)',
+            histColor,
+          ],
+          borderWidth:   0,
+          borderRadius:  4,
+        }],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           { duration: 400 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#0d1530' : '#fff',
+            bodyColor:       txtC,
+            borderColor:     isDark ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: ${parseFloat(ctx.parsed.y).toFixed(5)}`,
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: txtC, font: { size: 9 } }, grid: { color: gridC } },
+          y: { ticks: { color: txtC, font: { size: 9 } }, grid: { color: gridC } },
+        },
+      },
+    });
+  }
+
+  function _termRenderIchimoku(canvasId, isDark, a) {
+    const txtC  = isDark ? '#9db3d8' : '#64748b';
+    const gridC = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    const ich   = a.ich;
+    const price = a.price;
+
+    // Visualisation des niveaux Ichimoku clés
+    const labels  = ['Chikou/Price', 'Price', 'Tenkan', 'Kijun', 'Senkou A', 'Senkou B'];
+    const chikou  = price; // simplified proxy
+    const values  = [chikou, price, ich.tenkan, ich.kijun, ich.senkouA, ich.senkouB]
+      .map(v => v ?? price);
+    const colors  = values.map(v => v > price ? '#10b981' : v < price ? '#ef4444' : '#f59e0b');
+
+    _termCJCreate(canvasId, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data:            values,
+          backgroundColor: colors.map(c => c + '55'),
+          borderColor:     colors,
+          borderWidth:     2,
+          borderRadius:    4,
+          indexAxis:       'x',
+        }],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           { duration: 400 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#0d1530' : '#fff',
+            bodyColor:       txtC,
+            borderColor:     isDark ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: {
+              label: ctx => ` ${ctx.label}: $${parseFloat(ctx.parsed.y).toFixed(2)}`,
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: txtC, font: { size: 9 } }, grid: { color: gridC } },
+          y: {
+            ticks: {
+              color:    txtC,
+              font:     { size: 9 },
+              callback: v => '$' + v.toFixed(0),
+            },
+            grid: { color: gridC },
+            min:  Math.min(...values) * 0.995,
+            max:  Math.max(...values) * 1.005,
+          },
+        },
+      },
+    });
+  }
+
+  function _termRenderFibViz(containerId, a) {
+    const el = document.getElementById(containerId);
+    if (!el || !a.fib) return;
+
+    const fib   = a.fib;
+    const price = a.price;
+    const range = fib.hi - fib.lo;
+
+    el.innerHTML = fib.levels.map(lv => {
+      const isNear  = Math.abs(lv.price - price) < (a.atr || price * 0.01) * 0.8;
+      const isAbove = price >= lv.price;
+      const barPct  = range > 0
+        ? Math.max(0, Math.min(100, ((fib.hi - lv.price) / range) * 100))
+        : 50;
+      const color   = lv.key ? 'var(--b1)' : 'var(--txt3)';
+
+      return `<div style="display:flex;align-items:center;gap:8px;padding:3px 6px;margin-bottom:3px;
+                          border-radius:5px;background:${isNear ? 'rgba(59,130,246,0.07)' : 'transparent'};
+                          border:1px solid ${isNear ? 'rgba(59,130,246,0.2)' : 'transparent'}">
+        <span style="font-size:9px;font-weight:800;color:${color};min-width:38px;font-family:var(--mono)">${lv.label}</span>
+        <div style="flex:1;height:5px;background:var(--surf3);border-radius:3px;overflow:hidden">
+          <div style="width:${barPct.toFixed(1)}%;height:100%;
+                      background:${isAbove ? 'var(--g)' : 'var(--r)'};border-radius:3px"></div>
+        </div>
+        <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${color};min-width:65px;text-align:right">
+          $${lv.price.toFixed(2)}
+        </span>
+        ${lv.key  ? '<span style="font-size:8px;color:var(--b2);font-weight:700;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:3px">KEY</span>' : '<span style="min-width:32px"></span>'}
+        ${isNear  ? '<span style="font-size:9px;color:var(--b1);font-weight:800">← NOW</span>' : ''}
+      </div>`;
+    }).join('') + `
+      <div style="margin-top:8px;padding-top:6px;border-top:1px solid var(--bord);display:flex;gap:6px;flex-wrap:wrap">
+        <span style="font-size:9px;font-weight:700;color:var(--txt4);align-self:center">Extensions:</span>
+        ${fib.exts.map(e => `
+          <span style="background:var(--surf3);padding:2px 8px;border-radius:5px;font-size:10px">
+            <span style="color:var(--b2);font-weight:700">${e.label}</span>
+            <span style="color:var(--txt);font-family:var(--mono);margin-left:3px">$${e.price.toFixed(2)}</span>
+          </span>`).join('')}
       </div>`;
   }
 

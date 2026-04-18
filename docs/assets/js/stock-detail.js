@@ -153,6 +153,7 @@ const StockDetail = (() => {
   let _fpChart   = null;   // LWC full-page chart instance
   let _fpSeries  = null;
   let _lastFPWidth = 0;
+  const _sdCJ = {};          // Chart.js instances StockDetail
 
   // ────────────────────────────────────────────────────────
   // BUILD HTML (une seule fois au premier appel)
@@ -386,6 +387,7 @@ const StockDetail = (() => {
   // ────────────────────────────────────────────────────────
   function _switchTab(tab) {
     _tab = tab;
+    _destroyAllSDCJ();
     _destroyFPChart();
 
     document.querySelectorAll('.sdp-fp-tab').forEach(t =>
@@ -543,6 +545,8 @@ const StockDetail = (() => {
 
     // Load mini chart
     setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', _sym, '1d', '1y', 260), 80);
+    // ── TA Charts — chargement différé ───────────────────
+    setTimeout(() => _appendSDTASection(_sym), 120);
   }
 
   // ════════════════════════════════════════════════════════
@@ -987,6 +991,18 @@ const StockDetail = (() => {
     }
   }
 
+  // ────────────────────────────────────────────────────────
+  // Destroy all Chart.js instances créés dans StockDetail
+  // ────────────────────────────────────────────────────────
+  function _destroyAllSDCJ() {
+    Object.keys(_sdCJ).forEach(id => {
+      if (_sdCJ[id]) {
+        try { _sdCJ[id].destroy(); } catch(e) {}
+        delete _sdCJ[id];
+      }
+    });
+  }
+
   function _destroyFPChart() {
     if (_fpChart) {
       try { _fpChart.remove(); } catch(e) {}
@@ -1076,6 +1092,596 @@ const StockDetail = (() => {
     if (ps > ns) return { cls:'positive', label:'▲ Positive' };
     if (ns > ps) return { cls:'negative', label:'▼ Negative' };
     return { cls:'neutral', label:'— Neutral' };
+  }
+
+  // ════════════════════════════════════════════════════════
+  // TA CHARTS — Calculs & Rendu Chart.js pour Stock Detail
+  // 100% Yahoo Finance data (getChart)
+  // ════════════════════════════════════════════════════════
+
+  // ── Helpers TA (autonomes, pas de dépendance à terminal.js) ──
+
+  function _sdEma(arr, p) {
+    if (arr.length < p) return arr.map(() => null);
+    const k   = 2 / (p + 1);
+    const out = Array(p - 1).fill(null);
+    let v     = arr.slice(0, p).reduce((a, b) => a + b, 0) / p;
+    out.push(v);
+    for (let i = p; i < arr.length; i++) { v = arr[i] * k + v * (1 - k); out.push(v); }
+    return out;
+  }
+
+  function _sdRsiCalc(closes, p = 14) {
+    if (closes.length < p + 1) return closes.map(() => null);
+    let g = 0, l = 0;
+    for (let i = 1; i <= p; i++) {
+      const d = closes[i] - closes[i - 1];
+      g += Math.max(d, 0);
+      l += Math.max(-d, 0);
+    }
+    let ag = g / p, al = l / p;
+    const out = Array(p).fill(null);
+    out.push(al === 0 ? 100 : 100 - 100 / (1 + ag / al));
+    for (let i = p + 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i - 1];
+      ag = (ag * (p - 1) + Math.max(d, 0)) / p;
+      al = (al * (p - 1) + Math.max(-d, 0)) / p;
+      out.push(al === 0 ? 100 : 100 - 100 / (1 + ag / al));
+    }
+    return out;
+  }
+
+  function _sdMacdCalc(closes, f = 12, s = 26, sig = 9) {
+    const ef  = _sdEma(closes, f);
+    const es  = _sdEma(closes, s);
+    const ml  = closes.map((_, i) =>
+      ef[i] != null && es[i] != null ? ef[i] - es[i] : null
+    );
+    const valid = ml.filter(v => v != null);
+    const se    = _sdEma(valid, sig);
+    let si = 0;
+    const sl = ml.map(v => v == null ? null : se[si++] ?? null);
+    return { line: ml, signal: sl, hist: ml.map((v, i) => v != null && sl[i] != null ? v - sl[i] : null) };
+  }
+
+  function _sdIchimokuCalc(candles) {
+    const n  = candles.length;
+    const H  = candles.map(c => c.high);
+    const L  = candles.map(c => c.low);
+    const C  = candles.map(c => c.close);
+    const hh = (a, i, p) => Math.max(...a.slice(Math.max(0, i - p + 1), i + 1));
+    const ll = (a, i, p) => Math.min(...a.slice(Math.max(0, i - p + 1), i + 1));
+
+    const tenkan   = candles.map((_, i) => i >= 8  ? (hh(H, i, 9)  + ll(L, i, 9))  / 2 : null);
+    const kijun    = candles.map((_, i) => i >= 25 ? (hh(H, i, 26) + ll(L, i, 26)) / 2 : null);
+    const senkouA  = candles.map((_, i) =>
+      tenkan[i] != null && kijun[i] != null ? (tenkan[i] + kijun[i]) / 2 : null
+    );
+    const senkouB  = candles.map((_, i) => i >= 51 ? (hh(H, i, 52) + ll(L, i, 52)) / 2 : null);
+    const chikou   = [...C.slice(26), ...Array(26).fill(null)]; // Lagging
+
+    // Kumo twist points
+    const twists = [];
+    for (let i = 1; i < n; i++) {
+      if (senkouA[i] != null && senkouB[i] != null && senkouA[i-1] != null && senkouB[i-1] != null) {
+        if ((senkouA[i] > senkouB[i]) !== (senkouA[i-1] > senkouB[i-1])) {
+          twists.push(i);
+        }
+      }
+    }
+
+    return { tenkan, kijun, senkouA, senkouB, chikou, price: C, twists };
+  }
+
+  function _sdFibCalc(candles) {
+    const sl   = candles.slice(-Math.min(60, candles.length));
+    const hi   = Math.max(...sl.map(c => c.high));
+    const lo   = Math.min(...sl.map(c => c.low));
+    const d    = hi - lo;
+    const RATIOS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1.0];
+    const EXTS   = [1.272, 1.618, 2.0, 2.618];
+    const levels = RATIOS.map(r => ({
+      pct:   r,
+      label: `${(r * 100).toFixed(1)}%`,
+      price: +(hi - d * r).toFixed(2),
+      key:   [0.382, 0.5, 0.618].includes(r),
+    }));
+    const exts = EXTS.map(r => ({
+      pct:   r,
+      label: `${(r * 100).toFixed(1)}%`,
+      price: +(lo + d * r).toFixed(2),
+    }));
+    return { hi, lo, d, levels, exts };
+  }
+
+  // ── Append TA section au body (appelé depuis _renderOverview) ──
+
+  async function _appendSDTASection(sym) {
+    const body = document.getElementById('sdp-fp-body');
+    if (!body) return;
+
+    // Supprime l'ancienne section si elle existe
+    const old = document.getElementById('sd-ta-full');
+    if (old) old.remove();
+
+    // Créer le container full-width
+    const div = document.createElement('div');
+    div.id    = 'sd-ta-full';
+    div.style.cssText = 'grid-column:1/-1;margin-top:4px';
+    div.innerHTML = `
+      <div class="sdp-fp-stat-section" style="padding:16px">
+        <div class="sdp-fp-stat-title" style="margin-bottom:14px">
+          <i class="fa-solid fa-chart-candlestick" style="color:var(--b1)"></i>
+          Technical Analysis Charts
+          <span style="margin-left:auto;font-size:10px;color:var(--txt4);font-weight:400">
+            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · 1Y Daily
+          </span>
+          <div id="sd-ta-loading" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt4);font-weight:400">
+            <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i> Loading indicators...
+          </div>
+        </div>
+
+        <!-- Grid RSI + MACD -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between">
+              <span><i class="fa-solid fa-gauge" style="color:var(--b1)"></i> RSI (14)</span>
+              <span id="sd-rsi-val" style="color:var(--txt)">--</span>
+            </div>
+            <div style="height:110px;position:relative;overflow:hidden;contain:strict">
+              <canvas id="sd-rsi-chart"></canvas>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between">
+              <span><i class="fa-solid fa-wave-square" style="color:var(--b2)"></i> MACD (12,26,9)</span>
+              <span id="sd-macd-val" style="color:var(--txt)">--</span>
+            </div>
+            <div style="height:110px;position:relative;overflow:hidden;contain:strict">
+              <canvas id="sd-macd-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ichimoku Cloud Chart -->
+        <div style="margin-bottom:12px">
+          <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
+            <span><i class="fa-solid fa-cloud" style="color:var(--c)"></i> Ichimoku Cloud (9,26,52)</span>
+            <span id="sd-ichi-sig" style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px">--</span>
+          </div>
+          <div style="height:200px;position:relative;overflow:hidden;contain:strict">
+            <canvas id="sd-ichi-chart"></canvas>
+          </div>
+        </div>
+
+        <!-- Fibonacci Retracement Visualization -->
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+            <i class="fa-solid fa-layer-group" style="color:var(--b2)"></i> Fibonacci Retracement (60D)
+          </div>
+          <div id="sd-fib-viz">
+            <div style="color:var(--txt4);font-size:11px;text-align:center;padding:16px">
+              <i class="fa-solid fa-circle-notch fa-spin"></i>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    body.appendChild(div);
+
+    // Charge les données et rend les graphiques
+    await _renderSDTACharts(sym);
+  }
+
+  async function _renderSDTACharts(sym) {
+    const loadingEl = document.getElementById('sd-ta-loading');
+
+    try {
+      // Fetch 1Y daily candles depuis Yahoo Finance
+      const candles = await YahooFinance.getChart(sym, '1d', '1y');
+
+      if (!candles || candles.length < 55) {
+        if (loadingEl) loadingEl.innerHTML = '<span style="color:var(--y)"><i class="fa-solid fa-triangle-exclamation"></i> Insufficient data (min 55 bars)</span>';
+        return;
+      }
+
+      if (loadingEl) loadingEl.style.display = 'none';
+
+      const isDark  = document.documentElement.getAttribute('data-theme') === 'dark';
+      const closes  = candles.map(c => c.close);
+      const labels  = candles.map(c => {
+        const d = new Date(c.time * 1000);
+        return `${d.getMonth()+1}/${d.getDate()}`;
+      });
+
+      // ── RSI ─────────────────────────────────────────────
+      const rsiArr  = _sdRsiCalc(closes, 14);
+      const rsiLast = rsiArr.filter(v => v != null).at(-1) ?? 50;
+      const rsiEl   = document.getElementById('sd-rsi-val');
+      if (rsiEl) {
+        rsiEl.textContent = rsiLast.toFixed(1);
+        rsiEl.style.color = rsiLast > 70 ? 'var(--r)' : rsiLast < 30 ? 'var(--g)' : 'var(--y)';
+      }
+      _sdRenderRSI('sd-rsi-chart', labels, rsiArr, isDark);
+
+      // ── MACD ────────────────────────────────────────────
+      const macdData = _sdMacdCalc(closes);
+      const macdLast = macdData.line.filter(v => v != null).at(-1) ?? 0;
+      const sigLast  = macdData.signal.filter(v => v != null).at(-1) ?? 0;
+      const macdEl   = document.getElementById('sd-macd-val');
+      if (macdEl) {
+        macdEl.textContent = `${macdLast > sigLast ? '▲' : '▼'} ${macdLast.toFixed(4)}`;
+        macdEl.style.color = macdLast > sigLast ? 'var(--g)' : 'var(--r)';
+      }
+      _sdRenderMACD('sd-macd-chart', labels, macdData, isDark);
+
+      // ── Ichimoku ─────────────────────────────────────────
+      const ichi       = _sdIchimokuCalc(candles);
+      const lastPrice  = closes[closes.length - 1];
+      const lastA      = ichi.senkouA.filter(v => v != null).at(-1);
+      const lastB      = ichi.senkouB.filter(v => v != null).at(-1);
+      const cloudSig   = lastA && lastB
+        ? (lastPrice > Math.max(lastA, lastB) ? 'BULLISH'
+          : lastPrice < Math.min(lastA, lastB) ? 'BEARISH' : 'IN CLOUD')
+        : 'N/A';
+      const sigEl = document.getElementById('sd-ichi-sig');
+      if (sigEl) {
+        const c = cloudSig === 'BULLISH' ? 'var(--g)' : cloudSig === 'BEARISH' ? 'var(--r)' : 'var(--y)';
+        sigEl.textContent  = cloudSig;
+        sigEl.style.cssText= `color:${c};background:${c}18;border:1px solid ${c}40;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px`;
+      }
+      _sdRenderIchimoku('sd-ichi-chart', labels, ichi, isDark);
+
+      // ── Fibonacci ────────────────────────────────────────
+      const fib = _sdFibCalc(candles);
+      _sdRenderFibViz('sd-fib-viz', fib, lastPrice, isDark);
+
+    } catch (err) {
+      console.error('[SD TA Charts]', err);
+      if (loadingEl) loadingEl.innerHTML = `<span style="color:var(--r)"><i class="fa-solid fa-xmark"></i> Error: ${err.message}</span>`;
+    }
+  }
+
+  // ── RSI Chart.js ─────────────────────────────────────────
+  function _sdRenderRSI(canvasId, labels, rsiArr, isDark) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    _destroyAllSDCJ(); // handled per-chart below
+    if (_sdCJ[canvasId]) { try { _sdCJ[canvasId].destroy(); } catch(e) {} }
+
+    const txtColor  = isDark ? '#9db3d8' : '#64748b';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+
+    // Slice to last 120 bars for readability
+    const N   = 120;
+    const rsi = rsiArr.slice(-N);
+    const lbl = labels.slice(-N);
+
+    _sdCJ[canvasId] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: lbl,
+        datasets: [
+          {
+            label:           'RSI',
+            data:            rsi,
+            borderColor:     '#8b5cf6',
+            backgroundColor: 'transparent',
+            borderWidth:     1.5,
+            pointRadius:     0,
+            tension:         0.4,
+            spanGaps:        true,
+          },
+          {
+            label:           'OB',
+            data:            lbl.map(() => 70),
+            borderColor:     'rgba(239,68,68,0.4)',
+            borderWidth:     1,
+            borderDash:      [4, 3],
+            pointRadius:     0,
+            fill:            false,
+          },
+          {
+            label:           'OS',
+            data:            lbl.map(() => 30),
+            borderColor:     'rgba(16,185,129,0.4)',
+            borderWidth:     1,
+            borderDash:      [4, 3],
+            pointRadius:     0,
+            fill:            false,
+          },
+        ],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#0d1530' : '#fff',
+            bodyColor:       txtColor,
+            borderColor:     isDark ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: {
+              label: ctx => ` RSI: ${parseFloat(ctx.parsed.y).toFixed(1)}`,
+              filter: item => item.datasetIndex === 0,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks:  { color: txtColor, maxTicksLimit: 6, font: { size: 9 } },
+            grid:   { color: gridColor },
+          },
+          y: {
+            min:    0,
+            max:    100,
+            ticks:  { color: txtColor, font: { size: 9 }, callback: v => v },
+            grid:   { color: gridColor },
+          },
+        },
+      },
+    });
+  }
+
+  // ── MACD Chart.js ────────────────────────────────────────
+  function _sdRenderMACD(canvasId, labels, macdData, isDark) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_sdCJ[canvasId]) { try { _sdCJ[canvasId].destroy(); } catch(e) {} }
+
+    const txtColor  = isDark ? '#9db3d8' : '#64748b';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+
+    const N    = 120;
+    const hist = macdData.hist.slice(-N);
+    const line = macdData.line.slice(-N);
+    const sig  = macdData.signal.slice(-N);
+    const lbl  = labels.slice(-N);
+
+    _sdCJ[canvasId] = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: lbl,
+        datasets: [
+          {
+            type:            'bar',
+            label:           'Histogram',
+            data:            hist,
+            backgroundColor: hist.map(v =>
+              v == null ? 'transparent' : v >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'
+            ),
+            borderWidth:     0,
+            borderRadius:    1,
+          },
+          {
+            type:            'line',
+            label:           'MACD Line',
+            data:            line,
+            borderColor:     '#3b82f6',
+            borderWidth:     1.5,
+            pointRadius:     0,
+            tension:         0.3,
+            fill:            false,
+            spanGaps:        true,
+          },
+          {
+            type:            'line',
+            label:           'Signal',
+            data:            sig,
+            borderColor:     '#f97316',
+            borderWidth:     1.5,
+            pointRadius:     0,
+            tension:         0.3,
+            fill:            false,
+            spanGaps:        true,
+          },
+        ],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: isDark ? '#0d1530' : '#fff',
+            bodyColor:       txtColor,
+            borderColor:     isDark ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: txtColor, maxTicksLimit: 6, font: { size: 9 } },
+            grid:  { color: gridColor },
+          },
+          y: {
+            ticks: { color: txtColor, font: { size: 9 } },
+            grid:  { color: gridColor },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Ichimoku Cloud Chart.js ───────────────────────────────
+  function _sdRenderIchimoku(canvasId, labels, ichi, isDark) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_sdCJ[canvasId]) { try { _sdCJ[canvasId].destroy(); } catch(e) {} }
+
+    const txtColor  = isDark ? '#9db3d8' : '#64748b';
+    const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+
+    // Slice derniers 120 bars
+    const N  = 120;
+    const sl = (arr) => arr.slice(-N);
+    const lbl = labels.slice(-N);
+
+    _sdCJ[canvasId] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: lbl,
+        datasets: [
+          {
+            label:           'Senkou A',
+            data:            sl(ichi.senkouA),
+            borderColor:     'rgba(16,185,129,0.6)',
+            backgroundColor: 'rgba(16,185,129,0.12)',
+            borderWidth:     1,
+            pointRadius:     0,
+            fill:            '+1',   // ← cloud fill vers Senkou B
+            spanGaps:        true,
+            tension:         0.2,
+          },
+          {
+            label:           'Senkou B',
+            data:            sl(ichi.senkouB),
+            borderColor:     'rgba(239,68,68,0.6)',
+            backgroundColor: 'rgba(239,68,68,0.12)',
+            borderWidth:     1,
+            pointRadius:     0,
+            fill:            false,
+            spanGaps:        true,
+            tension:         0.2,
+          },
+          {
+            label:           'Tenkan-sen',
+            data:            sl(ichi.tenkan),
+            borderColor:     '#ef4444',
+            backgroundColor: 'transparent',
+            borderWidth:     1.5,
+            pointRadius:     0,
+            fill:            false,
+            spanGaps:        true,
+          },
+          {
+            label:           'Kijun-sen',
+            data:            sl(ichi.kijun),
+            borderColor:     '#3b82f6',
+            backgroundColor: 'transparent',
+            borderWidth:     1.5,
+            pointRadius:     0,
+            fill:            false,
+            spanGaps:        true,
+          },
+          {
+            label:           'Price',
+            data:            sl(ichi.price),
+            borderColor:     '#8b5cf6',
+            backgroundColor: 'transparent',
+            borderWidth:     2,
+            pointRadius:     0,
+            fill:            false,
+            spanGaps:        true,
+          },
+        ],
+      },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           false,
+        interaction:         { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            display:  true,
+            position: 'bottom',
+            labels:   { color: txtColor, font: { size: 9 }, padding: 8, boxWidth: 12 },
+          },
+          tooltip: {
+            backgroundColor: isDark ? '#0d1530' : '#fff',
+            bodyColor:       txtColor,
+            borderColor:     isDark ? '#1a2845' : '#dde3f0',
+            borderWidth:     1,
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? '$'+ctx.parsed.y.toFixed(2) : '--'}`,
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: txtColor, maxTicksLimit: 8, font: { size: 9 } },
+            grid:  { color: gridColor },
+          },
+          y: {
+            ticks: {
+              color:    txtColor,
+              font:     { size: 9 },
+              callback: v => '$' + v.toFixed(0),
+            },
+            grid: { color: gridColor },
+          },
+        },
+      },
+    });
+  }
+
+  // ── Fibonacci HTML Visualization ─────────────────────────
+  function _sdRenderFibViz(containerId, fib, currentPrice, isDark) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    const range  = fib.hi - fib.lo;
+    const priceBarPct = range > 0 ? Math.max(0, Math.min(100, ((fib.hi - currentPrice) / range) * 100)) : 50;
+
+    el.innerHTML = `
+      <div style="padding:4px 0">
+        <!-- Price indicator bar -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:rgba(139,92,246,0.08);border-radius:8px;border:1px solid rgba(139,92,246,0.2)">
+          <i class="fa-solid fa-crosshairs" style="color:var(--b2)"></i>
+          <span style="font-size:11px;font-weight:700;color:var(--txt)">Current: $${currentPrice.toFixed(2)}</span>
+          <span style="font-size:10px;color:var(--txt4);margin-left:auto">Range: $${fib.lo.toFixed(2)} — $${fib.hi.toFixed(2)}</span>
+        </div>
+
+        <!-- Fibonacci levels -->
+        <div style="position:relative">
+          ${fib.levels.map(lv => {
+            const barPct  = range > 0 ? ((fib.hi - lv.price) / range) * 100 : 50;
+            const isNear  = Math.abs(lv.price - currentPrice) / Math.max(currentPrice, 1) < 0.012;
+            const isAbove = currentPrice >= lv.price;
+            const levelColor = lv.key ? 'var(--b1)' : 'var(--txt3)';
+
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;margin-bottom:3px;border-radius:6px;
+                                background:${isNear ? 'rgba(59,130,246,0.08)' : 'transparent'};
+                                border:1px solid ${isNear ? 'rgba(59,130,246,0.2)' : 'transparent'}">
+              <span style="font-size:10px;font-weight:800;color:${levelColor};min-width:38px;font-family:var(--mono)">${lv.label}</span>
+              <div style="flex:1;height:6px;background:var(--surf3);border-radius:3px;overflow:hidden;position:relative">
+                <div style="width:${barPct.toFixed(1)}%;height:100%;background:${isAbove ? 'var(--g)' : 'var(--surf3)'};border-radius:3px;transition:width 0.6s ease"></div>
+              </div>
+              <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${levelColor};min-width:65px;text-align:right">
+                $${lv.price.toFixed(2)}
+              </span>
+              ${lv.key ? `<span style="font-size:8px;color:var(--b2);font-weight:700;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:3px;flex-shrink:0">KEY</span>` : '<span style="min-width:32px"></span>'}
+              ${isNear ? `<span style="font-size:9px;color:var(--b1);font-weight:800;flex-shrink:0">← NOW</span>` : ''}
+            </div>`;
+          }).join('')}
+
+          <!-- Current price line -->
+          <div style="position:relative;margin:8px 0;display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--b2),transparent);border-radius:1px"></div>
+            <span style="font-size:10px;font-weight:800;color:var(--b2);font-family:var(--mono);white-space:nowrap">
+              <i class="fa-solid fa-caret-right"></i> $${currentPrice.toFixed(2)}
+            </span>
+            <div style="flex:1;height:2px;background:linear-gradient(270deg,var(--b2),transparent);border-radius:1px"></div>
+          </div>
+
+          <!-- Extensions -->
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bord)">
+            <div style="font-size:9px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+              Fibonacci Extensions
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${fib.exts.map(e => `
+                <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:6px;padding:4px 10px;text-align:center">
+                  <div style="font-size:9px;color:var(--b2);font-weight:700">${e.label}</div>
+                  <div style="font-size:11px;font-weight:800;font-family:var(--mono);color:var(--txt)">$${e.price.toFixed(2)}</div>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
   // ════════════════════════════════════════════════════════
