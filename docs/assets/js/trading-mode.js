@@ -1,19 +1,17 @@
 // ============================================================
-// trading-mode.js — AlphaVault Quant v2.0
-// ✅ 100% gratuit — GitHub API + GitHub Pages JSON
-// ✅ Zéro appel direct Oracle VM
-// ✅ Switch via workflow_dispatch GitHub Actions
+// trading-mode.js — AlphaVault Quant v2.1
+// ✅ 100% gratuit — Cloudflare Worker + GitHub Pages JSON
+// ✅ PAT stocké en secret Cloudflare (jamais dans le code)
+// ✅ Zéro saisie manuelle — fonctionne 24/7
+// ✅ Switch via alphavault-gh-proxy Worker
 // ✅ Statut via ibkr_status.json (GitHub Pages)
 // ============================================================
 
 const TradingModeManager = (() => {
 
   // ── Configuration ─────────────────────────────────────────
-  const GH_OWNER    = 'Raph33AI';
-  const GH_REPO     = 'alphavault-quant';
-  const GH_WORKFLOW = 'switch-mode.yml';
-  const POLL_MS     = 30_000;   // Poll statut GitHub Pages 30s
-  const PAT_KEY     = 'av_gh_pat'; // localStorage — même clé que terminal.js
+  const WORKER_URL  = 'https://alphavault-gh-proxy.raphnardone.workers.dev';
+  const POLL_MS     = 30_000;
 
   const MODES = {
     paper: {
@@ -35,8 +33,8 @@ const TradingModeManager = (() => {
   let _account    = 'DUM895161';
   let _connected  = false;
   let _switching  = false;
-  let _pollTimer  = null;
   let _switchedAt = null;
+  let _pollTimer  = null;
 
   // ── Init ───────────────────────────────────────────────────
   function init() {
@@ -46,38 +44,54 @@ const TradingModeManager = (() => {
     _fetchStatus();
     _pollTimer = setInterval(_fetchStatus, POLL_MS);
 
-    console.log('✅ TradingModeManager v2.0 | GitHub-only | Poll: 30s');
+    console.log('✅ TradingModeManager v2.1 | Worker:', WORKER_URL);
   }
 
   // ── Lire ibkr_status.json depuis GitHub Pages ─────────────
-  // Utilise ApiClient (déjà chargé)
   async function _fetchStatus() {
     try {
-      const data = await ApiClient.getIBKRStatus(true); // force bust cache
+      const data = await ApiClient.getIBKRStatus(true);
 
-      _mode      = data.trading_mode || 'paper';
-      _account   = data.account      || MODES[_mode].account;
-      _connected = data.ibkr_connected || false;
+      const prevMode = _mode;
+      _mode      = data.trading_mode    || 'paper';
+      _account   = data.account         || MODES[_mode].account;
+      _connected = data.ibkr_connected  || false;
 
-      // Détecter fin de switch (si switch en cours)
-      if (_switching && _switchedAt) {
+      // Détecter fin de switch
+      if (_switching && _switchedAt && prevMode !== _mode) {
+        _switching  = false;
+        _switchedAt = null;
+        clearInterval(_fastPollTimer);
+        _pollTimer = setInterval(_fetchStatus, POLL_MS);
+        _showToast(
+          `✅ Switch terminé — Mode ${MODES[_mode].label} actif (${_account})`,
+          'success', 6000
+        );
+      } else if (_switching && _switchedAt) {
         const elapsed = Date.now() - _switchedAt;
-        if (elapsed > 20_000) {
-          // Le workflow a eu le temps de pousser le nouveau statut
+        if (elapsed > 240_000) { // 4 min timeout
           _switching  = false;
           _switchedAt = null;
-          _showToast(
-            `✅ Switch terminé — Mode ${MODES[_mode].label} actif`,
-            'success'
-          );
+          clearInterval(_fastPollTimer);
+          _pollTimer = setInterval(_fetchStatus, POLL_MS);
+          _showToast('⚠ Timeout switch — vérifie GitHub Actions', 'warn');
         }
       }
 
       _updateAllUI();
 
     } catch (e) {
-      console.warn('[TradingMode] Erreur fetch statut:', e.message);
+      console.warn('[TradingMode] Fetch statut:', e.message);
     }
+  }
+
+  let _fastPollTimer = null;
+
+  // ── Poll accéléré pendant le switch ───────────────────────
+  function _startFastPoll() {
+    clearInterval(_pollTimer);
+    clearInterval(_fastPollTimer);
+    _fastPollTimer = setInterval(_fetchStatus, 10_000);
   }
 
   // ── Handler toggle ─────────────────────────────────────────
@@ -89,11 +103,8 @@ const TradingModeManager = (() => {
     }
 
     const targetMode = e.target.checked ? 'live' : 'paper';
-
-    // Même mode → rien à faire
     if (targetMode === _mode) return;
 
-    // Confirmation modale LIVE
     if (targetMode === 'live') {
       const confirmed = await _showLiveConfirmModal();
       if (!confirmed) {
@@ -102,173 +113,126 @@ const TradingModeManager = (() => {
       }
     }
 
-    // Vérifier PAT
-    const pat = _getPAT();
-    if (!pat || !pat.startsWith('ghp_')) {
-      e.target.checked = _mode === 'live'; // rollback
-      _showNoPATModal();
-      return;
-    }
-
-    await _dispatchSwitch(targetMode, pat);
+    await _doSwitch(targetMode);
   }
 
-  // ── Dispatch workflow GitHub ───────────────────────────────
-  async function _dispatchSwitch(mode, pat) {
+  // ── Switch via Cloudflare Worker ───────────────────────────
+  async function _doSwitch(mode) {
     _switching  = true;
     _switchedAt = Date.now();
 
     const checkbox = document.getElementById('mode-toggle-checkbox');
     if (checkbox) checkbox.disabled = true;
-
     _setSwitchingUI(mode);
 
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/${GH_WORKFLOW}/dispatches`,
-        {
-          method:  'POST',
-          headers: {
-            'Authorization':        `Bearer ${pat}`,
-            'Accept':               'application/vnd.github.v3+json',
-            'Content-Type':         'application/json',
-            'X-GitHub-Api-Version': '2022-11-28',
-          },
-          body: JSON.stringify({
-            ref:    'main',
-            inputs: { mode },
-          }),
-        }
-      );
+      const res = await fetch(`${WORKER_URL}/switch-mode`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ mode }),
+        signal:  AbortSignal.timeout(15_000),
+      });
 
-      if (res.status === 204) {
-        // ✅ Workflow déclenché
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         _showToast(
           mode === 'live'
-            ? '🔴 Switch LIVE déclenché — GitHub Actions en cours (~2 min)...'
-            : '🟡 Switch PAPER déclenché — GitHub Actions en cours (~2 min)...',
+            ? '🔴 Switch LIVE lancé — GitHub Actions (~2 min)...'
+            : '🟡 Switch PAPER lancé — GitHub Actions (~2 min)...',
           mode === 'live' ? 'warn' : 'info',
           8000
         );
-
-        // Polling accéléré pendant le switch (toutes les 10s)
         _startFastPoll();
 
       } else if (res.status === 401) {
         _switching = false;
         if (checkbox) checkbox.checked = _mode === 'live';
-        _showToast('❌ PAT invalide ou expiré', 'error');
-
-      } else if (res.status === 404) {
-        _switching = false;
-        if (checkbox) checkbox.checked = _mode === 'live';
-        _showToast(`❌ Workflow "${GH_WORKFLOW}" introuvable`, 'error');
+        _showToast(
+          '❌ PAT expiré — Mets à jour le secret dans Cloudflare Workers',
+          'error', 8000
+        );
 
       } else {
         _switching = false;
         if (checkbox) checkbox.checked = _mode === 'live';
-        const body = await res.text().catch(() => '');
-        _showToast(`❌ GitHub API erreur ${res.status}`, 'error');
-        console.error('[TradingMode] GitHub API:', res.status, body);
+        _showToast(`❌ Erreur: ${data.error || res.status}`, 'error');
       }
 
     } catch (e) {
       _switching = false;
       if (checkbox) checkbox.checked = _mode === 'live';
-      _showToast(`❌ Erreur réseau: ${e.message}`, 'error');
+      if (e.name === 'TimeoutError') {
+        _showToast('⏳ Worker lent — switch peut être en cours', 'warn');
+      } else {
+        _showToast(`❌ Worker inaccessible: ${e.message}`, 'error');
+      }
     } finally {
       if (checkbox) checkbox.disabled = false;
+      _updateAllUI();
     }
   }
 
-  // ── Poll accéléré pendant le switch (toutes les 10s) ──────
-  function _startFastPoll() {
-    clearInterval(_pollTimer);
-    let ticks = 0;
-    const MAX_TICKS = 24; // 24 × 10s = 4 minutes max
-
-    const fastTimer = setInterval(async () => {
-      ticks++;
-      await _fetchStatus();
-
-      // Arrêter le fast poll si switch terminé OU timeout
-      if (!_switching || ticks >= MAX_TICKS) {
-        clearInterval(fastTimer);
-        _switching  = false;
-        _switchedAt = null;
-
-        // Reprendre le poll normal
-        _pollTimer = setInterval(_fetchStatus, POLL_MS);
-
-        if (ticks >= MAX_TICKS) {
-          _showToast('⚠ Timeout switch — vérifie GitHub Actions', 'warn');
-        }
-      }
-    }, 10_000);
-  }
-
-  // ── Mise à jour de TOUTE l'UI ─────────────────────────────
+  // ── Mise à jour UI complète ────────────────────────────────
   function _updateAllUI() {
     const cfg = MODES[_mode] || MODES.paper;
 
-    // 1. Checkbox
-    const checkbox = document.getElementById('mode-toggle-checkbox');
-    if (checkbox && !_switching) checkbox.checked = _mode === 'live';
+    // Checkbox
+    const cb = document.getElementById('mode-toggle-checkbox');
+    if (cb && !_switching) cb.checked = _mode === 'live';
 
-    // 2. Label PAPER / LIVE
+    // Label
     const label = document.getElementById('mode-toggle-label');
     if (label && !_switching) {
       label.textContent = cfg.label;
       label.className   = `mode-toggle-label ${_mode}`;
     }
 
-    // 3. Account
-    const accEl = document.getElementById('mode-toggle-account');
-    if (accEl) accEl.textContent = _account;
+    // Account
+    const acc = document.getElementById('mode-toggle-account');
+    if (acc) acc.textContent = _account;
 
-    // 4. Oracle dot → statut GitHub (toujours accessible)
+    // Oracle dot
     _updateOracleDot(_connected ? 'online' : 'pending');
 
-    // 5. dry-run-badge (compat terminal.js)
-    const drBadge = document.getElementById('dry-run-badge');
-    if (drBadge) {
-      drBadge.textContent = cfg.label;
-      drBadge.className   = _mode === 'live' ? 'dry-run-badge live' : 'dry-run-badge';
+    // dry-run-badge (compat terminal.js)
+    const badge = document.getElementById('dry-run-badge');
+    if (badge) {
+      badge.textContent = cfg.label;
+      badge.className   = _mode === 'live' ? 'dry-run-badge live' : 'dry-run-badge';
     }
 
-    // 6. Wrapper data-mode
+    // Wrapper
     const wrap = document.getElementById('mode-toggle-wrap');
     if (wrap) wrap.dataset.mode = _mode;
 
-    // 7. IBKR status pill (Execution)
-    const ibkrPill = document.getElementById('ibkr-status-pill');
-    if (ibkrPill) {
-      ibkrPill.className = `ibkr-status-pill ${_mode} ${_connected ? 'connected' : ''}`;
-    }
+    // IBKR status pill
+    const pill = document.getElementById('ibkr-status-pill');
+    if (pill) pill.className = `ibkr-status-pill ${_mode} ${_connected ? 'connected' : ''}`;
 
-    // 8. ibkr-mode-text (Execution)
-    const ibkrModeTxt = document.getElementById('ibkr-mode-text');
-    if (ibkrModeTxt) {
-      ibkrModeTxt.innerHTML = _mode === 'live'
+    // ibkr-mode-text
+    const modeText = document.getElementById('ibkr-mode-text');
+    if (modeText) {
+      modeText.innerHTML = _mode === 'live'
         ? '<span style="color:#ef4444;font-weight:800">⚠ LIVE TRADING</span>'
         : 'PAPER MODE';
     }
 
-    // 9. icp-status (Execution log)
+    // icp-status
     const icpStatus = document.getElementById('icp-status');
     if (icpStatus) {
       icpStatus.innerHTML = _switching
-        ? `<span style="color:var(--y)">⏳ Switch en cours...</span>`
+        ? `<span style="color:var(--y)">⏳ Switch en cours (GitHub Actions)...</span>`
         : _connected
           ? `<span style="color:var(--g)">✅ Connected — ${cfg.label}</span>`
           : `<span style="color:var(--y)">⏳ ${cfg.label} — Auth pending</span>`;
     }
 
-    // 10. icp-account
-    const icpAccount = document.getElementById('icp-account');
-    if (icpAccount) icpAccount.textContent = _account;
+    // icp-account
+    const icpAcc = document.getElementById('icp-account');
+    if (icpAcc) icpAcc.textContent = _account;
 
-    // 11. hg-ibkr (System Health)
+    // hg-ibkr (System Health)
     const hgIbkr = document.getElementById('hg-ibkr');
     if (hgIbkr) {
       const icon = _switching
@@ -279,7 +243,7 @@ const TradingModeManager = (() => {
       hgIbkr.innerHTML = `${icon} ${cfg.label} — <span class="mono" style="font-size:10px">${_account}</span>`;
     }
 
-    // 12. dot-ibkr + pill-ibkr (topbar)
+    // dot-ibkr + pill-ibkr (topbar)
     const dotIbkr  = document.getElementById('dot-ibkr');
     const pillIbkr = document.getElementById('pill-ibkr');
     const state    = _connected ? 'ok' : 'warn';
@@ -295,9 +259,9 @@ const TradingModeManager = (() => {
     const dot = document.getElementById('mode-oracle-dot');
     if (!dot) return;
     dot.className = `mode-oracle-dot ${state}`;
-    dot.title = state === 'online'  ? 'IBKR connecté'
-              : state === 'pending' ? 'IBeam auth pending (normal sans IBEAM_KEY)'
-              : 'Offline';
+    dot.title     = state === 'online'  ? 'IBKR connecté'
+                  : state === 'pending' ? 'IBeam auth pending'
+                  :                       'Offline';
   }
 
   // ── UI état switching ──────────────────────────────────────
@@ -307,15 +271,9 @@ const TradingModeManager = (() => {
       label.className   = 'mode-toggle-label switching';
       label.textContent = '...';
     }
+    const cb = document.getElementById('mode-toggle-checkbox');
+    if (cb) cb.checked = targetMode === 'live';
     _updateOracleDot('pending');
-
-    const checkbox = document.getElementById('mode-toggle-checkbox');
-    if (checkbox) checkbox.checked = targetMode === 'live';
-  }
-
-  // ── PAT (partagé avec terminal.js) ────────────────────────
-  function _getPAT() {
-    return localStorage.getItem(PAT_KEY) || '';
   }
 
   // ── Modal LIVE confirm ─────────────────────────────────────
@@ -323,7 +281,6 @@ const TradingModeManager = (() => {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'live-confirm-overlay';
-
       overlay.innerHTML = `
         <div class="live-confirm-modal">
           <div class="live-confirm-icon">
@@ -331,7 +288,7 @@ const TradingModeManager = (() => {
           </div>
           <div class="live-confirm-title">Live Trading — Confirmation</div>
           <div class="live-confirm-subtitle">
-            GitHub Actions va switcher vers le trading réel.<br>
+            GitHub Actions va basculer vers le trading réel.<br>
             <strong>~2 minutes</strong> pour que le switch soit effectif.
           </div>
           <div class="live-confirm-warning">
@@ -345,7 +302,7 @@ const TradingModeManager = (() => {
             </div>
             <div class="live-confirm-warning-row">
               <i class="fa-solid fa-circle-dot"></i>
-              Tous les ordres exécutés en LIVE (argent réel)
+              Ordres exécutés avec argent réel
             </div>
             <div class="live-confirm-warning-row">
               <i class="fa-solid fa-circle-dot"></i>
@@ -355,102 +312,44 @@ const TradingModeManager = (() => {
           <div class="live-confirm-input-label">
             Tape <strong>LIVE</strong> pour confirmer :
           </div>
-          <input type="text"
-                 class="live-confirm-input"
-                 id="live-confirm-input"
-                 placeholder="LIVE"
-                 autocomplete="off"
-                 maxlength="10">
+          <input type="text" class="live-confirm-input"
+                 id="live-confirm-input" placeholder="LIVE"
+                 autocomplete="off" maxlength="10">
           <div class="live-confirm-btns">
-            <button class="live-confirm-cancel" id="live-confirm-cancel">
-              Annuler
-            </button>
-            <button class="live-confirm-ok" id="live-confirm-ok">
-              <i class="fa-solid fa-bolt"></i> Activer LIVE Trading
+            <button class="live-confirm-cancel" id="lc-cancel">Annuler</button>
+            <button class="live-confirm-ok"     id="lc-ok">
+              <i class="fa-solid fa-bolt"></i> Activer LIVE
             </button>
           </div>
         </div>`;
 
       document.body.appendChild(overlay);
-
-      const input     = overlay.querySelector('#live-confirm-input');
-      const okBtn     = overlay.querySelector('#live-confirm-ok');
-      const cancelBtn = overlay.querySelector('#live-confirm-cancel');
+      const input = overlay.querySelector('#live-confirm-input');
+      const okBtn = overlay.querySelector('#lc-ok');
 
       setTimeout(() => input?.focus(), 100);
 
       input?.addEventListener('input', () => {
-        const valid = input.value.trim().toUpperCase() === 'LIVE';
-        okBtn?.classList.toggle('ready', valid);
+        okBtn?.classList.toggle('ready', input.value.trim().toUpperCase() === 'LIVE');
       });
 
       input?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && input.value.trim().toUpperCase() === 'LIVE') _cleanup(true);
-        if (e.key === 'Escape') _cleanup(false);
+        if (e.key === 'Enter' && input.value.trim().toUpperCase() === 'LIVE') _done(true);
+        if (e.key === 'Escape') _done(false);
       });
 
       okBtn?.addEventListener('click', () => {
-        if (input?.value?.trim().toUpperCase() === 'LIVE') _cleanup(true);
+        if (input?.value?.trim().toUpperCase() === 'LIVE') _done(true);
       });
 
-      cancelBtn?.addEventListener('click',  () => _cleanup(false));
-      overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) _cleanup(false);
-      });
+      overlay.querySelector('#lc-cancel')?.addEventListener('click', () => _done(false));
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) _done(false); });
 
-      function _cleanup(confirmed) {
-        overlay.style.opacity    = '0';
+      function _done(confirmed) {
+        overlay.style.opacity = '0';
         overlay.style.transition = 'opacity 0.15s';
         setTimeout(() => { overlay.remove(); resolve(confirmed); }, 150);
       }
-    });
-  }
-
-  // ── Modal PAT manquant ─────────────────────────────────────
-  function _showNoPATModal() {
-    const overlay = document.createElement('div');
-    overlay.className = 'live-confirm-overlay';
-    overlay.innerHTML = `
-      <div class="live-confirm-modal">
-        <div class="live-confirm-icon" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.4)">
-          <i class="fa-solid fa-key" style="color:#f59e0b"></i>
-        </div>
-        <div class="live-confirm-title" style="color:#f59e0b">GitHub PAT requis</div>
-        <div class="live-confirm-subtitle">
-          Le switch mode utilise GitHub Actions.<br>
-          Configure ton PAT dans la section <strong>Execution → Terminal</strong>.
-        </div>
-        <div class="live-confirm-warning" style="border-color:rgba(245,158,11,0.3)">
-          <div class="live-confirm-warning-row">
-            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
-            Génère un PAT sur <strong>github.com/settings/tokens</strong>
-          </div>
-          <div class="live-confirm-warning-row">
-            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
-            Scope requis : <strong>workflow</strong>
-          </div>
-          <div class="live-confirm-warning-row">
-            <i class="fa-solid fa-circle-info" style="color:#f59e0b"></i>
-            Saisis-le dans Execution → champ GitHub PAT
-          </div>
-        </div>
-        <div class="live-confirm-btns">
-          <button class="live-confirm-cancel"
-                  onclick="this.closest('.live-confirm-overlay').remove()">
-            Fermer
-          </button>
-          <a href="https://github.com/settings/tokens"
-             target="_blank"
-             style="flex:2;display:block;padding:10px;border-radius:10px;
-                    background:#f59e0b;color:white;font-weight:700;
-                    text-align:center;text-decoration:none;font-size:13px">
-            <i class="fa-solid fa-external-link-alt"></i> Générer un PAT
-          </a>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
     });
   }
 
@@ -462,7 +361,7 @@ const TradingModeManager = (() => {
     const colors = { success:'var(--g)', error:'var(--r)', warn:'var(--y)', info:'var(--b1)' };
     const toast  = document.createElement('div');
     toast.className = `toast ${type}`;
-    toast.innerHTML = `<i class="fa-solid ${icons[type]||'fa-circle-info'}" style="color:${colors[type]||'var(--b1)'}"></i> ${msg}`;
+    toast.innerHTML = `<i class="fa-solid ${icons[type]}" style="color:${colors[type]}"></i> ${msg}`;
     wrap.appendChild(toast);
     setTimeout(() => {
       toast.style.transition = 'opacity 0.3s';
@@ -479,7 +378,6 @@ const TradingModeManager = (() => {
     isConnected:       () => _connected,
     isSwitching:       () => _switching,
     refresh:           _fetchStatus,
-    switchMode:        (mode) => _dispatchSwitch(mode, _getPAT()),
   };
 
 })();
@@ -487,4 +385,4 @@ const TradingModeManager = (() => {
 window.TradingModeManager = TradingModeManager;
 document.addEventListener('DOMContentLoaded', () => TradingModeManager.init());
 
-console.log('✅ TradingModeManager v2.0 | GitHub-only | 100% gratuit');
+console.log('✅ TradingModeManager v2.1 | Worker + GitHub Pages | 100% gratuit');
