@@ -849,6 +849,12 @@ const Terminal = (() => {
     // ✅ FIX #1 — Init watchlist APRÈS que le DOM soit prêt
     WatchlistManager.init();
 
+    // ── Init symbol search widgets ──────────────────────────
+    setTimeout(() => {
+      _createSymbolSearchWidget('ov-symbol-widget-host',     'ov-symbol',     'SPY');
+      _createSymbolSearchWidget('order-symbol-widget-host',  'order-symbol',  '');
+    }, 200);
+
     // First data load
     await _refresh();
     await _loadMainChart();
@@ -953,6 +959,229 @@ const Terminal = (() => {
     }
   }
 
+  // ════════════════════════════════════════════════════════════
+  // SYMBOL SEARCH WIDGET
+  // Remplace un <select> par un dropdown recherchable
+  // ════════════════════════════════════════════════════════════
+  function _createSymbolSearchWidget(hostId, hiddenSelectId, initialSym = '') {
+    const host   = document.getElementById(hostId);
+    const select = document.getElementById(hiddenSelectId);
+    if (!host || !select) return null;
+
+    // Empêche double initialisation
+    if (host.dataset.init) return null;
+    host.dataset.init = '1';
+
+    // ── Source de symboles ────────────────────────────────────
+    function _getAllSyms() {
+      if (window.WatchlistManager) return WatchlistManager.getAllSymbols();
+      return Object.values(UNIVERSE).flat ? Object.values(UNIVERSE).flat() : UNIVERSE;
+    }
+
+    let _open       = false;
+    let _currentSym = initialSym;
+    let _highlighted = -1;
+
+    // ── Build HTML ────────────────────────────────────────────
+    host.innerHTML = `
+      <div class="sym-widget" id="${hostId}-inner">
+        <div class="sym-widget-trigger" id="${hostId}-trigger" tabindex="0" role="combobox"
+             aria-expanded="false" aria-haspopup="listbox">
+          <i class="fa-solid fa-magnifying-glass sym-widget-icon"></i>
+          <input  class="sym-widget-input"
+                  id="${hostId}-input"
+                  type="text"
+                  placeholder="Search symbol..."
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-label="Symbol search"
+                  role="searchbox">
+          <span class="sym-widget-tag" id="${hostId}-tag"
+                style="display:${_currentSym ? 'inline-flex' : 'none'}">
+            ${_currentSym || ''}
+          </span>
+          <button class="sym-widget-clear" id="${hostId}-clear"
+                  style="display:${_currentSym ? 'flex' : 'none'}"
+                  title="Clear" tabindex="-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+          <i class="fa-solid fa-chevron-down sym-widget-caret" id="${hostId}-caret"></i>
+        </div>
+        <div class="sym-widget-dropdown" id="${hostId}-dropdown"
+             role="listbox" aria-label="Symbol list" style="display:none">
+          <div class="sym-widget-list" id="${hostId}-list"></div>
+        </div>
+      </div>`;
+
+    const inner    = document.getElementById(`${hostId}-inner`);
+    const trigger  = document.getElementById(`${hostId}-trigger`);
+    const input    = document.getElementById(`${hostId}-input`);
+    const tag      = document.getElementById(`${hostId}-tag`);
+    const clearBtn = document.getElementById(`${hostId}-clear`);
+    const caret    = document.getElementById(`${hostId}-caret`);
+    const dropdown = document.getElementById(`${hostId}-dropdown`);
+    const list     = document.getElementById(`${hostId}-list`);
+
+    // ── Render list ───────────────────────────────────────────
+    function _renderList(q = '') {
+      const allSyms = _getAllSyms();
+      const qLow    = q.toLowerCase().trim();
+      _highlighted  = -1;
+
+      let filtered;
+      if (!qLow) {
+        // Vide : montre les starred en premier puis tous
+        const starred = window.WatchlistManager ? WatchlistManager.getStarred() : [];
+        const wl      = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
+        const rest    = allSyms.filter(s => !wl.includes(s));
+        filtered = [...new Set([...starred, ...wl, ...rest])].slice(0, 80);
+      } else {
+        // Filtre : starts-with d'abord, puis contains
+        const startsWith = allSyms.filter(s => s.toLowerCase().startsWith(qLow));
+        const contains   = allSyms.filter(s =>
+          !s.toLowerCase().startsWith(qLow) &&
+          (s.toLowerCase().includes(qLow) ||
+           (window.WatchlistManager ? WatchlistManager.getSymbolMeta(s)?.name || '' : '').toLowerCase().includes(qLow))
+        );
+        filtered = [...startsWith, ...contains].slice(0, 60);
+      }
+
+      if (!filtered.length) {
+        list.innerHTML = `
+          <div class="sym-widget-empty">
+            <i class="fa-solid fa-magnifying-glass" style="font-size:18px;margin-bottom:8px;opacity:0.4"></i>
+            <div>No results for "<strong>${q}</strong>"</div>
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = filtered.map((s, idx) => {
+        const meta     = window.WatchlistManager ? WatchlistManager.getSymbolMeta(s) : { name: s, sector: '' };
+        const logoHtml = typeof _getLogoHtml === 'function' ? _getLogoHtml(s, 18) : '';
+        const isActive = s === _currentSym;
+        const isStarred= window.WatchlistManager ? WatchlistManager.isStarred(s) : false;
+        const name     = (meta.name || s).slice(0, 28);
+        const sector   = meta.sector || '';
+
+        return `
+          <div class="sym-widget-item${isActive ? ' selected' : ''}"
+               data-sym="${s}" data-idx="${idx}"
+               role="option" aria-selected="${isActive}">
+            <span class="sym-widget-item-logo">${logoHtml}</span>
+            <div class="sym-widget-item-info">
+              <span class="sym-widget-item-sym">${s}</span>
+              <span class="sym-widget-item-name">${name}</span>
+            </div>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+              ${isStarred ? '<i class="fa-solid fa-star" style="font-size:9px;color:var(--y)"></i>' : ''}
+              <span class="sym-widget-item-sector">${sector}</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Bind clicks
+      list.querySelectorAll('.sym-widget-item').forEach(item => {
+        item.addEventListener('mousedown', e => {
+          e.preventDefault();
+          _pick(item.dataset.sym);
+        });
+      });
+    }
+
+    // ── Pick a symbol ─────────────────────────────────────────
+    function _pick(sym) {
+      _currentSym       = sym;
+      select.value      = sym;
+      tag.textContent   = sym;
+      tag.style.display = sym ? 'inline-flex' : 'none';
+      clearBtn.style.display = sym ? 'flex' : 'none';
+      input.value       = '';
+      _close();
+      // Dispatche l'event change sur le select caché
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // ── Open / Close ──────────────────────────────────────────
+    function _openDD() {
+      _open = true;
+      dropdown.style.display = 'block';
+      caret.style.transform  = 'rotate(180deg)';
+      trigger.setAttribute('aria-expanded', 'true');
+      _renderList(input.value);
+      input.focus();
+    }
+
+    function _close() {
+      _open = false;
+      dropdown.style.display = 'none';
+      caret.style.transform  = '';
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    // ── Events ────────────────────────────────────────────────
+    trigger.addEventListener('click', e => {
+      if (e.target === clearBtn || clearBtn.contains(e.target)) return;
+      _open ? _close() : _openDD();
+    });
+
+    input.addEventListener('click', e => e.stopPropagation());
+
+    input.addEventListener('input', () => {
+      if (!_open) _openDD();
+      else _renderList(input.value);
+    });
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { _close(); return; }
+      const items = list.querySelectorAll('.sym-widget-item');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _highlighted = Math.min(_highlighted + 1, items.length - 1);
+        _highlightItem(items);
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _highlighted = Math.max(_highlighted - 1, 0);
+        _highlightItem(items);
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (_highlighted >= 0 && items[_highlighted]) {
+          _pick(items[_highlighted].dataset.sym);
+        } else if (items[0]) {
+          _pick(items[0].dataset.sym);
+        }
+      }
+    });
+
+    function _highlightItem(items) {
+      items.forEach((el, i) => {
+        el.classList.toggle('highlighted', i === _highlighted);
+        if (i === _highlighted) el.scrollIntoView({ block: 'nearest' });
+      });
+    }
+
+    clearBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      _pick('');
+      input.focus();
+      _openDD();
+    });
+
+    // Ferme sur clic extérieur
+    document.addEventListener('click', e => {
+      if (_open && !inner.contains(e.target)) _close();
+    });
+
+    // ── API publique ──────────────────────────────────────────
+    return {
+      pick:     _pick,
+      getValue: () => _currentSym || select.value,
+      open:     _openDD,
+      close:    _close,
+    };
+  }
+
   // ── Bind ALL event listeners (no inline handlers) ────────
   function _bindEvents() {
     // Topbar
@@ -961,7 +1190,7 @@ const Terminal = (() => {
     _on('btn-theme',      'click',  toggleTheme);
 
     // Overview chart controls
-    _on('ov-symbol',       'change', () => _loadMainChart());
+    document.getElementById('ov-symbol')?.addEventListener('change', () => _loadMainChart());
     _on('btn-refresh-chart','click', () => _loadMainChart(true));
     _on('btn-view-all-signals','click', () => showSection('signals'));
 
@@ -2006,12 +2235,31 @@ const Terminal = (() => {
   }
 
   function loadChartSymbol(sym) {
+    // Met à jour le select caché
     const sel = document.getElementById('ov-symbol');
     if (sel) sel.value = sym;
+
+    // Met à jour le widget visuellement (sans déclencher un double event)
+    const widgetHost = document.getElementById('ov-symbol-widget-host');
+    if (widgetHost?._widgetApi) {
+      widgetHost._widgetApi.pick(sym);
+    } else {
+      // Cherche le tag directement
+      const tag = document.querySelector('#ov-symbol-widget-host .sym-widget-tag');
+      if (tag) { tag.textContent = sym; tag.style.display = 'inline-flex'; }
+      const clearBtn = document.querySelector('#ov-symbol-widget-host .sym-widget-clear');
+      if (clearBtn) clearBtn.style.display = 'flex';
+    }
+
     _loadMainChart(true);
+
     // Sync order form
     const orderSym = document.getElementById('order-symbol');
     if (orderSym) orderSym.value = sym;
+    const orderTag = document.querySelector('#order-symbol-widget-host .sym-widget-tag');
+    if (orderTag) { orderTag.textContent = sym; orderTag.style.display = 'inline-flex'; }
+    const orderClear = document.querySelector('#order-symbol-widget-host .sym-widget-clear');
+    if (orderClear) orderClear.style.display = 'flex';
   }
 
   // ════════════════════════════════════════════════════════

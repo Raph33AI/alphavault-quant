@@ -283,20 +283,10 @@
         <div class="card chart-main-card" style="margin-bottom:0">
           <div class="card-header">
             <div class="ch-controls">
-              <select class="select-input" id="ov-symbol">
-                <option value="SPY">SPY</option>
-                <option value="QQQ">QQQ</option>
-                <option value="IWM">IWM</option>
-                <option value="AAPL">AAPL</option>
-                <option value="NVDA">NVDA</option>
-                <option value="MSFT">MSFT</option>
-                <option value="GOOGL">GOOGL</option>
-                <option value="AMZN">AMZN</option>
-                <option value="META">META</option>
-                <option value="TSLA">TSLA</option>
-                <option value="JPM">JPM</option>
-                <option value="GS">GS</option>
-              </select>
+              <!-- Hidden select (gardé pour compatibilité JS) -->
+              <select id="ov-symbol" style="display:none"><option value="SPY">SPY</option></select>
+              <!-- Widget de recherche (injecté par terminal.js) -->
+              <div id="ov-symbol-widget-host" class="sym-widget-host"></div>
               <div class="interval-tabs" id="ov-intervals">
                 <button class="itab" data-iv="5min">5m</button>
                 <button class="itab" data-iv="1h">1H</button>
@@ -1093,20 +1083,8 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Symbol</label>
-                <select class="form-select" id="order-symbol">
-                  <option value="SPY">SPY</option>
-                  <option value="QQQ">QQQ</option>
-                  <option value="IWM">IWM</option>
-                  <option value="AAPL">AAPL</option>
-                  <option value="NVDA">NVDA</option>
-                  <option value="MSFT">MSFT</option>
-                  <option value="GOOGL">GOOGL</option>
-                  <option value="AMZN">AMZN</option>
-                  <option value="META">META</option>
-                  <option value="TSLA">TSLA</option>
-                  <option value="JPM">JPM</option>
-                  <option value="GS">GS</option>
-                </select>
+                <select id="order-symbol" style="display:none"><option value="">--</option></select>
+                <div id="order-symbol-widget-host" class="sym-widget-host"></div>
               </div>
               <div class="form-group">
                 <label class="form-label">Side</label>
