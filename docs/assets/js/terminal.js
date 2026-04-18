@@ -1820,7 +1820,7 @@ const Terminal = (() => {
       const ICONS = {
         drawdown_guardian:  'fa-shield',
         regime_model:       'fa-crosshairs',
-        signal_model:       'fa-robot',
+        signal_model:       'fa-brain',
         execution_timing:   'fa-bolt',
         risk_manager:       'fa-scale-balanced',
         correlation_surface:'fa-network-wired',
@@ -2586,7 +2586,7 @@ const Terminal = (() => {
             </span>`;
 
     return `
-        <div class="qm-section-title"><i class="fa-solid fa-robot"></i> ML Ensemble Signal</div>
+        <div class="qm-section-title"><i class="fa-solid fa-brain"></i> ML Ensemble Signal</div>
 
         <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap">
         ${dirBadgeLarge}
@@ -2786,7 +2786,7 @@ const Terminal = (() => {
         ${_qCard('Variance Ratio', vr!==0?`${vr>=0?'+':''}${vr.toFixed(3)}`:'--', 'fa-chart-area', vrColor, vrInterp)}
         ${_qCard('ATR %',          atr>0?`${(atr*100).toFixed(2)}%`:'--',   'fa-expand', 'var(--o)', 'Daily range / price')}
         ${_qCard('ATR Percentile', atrRank>0?`${(atrRank*100).toFixed(0)}th`:'--', 'fa-gauge', atrRank>0.75?'var(--r)':atrRank<0.25?'var(--g)':'var(--y)', '252-day lookback')}
-        ${_qCard('GARCH Forecast', feat.garch_forecast>0?`${(feat.garch_forecast*100).toFixed(1)}%`:'--', 'fa-robot', 'var(--b1)', 'GARCH(1,1) vol forecast')}
+        ${_qCard('GARCH Forecast', feat.garch_forecast>0?`${(feat.garch_forecast*100).toFixed(1)}%`:'--', 'fa-brain', 'var(--b1)', 'GARCH(1,1) vol forecast')}
         ${_qCard('IV Rank',        feat.iv_rank!=null?`${(feat.iv_rank*100).toFixed(0)}th`:'--', 'fa-bolt', feat.iv_rank>0.7?'var(--r)':'var(--b1)', 'Implied Vol rank')}
         </div>
 

@@ -450,7 +450,7 @@ const StockDetail = (() => {
         <!-- Signal block -->
         <div class="sdp-fp-stat-section" style="background:${sigBg};border-color:${sigBorder};padding:14px">
           <div class="sdp-fp-stat-title" style="margin-bottom:10px">
-            <i class="fa-solid fa-robot"></i> AlphaVault ML Signal
+            <i class="fa-solid fa-brain"></i> AlphaVault ML Signal
           </div>
           ${signal ? `
             <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
