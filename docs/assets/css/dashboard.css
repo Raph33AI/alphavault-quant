@@ -4249,3 +4249,114 @@ canvas.ic-spark {
     transparent 100%
   ) !important;
 }
+
+/* Ajouter à la fin de dashboard.css */
+
+/* ── FIX cp-header — layout compact avec logos ── */
+.cp-header {
+  display:     flex;
+  align-items: center;
+  gap:         6px;
+  padding:     7px 10px;
+  border-bottom: 1px solid var(--bord);
+  background:  var(--surf2);
+  min-height:  38px;
+  overflow:    hidden;
+}
+
+.cp-logo-sym {
+  display:     flex;
+  align-items: center;
+  gap:         5px;
+  font-size:   12px;
+  font-weight: 700;
+  color:       var(--txt);
+  flex:        1;
+  min-width:   0;
+  overflow:    hidden;
+}
+
+.cp-logo-sym span {
+  white-space:   nowrap;
+  overflow:      hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-logo {
+  width:        16px;
+  height:       16px;
+  border-radius:3px;
+  object-fit:   contain;
+  flex-shrink:  0;
+}
+
+.cp-header-right {
+  display:     flex;
+  align-items: center;
+  gap:         3px;
+  flex-shrink: 0;
+}
+
+/* Interval tabs — plus compacts */
+.cp-itabs {
+  display:     flex;
+  align-items: center;
+  gap:         1px;
+  background:  var(--surf3);
+  border:      1px solid var(--bord);
+  border-radius: 5px;
+  padding:     2px;
+}
+
+.cp-itab {
+  padding:       2px 7px;
+  border-radius: 3px;
+  border:        none;
+  background:    transparent;
+  font-size:     10px;
+  font-weight:   700;
+  color:         var(--txt3);
+  cursor:        pointer;
+  transition:    all var(--tr);
+  white-space:   nowrap;
+  line-height:   1.4;
+}
+
+.cp-itab:hover  { color: var(--b1); }
+.cp-itab.active { background: var(--b1); color: #fff; }
+
+/* Quant button — icône seule */
+.btn-quant-modal {
+  width:           26px;
+  height:          26px;
+  padding:         0;
+  border-radius:   5px;
+  border:          1px solid rgba(139,92,246,0.35);
+  background:      rgba(139,92,246,0.08);
+  color:           var(--b2);
+  font-size:       11px;
+  cursor:          pointer;
+  transition:      all var(--tr);
+  display:         flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+}
+
+.btn-quant-modal:hover {
+  background:   var(--b2);
+  color:        #fff;
+  border-color: var(--b2);
+}
+
+/* Chart panels — hauteur uniforme */
+.cp-chart {
+  width:      100% !important;
+  height:     200px !important;
+  min-height: 200px !important;
+  max-height: 200px !important;
+  overflow:   hidden !important;
+  display:    block !important;
+  contain:    strict !important;
+  background: var(--surf);
+}

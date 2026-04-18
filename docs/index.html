@@ -432,6 +432,54 @@
           </table>
         </div>
       </div>
+
+      <!-- ══════════════════════════════════════════════════════
+          TECHNICAL ANALYSIS — Wall Street Indicators
+      ══════════════════════════════════════════════════════ -->
+      <div class="card" id="ta-panel-card" style="margin-bottom:16px">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-candlestick"></i>
+          Technical Analysis —
+          <span id="ta-sym" style="color:var(--b1);font-family:var(--mono)">SPY</span>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <span id="ta-rec-badge" style="display:none;font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px">--</span>
+            <button class="btn-icon-sm" id="btn-refresh-ta" title="Recalculate">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
+        </div>
+        <div id="ta-panel">
+          <div style="text-align:center;padding:32px;color:var(--txt4)">
+            <i class="fa-solid fa-chart-candlestick" style="font-size:24px;color:var(--b1);margin-bottom:10px;display:block;opacity:0.5"></i>
+            Select a symbol and load a chart to see technical analysis
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════
+          WATCHLIST CHARTS (déplacé depuis sec-charts)
+      ══════════════════════════════════════════════════════ -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header">
+          <i class="fa-solid fa-chart-bar"></i> Watchlist Charts
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <span id="ov-charts-wl-info" style="font-size:11px;color:var(--txt4)"></span>
+            <select class="select-sm" id="ov-chart-count">
+              <option value="2">2 panels</option>
+              <option value="4" selected>4 panels</option>
+              <option value="6">6 panels</option>
+            </select>
+            <button class="btn-sm" id="btn-ov-charts-refresh" style="font-size:11px">
+              <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+          </div>
+        </div>
+        <div class="charts-grid layout-2-2" id="ov-charts-grid" style="margin-bottom:0">
+          <div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--txt4)">
+            <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i> Loading charts...
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- ══════════════════════════════════════════════════════

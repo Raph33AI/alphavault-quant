@@ -137,6 +137,417 @@ const Terminal = (() => {
   let _activeSection = 'overview';
 
   // ════════════════════════════════════════════════════════
+  // TECHNICAL ANALYSIS ENGINE — Wall Street Indicators
+  // ════════════════════════════════════════════════════════
+
+  function _ema(arr, p) {
+    if (arr.length < p) return arr.map(() => null);
+    const k = 2 / (p + 1);
+    const out = Array(p - 1).fill(null);
+    let v = arr.slice(0, p).reduce((a, b) => a + b, 0) / p;
+    out.push(v);
+    for (let i = p; i < arr.length; i++) { v = arr[i] * k + v * (1 - k); out.push(v); }
+    return out;
+  }
+
+  function _sma(arr, p) {
+    return arr.map((_, i) =>
+      i < p - 1 ? null : arr.slice(i - p + 1, i + 1).reduce((a, b) => a + b, 0) / p
+    );
+  }
+
+  function _rsi(closes, p = 14) {
+    if (closes.length < p + 1) return closes.map(() => null);
+    let g = 0, l = 0;
+    for (let i = 1; i <= p; i++) { const d = closes[i] - closes[i-1]; g += Math.max(d,0); l += Math.max(-d,0); }
+    let ag = g / p, al = l / p;
+    const out = Array(p).fill(null);
+    out.push(al === 0 ? 100 : 100 - 100 / (1 + ag / al));
+    for (let i = p + 1; i < closes.length; i++) {
+      const d = closes[i] - closes[i-1];
+      ag = (ag * (p-1) + Math.max(d,0)) / p;
+      al = (al * (p-1) + Math.max(-d,0)) / p;
+      out.push(al === 0 ? 100 : 100 - 100 / (1 + ag / al));
+    }
+    return out;
+  }
+
+  function _macd(closes, f=12, s=26, sig=9) {
+    const ef = _ema(closes, f), es = _ema(closes, s);
+    const ml = closes.map((_, i) => ef[i] != null && es[i] != null ? ef[i] - es[i] : null);
+    const valid = ml.filter(v => v != null);
+    const se = _ema(valid, sig);
+    let si = 0;
+    const sl = ml.map(v => v == null ? null : se[si++] ?? null);
+    return {
+      line: ml[ml.length-1] ?? 0,
+      signal: sl[sl.length-1] ?? 0,
+      hist: (ml[ml.length-1] ?? 0) - (sl[sl.length-1] ?? 0),
+    };
+  }
+
+  function _bollinger(closes, p=20, m=2) {
+    const sma = _sma(closes, p);
+    const last = closes.length - 1;
+    if (sma[last] == null) return null;
+    const sl = closes.slice(last - p + 1, last + 1);
+    const std = Math.sqrt(sl.reduce((s, v) => s + Math.pow(v - sma[last], 2), 0) / p);
+    return { upper: sma[last] + m*std, middle: sma[last], lower: sma[last] - m*std };
+  }
+
+  function _ichimoku(candles) {
+    const H = candles.map(c => c.high), L = candles.map(c => c.low), C = candles.map(c => c.close);
+    const hh = (a, i, p) => Math.max(...a.slice(Math.max(0, i-p+1), i+1));
+    const ll = (a, i, p) => Math.min(...a.slice(Math.max(0, i-p+1), i+1));
+    const n = candles.length, i = n - 1;
+    const tenkan  = i >= 8  ? (hh(H,i,9)  + ll(L,i,9))  / 2 : null;
+    const kijun   = i >= 25 ? (hh(H,i,26) + ll(L,i,26)) / 2 : null;
+    const senkouA = tenkan && kijun ? (tenkan + kijun) / 2 : null;
+    const senkouB = i >= 51 ? (hh(H,i,52) + ll(L,i,52)) / 2 : null;
+    const price   = C[i];
+    let cloudSig  = 'neutral';
+    if (senkouA && senkouB) {
+      const hi = Math.max(senkouA, senkouB), lo = Math.min(senkouA, senkouB);
+      cloudSig = price > hi ? 'bullish' : price < lo ? 'bearish' : 'inside';
+    }
+    return { tenkan, kijun, senkouA, senkouB, price, cloudSig,
+      tkCross: tenkan && kijun ? (tenkan > kijun ? 'bullish' : 'bearish') : 'neutral' };
+  }
+
+  function _fibonacci(candles) {
+    const sl = candles.slice(-Math.min(60, candles.length));
+    const hi = Math.max(...sl.map(c => c.high));
+    const lo = Math.min(...sl.map(c => c.low));
+    const d  = hi - lo;
+    return {
+      hi, lo,
+      levels: [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1].map(r => ({
+        pct: r, label: (r*100).toFixed(1)+'%',
+        price: hi - d * r, key: [0.382,0.5,0.618].includes(r),
+      })),
+      exts: [1.272, 1.618, 2.0, 2.618].map(r => ({
+        pct: r, label: (r*100).toFixed(1)+'%', price: lo + d * r,
+      })),
+    };
+  }
+
+  function _stochastic(candles, k=14, d=3) {
+    const C = candles.map(c => c.close);
+    const H = candles.map(c => c.high);
+    const L = candles.map(c => c.low);
+    const kv = [];
+    for (let i = k-1; i < candles.length; i++) {
+      const hh = Math.max(...H.slice(i-k+1,i+1));
+      const ll = Math.min(...L.slice(i-k+1,i+1));
+      kv.push(hh===ll ? 50 : (C[i]-ll)/(hh-ll)*100);
+    }
+    const dv = _sma(kv, d);
+    return { k: kv[kv.length-1] ?? null, d: dv[dv.length-1] ?? null };
+  }
+
+  function _atr(candles, p=14) {
+    if (candles.length < 2) return null;
+    const trs = candles.slice(1).map((c,i) => Math.max(
+      c.high - c.low,
+      Math.abs(c.high  - candles[i].close),
+      Math.abs(c.low   - candles[i].close)
+    ));
+    const a = _sma(trs, p);
+    return a[a.length-1];
+  }
+
+  // ── Main analysis ──────────────────────────────────────
+  function _analyzeTA(candles, sym) {
+    if (!candles || candles.length < 55) return null;
+    const C    = candles.map(c => c.close);
+    const last = C[C.length-1];
+
+    const rsiArr = _rsi(C, 14);
+    const rsiV   = rsiArr[rsiArr.length-1] ?? 50;
+    const macdV  = _macd(C);
+    const bb     = _bollinger(C);
+    const ema9v  = _ema(C, 9);   const e9  = ema9v[ema9v.length-1];
+    const ema21v = _ema(C, 21);  const e21 = ema21v[ema21v.length-1];
+    const ema50v = _ema(C, 50);  const e50 = ema50v[ema50v.length-1];
+    const ema200v= _ema(C, 200); const e200= ema200v[ema200v.length-1];
+    const ich    = _ichimoku(candles);
+    const fib    = _fibonacci(candles);
+    const stoch  = _stochastic(candles);
+    const atrV   = _atr(candles, 14);
+
+    // ── Scoring ──────────────────────────────────────────
+    let bull = 0, bear = 0;
+    const sigs = [];
+
+    const add = (ind, sig, b, val) => {
+      sigs.push({ ind, sig, bull: b, val });
+      if (b === true) bull += (ind.includes('EMA')||ind==='Fibonacci')?1:2;
+      else if (b === false) bear += (ind.includes('EMA')||ind==='Fibonacci')?1:2;
+    };
+
+    // RSI
+    rsiV < 30 ? add('RSI (14)', 'Oversold — Buy Signal', true, rsiV.toFixed(1)) :
+    rsiV > 70 ? add('RSI (14)', 'Overbought — Sell Signal', false, rsiV.toFixed(1)) :
+    rsiV > 50 ? add('RSI (14)', 'Neutral-Bullish', null, rsiV.toFixed(1)) :
+                add('RSI (14)', 'Neutral-Bearish', null, rsiV.toFixed(1));
+
+    // MACD
+    macdV.line > macdV.signal && macdV.hist > 0
+      ? add('MACD', 'Bullish Crossover', true, macdV.line.toFixed(4))
+      : macdV.line < macdV.signal && macdV.hist < 0
+        ? add('MACD', 'Bearish Crossover', false, macdV.line.toFixed(4))
+        : add('MACD', 'Neutral', null, macdV.line.toFixed(4));
+
+    // Bollinger
+    if (bb) {
+      const w = bb.upper - bb.lower;
+      const p = w > 0 ? (last - bb.lower) / w : 0.5;
+      p > 0.85 ? add('Bollinger Bands', 'Near Upper — Resistance', false, `${(p*100).toFixed(0)}%`) :
+      p < 0.15 ? add('Bollinger Bands', 'Near Lower — Support', true, `${(p*100).toFixed(0)}%`) :
+                add('Bollinger Bands', 'Mid-Band Range', null, `${(p*100).toFixed(0)}%`);
+    }
+
+    // EMA
+    if (e50 && e200) {
+      last > e50 && e50 > e200
+        ? add('EMA 50/200', 'Golden Cross — Bullish Trend', true, `$${e50.toFixed(2)}`)
+        : last < e50 && e50 < e200
+          ? add('EMA 50/200', 'Death Cross — Bearish Trend', false, `$${e50.toFixed(2)}`)
+          : add('EMA 50/200', 'Mixed — No Clear Trend', null, `$${e50.toFixed(2)}`);
+    }
+    if (e9 && e21) {
+      e9 > e21
+        ? add('EMA 9/21', 'Short-term Bullish', true, `$${e9.toFixed(2)}`)
+        : add('EMA 9/21', 'Short-term Bearish', false, `$${e9.toFixed(2)}`);
+    }
+
+    // Ichimoku
+    ich.cloudSig === 'bullish' ? add('Ichimoku Cloud', 'Above Cloud — Bullish', true, `T:${ich.tenkan?.toFixed(2)}`) :
+    ich.cloudSig === 'bearish' ? add('Ichimoku Cloud', 'Below Cloud — Bearish', false, `T:${ich.tenkan?.toFixed(2)}`) :
+                                add('Ichimoku Cloud', 'Inside Cloud — Neutral', null, `T:${ich.tenkan?.toFixed(2)}`);
+    ich.tkCross === 'bullish'  ? add('TK Cross', 'Tenkan > Kijun — Buy', true, 'Bullish') :
+                                add('TK Cross', 'Tenkan < Kijun — Sell', false, 'Bearish');
+
+    // Stochastic
+    if (stoch.k != null) {
+      stoch.k < 20 ? add('Stochastic %K', 'Oversold — Potential Reversal', true, stoch.k.toFixed(1)) :
+      stoch.k > 80 ? add('Stochastic %K', 'Overbought — Potential Reversal', false, stoch.k.toFixed(1)) :
+                    add('Stochastic %K', 'Neutral Zone', null, stoch.k.toFixed(1));
+    }
+
+    // Fibonacci
+    if (fib) {
+      const nearest = fib.levels.reduce((prev, cur) =>
+        Math.abs(cur.price - last) < Math.abs(prev.price - last) ? cur : prev
+      );
+      if (Math.abs(nearest.price - last) < (atrV||last*0.01) * 0.8) {
+        nearest.price < last
+          ? add('Fibonacci', `Near ${nearest.label} Support ($${nearest.price.toFixed(2)})`, true, nearest.label)
+          : add('Fibonacci', `Near ${nearest.label} Resistance ($${nearest.price.toFixed(2)})`, false, nearest.label);
+      }
+    }
+
+    // ── Recommendation ────────────────────────────────────
+    const total    = bull + bear;
+    const bullRat  = total > 0 ? bull / total : 0.5;
+    let rec, recCol, recIcon;
+    if      (bullRat >= 0.75) { rec = 'STRONG BUY';  recCol = '#10b981'; recIcon = 'fa-arrow-trend-up'; }
+    else if (bullRat >= 0.60) { rec = 'BUY';          recCol = '#34d399'; recIcon = 'fa-arrow-up'; }
+    else if (bullRat >= 0.45) { rec = 'NEUTRAL';      recCol = '#f59e0b'; recIcon = 'fa-minus'; }
+    else if (bullRat >= 0.30) { rec = 'SELL';         recCol = '#f87171'; recIcon = 'fa-arrow-down'; }
+    else                      { rec = 'STRONG SELL';  recCol = '#ef4444'; recIcon = 'fa-arrow-trend-down'; }
+
+    // ── Price Targets ─────────────────────────────────────
+    const isBull = bullRat >= 0.5;
+    const da = atrV || last * 0.015;
+    const tgt1 = isBull ? last + da * 2 : last - da * 2;
+    const tgt2 = isBull
+      ? (fib?.exts.find(e => e.pct === 1.618)?.price || last * 1.08)
+      : (fib?.levels.find(l => l.pct === 0.618)?.price || last * 0.93);
+    const stop = isBull ? last - da * 1.5 : last + da * 1.5;
+
+    return {
+      sym, price: last, rec, recCol, recIcon, bullRat,
+      bull, bear, sigs, rsi: rsiV, macd: macdV,
+      bb, ema: { e9, e21, e50, e200 }, ich, fib, stoch, atr: atrV,
+      targets: { t1: tgt1, t2: tgt2, stop },
+    };
+  }
+
+  // ── Render Technical Analysis ──────────────────────────
+  function _renderTechnicalAnalysis(a) {
+    const el = document.getElementById('ta-panel');
+    if (!el || !a) return;
+
+    const pct = (a.bullRat * 100).toFixed(0);
+
+    // Update badge in card header
+    const badge = document.getElementById('ta-rec-badge');
+    if (badge) {
+      badge.textContent = a.rec;
+      badge.style.display = 'inline-block';
+      badge.style.background = a.recCol + '20';
+      badge.style.color  = a.recCol;
+      badge.style.border = `1px solid ${a.recCol}40`;
+    }
+    const symEl = document.getElementById('ta-sym');
+    if (symEl) symEl.textContent = a.sym;
+
+    el.innerHTML = `
+      <!-- ── Main Recommendation ── -->
+      <div style="background:${a.recCol}10;border:1.5px solid ${a.recCol}35;border-radius:14px;padding:18px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <div style="text-align:center;padding:10px 18px;background:${a.recCol}18;border-radius:10px;min-width:130px">
+            <i class="fa-solid ${a.recIcon}" style="color:${a.recCol};font-size:22px;margin-bottom:5px;display:block"></i>
+            <div style="font-size:16px;font-weight:900;color:${a.recCol}">${a.rec}</div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--txt4);margin-bottom:4px">Signal Strength</div>
+            <div style="width:160px;height:8px;background:var(--surf3);border-radius:4px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${a.recCol};transition:width 0.6s"></div>
+            </div>
+            <div style="font-size:10px;color:var(--txt4);margin-top:3px">${pct}% Bullish (${a.bull} vs ${a.bear} signals)</div>
+          </div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto">
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Short Target</div>
+              <div style="font-size:15px;font-weight:800;color:var(--g);font-family:var(--mono)">$${a.targets.t1.toFixed(2)}</div>
+              <div style="font-size:9px;color:var(--txt4)">1-2 weeks</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Medium Target</div>
+              <div style="font-size:15px;font-weight:800;color:var(--b1);font-family:var(--mono)">$${a.targets.t2.toFixed(2)}</div>
+              <div style="font-size:9px;color:var(--txt4)">1-3 months</div>
+            </div>
+            <div style="text-align:center">
+              <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Stop Loss</div>
+              <div style="font-size:15px;font-weight:800;color:var(--r);font-family:var(--mono)">$${a.targets.stop.toFixed(2)}</div>
+              <div style="font-size:9px;color:var(--txt4)">Risk management</div>
+            </div>
+            ${a.atr ? `<div style="text-align:center">
+              <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">ATR (14)</div>
+              <div style="font-size:15px;font-weight:800;color:var(--y);font-family:var(--mono)">$${a.atr.toFixed(2)}</div>
+              <div style="font-size:9px;color:var(--txt4)">Daily range</div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Indicators Grid ── -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px">
+        ${_taC('RSI (14)', a.rsi.toFixed(1),
+          a.rsi<30?'Oversold ↑':a.rsi>70?'Overbought ↓':'Neutral',
+          a.rsi<30?'var(--g)':a.rsi>70?'var(--r)':'var(--y)', 'fa-gauge')}
+        ${_taC('MACD', a.macd.line.toFixed(4),
+          a.macd.line>a.macd.signal?'Bullish ↑':'Bearish ↓',
+          a.macd.line>a.macd.signal?'var(--g)':'var(--r)', 'fa-wave-square')}
+        ${a.stoch.k != null ? _taC('Stoch %K', a.stoch.k.toFixed(1),
+          a.stoch.k<20?'Oversold ↑':a.stoch.k>80?'Overbought ↓':'Neutral',
+          a.stoch.k<20?'var(--g)':a.stoch.k>80?'var(--r)':'var(--y)', 'fa-chart-area') : ''}
+        ${a.bb ? _taC('BB Position', a.price>a.bb.upper?'Above Upper':a.price<a.bb.lower?'Below Lower':'Mid-Band',
+          `Mid: $${a.bb.middle.toFixed(2)}`,
+          a.price>a.bb.upper?'var(--r)':a.price<a.bb.lower?'var(--g)':'var(--b1)', 'fa-chart-bar') : ''}
+        ${a.ema.e50 ? _taC('EMA 50', `$${a.ema.e50.toFixed(2)}`,
+          a.price>a.ema.e50?'Price Above ↑':'Price Below ↓',
+          a.price>a.ema.e50?'var(--g)':'var(--r)', 'fa-arrow-trend-up') : ''}
+        ${a.ema.e200 ? _taC('EMA 200', `$${a.ema.e200.toFixed(2)}`,
+          a.price>a.ema.e200?'LT Bullish ↑':'LT Bearish ↓',
+          a.price>a.ema.e200?'var(--g)':'var(--r)', 'fa-chart-line') : ''}
+      </div>
+
+      <!-- ── Ichimoku ── -->
+      <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px">
+          <i class="fa-solid fa-cloud" style="color:var(--b1)"></i> Ichimoku Cloud
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;margin-bottom:10px">
+          ${['Tenkan-sen','Kijun-sen','Senkou A','Senkou B'].map((n,i) => {
+            const v = [a.ich.tenkan, a.ich.kijun, a.ich.senkouA, a.ich.senkouB][i];
+            return `<div style="background:var(--surf);border:1px solid var(--bord);border-radius:7px;padding:7px 9px">
+              <div style="font-size:9px;color:var(--txt4);margin-bottom:2px">${n}</div>
+              <div style="font-size:12px;font-weight:800;font-family:var(--mono);color:var(--txt)">${v?'$'+v.toFixed(2):'--'}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${[
+            {label:'Cloud', val:a.ich.cloudSig},
+            {label:'TK Cross', val:a.ich.tkCross},
+          ].map(s => {
+            const c = s.val==='bullish'?'var(--g)':s.val==='bearish'?'var(--r)':'var(--y)';
+            const ic = s.val==='bullish'?'fa-arrow-up':s.val==='bearish'?'fa-arrow-down':'fa-minus';
+            return `<div style="padding:4px 12px;border-radius:6px;font-size:11px;font-weight:700;
+                    background:${c}15;color:${c}">
+              <i class="fa-solid ${ic}"></i> ${s.label}: ${s.val.toUpperCase()}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- ── Fibonacci ── -->
+      <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">
+          <i class="fa-solid fa-layer-group" style="color:var(--b2)"></i> Fibonacci Retracement
+          <span style="font-weight:400;font-size:9px;margin-left:6px;color:var(--txt4)">
+            Hi: $${a.fib.hi.toFixed(2)} · Lo: $${a.fib.lo.toFixed(2)}
+          </span>
+        </div>
+        ${a.fib.levels.map(r => {
+          const isNear = Math.abs(r.price - a.price) < (a.atr||a.price*0.01)*0.6;
+          const isAbove= a.price >= r.price;
+          return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:5px;
+                  background:${isNear?'rgba(59,130,246,0.08)':'transparent'};
+                  border:1px solid ${isNear?'rgba(59,130,246,0.25)':'transparent'};margin-bottom:2px">
+            <span style="font-size:9px;font-weight:700;color:var(--b2);min-width:42px">${r.label}</span>
+            <div style="flex:1;height:2px;background:var(--surf3);border-radius:1px;overflow:hidden">
+              <div style="width:${isAbove?'100':'0'}%;height:100%;background:${isAbove?'var(--g)':'var(--r)'}"></div>
+            </div>
+            <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${r.key?'var(--b1)':'var(--txt2)'}">
+              $${r.price.toFixed(2)}
+            </span>
+            ${r.key ? '<span style="font-size:8px;color:var(--b2);font-weight:700;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:3px">KEY</span>' : ''}
+            ${isNear ? '<span style="font-size:8px;color:var(--b1);font-weight:700">← NOW</span>' : ''}
+          </div>`;
+        }).join('')}
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bord);display:flex;gap:6px;flex-wrap:wrap">
+          <span style="font-size:9px;font-weight:700;color:var(--txt4);align-self:center">Extensions:</span>
+          ${a.fib.exts.map(e => `
+            <span style="background:var(--surf3);padding:2px 8px;border-radius:5px;font-size:10px">
+              <span style="color:var(--b2);font-weight:700">${e.label}</span>
+              <span style="color:var(--txt);font-family:var(--mono);margin-left:3px">$${e.price.toFixed(2)}</span>
+            </span>`).join('')}
+        </div>
+      </div>
+
+      <!-- ── All Signals ── -->
+      <div style="background:var(--surf2);border:1px solid var(--bord);border-radius:12px;padding:14px">
+        <div style="font-size:11px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px">
+          <i class="fa-solid fa-satellite-dish" style="color:var(--b1)"></i> Signal Details
+        </div>
+        ${a.sigs.map(s => `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;
+              background:var(--surf);margin-bottom:3px">
+            <span style="font-size:11px;font-weight:700;color:var(--txt2);min-width:110px;flex-shrink:0">${s.ind}</span>
+            <span style="flex:1;font-size:11px;color:${s.bull===true?'var(--g)':s.bull===false?'var(--r)':'var(--y)'};font-weight:500">${s.sig}</span>
+            <span style="font-size:10px;font-family:var(--mono);color:var(--txt4)">${s.val}</span>
+            <i class="fa-solid ${s.bull===true?'fa-circle-check':s.bull===false?'fa-circle-xmark':'fa-circle-minus'}"
+              style="font-size:12px;color:${s.bull===true?'var(--g)':s.bull===false?'var(--r)':'var(--y)'}"></i>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // Helper card mini
+  function _taC(title, value, sub, color, icon) {
+    return `<div style="background:var(--surf2);border:1px solid var(--bord);border-radius:9px;padding:10px;border-left:3px solid ${color}">
+      <div style="font-size:9px;font-weight:700;color:var(--txt4);text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:3px">
+        <i class="fa-solid ${icon}" style="color:${color}"></i> ${title}
+      </div>
+      <div style="font-size:15px;font-weight:800;font-family:var(--mono);color:${color}">${value}</div>
+      <div style="font-size:9px;color:${color};font-weight:600;margin-top:2px">${sub}</div>
+    </div>`;
+  }
+
+  // ════════════════════════════════════════════════════════
   // INIT
   // ════════════════════════════════════════════════════════
   async function init() {
@@ -177,6 +588,82 @@ const Terminal = (() => {
     })();
     }
 
+  // Charts dans overview — build dynamiquement
+  let _ovChartsInited = false;
+  async function _buildOvCharts() {
+    const grid = document.getElementById('ov-charts-grid');
+    if (!grid) return;
+
+    const countSel = document.getElementById('ov-chart-count');
+    const maxN = parseInt(countSel?.value || '4');
+    const wl   = window.WatchlistManager ? WatchlistManager.getWatchlist() : [];
+    const syms = wl.length ? wl.slice(0, maxN) : CHART_SYMBOLS_DEFAULTS_10.slice(0, maxN);
+
+    // Info text
+    const info = document.getElementById('ov-charts-wl-info');
+    if (info) info.textContent = wl.length
+      ? `${syms.length} symbols from your watchlist`
+      : `${syms.length} default symbols`;
+
+    // Détermine le layout
+    const layoutCls = syms.length <= 2 ? 'layout-1'
+                    : syms.length <= 4 ? 'layout-2-2'
+                    :                    'layout-2-3';
+    grid.className = `charts-grid ${layoutCls}`;
+
+    // Génère les panels
+    grid.innerHTML = syms.map((sym, i) => {
+      const logoHtml = _getLogoHtml(sym, 14);
+      return `
+        <div class="chart-panel">
+          <div class="cp-header">
+            <div class="cp-logo-sym">
+              ${logoHtml}
+              <span>${sym}</span>
+            </div>
+            <div class="cp-header-right">
+              <div class="cp-itabs" data-ovpanel="${i}">
+                <button class="cp-itab" data-iv="1h">1H</button>
+                <button class="cp-itab active" data-iv="1day">1D</button>
+                <button class="cp-itab" data-iv="1week">1W</button>
+              </div>
+            </div>
+          </div>
+          <div class="cp-chart" id="ov-chart-${i}"></div>
+        </div>`;
+    }).join('');
+
+    // Bind interval tabs
+    document.querySelectorAll('.cp-itabs[data-ovpanel]').forEach(container => {
+      const idx = parseInt(container.dataset.ovpanel);
+      container.querySelectorAll('.cp-itab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          container.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          _loadOvPanelChart(idx, syms[idx], btn.dataset.iv);
+        });
+      });
+    });
+
+    // Charge les graphiques
+    _ovChartsInited = true;
+    for (let i = 0; i < syms.length; i++) {
+      await _loadOvPanelChart(i, syms[i], '1day');
+    }
+  }
+
+  async function _loadOvPanelChart(idx, sym, iv = '1day') {
+    const cid = `ov-chart-${idx}`;
+    Charts.initPanelChart(idx + 10, cid); // offset +10 pour éviter conflits avec panels Charts
+    const candles = await _fetchChartData(sym, iv);
+    if (candles.length) {
+      Charts.updatePanelChart(idx + 10, candles.map(c => ({
+        datetime: new Date(c.time * 1000).toISOString(),
+        open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0,
+      })));
+    }
+  }
+
   // ── Bind ALL event listeners (no inline handlers) ────────
   function _bindEvents() {
     // Topbar
@@ -210,6 +697,11 @@ const Terminal = (() => {
     _on('chart-layout', 'change', e => _setChartLayout(e.target.value));
 
     _on('btn-wl-reset', 'click', () => WatchlistManager.resetToDefault());
+
+    // Charts in Overview — bind
+    _on('btn-ov-charts-refresh', 'click', _buildOvCharts);
+    _on('btn-refresh-ta',         'click', () => _loadMainChart(true));
+    _on('ov-chart-count', 'change', () => _buildOvCharts());
 
     // Panel chart selectors (cp-sym-0 to 3)
     for (let i = 0; i < 4; i++) {
@@ -697,6 +1189,10 @@ const Terminal = (() => {
 
     // Top signals table (max 8)
     _renderSignalsTable('ov-signals-tbody', sigs, 8, false);
+
+    if (!_ovChartsInited) {
+    setTimeout(_buildOvCharts, 300);
+}
   }
 
   // Generate synthetic sparkline prices around a base price
@@ -1173,13 +1669,15 @@ const Terminal = (() => {
       Charts.updatePriceChart(
         candles.map(c => ({
           datetime: new Date(c.time * 1000).toISOString(),
-          open:     c.open,
-          high:     c.high,
-          low:      c.low,
-          close:    c.close,
-          volume:   c.volume || 0,
+          open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0,
         })), {}
       );
+
+      // ── Déclenche l'analyse technique ──────────────────
+      const analysis = _analyzeTA(candles, sym);
+      if (analysis) {
+        _renderTechnicalAnalysis(analysis);
+      }
     }
   }
 

@@ -100,9 +100,10 @@ const YahooFinance = (() => {
   }
 
   // ── News ──────────────────────────────────────────────────
-  async function getNews(sym) {
-    const data = await _get(`/news/${sym}`, true);
-    return data?.news || [];
+  async function getNews(sym, count = 50) {
+    const data = await _get(`/news/${sym}?count=${count}`, true);
+    // Support plusieurs formats de réponse
+    return data?.news || data?.items || data?.articles || [];
   }
 
   // ── Symbol Search ─────────────────────────────────────────
@@ -339,7 +340,12 @@ const StockDetail = (() => {
   // ────────────────────────────────────────────────────────
   function close() {
     const fp = document.getElementById('sdp-fullpage');
-    if (fp) fp.classList.remove('open');
+    if (fp) {
+      fp.classList.remove('open');
+      fp.style.removeProperty('display');   // ← Supprime le style inline posé par open()
+      fp.style.removeProperty('z-index');
+      fp.style.removeProperty('flex-direction');
+    }
     document.body.style.overflow = '';
     _destroyFPChart();
   }
@@ -592,103 +598,122 @@ const StockDetail = (() => {
     const stats  = sum.defaultKeyStatistics   || {};
     const detail = sum.summaryDetail          || {};
     const price  = sum.price                  || {};
-    const inc0   = sum.incomeStatementHistory?.incomeStatementHistory?.[0] || {};
-    const isFallback = sum._source === 'chart_fallback';
+    const profile= sum.assetProfile           || {};
+    const q      = _data[_sym]?.quote         || {};
 
-    if (isFallback || (!fin.totalRevenue && !stats.enterpriseValue)) {
-      _bodyHtml(`
-        <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txt4)">
-          <i class="fa-solid fa-triangle-exclamation" style="font-size:32px;color:var(--y);margin-bottom:12px;display:block"></i>
-          <strong style="color:var(--txt);font-size:15px">Detailed financials unavailable</strong><br>
-          <span style="font-size:12px;margin-top:8px;display:block">
-            Yahoo Finance requires a crumb for full financials.
-            The proxy is fetching it — try again in 30s or check Worker logs.
-          </span>
-          <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:16px">
-            <i class="fa-solid fa-rotate"></i> Retry
-          </button>
-        </div>`, 'layout-financials');
-      return;
-    }
+    // ── Fusionne les données disponibles (summary + quote) ──
+    const kstats = [
+      { l:'Market Cap',      v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
+      { l:'Price',           v: _f(q.price || detail.regularMarketPrice?.raw, '$') },
+      { l:'Open',            v: _f(q.open  || detail.open?.raw, '$') },
+      { l:'Day High',        v: _f(q.high  || detail.dayHigh?.raw, '$') },
+      { l:'Day Low',         v: _f(q.low   || detail.dayLow?.raw, '$') },
+      { l:'Prev Close',      v: _f(q.prev_close || detail.previousClose?.raw, '$') },
+      { l:'Volume',          v: _fmtNum(q.volume || detail.volume?.raw) },
+      { l:'Avg Volume',      v: _fmtNum(detail.averageVolume?.raw) },
+      { l:'52W High',        v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, '$') },
+      { l:'52W Low',         v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw, '$') },
+      { l:'50D Avg',         v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw, '$') },
+      { l:'200D Avg',        v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
+      { l:'P/E (TTM)',       v: _f(detail.trailingPE?.raw, '', 2) },
+      { l:'Forward P/E',     v: _f(detail.forwardPE?.raw, '', 2) },
+      { l:'EPS (TTM)',       v: _f(stats.trailingEps?.raw, '$', 2) },
+      { l:'Beta',            v: _f(detail.beta?.raw, '', 2) },
+      { l:'Div Yield',       v: _fPct(detail.dividendYield?.raw) },
+      { l:'Enterprise Value',v: _fmtMCap(stats.enterpriseValue?.raw) },
+      { l:'P/S Ratio',       v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
+      { l:'P/B Ratio',       v: _f(stats.priceToBook?.raw, '', 2) },
+      { l:'EV/EBITDA',       v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
+      { l:'PEG Ratio',       v: _f(stats.pegRatio?.raw, '', 2) },
+      // Profitability
+      { l:'Revenue (TTM)',   v: _fmtMCap(fin.totalRevenue?.raw) },
+      { l:'Gross Margin',    v: _fPct(fin.grossMargins?.raw) },
+      { l:'Operating Margin',v: _fPct(fin.operatingMargins?.raw) },
+      { l:'Profit Margin',   v: _fPct(fin.profitMargins?.raw) },
+      { l:'EBITDA',          v: _fmtMCap(fin.ebitda?.raw) },
+      { l:'Revenue Growth',  v: _fPct(fin.revenueGrowth?.raw) },
+      { l:'Earnings Growth', v: _fPct(fin.earningsGrowth?.raw) },
+      // Balance Sheet
+      { l:'Total Cash',      v: _fmtMCap(fin.totalCash?.raw) },
+      { l:'Total Debt',      v: _fmtMCap(fin.totalDebt?.raw) },
+      { l:'Debt/Equity',     v: _f(fin.debtToEquity?.raw, '', 2) },
+      { l:'Free Cash Flow',  v: _fmtMCap(fin.freeCashflow?.raw) },
+      { l:'Current Ratio',   v: _f(fin.currentRatio?.raw, '', 2) },
+      // Returns
+      { l:'ROE',             v: _fPct(fin.returnOnEquity?.raw) },
+      { l:'ROA',             v: _fPct(fin.returnOnAssets?.raw) },
+      { l:'Short % Float',   v: _fPct(stats.shortPercentOfFloat?.raw) },
+      { l:'Insider Own.',    v: _fPct(stats.heldPercentInsiders?.raw) },
+      { l:'Institution Own.',v: _fPct(stats.heldPercentInstitutions?.raw) },
+    ].filter(i => i.v && i.v !== '--');
 
-    const sections = [
-      {
-        title:'Valuation', icon:'fa-scale-balanced',
-        items:[
-          { l:'Market Cap',       v: _fmtMCap(price.marketCap?.raw) },
-          { l:'Enterprise Value', v: _fmtMCap(stats.enterpriseValue?.raw) },
-          { l:'P/E (TTM)',        v: _f(detail.trailingPE?.raw,  '', 2) },
-          { l:'Forward P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
-          { l:'PEG Ratio',        v: _f(stats.pegRatio?.raw,     '', 2) },
-          { l:'P/S (TTM)',        v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
-          { l:'P/B Ratio',        v: _f(stats.priceToBook?.raw,  '', 2) },
-          { l:'EV/EBITDA',        v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
-          { l:'EV/Revenue',       v: _f(stats.enterpriseToRevenue?.raw,'',2) },
-        ],
-      },
-      {
-        title:'Profitability', icon:'fa-chart-line',
-        items:[
-          { l:'Revenue (TTM)',      v: _fmtMCap(fin.totalRevenue?.raw) },
-          { l:'Gross Profit',       v: _fmtMCap(inc0.grossProfit?.raw) },
-          { l:'Net Income',         v: _fmtMCap(inc0.netIncome?.raw) },
-          { l:'EBITDA',             v: _fmtMCap(fin.ebitda?.raw) },
-          { l:'Gross Margin',       v: _fPct(fin.grossMargins?.raw) },
-          { l:'Operating Margin',   v: _fPct(fin.operatingMargins?.raw) },
-          { l:'EBITDA Margin',      v: _fPct(fin.ebitdaMargins?.raw) },
-          { l:'Profit Margin',      v: _fPct(fin.profitMargins?.raw) },
-          { l:'Revenue Growth',     v: _fPct(fin.revenueGrowth?.raw) },
-          { l:'Earnings Growth',    v: _fPct(fin.earningsGrowth?.raw) },
-        ],
-      },
-      {
-        title:'Balance Sheet', icon:'fa-building-columns',
-        items:[
-          { l:'Total Cash',         v: _fmtMCap(fin.totalCash?.raw) },
-          { l:'Cash/Share',         v: _f(fin.totalCashPerShare?.raw,     '$', 2) },
-          { l:'Total Debt',         v: _fmtMCap(fin.totalDebt?.raw) },
-          { l:'Debt/Equity',        v: _f(fin.debtToEquity?.raw,          '', 2) },
-          { l:'Current Ratio',      v: _f(fin.currentRatio?.raw,          '', 2) },
-          { l:'Quick Ratio',        v: _f(fin.quickRatio?.raw,            '', 2) },
-          { l:'Free Cash Flow',     v: _fmtMCap(fin.freeCashflow?.raw) },
-          { l:'Oper. Cash Flow',    v: _fmtMCap(fin.operatingCashflow?.raw) },
-        ],
-      },
-      {
-        title:'Returns & Management', icon:'fa-award',
-        items:[
-          { l:'ROA',                v: _fPct(fin.returnOnAssets?.raw) },
-          { l:'ROE',                v: _fPct(fin.returnOnEquity?.raw) },
-          { l:'Beta',               v: _f(detail.beta?.raw,            '', 2) },
-          { l:'Shares Outstanding', v: _fmtNum(stats.sharesOutstanding?.raw) },
-          { l:'Float',              v: _fmtNum(stats.floatShares?.raw) },
-          { l:'Insider Own.',       v: _fPct(stats.heldPercentInsiders?.raw) },
-          { l:'Institution Own.',   v: _fPct(stats.heldPercentInstitutions?.raw) },
-          { l:'Short % Float',      v: _fPct(stats.shortPercentOfFloat?.raw) },
-          { l:'Div Yield',          v: _fPct(detail.dividendYield?.raw) },
-          { l:'Payout Ratio',       v: _fPct(stats.payoutRatio?.raw) },
-        ],
-      },
-    ];
+    // Source indicator
+    const hasFull = fin.totalRevenue || stats.enterpriseValue;
+    const srcBadge = hasFull
+      ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)">
+          <i class="fa-solid fa-circle-check"></i> Full Data
+        </span>`
+      : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)" title="Full financials unavailable — proxy may need /summary module">
+          <i class="fa-solid fa-triangle-exclamation"></i> Partial Data (quote only)
+        </span>`;
 
-    const html = sections.map(sec => `
+    // Company profile
+    const profileBlock = profile.longBusinessSummary ? `
+      <div class="sdp-fp-stat-section" style="margin-bottom:16px">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-building"></i> About ${_sym}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
+          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
+          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
+          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+        </div>
+        <p id="sdp-desc-p" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+          ${profile.longBusinessSummary}
+        </p>
+        <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>
+      </div>` : '';
+
+    const statsBlock = `
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
-          <i class="fa-solid ${sec.icon}"></i> ${sec.title}
+          <i class="fa-solid fa-table"></i> Key Statistics &amp; Financials
+          <div style="margin-left:auto">${srcBadge}</div>
         </div>
-        <div class="sdp-fp-stats">
-          ${sec.items.filter(i => i.v && i.v !== '--').map(i => `
-            <div class="sdp-fp-stat-item">
-              <div class="sdp-fp-stat-lbl">${i.l}</div>
-              <div class="sdp-fp-stat-val">${i.v}</div>
-            </div>`).join('')}
-        </div>
-      </div>`).join('');
+        ${kstats.length ? `
+          <div class="sdp-fp-stats">
+            ${kstats.map(i => `
+              <div class="sdp-fp-stat-item">
+                <div class="sdp-fp-stat-lbl">${i.l}</div>
+                <div class="sdp-fp-stat-val">${i.v}</div>
+              </div>`).join('')}
+          </div>` : `
+          <div style="text-align:center;padding:40px;color:var(--txt4)">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:28px;color:var(--y);margin-bottom:10px;display:block"></i>
+            <strong style="color:var(--txt)">Financial data unavailable</strong><br>
+            <span style="font-size:12px;margin-top:6px;display:block">
+              The Yahoo Finance proxy (<code>/summary/${_sym}</code>) did not return data.<br>
+              Ensure the worker implements the <code>/summary/</code> endpoint with <code>quoteSummary</code> modules.
+            </span>
+            <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:12px">
+              <i class="fa-solid fa-rotate"></i> Retry
+            </button>
+          </div>`}
+      </div>`;
 
-    _bodyHtml(html + `
-      <div style="grid-column:1/-1;font-size:10px;color:var(--txt4);text-align:center;padding:8px">
-        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance via yfinance proxy
-      </div>`, 'layout-financials');
+    _bodyHtml(profileBlock + statsBlock, 'layout-financials');
+
+    // Bind description toggle
+    const tog  = document.getElementById('sdp-desc-toggle');
+    const para = document.getElementById('sdp-desc-p');
+    if (tog && para) {
+      let expanded = false;
+      tog.addEventListener('click', () => {
+        expanded = !expanded;
+        para.style.webkitLineClamp = expanded ? 'unset' : '3';
+        para.style.overflow        = expanded ? 'visible' : 'hidden';
+        tog.textContent            = expanded ? 'Show less' : 'Show more';
+      });
+    }
   }
 
   // ── Retry financials (KV might have cached the crumb now) ─
@@ -706,64 +731,52 @@ const StockDetail = (() => {
   // ════════════════════════════════════════════════════════
   function _renderEarnings() {
     const sum      = _data[_sym]?.summary || {};
-    const trend    = sum.earningsTrend?.trend     || [];
-    const calendar = sum.calendarEvents?.earnings || {};
-    const signal   = _sig(_sym);
+    const q        = _data[_sym]?.quote   || {};
 
-    // Next earnings date
-    const nextDates = (calendar.earningsDate || []).map(d =>
-      new Date((d.raw || d) * 1000)
-    ).filter(d => d > new Date());
+    // Multiple data paths
+    const trend    = sum.earningsTrend?.trend
+      || sum.earnings?.earningsChart?.quarterly
+      || [];
+    const calendar = sum.calendarEvents?.earnings || {};
+    const nextDates= (calendar.earningsDate || [])
+      .map(d => new Date((d.raw || d) * 1000))
+      .filter(d => d > new Date());
     const nextEarnings = nextDates[0]?.toLocaleDateString('en-US', {
       month:'long', day:'numeric', year:'numeric'
     });
 
-    // EPS trend rows
-    const PERIOD_LABELS = { '0q':'Current Qtr', '+1q':'Next Qtr', '0y':'Current Year', '+1y':'Next Year' };
+    // EPS from quote (if available)
+    const epsFromQuote = sum.defaultKeyStatistics?.trailingEps?.raw
+      || sum.defaultKeyStatistics?.forwardEps?.raw;
+
+    const PERIOD_LABELS = {
+      '0q':'Current Quarter', '+1q':'Next Quarter',
+      '0y':'Current Year',    '+1y':'Next Year',
+    };
 
     const epsSection = trend.length ? `
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-chart-bar"></i> EPS & Revenue Estimates
+          <i class="fa-solid fa-chart-bar"></i> EPS &amp; Revenue Estimates
         </div>
         ${trend.map(t => {
           const epsEst  = t.earningsEstimate?.avg?.raw;
-          const epsLow  = t.earningsEstimate?.low?.raw;
-          const epsHigh = t.earningsEstimate?.high?.raw;
           const epsYago = t.earningsEstimate?.yearAgoEps?.raw;
           const revEst  = t.revenueEstimate?.avg?.raw;
           const revGrow = t.revenueEstimate?.growth?.raw;
           const period  = PERIOD_LABELS[t.period] || t.period;
-
           return `
-            <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--bord)">
-              <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:12px">
+            <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bord)">
+              <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:10px;display:flex;align-items:center;gap:10px">
                 ${period}
-                ${revGrow != null ? `<span style="margin-left:8px;font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">
+                ${revGrow != null ? `<span style="font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">
                   Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY
                 </span>` : ''}
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
-                ${epsEst != null ? `<div class="sdp-fp-stat-item">
-                  <div class="sdp-fp-stat-lbl">EPS Estimate</div>
-                  <div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div>
-                </div>` : ''}
-                ${epsLow != null ? `<div class="sdp-fp-stat-item">
-                  <div class="sdp-fp-stat-lbl">EPS Low</div>
-                  <div class="sdp-fp-stat-val">$${epsLow.toFixed(2)}</div>
-                </div>` : ''}
-                ${epsHigh != null ? `<div class="sdp-fp-stat-item">
-                  <div class="sdp-fp-stat-lbl">EPS High</div>
-                  <div class="sdp-fp-stat-val">$${epsHigh.toFixed(2)}</div>
-                </div>` : ''}
-                ${epsYago != null ? `<div class="sdp-fp-stat-item">
-                  <div class="sdp-fp-stat-lbl">Year Ago EPS</div>
-                  <div class="sdp-fp-stat-val">$${epsYago.toFixed(2)}</div>
-                </div>` : ''}
-                ${revEst != null ? `<div class="sdp-fp-stat-item">
-                  <div class="sdp-fp-stat-lbl">Rev Estimate</div>
-                  <div class="sdp-fp-stat-val">${_fmtMCap(revEst)}</div>
-                </div>` : ''}
+                ${epsEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">EPS Estimate</div><div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div></div>` : ''}
+                ${epsYago != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Year Ago EPS</div><div class="sdp-fp-stat-val">$${epsYago.toFixed(2)}</div></div>` : ''}
+                ${revEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Rev Estimate</div><div class="sdp-fp-stat-val">${_fmtMCap(revEst)}</div></div>` : ''}
               </div>
             </div>`;
         }).join('')}
@@ -771,33 +784,43 @@ const StockDetail = (() => {
 
     const calSection = nextEarnings ? `
       <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
-        <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-calendar-check"></i> Next Earnings Date
-        </div>
-        <div style="font-size:28px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:8px">
-          ${nextEarnings}
-        </div>
-        ${signal?.earnings?.upcoming ? `
-          <div class="test-status warn" style="margin-top:8px">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            AlphaVault ML detected upcoming earnings — expect increased volatility
-          </div>` : ''}
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-calendar-check"></i> Next Earnings Date</div>
+        <div style="font-size:28px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:6px">${nextEarnings}</div>
       </div>` : '';
 
-    const fallbackMsg = !trend.length && !nextEarnings ? `
-      <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--txt4)">
+    const epsCard = epsFromQuote ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title"><i class="fa-solid fa-dollar-sign"></i> EPS Summary</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">EPS (TTM)</div>
+            <div class="sdp-fp-stat-val" style="color:${epsFromQuote>0?'var(--g)':'var(--r)'}">
+              $${epsFromQuote.toFixed(2)}
+            </div>
+          </div>
+          ${q.price && epsFromQuote ? `
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">P/E (TTM)</div>
+            <div class="sdp-fp-stat-val">${(q.price / epsFromQuote).toFixed(2)}</div>
+          </div>` : ''}
+        </div>
+      </div>` : '';
+
+    const fallback = !trend.length && !nextEarnings && !epsFromQuote ? `
+      <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--txt4)">
         <i class="fa-solid fa-calendar-xmark" style="font-size:32px;color:var(--txt4);margin-bottom:12px;display:block"></i>
-        No earnings data available for <strong style="color:var(--txt)">${_sym}</strong>
-        <div style="font-size:12px;margin-top:8px">This may be an ETF or the crumb has not loaded yet.</div>
-        <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:16px">
+        <strong style="color:var(--txt);font-size:14px">Earnings data unavailable for ${_sym}</strong>
+        <div style="font-size:12px;margin-top:8px">
+          ${_sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT)$/)
+            ? 'ETFs do not report individual earnings.'
+            : 'The /summary proxy endpoint needs to include <code>earningsTrend</code> and <code>calendarEvents</code> modules.'}
+        </div>
+        <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:14px">
           <i class="fa-solid fa-rotate"></i> Retry
         </button>
       </div>` : '';
 
-    _bodyHtml(
-      (calSection ? calSection + epsSection : epsSection + fallbackMsg),
-      'layout-earnings'
-    );
+    _bodyHtml(calSection + epsCard + epsSection + fallback, 'layout-earnings');
   }
 
   // ════════════════════════════════════════════════════════
@@ -805,10 +828,10 @@ const StockDetail = (() => {
   // ════════════════════════════════════════════════════════
   function _renderNews() {
     const news = _data[_sym]?.news || [];
+    const MAX_NEWS = 50;
 
     if (!news.length) {
-      // Attempt to load
-      YahooFinance.getNews(_sym).then(articles => {
+      YahooFinance.getNews(_sym, MAX_NEWS).then(articles => {
         if (_tab === 'news') {
           if (_data[_sym]) _data[_sym].news = articles;
           _renderNews();
@@ -824,18 +847,21 @@ const StockDetail = (() => {
 
     const html = `
       <div style="max-width:900px;width:100%;margin:0 auto">
-        <div style="font-size:13px;font-weight:700;color:var(--txt3);margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--txt3);margin-bottom:16px;display:flex;align-items:center;gap:8px">
           <i class="fa-solid fa-newspaper" style="color:var(--b1)"></i>
           ${news.length} articles — ${_sym}
+          <button onclick="StockDetail._refreshNews()" class="btn-sm" style="margin-left:auto;font-size:11px">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
         </div>
-        ${news.map(a => {
+        ${news.slice(0, MAX_NEWS).map(a => {
           const thumb = a.thumbnail?.resolutions?.find(r => r.width >= 80)?.url;
           const pub   = a.publisher || 'Yahoo Finance';
           const time  = a.providerPublishTime ? _timeAgo(a.providerPublishTime * 1000) : '';
           const sent  = _sentiment(a.title || '');
           return `
             <a href="${a.link || '#'}" target="_blank" rel="noopener" class="sdp-fp-news-item">
-              ${thumb ? `<img src="${thumb}" alt="" class="sdp-fp-news-thumb">` : ''}
+              ${thumb ? `<img src="${thumb}" alt="" class="sdp-fp-news-thumb" onerror="this.style.display='none'">` : ''}
               <div style="flex:1;min-width:0">
                 <div class="sdp-fp-news-headline">${a.title || 'No title'}</div>
                 <div class="sdp-fp-news-meta">
@@ -843,6 +869,7 @@ const StockDetail = (() => {
                   <span>${time}</span>
                   <span class="sdp-news-sentiment ${sent.cls}">${sent.label}</span>
                 </div>
+                ${a.summary ? `<div style="font-size:12px;color:var(--txt3);margin-top:4px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${a.summary}</div>` : ''}
               </div>
               <i class="fa-solid fa-arrow-up-right-from-square" style="color:var(--txt4);font-size:12px;flex-shrink:0;align-self:center"></i>
             </a>`;
@@ -851,7 +878,6 @@ const StockDetail = (() => {
           <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance News
         </div>
       </div>`;
-
     _bodyHtml(html, 'layout-news');
   }
 
@@ -1059,6 +1085,13 @@ const StockDetail = (() => {
     open,
     close,
     _retryFinancials,
+    _refreshNews: async function() {
+      if (!_sym) return;
+      delete _data[_sym]?.news;
+      const articles = await YahooFinance.getNews(_sym, 50);
+      if (_data[_sym]) _data[_sym].news = articles;
+      _renderNews();
+    },
   };
 
 })();
