@@ -1365,16 +1365,27 @@ const Terminal = (() => {
     // ════════════════════════════════════════════════════
     console.groupCollapsed('%c[AlphaVault] Status Debug', 'color:#3b82f6;font-weight:bold;font-size:11px');
 
-    // LLM
-    const llmAvail = status.llm_available;
-    console.log(
-        `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
-        `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
-    );
-    if (!llmAvail) {
-        console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
-        console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
-        console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
+    // ── LLM — Multi-provider status ─────────────────────────
+    const llmProviders = status.llm_providers || {};
+    const activeProvider = llmProviders.primary || (status.llm_available ? 'gemini' : 'none');
+
+    const llmOk = status.llm_available || !!activeProvider;
+    const llmLabel = {
+      gemini: 'Gemini',
+      groq:   'Groq',
+      ollama: 'Ollama',
+      none:   'ML Only',
+    }[activeProvider] || 'ML';
+
+    _setDot('llm', llmOk ? 'ok' : 'warn');
+
+    const pillLLM = document.getElementById('pill-llm');
+    if (pillLLM) {
+      pillLLM.title = llmOk
+        ? `LLM Online — Provider: ${llmLabel}`
+        : 'All LLMs offline — Deterministic ML active';
+      const lbl = pillLLM.querySelector('.s-lbl');
+      if (lbl) lbl.textContent = llmLabel;
     }
 
     // Hub
@@ -1759,9 +1770,12 @@ const Terminal = (() => {
     }
 
     // Health grid
-    _txt('hg-llm',  status.llm_available
-    ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Available'
-    : '<i class="fa-solid fa-gears"></i> Deterministic ML', true);
+    _txt('hg-llm',
+      providers.length
+        ? `<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> ${llmLabel} (${providers.join('→')})`
+        : '<i class="fa-solid fa-gears"></i> ML Deterministic',
+      true
+    );
     _txt('hg-ibkr', status.dry_run === false
     ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Live Paper'
     : '<i class="fa-solid fa-flask"></i> Paper Simulation', true);
@@ -2127,36 +2141,51 @@ const Terminal = (() => {
         : '<tr><td colspan="5" class="loading-row">No executions yet</td></tr>';
     }
 
-    // LLM status
-    const llmAvail = status.llm_available;
+    // LLM Multi-provider
+    const llmStatus    = status.llm_providers || {};
+    const providers    = llmStatus.available_providers || [];
+    const primaryProv  = llmStatus.primary || 'none';
+    const geminiOk     = llmStatus.gemini_ok || false;
+    const groqOk       = llmStatus.groq_ok   || false;
+    const ollamaOk     = llmStatus.ollama_ok || false;
+
     const dot = document.getElementById('llm-main-dot');
-    if (dot) dot.className = `llm-dot-big ${llmAvail ? 'ok' : 'error'}`;
+    if (dot) dot.className = `llm-dot-big ${providers.length ? 'ok' : 'error'}`;
 
     _txt('llm-status-text',
-    llmAvail
-        ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> LLM Available'
-        : '<i class="fa-solid fa-circle-xmark" style="color:var(--r)"></i> LLM Unavailable',
-    true
-    );
-    _txt('llm-mode-text',
-    `Running: ${status.mode === 'llm'
-        ? '<strong style="color:var(--b1)">AI-Assisted Reasoning</strong>'
-        : '<strong style="color:var(--y)">Deterministic Fallback — ML Ensemble (XGBoost + LightGBM + LogReg)</strong>'}`,
-    true
+      providers.length
+        ? `<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> LLM Active — Provider: <strong>${primaryProv.toUpperCase()}</strong>`
+        : '<i class="fa-solid fa-circle-xmark" style="color:var(--r)"></i> All LLMs offline',
+      true
     );
 
-    const fbEl = document.getElementById('llm-fallback-info');
-    if (fbEl) {
-    fbEl.style.display = llmAvail ? 'none' : 'block';
-    fbEl.innerHTML     = llmAvail ? '' : `
-        <i class="fa-solid fa-triangle-exclamation"></i>
-        <strong>Gemini quota exceeded (HTTP 429)</strong> — System fully operational in deterministic mode.<br>
-        ML ensemble + regime detection active. All signals generated normally.<br>
-        <span style="font-size:10px;color:var(--txt4)">
-        To restore LLM: wait for quota reset or upgrade Gemini plan.
-        Python backend continues generating signals regardless.
-        </span>`;
-    }
+    _txt('llm-mode-text', `
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        <span style="padding:2px 8px;border-radius:5px;font-size:10px;
+              background:${geminiOk?'rgba(16,185,129,0.1)':'rgba(239,68,68,0.1)'};
+              color:${geminiOk?'var(--g)':'var(--r)'}">
+          <i class="fa-solid ${geminiOk?'fa-check':'fa-xmark'}"></i> Gemini
+        </span>
+        <span style="padding:2px 8px;border-radius:5px;font-size:10px;
+              background:${groqOk?'rgba(16,185,129,0.1)':'rgba(100,116,139,0.1)'};
+              color:${groqOk?'var(--g)':'var(--txt4)'}">
+          <i class="fa-solid ${groqOk?'fa-check':'fa-minus'}"></i> Groq
+        </span>
+        <span style="padding:2px 8px;border-radius:5px;font-size:10px;
+              background:${ollamaOk?'rgba(16,185,129,0.1)':'rgba(100,116,139,0.1)'};
+              color:${ollamaOk?'var(--g)':'var(--txt4)'}">
+          <i class="fa-solid ${ollamaOk?'fa-check':'fa-minus'}"></i> Ollama
+        </span>
+        <span style="padding:2px 8px;border-radius:5px;font-size:10px;
+              background:rgba(16,185,129,0.1);color:var(--g)">
+          <i class="fa-solid fa-check"></i> ML Ensemble
+        </span>
+      </div>
+      <div style="font-size:10px;color:var(--txt4);margin-top:4px">
+        Mode: <strong>${status.mode === 'llm' ? primaryProv+' assisted' : 'Deterministic ML'}</strong>
+        | 13 Agents actifs | Watcher ${status.watcher_version || 'v3.1'}
+      </div>
+    `, true);
 
     // Feature importance + regime detail
     const sigs   = data.signals?.signals || {};
