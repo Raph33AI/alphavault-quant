@@ -1,161 +1,164 @@
-# # ============================================================
-# # switch-mode.yml — AlphaVault Quant
-# # Bascule Paper/Live depuis le dashboard frontend
-# # Déclenché via workflow_dispatch (GitHub API)
-# # ============================================================
+# ============================================================
+# switch-mode.yml — AlphaVault Quant
+# Bascule Paper/Live depuis le dashboard frontend
+# Déclenché via workflow_dispatch (GitHub API)
+# ============================================================
 
-# name: 🔄 Switch Trading Mode
+name: 🔄 Switch Trading Mode
 
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       mode:
-#         description: 'Mode de trading'
-#         required: true
-#         type: choice
-#         options:
-#           - paper
-#           - live
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Mode de trading'
+        required: true
+        type: choice
+        options:
+          - paper
+          - live
 
-# permissions:
-#   contents: write
+permissions:
+  contents: write
 
-# jobs:
-#   switch:
-#     name: Switch ${{ inputs.mode }}
-#     runs-on: ubuntu-latest
-#     timeout-minutes: 5
+jobs:
+  switch:
+    name: Switch ${{ inputs.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
-#     steps:
-#       # ── 1. Valider le mode ───────────────────────────────
-#       - name: Validate mode
-#         run: |
-#           if [[ "${{ inputs.mode }}" != "paper" && "${{ inputs.mode }}" != "live" ]]; then
-#             echo "❌ Mode invalide: ${{ inputs.mode }}"
-#             exit 1
-#           fi
-#           echo "✅ Mode validé: ${{ inputs.mode }}"
+    steps:
 
-#       # ── 2. SSH → Oracle VM → Switch ─────────────────────
-#       - name: SSH into Oracle VM and switch
-#         uses: appleboy/ssh-action@v1.0.3
-#         with:
-#           host:        141.253.96.130
-#           username:    ubuntu
-#           key:         ${{ secrets.ORACLE_SSH_KEY }}
-#           port:        22
-#           timeout:     60s
-#           script_stop: true
-#           script: |
-#             echo "🔄 Switch vers mode: ${{ inputs.mode }}"
-#             cd /home/ubuntu/alphavault
-
-#             # Copier la bonne config IBeam
-#             if [ "${{ inputs.mode }}" = "live" ]; then
-#               cp ibeam/conf/env.live.list ibeam/conf/env.list
-#               sed -i 's/^TRADING_MODE=.*/TRADING_MODE=live/'   watcher/.env
-#               sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=U21160314/' watcher/.env
-#               sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=raphnardone/' watcher/.env
-#               echo "🔴 Config LIVE activée"
-#             else
-#               cp ibeam/conf/env.paper.list ibeam/conf/env.list
-#               sed -i 's/^TRADING_MODE=.*/TRADING_MODE=paper/'   watcher/.env
-#               sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=DUM895161/' watcher/.env
-#               sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=vtsdxs036/' watcher/.env
-#               echo "🟡 Config PAPER activée"
-#             fi
-
-#             # Redémarrer IBeam
-#             docker compose restart ibeam
-#             echo "✅ IBeam redémarré"
-
-#             # Redémarrer le watcher (il va push ibkr_status.json)
-#             sudo systemctl restart ibkr-watcher
-#             echo "✅ Watcher redémarré"
-
-#             # Attendre que le watcher pousse le statut
-#             sleep 15
-#             echo "✅ Switch terminé → mode: ${{ inputs.mode }}"
-
-#       # ── 3. Log du switch dans system_status ─────────────
-#       - name: Log switch event
-#         uses: actions/checkout@v4
-
-#       - name: Update switch log
-#         run: |
-#           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-#           MODE="${{ inputs.mode }}"
-#           ACCOUNT=$([[ "$MODE" == "live" ]] && echo "U21160314" || echo "DUM895161")
-
-#           # Mettre à jour ibkr_status.json
-#           cat > docs/signals/ibkr_status.json << EOF
-#           {
-#             "trading_mode":    "$MODE",
-#             "account":         "$ACCOUNT",
-#             "paper_trading":   $([[ "$MODE" == "paper" ]] && echo "true" || echo "false"),
-#             "ibkr_connected":  false,
-#             "orders_executed": 0,
-#             "switch_time":     "$NOW",
-#             "last_check":      "$NOW",
-#             "vm_ip":           "141.253.96.130",
-#             "switched_by":     "dashboard_toggle"
-#           }
-#           EOF
-
-#           git config user.name  "AlphaVault Bot"
-#           git config user.email "bot@alphavault-quant"
-#           git add docs/signals/ibkr_status.json
-#           git commit -m "chore: switch to $MODE mode — $NOW" || echo "Nothing to commit"
-#           git push
-
-- name: Switch mode on Oracle VM
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.ORACLE_HOST }}
-        username: ubuntu
-        key: ${{ secrets.ORACLE_SSH_KEY }}
-        port: 22
-        script_stop: false
-        script: |
-          set -x
-          echo "🔄 Switch vers mode: ${{ github.event.inputs.mode }}"
-
-          # Vérif répertoire
-          if [ ! -d /home/ubuntu/alphavault ]; then
-            echo "❌ ERREUR: /home/ubuntu/alphavault introuvable"
+      # ── 1. Valider le mode ───────────────────────────────
+      - name: Validate mode
+        run: |
+          if [[ "${{ inputs.mode }}" != "paper" && "${{ inputs.mode }}" != "live" ]]; then
+            echo "❌ Mode invalide: ${{ inputs.mode }}"
             exit 1
           fi
-          cd /home/ubuntu/alphavault
-          echo "✅ CD OK"
+          echo "✅ Mode validé: ${{ inputs.mode }}"
 
-          # Vérif fichiers config
-          if [ ! -f ibeam/conf/env.paper.list ]; then
-            echo "❌ ERREUR: env.paper.list introuvable"
-            ls -la ibeam/conf/ || echo "Dossier ibeam/conf absent"
-            exit 1
-          fi
-          echo "✅ Fichiers config OK"
+      # ── 2. SSH → Oracle VM → Switch ─────────────────────
+      - name: SSH into Oracle VM and switch
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host:            141.253.96.130
+          username:        ubuntu
+          key:             ${{ secrets.ORACLE_SSH_KEY }}
+          port:            22
+          timeout:         60s
+          command_timeout: 3m
+          script_stop:     false
+          request_pty:     true
+          script: |
+            echo "========================================"
+            echo "Switch vers mode: ${{ inputs.mode }}"
+            echo "========================================"
 
-          # Copier la bonne config IBeam
-          if [ "${{ github.event.inputs.mode }}" = "live" ]; then
-            cp ibeam/conf/env.live.list ibeam/conf/env.list
-            sed -i 's/^TRADING_MODE=.*/TRADING_MODE=live/' watcher/.env
-            sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=U21160314/' watcher/.env
-            sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=raphnardone/' watcher/.env
-            echo "🔴 Config LIVE activée"
+            if [ ! -d /home/ubuntu/alphavault ]; then
+              echo "ERREUR: /home/ubuntu/alphavault introuvable"
+              ls /home/ubuntu/
+              exit 1
+            fi
+
+            cd /home/ubuntu/alphavault
+            echo "Repertoire: $(pwd)"
+
+            echo "Contenu ibeam/conf/:"
+            ls -la ibeam/conf/ 2>/dev/null || echo "Dossier ibeam/conf absent"
+
+            echo "watcher/.env actuel:"
+            cat watcher/.env 2>/dev/null || echo "watcher/.env absent"
+
+            if [ "${{ inputs.mode }}" = "live" ]; then
+              if [ ! -f ibeam/conf/env.live.list ]; then
+                echo "ERREUR: env.live.list introuvable"
+                exit 1
+              fi
+              cp ibeam/conf/env.live.list ibeam/conf/env.list
+              sed -i 's/^TRADING_MODE=.*/TRADING_MODE=live/'           watcher/.env
+              sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=U21160314/'     watcher/.env
+              sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=raphnardone/' watcher/.env
+              echo "Config LIVE activee"
+            else
+              if [ ! -f ibeam/conf/env.paper.list ]; then
+                echo "ERREUR: env.paper.list introuvable"
+                exit 1
+              fi
+              cp ibeam/conf/env.paper.list ibeam/conf/env.list
+              sed -i 's/^TRADING_MODE=.*/TRADING_MODE=paper/'          watcher/.env
+              sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=DUM895161/'     watcher/.env
+              sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=vtsdxs036/'   watcher/.env
+              echo "Config PAPER activee"
+            fi
+
+            echo "watcher/.env apres switch:"
+            cat watcher/.env
+
+            if docker compose restart ibeam 2>&1; then
+              echo "IBeam redemarre OK"
+            else
+              echo "IBeam restart failed - logs:"
+              docker logs ibeam --tail 10 2>&1 || true
+            fi
+
+            if sudo systemctl restart ibkr-watcher 2>&1; then
+              echo "Watcher redemarre OK"
+            else
+              echo "Watcher restart failed - status:"
+              sudo systemctl status ibkr-watcher --no-pager 2>&1 || true
+            fi
+
+            sleep 15
+
+            echo "Status final:"
+            curl -s http://localhost:5000/current-mode 2>/dev/null || echo "Watcher non disponible sur :5000"
+
+            echo "========================================"
+            echo "Switch termine -> mode: ${{ inputs.mode }}"
+            echo "========================================"
+
+      # ── 3. Checkout repo ────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 4. Mettre à jour ibkr_status.json ───────────────
+      - name: Update ibkr_status.json
+        run: |
+          NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          MODE="${{ inputs.mode }}"
+
+          if [ "$MODE" = "live" ]; then
+            ACCOUNT="U21160314"
+            PAPER="false"
           else
-            cp ibeam/conf/env.paper.list ibeam/conf/env.list
-            sed -i 's/^TRADING_MODE=.*/TRADING_MODE=paper/' watcher/.env
-            sed -i 's/^IBKR_ACCOUNT=.*/IBKR_ACCOUNT=DUM895161/' watcher/.env
-            sed -i 's/^IBKR_USERNAME=.*/IBKR_USERNAME=vtsdxs036/' watcher/.env
-            echo "🟡 Config PAPER activée"
+            ACCOUNT="DUM895161"
+            PAPER="true"
           fi
 
-          # Redémarrer IBeam
-          docker compose restart ibeam && echo "✅ IBeam redémarré" || echo "⚠ IBeam restart failed"
+          mkdir -p docs/signals
 
-          # Redémarrer le watcher
-          sudo systemctl restart ibkr-watcher && echo "✅ Watcher redémarré" || echo "⚠ Watcher restart failed"
+          jq -n \
+            --arg  mode    "$MODE"    \
+            --arg  account "$ACCOUNT" \
+            --arg  now     "$NOW"     \
+            --argjson paper "$PAPER"  \
+            '{
+              trading_mode:    $mode,
+              account:         $account,
+              paper_trading:   $paper,
+              ibkr_connected:  false,
+              orders_executed: 0,
+              switch_time:     $now,
+              last_check:      $now,
+              vm_ip:           "141.253.96.130",
+              switched_by:     "dashboard_toggle"
+            }' > docs/signals/ibkr_status.json
 
-          sleep 15
-          echo "✅ Switch terminé → mode: ${{ github.event.inputs.mode }}"
+          echo "ibkr_status.json genere:"
+          cat docs/signals/ibkr_status.json
+
+          git config user.name  "AlphaVault Bot"
+          git config user.email "bot@alphavault-quant"
+          git add docs/signals/ibkr_status.json
+          git commit -m "chore: switch to $MODE mode - $NOW" || echo "Nothing to commit"
+          git push || echo "Push failed"
