@@ -1,0 +1,255 @@
+name: Daily Recap Email
+
+on:
+  schedule:
+    - cron: '30 21 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  daily-recap:
+    name: Send Daily Recap
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Send Daily Recap Email
+        env:
+          RESEND_API_KEY:    ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          GH_PAGES_BASE:     https://raph33ai.github.io/alphavault-quant/signals
+          RUN_NUMBER:        ${{ github.run_number }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request, urllib.error, datetime
+
+          BASE     = os.environ.get("GH_PAGES_BASE", "")
+          API_KEY  = os.environ.get("RESEND_API_KEY", "")
+          FROM     = os.environ.get("RESEND_FROM_EMAIL", "")
+          TODAY    = datetime.date.today()
+          DATE_STR = TODAY.strftime("%B %d, %Y")
+          WEEKDAY  = TODAY.strftime("%A")
+
+          def fetch(path):
+              try:
+                  req = urllib.request.Request(
+                      f"{BASE}/{path}",
+                      headers={"Cache-Control": "no-cache"}
+                  )
+                  with urllib.request.urlopen(req, timeout=10) as r:
+                      return json.loads(r.read().decode())
+              except Exception as e:
+                  print(f"  Fetch {path}: {e}")
+                  return {}
+
+          def send(to_list, subject, html):
+              if not API_KEY:
+                  print("  RESEND_API_KEY not set"); return
+              if not to_list:
+                  print("  No recipients"); return
+              payload = json.dumps({"from": FROM, "to": to_list,
+                                    "subject": subject, "html": html}).encode()
+              req = urllib.request.Request(
+                  "https://api.resend.com/emails",
+                  data=payload, method="POST",
+                  headers={"Authorization": f"Bearer {API_KEY}",
+                           "Content-Type": "application/json"}
+              )
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      d = json.loads(r.read().decode())
+                      print(f"  Sent: {d.get('id','ok')} to {len(to_list)} recipients")
+              except urllib.error.HTTPError as e:
+                  print(f"  Resend {e.code}: {e.read().decode()[:300]}")
+              except Exception as e:
+                  print(f"  Error: {e}")
+
+          # ── Load data ─────────────────────────────────────
+          settings  = fetch("notification_settings.json")
+          emails    = settings.get("emails", [])
+          if not settings.get("notify_daily_recap", True):
+              print("Daily recap disabled in settings — skipping"); exit(0)
+          if not emails:
+              print("No email addresses configured — skipping"); exit(0)
+
+          signals   = fetch("current_signals.json")
+          regime    = fetch("regime.json")
+          risk      = fetch("risk_metrics.json")
+          portfolio = fetch("portfolio.json")
+          status    = fetch("system_status.json")
+          ibkr      = fetch("ibkr_status.json")
+          exec_mode = fetch("execution_mode.json")
+
+          # ── Parse data ────────────────────────────────────
+          sigs_data    = signals.get("signals", {})
+          glob_regime  = regime.get("global", {})
+          regime_label = glob_regime.get("regime_label", "unknown").replace("_", " ").title()
+          regime_conf  = float(glob_regime.get("confidence", 0))
+          regime_score = float(glob_regime.get("regime_score", 0))
+
+          dd_pct     = abs(float(risk.get("drawdown", {}).get("current_drawdown", 0)) * 100)
+          daily_pnl  = float(risk.get("drawdown", {}).get("daily_pnl_pct", 0)) * 100
+          leverage   = float(risk.get("leverage", {}).get("current_leverage", 0))
+          halt       = risk.get("drawdown", {}).get("halt_active", False)
+
+          port_val   = float(portfolio.get("total_value", 100000))
+          cash_pct   = float(portfolio.get("cash_pct", 1)) * 100
+          n_pos      = len(portfolio.get("positions", {}))
+
+          n_sigs     = len(sigs_data)
+          buy_sigs   = sum(1 for s in sigs_data.values() if s.get("direction") == "buy")
+          sell_sigs  = sum(1 for s in sigs_data.values() if s.get("direction") == "sell")
+          exec_sigs  = sum(1 for s in sigs_data.values() if "execute" in s.get("council",""))
+
+          mode_trade = ibkr.get("trading_mode", "paper").upper()
+          exec_m     = exec_mode.get("execution_mode", "auto").upper()
+          llm_ok     = status.get("llm_available", False)
+          mode_label = status.get("mode", "deterministic")
+
+          # Top 5 signals by score
+          top_sigs = sorted(
+              [(sym, sig) for sym, sig in sigs_data.items()],
+              key=lambda x: float(x[1].get("final_score", 0)),
+              reverse=True
+          )[:5]
+
+          # ── Colors ───────────────────────────────────────
+          pnl_color  = "#10b981" if daily_pnl >= 0 else "#ef4444"
+          pnl_sign   = "+" if daily_pnl >= 0 else ""
+          dd_color   = "#ef4444" if dd_pct > 5 else "#f59e0b" if dd_pct > 2 else "#10b981"
+          exec_color = "#f59e0b" if exec_m == "MANUAL" else "#10b981"
+
+          regime_colors = {
+              "Trend Up": "#10b981", "Trend Down": "#ef4444",
+              "Range Bound": "#64748b", "High Volatility": "#f59e0b",
+              "Low Volatility": "#06b6d4", "Crash": "#dc2626",
+              "Macro Tightening": "#f97316", "Macro Easing": "#8b5cf6",
+          }
+          regime_color = regime_colors.get(regime_label, "#64748b")
+
+          # ── Top signals rows ─────────────────────────────
+          sig_rows = ""
+          for sym, sig in top_sigs:
+              score = float(sig.get("final_score", 0))
+              direction = sig.get("direction", "neutral").upper()
+              council   = sig.get("council", "wait").upper()
+              price     = float(sig.get("price", 0))
+              d_color   = "#10b981" if direction == "BUY" else "#ef4444" if direction == "SELL" else "#64748b"
+              c_color   = "#10b981" if "EXECUTE" in council else "#f59e0b"
+              sig_rows += f"""
+              <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:10px 12px;font-weight:700;font-family:monospace;color:#1e293b">{sym}</td>
+                <td style="padding:10px 12px;font-family:monospace;color:#475569">${price:.2f}</td>
+                <td style="padding:10px 12px"><span style="background:{d_color}18;color:{d_color};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">{direction}</span></td>
+                <td style="padding:10px 12px;font-family:monospace;color:#1e293b;font-weight:700">{score:.3f}</td>
+                <td style="padding:10px 12px"><span style="color:{c_color};font-size:11px;font-weight:700">{council}</span></td>
+              </tr>"""
+
+          # ── HTML Email ───────────────────────────────────
+          html = f"""<!DOCTYPE html>
+          <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+          <body style="margin:0;padding:32px 16px;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc">
+          <div style="max-width:600px;margin:0 auto">
+
+            <!-- Header -->
+            <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:16px 16px 0 0;padding:32px;text-align:center;margin-bottom:0">
+              <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:#475569;text-transform:uppercase;margin-bottom:8px">AlphaVault Quant</div>
+              <div style="font-size:24px;font-weight:900;color:white;margin-bottom:4px">Daily Recap</div>
+              <div style="font-size:13px;color:#64748b">{WEEKDAY}, {DATE_STR} · Market Close</div>
+            </div>
+
+            <!-- Status Strip -->
+            <div style="background:#1e293b;padding:12px 32px;display:flex;gap:24px;flex-wrap:wrap;margin-bottom:0">
+              <div style="display:inline-block;margin-right:20px">
+                <span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Account</span>
+                <span style="font-size:12px;font-weight:700;color:{'#ef4444' if mode_trade=='LIVE' else '#3b82f6'};margin-left:6px">{mode_trade}</span>
+              </div>
+              <div style="display:inline-block;margin-right:20px">
+                <span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Execution</span>
+                <span style="font-size:12px;font-weight:700;color:{exec_color};margin-left:6px">{exec_m}</span>
+              </div>
+              <div style="display:inline-block;margin-right:20px">
+                <span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">LLM</span>
+                <span style="font-size:12px;font-weight:700;color:{'#10b981' if llm_ok else '#f59e0b'};margin-left:6px">{'Active' if llm_ok else 'Deterministic'}</span>
+              </div>
+              <div style="display:inline-block">
+                <span style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Halt</span>
+                <span style="font-size:12px;font-weight:700;color:{'#ef4444' if halt else '#10b981'};margin-left:6px">{'ACTIVE' if halt else 'No'}</span>
+              </div>
+            </div>
+
+            <!-- Main Content -->
+            <div style="background:white;border-radius:0 0 16px 16px;padding:32px;box-shadow:0 4px 24px rgba(0,0,0,0.06)">
+
+              <!-- KPIs -->
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px">
+                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+                  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#94a3b8;margin-bottom:6px">Portfolio</div>
+                  <div style="font-size:20px;font-weight:900;color:#1e293b;font-family:monospace">${port_val:,.0f}</div>
+                  <div style="font-size:10px;color:#94a3b8;margin-top:2px">Cash {cash_pct:.0f}% · {n_pos} pos</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+                  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#94a3b8;margin-bottom:6px">Daily P&amp;L</div>
+                  <div style="font-size:20px;font-weight:900;color:{pnl_color};font-family:monospace">{pnl_sign}{daily_pnl:.2f}%</div>
+                  <div style="font-size:10px;color:#94a3b8;margin-top:2px">Drawdown {dd_pct:.2f}%</div>
+                </div>
+                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+                  <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:#94a3b8;margin-bottom:6px">Signals</div>
+                  <div style="font-size:20px;font-weight:900;color:#1e293b;font-family:monospace">{n_sigs}</div>
+                  <div style="font-size:10px;color:#94a3b8;margin-top:2px">{buy_sigs} BUY · {sell_sigs} SELL · {exec_sigs} EXEC</div>
+                </div>
+              </div>
+
+              <!-- Regime -->
+              <div style="background:{regime_color}0a;border:1px solid {regime_color}30;border-radius:10px;padding:16px;margin-bottom:24px">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:6px">Market Regime</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                  <div style="font-size:18px;font-weight:900;color:{regime_color}">{regime_label}</div>
+                  <div style="font-size:12px;color:#64748b">
+                    Score: <strong style="color:{regime_color}">{regime_score:+.3f}</strong>
+                    &nbsp;·&nbsp;
+                    Confidence: <strong style="color:{regime_color}">{regime_conf:.0%}</strong>
+                    &nbsp;·&nbsp;
+                    Leverage: <strong style="color:#1e293b">{leverage:.2f}x</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Top Signals -->
+              <div style="margin-bottom:24px">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin-bottom:12px">Top 5 Signals</div>
+                <table style="width:100%;border-collapse:collapse;font-size:12px">
+                  <thead>
+                    <tr style="background:#f8fafc">
+                      <th style="padding:8px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700">Symbol</th>
+                      <th style="padding:8px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700">Price</th>
+                      <th style="padding:8px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700">Direction</th>
+                      <th style="padding:8px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700">Score</th>
+                      <th style="padding:8px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700">Council</th>
+                    </tr>
+                  </thead>
+                  <tbody>{sig_rows}</tbody>
+                </table>
+              </div>
+
+              <!-- Footer -->
+              <div style="border-top:1px solid #f1f5f9;padding-top:20px;text-align:center">
+                <a href="https://raph33ai.github.io/alphavault-quant/" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#8b5cf6);color:white;text-decoration:none;padding:10px 24px;border-radius:8px;font-size:13px;font-weight:700;margin-bottom:16px">Open Dashboard</a>
+                <div style="font-size:10px;color:#94a3b8;line-height:1.6">
+                  AlphaVault Quant · Automated recap · Market close 21:30 UTC<br>
+                  Data: GitHub Pages signals · Paper account: DUM895161<br>
+                  <a href="https://raph33ai.github.io/alphavault-quant/" style="color:#3b82f6;text-decoration:none">Dashboard</a>
+                  &nbsp;·&nbsp;
+                  <a href="https://github.com/Raph33AI/alphavault-quant/actions" style="color:#3b82f6;text-decoration:none">GitHub Actions</a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          </body></html>"""
+
+          send(emails, f"[AlphaVault Quant] Daily Recap — {DATE_STR}", html)
+          print(f"Daily recap sent to {len(emails)} recipients")
+          PYEOF
