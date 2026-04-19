@@ -339,6 +339,7 @@ jobs:
           FIREBASE_API_KEY:     ${{ secrets.FIREBASE_API_KEY }}
           RESEND_ALERT_EMAIL:   ${{ secrets.RESEND_ALERT_EMAIL }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TRADE_AUTO_MODE: ${{ vars.TRADE_AUTO_MODE || 'enabled' }}
         run: |
           python -m backend.orchestrator.trading_loop
         timeout-minutes: 8

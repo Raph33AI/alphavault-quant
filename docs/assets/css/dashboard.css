@@ -5462,3 +5462,37 @@ canvas.ic-spark {
   .mode-toggle-account { display: none; }
   .mode-toggle-wrap    { padding: 4px 8px; }
 }
+
+/* ── Software Section ─────────────────────────────── */
+  #exec-mode-modal { display:none }
+  #exec-mode-modal.open { display:flex !important }
+
+  #sw-exec-slider { background: #10b981; }
+  #sw-exec-slider.manual { background: #f59e0b; }
+
+  #sw-paper-live-slider { background: #3b82f6; }
+  #sw-paper-live-slider.live { background: #ef4444; }
+
+  .sw-checklist-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px; border-radius: 10px;
+    border: 1px solid var(--bord); margin-bottom: 8px;
+    background: var(--surf2);
+  }
+  .sw-checklist-item.done {
+    border-color: rgba(16,185,129,0.25);
+    background: rgba(16,185,129,0.04);
+  }
+  .sw-checklist-item.pending {
+    border-color: rgba(249,115,22,0.25);
+    background: rgba(249,115,22,0.04);
+  }
+  .sw-checklist-item.blocked {
+    border-color: rgba(239,68,68,0.2);
+    background: rgba(239,68,68,0.03);
+  }
+  .sw-ci-icon { font-size:18px; flex-shrink:0; margin-top:2px; }
+  .sw-ci-body { flex:1 }
+  .sw-ci-title { font-size:13px; font-weight:700; color:var(--txt); margin-bottom:3px }
+  .sw-ci-desc  { font-size:11px; color:var(--txt4); line-height:1.5 }
+  .sw-ci-badge { font-size:9px; padding:1px 7px; border-radius:10px; font-weight:700; }

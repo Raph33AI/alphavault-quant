@@ -1672,6 +1672,7 @@ const Terminal = (() => {
     }
 
     if (name === 'execution') _refreshExecLog();
+    if (name === 'software')  _initSoftwareSection();
 
     _renderSection(name, _state);
   }
@@ -1682,6 +1683,7 @@ const Terminal = (() => {
 
   function _renderSection(name, data) {
     switch(name) {
+      case 'software':    _renderSoftware(data);    break;
       case 'overview':    _renderOverview(data);    break;
       case 'watchlist':   _renderWatchlist(data);   break;
       case 'signals':     _renderSignals(data);     break;
@@ -3208,6 +3210,446 @@ const Terminal = (() => {
     // Expose globally pour le HTML inline onclick
     window.openQuantModal  = openQuantModal;
     window.closeQuantModal = closeQuantModal;
+
+    // ════════════════════════════════════════════════════════
+    // SECTION: SOFTWARE — Architecture & Execution Mode
+    // ════════════════════════════════════════════════════════
+
+    const AGENTS_LIST = [
+      { name:'MultiAgent Council',      module:'multi_agent_council',       role:'Central vote & final decision',      weight:'—',    icon:'fa-gavel',             color:'#3b82f6' },
+      { name:'Drawdown Guardian',       module:'drawdown_guardian',         role:'Circuit breaker — risk halt',        weight:'0.20', icon:'fa-shield',             color:'#ef4444' },
+      { name:'Regime Model',            module:'regime_model',              role:'8 market regimes + HMM',             weight:'0.15', icon:'fa-crosshairs',         color:'#8b5cf6' },
+      { name:'Signal Model',            module:'signal_model',              role:'XGBoost + LightGBM + LogReg',        weight:'0.15', icon:'fa-brain',              color:'#06b6d4' },
+      { name:'Execution Timing',        module:'execution_timing',          role:'Optimal order timing',               weight:'0.10', icon:'fa-bolt',               color:'#f59e0b' },
+      { name:'Risk Manager',            module:'risk_manager',              role:'Kelly + VaR + CVaR',                 weight:'0.10', icon:'fa-scale-balanced',     color:'#10b981' },
+      { name:'Correlation Surface',     module:'correlation_surface',       role:'HRP + cluster analysis',             weight:'0.08', icon:'fa-network-wired',      color:'#6366f1' },
+      { name:'Strategy Switching',      module:'strategy_switching',        role:'Anti-whipsaw protection',            weight:'0.08', icon:'fa-rotate',             color:'#84cc16' },
+      { name:'Market Impact',           module:'market_impact',             role:'Almgren-Chriss model',               weight:'0.07', icon:'fa-droplet',            color:'#f97316' },
+      { name:'Capital Rotation',        module:'capital_rotation',          role:'Sector rotation optimizer',          weight:'0.07', icon:'fa-arrows-rotate',      color:'#ec4899' },
+      { name:'Feature Drift',           module:'feature_drift',             role:'PSI + KS drift detection',           weight:'—',    icon:'fa-chart-area',         color:'#94a3b8' },
+      { name:'Self Evaluation',         module:'self_evaluation',           role:'Sharpe/Calmar auto-assessment',      weight:'—',    icon:'fa-user-check',         color:'#a78bfa' },
+      { name:'Strategy Discovery',      module:'strategy_discovery',        role:'Alpha hunting — new patterns',       weight:'—',    icon:'fa-magnifying-glass',   color:'#34d399' },
+    ];
+
+    const SETUP_CHECKLIST = [
+      { id:'ibeam_key',   label:'IBEAM_KEY (TOTP Base32)',    status:'pending', priority:'#1 TOP PRIORITY',
+        desc:'Received from IBKR support → activate in env.paper.list → docker restart ibeam → connected=true → real orders',
+        icon:'🔑', link: null },
+      { id:'groq',        label:'GROQ_API_KEY',               status:'done',    priority:'✅ Done',
+        desc:'LLM fallback configured (llama3-8b-8192, 14,400 tok/min free). Add in Oracle .env + GitHub Secrets + trading-loop.yml',
+        icon:'🤖', link: null },
+      { id:'ollama',      label:'Ollama Local (phi3:mini)',    status:'pending', priority:'#3 Pending',
+        desc:'sudo snap install ollama → ollama pull phi3:mini → LLM fallback 3 active',
+        icon:'🦙', link: null },
+      { id:'ml_train',    label:'ML Model Training',          status:'blocked', priority:'#4 Not trained',
+        desc:'Actions → Daily Model Training → force_full_retrain → ~30 min → improves signal quality significantly',
+        icon:'🧠', link: 'https://github.com/Raph33AI/alphavault-quant/actions' },
+      { id:'oracle_ssh',  label:'ORACLE_SSH_KEY (GitHub Secret)', status:'done', priority:'✅ Done',
+        desc:'Required for switch-mode.yml and switch-execution-mode.yml SSH steps',
+        icon:'🔐', link: null },
+      { id:'dry_run',     label:'DRY_RUN=false (Live orders)', status:'blocked', priority:'#6 After IBEAM_KEY',
+        desc:'Only activate after IBEAM_KEY confirmed + paper validation period completed',
+        icon:'⚠', link: null },
+      { id:'arm_a1',      label:'Oracle ARM A1 (4 OCPU/24GB)', status:'blocked', priority:'#7 Region saturated',
+        desc:'Skip or change home region — current AMD Micro handles 550+ symbols with optimized settings',
+        icon:'💻', link: null },
+      { id:'postgresql',  label:'PostgreSQL (trade history)',  status:'blocked', priority:'#8 After ARM A1',
+        desc:'Real P&L tracking, trade history, performance analytics — depends on ARM A1 migration',
+        icon:'🗄', link: null },
+    ];
+
+    let _execModeState = { mode: 'auto', pending: false };
+
+    // ── Init software section ──────────────────────────────
+    async function _initSoftwareSection() {
+      await _loadExecutionModeStatus();
+      _bindExecutionModeToggle();
+      _bindPaperLiveToggle();
+      _renderAgentGrid();
+      _renderChecklist();
+    }
+
+    // ── Load current execution mode from GitHub Pages JSON ──
+    async function _loadExecutionModeStatus() {
+      try {
+        const url  = `https://raph33ai.github.io/alphavault-quant/signals/execution_mode.json?t=${Date.now()}`;
+        const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) {
+          const d = await resp.json();
+          _execModeState.mode = d.execution_mode || 'auto';
+          _updateExecModeUI(_execModeState.mode);
+          const updEl = document.getElementById('sw-exec-mode-badge');
+          if (updEl && d.updated_at) {
+            updEl.innerHTML = `<i class="fa-solid fa-clock"></i> Last switch: ${_fmtTime(d.updated_at)}`;
+          }
+        }
+      } catch(e) {
+        // Default to auto if not found
+        _updateExecModeUI('auto');
+      }
+    }
+
+    // ── Update all execution mode UI elements ──────────────
+    function _updateExecModeUI(mode) {
+      const isManual   = mode === 'manual';
+      const color      = isManual ? '#f59e0b' : '#10b981';
+      const label      = isManual ? '✋ MANUAL' : '🤖 AUTO';
+      const sublabel   = isManual
+        ? 'Orders blocked — analysis only'
+        : 'All 13 agents active — orders transmitted';
+
+      _txt('sw-exec-mode-label',   label);
+      _txt('sw-exec-mode-sublabel',sublabel);
+      _txt('sw-exec-mode-val',     label);
+      _txt('sw-exec-mode-badge',   label, true);
+
+      const badge = document.getElementById('sw-exec-badge');
+      if (badge) {
+        badge.textContent    = mode.toUpperCase();
+        badge.style.background = `${color}18`;
+        badge.style.color      = color;
+        badge.style.border     = `1px solid ${color}40`;
+      }
+
+      const topBar = document.getElementById('sw-exec-top-bar');
+      if (topBar) {
+        topBar.style.background = isManual
+          ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
+          : 'linear-gradient(90deg,#10b981,#06b6d4)';
+      }
+
+      const labelEl = document.getElementById('sw-exec-mode-label');
+      if (labelEl) labelEl.style.color = color;
+
+      const slider = document.getElementById('sw-exec-slider');
+      const knob   = document.getElementById('sw-exec-knob');
+      const toggle = document.getElementById('sw-exec-mode-toggle');
+      if (slider) { slider.style.background = color; slider.className = isManual ? 'manual' : ''; }
+      if (knob)   knob.style.transform = isManual ? 'translateX(26px)' : 'translateX(0)';
+      if (toggle) toggle.checked = isManual;
+
+      // Highlight active mode card
+      const autoDesc   = document.getElementById('sw-auto-desc');
+      const manualDesc = document.getElementById('sw-manual-desc');
+      if (autoDesc) {
+        autoDesc.style.opacity = isManual ? '0.5' : '1';
+        autoDesc.style.borderColor = isManual ? 'var(--bord)' : 'rgba(16,185,129,0.4)';
+      }
+      if (manualDesc) {
+        manualDesc.style.opacity = isManual ? '1' : '0.5';
+        manualDesc.style.borderColor = isManual ? 'rgba(249,115,22,0.4)' : 'var(--bord)';
+      }
+
+      // KPI badge global
+      const modeBadge = document.getElementById('sw-exec-mode-badge');
+      if (modeBadge) {
+        modeBadge.style.background = `${color}15`;
+        modeBadge.style.color      = color;
+        modeBadge.style.border     = `1px solid ${color}30`;
+      }
+
+      _execModeState.mode = mode;
+    }
+
+    // ── Bind execution mode toggle ─────────────────────────
+    function _bindExecutionModeToggle() {
+      const toggle = document.getElementById('sw-exec-mode-toggle');
+      if (!toggle || toggle.dataset.bound) return;
+      toggle.dataset.bound = '1';
+
+      toggle.addEventListener('change', (e) => {
+        e.preventDefault();
+        // Revert immediately — modal will confirm or cancel
+        toggle.checked = _execModeState.mode === 'manual';
+        _openExecModeModal(_execModeState.mode === 'auto' ? 'manual' : 'auto');
+      });
+
+      // Expose globally for HTML onclick
+      window._swExecModalCancel = _closeExecModeModal;
+      window._swExecModalConfirm = _confirmExecModeSwitch;
+    }
+
+    // ── Open execution mode confirmation modal ─────────────
+    function _openExecModeModal(targetMode) {
+      if (_execModeState.pending) return;
+
+      const modal    = document.getElementById('exec-mode-modal');
+      const iconEl   = document.getElementById('exec-modal-icon');
+      const titleEl  = document.getElementById('exec-modal-title');
+      const descEl   = document.getElementById('exec-modal-desc');
+      const warnEl   = document.getElementById('exec-modal-warning');
+      const inputEl  = document.getElementById('exec-modal-input');
+      const wordEl   = document.getElementById('exec-modal-confirm-word');
+      const confirmBtn = document.getElementById('exec-modal-confirm-btn');
+
+      if (!modal) return;
+
+      const isManual  = targetMode === 'manual';
+      const word      = targetMode.toUpperCase();
+      const color     = isManual ? '#f59e0b' : '#10b981';
+
+      if (iconEl)  iconEl.textContent = isManual ? '✋' : '🤖';
+      if (titleEl) titleEl.textContent = isManual ? 'Switch to MANUAL Mode' : 'Switch to AUTO Mode';
+      if (descEl)  descEl.innerHTML = isManual
+        ? `All automated order transmission will be <strong>immediately blocked</strong>.<br>
+          Agents continue analyzing but NO orders will be placed.<br>
+          You can place manual orders via the Trading Terminal.`
+        : `Automated trading will be <strong>fully re-enabled</strong>.<br>
+          All 13 agents will transmit orders every 5 minutes during market hours.<br>
+          Ensure DRY_RUN settings are correct before proceeding.`;
+
+      if (warnEl) {
+        warnEl.style.borderColor  = `${color}40`;
+        warnEl.style.background   = `${color}08`;
+        warnEl.querySelector('div').style.color = color;
+      }
+      if (wordEl)   { wordEl.textContent = word; wordEl.style.color = color; }
+      if (inputEl)  {
+        inputEl.value = '';
+        inputEl.placeholder = `Type "${word}" to confirm`;
+        inputEl.style.borderColor = 'var(--bord)';
+      }
+      if (confirmBtn) {
+        confirmBtn.style.opacity = '0.4';
+        confirmBtn.disabled = true;
+        confirmBtn.style.background = color;
+        confirmBtn.dataset.target = targetMode;
+      }
+
+      modal.style.display = 'flex';
+      inputEl?.focus();
+
+      // Validate input as user types
+      inputEl?.addEventListener('input', () => {
+        const match = inputEl.value.trim().toUpperCase() === word;
+        if (confirmBtn) {
+          confirmBtn.disabled  = !match;
+          confirmBtn.style.opacity = match ? '1' : '0.4';
+        }
+        inputEl.style.borderColor = inputEl.value.length
+          ? (match ? color : '#ef4444')
+          : 'var(--bord)';
+      });
+
+      // ESC to close
+      document.addEventListener('keydown', _execModalEsc);
+    }
+
+    function _execModalEsc(e) {
+      if (e.key === 'Escape') _closeExecModeModal();
+    }
+
+    function _closeExecModeModal() {
+      const modal = document.getElementById('exec-mode-modal');
+      if (modal) modal.style.display = 'none';
+      document.removeEventListener('keydown', _execModalEsc);
+    }
+
+    async function _confirmExecModeSwitch() {
+      const confirmBtn = document.getElementById('exec-modal-confirm-btn');
+      const statusEl   = document.getElementById('exec-modal-status');
+      const targetMode = confirmBtn?.dataset.target || 'auto';
+
+      if (_execModeState.pending) return;
+      _execModeState.pending = true;
+
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Switching...';
+      }
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent   = '⏳ Dispatching to GitHub Actions (~1 min)...';
+      }
+
+      try {
+        const resp = await fetch(`${WORKER_URL}/switch-execution-mode`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ mode: targetMode }),
+          signal:  AbortSignal.timeout(15000),
+        });
+
+        const result = await resp.json().catch(() => ({}));
+
+        if (resp.ok && result.success) {
+          if (statusEl) statusEl.textContent = '✅ Switch triggered — updating in ~1 minute...';
+
+          // Optimistic UI update
+          _updateExecModeUI(targetMode);
+          _showToast(
+            `Execution mode → ${targetMode.toUpperCase()} | GitHub Actions triggered`,
+            'success', 5000
+          );
+
+          // Close modal after 1.5s
+          setTimeout(_closeExecModeModal, 1500);
+
+          // Refresh after 75s to confirm
+          setTimeout(async () => {
+            await _loadExecutionModeStatus();
+            _showToast('Execution mode status refreshed', 'info', 2000);
+          }, 75000);
+
+        } else {
+          const errMsg = result.error || `HTTP ${resp.status}`;
+          if (statusEl) statusEl.textContent = `❌ Error: ${errMsg}`;
+          _showToast(`Switch failed: ${errMsg}`, 'error');
+          if (confirmBtn) {
+            confirmBtn.disabled  = false;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm Switch';
+          }
+        }
+
+      } catch(err) {
+        if (statusEl) statusEl.textContent = `❌ Network error: ${err.message}`;
+        _showToast(`Network error: ${err.message}`, 'error');
+        if (confirmBtn) {
+          confirmBtn.disabled  = false;
+          confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm Switch';
+        }
+      } finally {
+        _execModeState.pending = false;
+      }
+    }
+
+    // ── Bind Paper/Live toggle on software page ────────────
+    function _bindPaperLiveToggle() {
+      const toggle = document.getElementById('sw-paper-live-toggle');
+      if (!toggle || toggle.dataset.bound) return;
+      toggle.dataset.bound = '1';
+
+      // Sync with current mode from ibkr_status.json
+      const ibkrStatus = _state.ibkr || {};
+      const isLive = ibkrStatus.trading_mode === 'live';
+      _updatePaperLiveUI(isLive ? 'live' : 'paper');
+
+      toggle.addEventListener('change', () => {
+        const targetMode = toggle.checked ? 'live' : 'paper';
+        toggle.checked = !toggle.checked; // revert — existing trading-mode.js handles the modal
+        // Delegate to existing trading-mode.js if available
+        if (window.TradingMode && window.TradingMode.requestSwitch) {
+          window.TradingMode.requestSwitch(targetMode);
+        } else {
+          // Fallback: direct dispatch via Worker
+          _showToast('Use the Paper/Live toggle in the topbar or ensure trading-mode.js is loaded', 'warn', 4000);
+        }
+      });
+    }
+
+    function _updatePaperLiveUI(mode) {
+      const isLive    = mode === 'live';
+      const color     = isLive ? '#ef4444' : '#3b82f6';
+      const account   = isLive ? 'U21160314' : 'DUM895161';
+      const label     = isLive ? '🔴 LIVE' : '🔵 PAPER';
+
+      _txt('sw-current-account',  account);
+      _txt('sw-trading-mode-val', label);
+      _txt('sw-paper-live-badge', mode.toUpperCase());
+
+      const badge = document.getElementById('sw-paper-live-badge');
+      if (badge) {
+        badge.style.background   = `${color}15`;
+        badge.style.color        = color;
+        badge.style.border       = `1px solid ${color}30`;
+      }
+
+      const slider = document.getElementById('sw-paper-live-slider');
+      const knob   = document.getElementById('sw-paper-live-knob');
+      const toggle = document.getElementById('sw-paper-live-toggle');
+      if (slider) { slider.style.background = color; }
+      if (knob)   knob.style.transform = isLive ? 'translateX(26px)' : 'translateX(0)';
+      if (toggle) toggle.checked = isLive;
+    }
+
+    // ── Render 13 agents grid ──────────────────────────────
+    function _renderAgentGrid() {
+      const grid = document.getElementById('sw-agents-grid');
+      if (!grid) return;
+
+      grid.parentElement.innerHTML = AGENTS_LIST.map(a => `
+        <div style="padding:10px 12px;background:var(--surf2);border:1.5px solid var(--bord);
+                    border-left:3px solid ${a.color};border-radius:10px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+            <i class="fa-solid ${a.icon}" style="color:${a.color};font-size:13px;flex-shrink:0"></i>
+            <span style="font-size:11px;font-weight:800;color:var(--txt)">${a.name}</span>
+            ${a.weight !== '—' ? `<span style="margin-left:auto;font-size:9px;background:${a.color}20;color:${a.color};padding:1px 6px;border-radius:8px;font-weight:700">${a.weight}</span>` : ''}
+          </div>
+          <div style="font-size:9px;color:var(--txt4);padding-left:20px">${a.role}</div>
+        </div>`
+      ).join('');
+    }
+
+    // ── Render setup checklist ─────────────────────────────
+    function _renderChecklist() {
+      const el = document.getElementById('sw-checklist');
+      if (!el) return;
+
+      const done    = SETUP_CHECKLIST.filter(i => i.status === 'done').length;
+      const total   = SETUP_CHECKLIST.length;
+      const countEl = document.getElementById('sw-todo-count');
+      if (countEl) countEl.textContent = `${done}/${total} complete`;
+
+      el.innerHTML = SETUP_CHECKLIST.map(item => {
+        const cls   = item.status === 'done' ? 'done' : item.status === 'pending' ? 'pending' : 'blocked';
+        const icon  = item.status === 'done'
+          ? '<i class="fa-solid fa-circle-check" style="color:#10b981;font-size:18px"></i>'
+          : item.status === 'pending'
+            ? '<i class="fa-solid fa-circle-exclamation" style="color:#f97316;font-size:18px"></i>'
+            : '<i class="fa-solid fa-clock" style="color:#94a3b8;font-size:18px"></i>';
+
+        const priorityColor = item.status === 'done' ? '#10b981'
+          : item.status === 'pending' ? '#f97316' : '#94a3b8';
+
+        return `<div class="sw-checklist-item ${cls}">
+          <div class="sw-ci-icon">${icon}</div>
+          <div class="sw-ci-body">
+            <div class="sw-ci-title">
+              ${item.icon} ${item.label}
+              <span class="sw-ci-badge" style="margin-left:8px;background:${priorityColor}15;color:${priorityColor}">
+                ${item.priority}
+              </span>
+            </div>
+            <div class="sw-ci-desc">${item.desc}</div>
+            ${item.link ? `<a href="${item.link}" target="_blank"
+              style="font-size:10px;color:var(--b1);margin-top:4px;display:inline-block">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> View on GitHub Actions
+            </a>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Main render for software section ──────────────────
+    function _renderSoftware(data) {
+      const status   = data.status   || {};
+      const ibkr     = data.ibkr     || {};
+      const port     = data.portfolio|| {};
+
+      // Oracle status (inferred from ibkr_status.json)
+      const oracleOk = ibkr.vm_ip === '141.253.96.130';
+      _txt('sw-oracle-status',
+        oracleOk
+          ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
+          : '<i class="fa-solid fa-circle" style="color:var(--y)"></i> Unknown',
+        true
+      );
+
+      // IBeam status
+      _txt('sw-ibeam-status',
+        ibkr.ibkr_connected
+          ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Connected'
+          : '<i class="fa-solid fa-plug" style="color:var(--y)"></i> No IBEAM_KEY',
+        true
+      );
+
+      // Last ML cycle
+      _txt('sw-last-cycle', status.timestamp ? _fmtTime(status.timestamp) : '--');
+
+      // Trading mode
+      const isLive = ibkr.trading_mode === 'live';
+      _updatePaperLiveUI(isLive ? 'live' : 'paper');
+    }
 
   // ════════════════════════════════════════════════════════
   // SIDEBAR TOGGLE

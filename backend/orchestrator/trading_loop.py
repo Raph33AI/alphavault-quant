@@ -413,18 +413,49 @@ def main():
         sys.exit(1)
 
     # ── 6. Bridge ML → ibkr_watcher ✅ FIX CRITIQUE ──────
-    try:
-        n_orders = push_execute_orders_to_watcher(output, settings)
-        if n_orders > 0:
-            logger.info(
-                f"🎯 {n_orders} ordres transmis au watcher Oracle "
-                f"(dry_run={settings.DRY_RUN})"
-            )
-        else:
-            logger.info("📭 Aucun ordre à transmettre ce cycle")
-    except Exception as e:
-        logger.error(f"[Bridge] Erreur transmission ordres: {e}")
-        # Non bloquant — le pipeline continue
+    trade_auto_mode = os.environ.get("TRADE_AUTO_MODE", "enabled").lower().strip()
+
+    if trade_auto_mode == "disabled":
+        logger.info("✋ MANUAL MODE ACTIVE — Automated order transmission DISABLED")
+        logger.info("  → All 13 agents analyzed the market this cycle")
+        logger.info("  → Signals generated but NO orders transmitted to Oracle Watcher")
+        logger.info("  → Switch back to AUTO from dashboard to re-enable")
+        logger.info(f"  → TRADE_AUTO_MODE={trade_auto_mode} (from GitHub Variable)")
+        n_orders = 0
+
+        # Écrit un fichier de status pour le dashboard
+        manual_status = {
+            "timestamp":      datetime.datetime.utcnow().isoformat() + "Z",
+            "execution_mode": "manual",
+            "trade_auto":     False,
+            "message":        "Manual mode — orders blocked this cycle",
+            "signals_generated": len(output.get("current_signals", {}).get("signals", {})),
+            "run_id":         os.environ.get("GITHUB_RUN_NUMBER", "local"),
+        }
+        try:
+            manual_path = _ROOT_DIR / "docs" / "signals" / "execution_mode.json"
+            if manual_path.exists():
+                existing = json.loads(manual_path.read_text())
+                existing["last_blocked_cycle"] = manual_status["timestamp"]
+                existing["signals_this_cycle"]  = manual_status["signals_generated"]
+                manual_path.write_text(json.dumps(existing, indent=2))
+        except Exception:
+            pass
+
+    else:
+        try:
+            n_orders = push_execute_orders_to_watcher(output, settings)
+            if n_orders > 0:
+                logger.info(
+                    f"🎯 {n_orders} ordres transmis au watcher Oracle "
+                    f"(dry_run={settings.DRY_RUN})"
+                )
+            else:
+                logger.info("📭 Aucun ordre à transmettre ce cycle")
+        except Exception as e:
+            logger.error(f"[Bridge] Erreur transmission ordres: {e}")
+            # Non bloquant — le pipeline continue
+            n_orders = 0
 
     # ── 7. Performance Tracker ────────────────────────────
     perf_metrics = {}
