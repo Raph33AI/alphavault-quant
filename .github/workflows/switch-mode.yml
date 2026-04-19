@@ -37,11 +37,11 @@ jobs:
           fi
           echo "✅ Mode validé: ${{ inputs.mode }}"
 
-      # ── 2. SSH → Oracle VM → Switch ─────────────────────
+      # ── 2. SSH → Oracle A1 → Switch ─────────────────────
       - name: SSH into Oracle VM and switch
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host:            141.253.96.130
+          host:            ${{ secrets.IBKR_HOST }}
           username:        ubuntu
           key:             ${{ secrets.ORACLE_SSH_KEY }}
           port:            22
@@ -150,7 +150,7 @@ jobs:
               orders_executed: 0,
               switch_time:     $now,
               last_check:      $now,
-              vm_ip:           "141.253.96.130",
+              vm_ip:           "141.253.101.68",
               switched_by:     "dashboard_toggle"
             }' > docs/signals/ibkr_status.json
 
