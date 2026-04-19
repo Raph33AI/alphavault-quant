@@ -1355,7 +1355,21 @@ const Terminal = (() => {
   // TOPBAR UPDATES
   // ════════════════════════════════════════════════════════
   function _updateTopbar(data) {
-    const status = data.status || {};
+    const rawStatus = data.status || {};
+
+    // ── Normalisation défensive ────────────────────────────────
+    // Le backend Python peut générer deux structures selon la version :
+    //   v1 : { workers:{finance_hub,ai_proxy,...}, mode, session, dry_run }
+    //   v2 : { checks:{...} }  ← structure transitoire sans mode/session/dry_run
+    // On normalise pour que tout le code downstream fonctionne sans modification.
+    const status = {
+      ...rawStatus,
+      workers: rawStatus.workers  ?? rawStatus.checks ?? {},
+      mode:    rawStatus.mode     ?? 'deterministic',
+      session: rawStatus.session  ?? 'closed',
+      dry_run: rawStatus.dry_run  ?? false,
+    };
+
     const regime = data.regime?.global || {};
     const rl     = regime.regime_label || 'initializing';
 
