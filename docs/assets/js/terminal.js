@@ -1358,10 +1358,6 @@ const Terminal = (() => {
     const rawStatus = data.status || {};
 
     // ── Normalisation défensive ────────────────────────────────
-    // Le backend Python peut générer deux structures selon la version :
-    //   v1 : { workers:{finance_hub,ai_proxy,...}, mode, session, dry_run }
-    //   v2 : { checks:{...} }  ← structure transitoire sans mode/session/dry_run
-    // On normalise pour que tout le code downstream fonctionne sans modification.
     const status = {
       ...rawStatus,
       workers: rawStatus.workers  ?? rawStatus.checks ?? {},
@@ -1369,6 +1365,15 @@ const Terminal = (() => {
       session: rawStatus.session  ?? 'closed',
       dry_run: rawStatus.dry_run  ?? false,
     };
+
+    // ── Override overall : ignore les workers non utilisés ────
+    const _criticalOk = ['finance_hub', 'ai_proxy'].every(key => {
+      const w = status.workers?.[key];
+      return w === true || w?.ok === true;
+    });
+    if (status.overall === 'degraded' && _criticalOk) {
+      status.overall = 'healthy';
+    }
 
     const regime = data.regime?.global || {};
     const rl     = regime.regime_label || 'initializing';
@@ -1391,7 +1396,8 @@ const Terminal = (() => {
     }
 
     // Hub
-    const hubOk = !!(status.workers?.finance_hub);
+    const hubOk = status.workers?.finance_hub === true
+           || status.workers?.finance_hub?.ok === true;
     console.log(
         `%c HUB: ${hubOk ? 'ONLINE' : 'OFFLINE'} → dot ${hubOk ? 'GREEN' : 'ORANGE'}`,
         `color:${hubOk ? '#10b981' : '#f59e0b'};font-weight:bold`
@@ -1404,7 +1410,7 @@ const Terminal = (() => {
     // IBKR
     console.log('%c IBKR: ALWAYS ORANGE in cloud (expected)', 'color:#f59e0b;font-weight:bold');
     console.log('%c → GitHub Actions ne peut pas atteindre TWS Gateway (firewall). Normal en paper mode cloud.', 'color:#94a3b8');
-    console.log('%c → L\'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=', status.dry_run, 'color:#94a3b8');
+    console.log(`%c → L'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=${status.dry_run}`, 'color:#94a3b8');
 
     // SYS
     const overall = status.overall;
@@ -1778,9 +1784,11 @@ const Terminal = (() => {
     _txt('hg-ibkr', status.dry_run === false
     ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Live Paper'
     : '<i class="fa-solid fa-flask"></i> Paper Simulation', true);
-    _txt('hg-hub',  status.workers?.finance_hub
-    ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
-    : '<i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i> Offline', true);
+    const _hubOnline = status.workers?.finance_hub === true
+                || status.workers?.finance_hub?.ok === true;
+    _txt('hg-hub', _hubOnline
+      ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
+      : '<i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i> Offline', true);
 
     const ts = data.signals?.timestamp;
     _txt('hg-last', ts ? _fmtTime(ts) : '--');
