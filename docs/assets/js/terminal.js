@@ -3269,23 +3269,46 @@ const Terminal = (() => {
       _renderChecklist();
     }
 
-    // ── Load current execution mode from GitHub Pages JSON ──
-    async function _loadExecutionModeStatus() {
+    // ── Load current execution mode — localStorage + GitHub Pages ──
+  async function _loadExecutionModeStatus() {
+
+      // ✅ FIX BUG 2 & 3 — Restauration immédiate depuis localStorage
+      // Évite le flash "AUTO" sur chaque refresh même si on était en MANUAL
+      const cached = localStorage.getItem('av_exec_mode');
+      if (cached && ['auto', 'manual'].includes(cached)) {
+        _execModeState.mode = cached;
+        _updateExecModeUI(cached);
+      }
+
+      // Puis vérification réseau (GitHub Pages JSON)
       try {
         const url  = `https://raph33ai.github.io/alphavault-quant/signals/execution_mode.json?t=${Date.now()}`;
         const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+
         if (resp.ok) {
-          const d = await resp.json();
-          _execModeState.mode = d.execution_mode || 'auto';
-          _updateExecModeUI(_execModeState.mode);
+          const d    = await resp.json();
+          const mode = d.execution_mode || 'auto';
+          _execModeState.mode = mode;
+          localStorage.setItem('av_exec_mode', mode);  // persist
+          _updateExecModeUI(mode);
+
           const updEl = document.getElementById('sw-exec-mode-badge');
           if (updEl && d.updated_at) {
             updEl.innerHTML = `<i class="fa-solid fa-clock"></i> Last switch: ${_fmtTime(d.updated_at)}`;
           }
+          return;
         }
+
+        // 404 = fichier pas encore créé → garde le localStorage ou auto
+        if (resp.status === 404) {
+          console.info('[Software] execution_mode.json not yet created — using localStorage or default auto');
+          if (!cached) _updateExecModeUI('auto');
+          return;
+        }
+
       } catch(e) {
-        // Default to auto if not found
-        _updateExecModeUI('auto');
+        console.warn('[Software] execution_mode.json fetch failed:', e.message);
+        if (!cached) _updateExecModeUI('auto');
       }
     }
 
@@ -3420,16 +3443,23 @@ const Terminal = (() => {
       inputEl?.focus();
 
       // Validate input as user types
-      inputEl?.addEventListener('input', () => {
+      // ✅ FIX BUG 1 — Nettoyer l'ancien listener avant d'en ajouter un nouveau
+      // Sans ça, après chaque ouverture du modal un listener s'accumule
+      // et l'ancien cherche encore "MANUAL" quand on ouvre pour "AUTO"
+      if (inputEl._execHandler) {
+        inputEl.removeEventListener('input', inputEl._execHandler);
+      }
+      inputEl._execHandler = () => {
         const match = inputEl.value.trim().toUpperCase() === word;
         if (confirmBtn) {
-          confirmBtn.disabled  = !match;
+          confirmBtn.disabled      = !match;
           confirmBtn.style.opacity = match ? '1' : '0.4';
         }
         inputEl.style.borderColor = inputEl.value.length
           ? (match ? color : '#ef4444')
           : 'var(--bord)';
-      });
+      };
+      inputEl.addEventListener('input', inputEl._execHandler);
 
       // ESC to close
       document.addEventListener('keydown', _execModalEsc);
@@ -3475,6 +3505,9 @@ const Terminal = (() => {
         if (resp.ok && result.success) {
           if (statusEl) statusEl.textContent = '✅ Switch triggered — updating in ~1 minute...';
 
+          // ✅ FIX BUG 3 — Persist immédiatement → résiste au refresh
+          localStorage.setItem('av_exec_mode', targetMode);
+
           // Optimistic UI update
           _updateExecModeUI(targetMode);
           _showToast(
@@ -3519,22 +3552,220 @@ const Terminal = (() => {
       if (!toggle || toggle.dataset.bound) return;
       toggle.dataset.bound = '1';
 
-      // Sync with current mode from ibkr_status.json
-      const ibkrStatus = _state.ibkr || {};
-      const isLive = ibkrStatus.trading_mode === 'live';
-      _updatePaperLiveUI(isLive ? 'live' : 'paper');
+      // Sync état initial depuis localStorage ou ibkr_status
+      const cachedMode = localStorage.getItem('av_trading_mode') || 'paper';
+      _updatePaperLiveUI(cachedMode);
+
+      // Aussi vérifier ibkr_status.json pour l'état réel
+      _loadPaperLiveModeStatus();
 
       toggle.addEventListener('change', () => {
         const targetMode = toggle.checked ? 'live' : 'paper';
-        toggle.checked = !toggle.checked; // revert — existing trading-mode.js handles the modal
-        // Delegate to existing trading-mode.js if available
-        if (window.TradingMode && window.TradingMode.requestSwitch) {
-          window.TradingMode.requestSwitch(targetMode);
-        } else {
-          // Fallback: direct dispatch via Worker
-          _showToast('Use the Paper/Live toggle in the topbar or ensure trading-mode.js is loaded', 'warn', 4000);
-        }
+        // Revert immédiatement — le modal confirme ou annule
+        toggle.checked = (localStorage.getItem('av_trading_mode') || 'paper') === 'live';
+        _openPaperLiveModal(targetMode);
       });
+
+      // Expose globally pour onclick HTML
+      window._plmCancel  = _closePaperLiveModal;
+      window._plmConfirm = _confirmPaperLiveSwitch;
+    }
+
+    // ── Load Paper/Live mode from GitHub Pages ─────────────
+    async function _loadPaperLiveModeStatus() {
+      try {
+        const url  = `https://raph33ai.github.io/alphavault-quant/signals/ibkr_status.json?t=${Date.now()}`;
+        const resp = await fetch(url, { signal: AbortSignal.timeout(5000) });
+        if (resp.ok) {
+          const d    = await resp.json();
+          const mode = d.trading_mode || 'paper';
+          localStorage.setItem('av_trading_mode', mode);
+          _updatePaperLiveUI(mode);
+        }
+      } catch(e) {
+        console.warn('[Software] ibkr_status.json fetch failed:', e.message);
+      }
+    }
+
+    // ── Open Paper/Live confirmation modal ─────────────────
+    let _plmPending = false;
+
+    function _openPaperLiveModal(targetMode) {
+      if (_plmPending) return;
+
+      const modal      = document.getElementById('paper-live-modal');
+      const iconEl     = document.getElementById('plm-icon');
+      const titleEl    = document.getElementById('plm-title');
+      const descEl     = document.getElementById('plm-desc');
+      const warnEl     = document.getElementById('plm-warning');
+      const warnTxtEl  = document.getElementById('plm-warning-text');
+      const wordEl     = document.getElementById('plm-confirm-word');
+      const inputEl    = document.getElementById('plm-input');
+      const confirmBtn = document.getElementById('plm-confirm-btn');
+      const statusEl   = document.getElementById('plm-status');
+      if (!modal) return;
+
+      const isLive = targetMode === 'live';
+      const word   = isLive ? 'LIVE' : '';
+      const color  = isLive ? '#ef4444' : '#3b82f6';
+
+      if (iconEl)  iconEl.textContent = isLive ? '⚠' : '🔵';
+      if (titleEl) titleEl.textContent = isLive
+        ? 'Switch to LIVE Trading'
+        : 'Switch to PAPER Trading';
+      if (descEl)  descEl.innerHTML = isLive
+        ? `You are switching to <strong style="color:#ef4444">LIVE Trading with real money</strong>.<br>
+          IBeam will restart and connect to account <strong>U21160314</strong> (raphnardone).<br>
+          Ensure IBEAM_KEY is configured and paper validation is complete.`
+        : `You are switching back to <strong style="color:#3b82f6">Paper Trading</strong> (simulation).<br>
+          IBeam will restart and connect to account <strong>DUM895161</strong> (vtsdxs036).<br>
+          No real money at risk.`;
+
+      if (warnEl) {
+        warnEl.style.borderColor = `${color}40`;
+        warnEl.style.background  = `${color}08`;
+        const div = warnEl.querySelector('div');
+        if (div) div.style.color = color;
+      }
+
+      if (statusEl) { statusEl.style.display = 'none'; statusEl.textContent = ''; }
+
+      // LIVE → requiert de taper "LIVE" | PAPER → confirmation simple
+      const inputWrap = inputEl?.parentElement;
+      if (isLive) {
+        if (inputEl)  { inputEl.style.display = ''; inputEl.value = ''; inputEl.placeholder = 'Type "LIVE" to confirm'; }
+        if (wordEl)   { wordEl.textContent = 'LIVE'; wordEl.style.color = color; }
+        if (warnTxtEl) warnTxtEl.innerHTML = `Type <strong id="plm-confirm-word" style="color:var(--txt);font-family:var(--mono)">LIVE</strong> below to confirm.`;
+        if (confirmBtn) {
+          confirmBtn.style.opacity  = '0.4';
+          confirmBtn.disabled       = true;
+          confirmBtn.style.background = color;
+        }
+      } else {
+        if (inputEl)  { inputEl.style.display = 'none'; inputEl.value = ''; }
+        if (warnTxtEl) warnTxtEl.innerHTML = 'Click "Confirm Switch" to switch back to Paper Trading.';
+        if (confirmBtn) {
+          confirmBtn.style.opacity  = '1';
+          confirmBtn.disabled       = false;
+          confirmBtn.style.background = color;
+        }
+      }
+
+      confirmBtn.dataset.target = targetMode;
+
+      // ✅ Nettoyer ancien listener input avant d'en ajouter un nouveau
+      if (inputEl._plmHandler) {
+        inputEl.removeEventListener('input', inputEl._plmHandler);
+      }
+      if (isLive) {
+        inputEl._plmHandler = () => {
+          const match = inputEl.value.trim().toUpperCase() === 'LIVE';
+          if (confirmBtn) {
+            confirmBtn.disabled      = !match;
+            confirmBtn.style.opacity = match ? '1' : '0.4';
+          }
+          inputEl.style.borderColor = inputEl.value.length
+            ? (match ? color : '#ef4444') : 'var(--bord)';
+        };
+        inputEl.addEventListener('input', inputEl._plmHandler);
+      }
+
+      modal.style.display = 'flex';
+      if (isLive) setTimeout(() => inputEl?.focus(), 100);
+
+      document.addEventListener('keydown', _plmEsc);
+    }
+
+    function _plmEsc(e) {
+      if (e.key === 'Escape') _closePaperLiveModal();
+    }
+
+    function _closePaperLiveModal() {
+      const modal = document.getElementById('paper-live-modal');
+      if (modal) modal.style.display = 'none';
+      document.removeEventListener('keydown', _plmEsc);
+      _plmPending = false;
+
+      // Resync toggle avec l'état réel
+      const current = localStorage.getItem('av_trading_mode') || 'paper';
+      const toggle  = document.getElementById('sw-paper-live-toggle');
+      if (toggle) toggle.checked = current === 'live';
+    }
+
+    async function _confirmPaperLiveSwitch() {
+      const confirmBtn = document.getElementById('plm-confirm-btn');
+      const statusEl   = document.getElementById('plm-status');
+      const targetMode = confirmBtn?.dataset.target || 'paper';
+
+      if (_plmPending) return;
+      _plmPending = true;
+
+      if (confirmBtn) {
+        confirmBtn.disabled   = true;
+        confirmBtn.innerHTML  = '<i class="fa-solid fa-circle-notch fa-spin"></i> Switching...';
+      }
+      if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.textContent   = '⏳ Dispatching to GitHub Actions (~2 min for IBeam restart)...';
+      }
+
+      try {
+        const resp = await fetch(`${WORKER_URL}/switch-mode`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ mode: targetMode }),
+          signal:  AbortSignal.timeout(15000),
+        });
+
+        const result = await resp.json().catch(() => ({}));
+
+        if (resp.ok && result.success) {
+          // ✅ Persist immédiatement
+          localStorage.setItem('av_trading_mode', targetMode);
+
+          if (statusEl) statusEl.textContent = '✅ Switch triggered — IBeam restarting (~90s)...';
+
+          // Optimistic UI update
+          _updatePaperLiveUI(targetMode);
+          _showToast(
+            `Trading mode → ${targetMode.toUpperCase()} | ${result.account || ''} | GitHub Actions triggered`,
+            'success', 5000
+          );
+
+          // Sync topbar labels even though toggle is hidden
+          const topbarLabel   = document.getElementById('mode-toggle-label');
+          const topbarAccount = document.getElementById('mode-toggle-account');
+          if (topbarLabel)   topbarLabel.textContent = targetMode.toUpperCase();
+          if (topbarAccount) topbarAccount.textContent = targetMode === 'live' ? 'U21160314' : 'DUM895161';
+
+          setTimeout(_closePaperLiveModal, 2000);
+
+          // Refresh ibkr_status après 120s
+          setTimeout(async () => {
+            await _loadPaperLiveModeStatus();
+            _showToast('Trading mode status refreshed from Oracle VM', 'info', 2000);
+          }, 120000);
+
+        } else {
+          const errMsg = result.error || `HTTP ${resp.status}`;
+          if (statusEl) statusEl.textContent = `❌ Error: ${errMsg}`;
+          _showToast(`Switch failed: ${errMsg}`, 'error');
+          if (confirmBtn) {
+            confirmBtn.disabled  = false;
+            confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm Switch';
+          }
+          _plmPending = false;
+        }
+
+      } catch(err) {
+        if (statusEl) statusEl.textContent = `❌ Network error: ${err.message}`;
+        _showToast(`Network error: ${err.message}`, 'error');
+        if (confirmBtn) {
+          confirmBtn.disabled  = false;
+          confirmBtn.innerHTML = '<i class="fa-solid fa-check"></i> Confirm Switch';
+        }
+        _plmPending = false;
+      }
     }
 
     function _updatePaperLiveUI(mode) {
