@@ -229,383 +229,325 @@
   <main class="content" id="content">
 
     <!-- ══════════════════════════════════════════════════════
-         SECTION: SOFTWARE — Architecture & Controls
+         SECTION: SOFTWARE
     ══════════════════════════════════════════════════════ -->
     <section id="sec-software" class="section">
 
-      <!-- ── Header ─────────────────────────────────────── -->
-      <div class="section-header" style="margin-bottom:20px">
-        <h2><i class="fa-solid fa-microchip"></i> Software Architecture & Controls</h2>
-        <div class="sh-actions">
-          <span class="badge-mode" id="sw-exec-mode-badge" style="font-size:11px;padding:4px 12px;border-radius:20px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...
-          </span>
+      <!-- Header -->
+      <div class="sw-ph">
+        <div>
+          <div class="sw-ph-title">System Architecture</div>
+          <div class="sw-ph-sub">AlphaVault Quant v2.5 · Infrastructure &amp; Execution Controls</div>
         </div>
-      </div>
-
-      <!-- ── Status Bar ──────────────────────────────────── -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px">
-        <div class="kpi-card" id="sw-kpi-trading-mode">
-          <div class="kpi-val" id="sw-trading-mode-val" style="font-size:16px">--</div>
-          <div class="kpi-lbl">Trading Account</div>
-        </div>
-        <div class="kpi-card" id="sw-kpi-exec-mode">
-          <div class="kpi-val" id="sw-exec-mode-val" style="font-size:16px">--</div>
-          <div class="kpi-lbl">Execution Mode</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-val" id="sw-oracle-status" style="font-size:16px">--</div>
-          <div class="kpi-lbl">Oracle VM</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-val" id="sw-ibeam-status" style="font-size:16px">--</div>
-          <div class="kpi-lbl">IBeam / IBKR</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-val" id="sw-last-cycle" style="font-size:13px;font-family:var(--mono)">--</div>
-          <div class="kpi-lbl">Last ML Cycle</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-val" id="sw-agents-count" style="font-size:16px;color:var(--b1)">13</div>
-          <div class="kpi-lbl">Active Agents</div>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════════════
-           CONTROL CENTER — Two Switch Cards
-      ══════════════════════════════════════════════ -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-
-        <!-- Card 1: Paper / Live -->
-        <div class="card" style="border:2px solid var(--bord);position:relative;overflow:hidden">
-          <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#8b5cf6)"></div>
-          <div class="card-header" style="border-bottom:1px solid var(--bord)">
-            <i class="fa-solid fa-bank" style="color:var(--b1)"></i>
-            <strong>Trading Account Mode</strong>
-            <span id="sw-paper-live-badge" style="margin-left:auto;font-size:10px;padding:3px 10px;border-radius:12px;background:rgba(59,130,246,0.1);color:var(--b1);border:1px solid rgba(59,130,246,0.3)">PAPER</span>
+        <div class="sw-ph-badges">
+          <div class="sw-badge" id="sw-badge-exec">
+            <div class="sw-badge-dot"></div>
+            <span id="sw-badge-exec-label">AUTO</span>
           </div>
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div class="sw-badge" id="sw-badge-trading">
+            <div class="sw-badge-dot" style="background:#3b82f6"></div>
+            <span id="sw-badge-trading-label">PAPER</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Bar -->
+      <div class="sw-status-bar">
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-warn" id="sw-dot-oracle"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">Oracle VM</div>
+            <div class="sw-stat-value">141.253.96.130</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-warn" id="sw-dot-ibeam"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">IBeam</div>
+            <div class="sw-stat-value">:5055 · Pending key</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-ok" id="sw-dot-watcher"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">Watcher</div>
+            <div class="sw-stat-value">v3.2 · :5000</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-ok" id="sw-dot-worker"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">CF Workers</div>
+            <div class="sw-stat-value">4 active</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-ok"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">Last Cycle</div>
+            <div class="sw-stat-value" id="sw-val-lastcycle">--</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-ok"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">Universe</div>
+            <div class="sw-stat-value">550+ symbols · 22 sectors</div>
+          </div>
+        </div>
+        <div class="sw-stat-sep"></div>
+        <div class="sw-stat">
+          <div class="sw-stat-dot sw-dot-ok"></div>
+          <div class="sw-stat-info">
+            <div class="sw-stat-label">Agents</div>
+            <div class="sw-stat-value">13 specialized · Council</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Center -->
+      <div class="sw-controls">
+
+        <!-- Card: Trading Account -->
+        <div class="sw-ctrl-card" id="sw-card-account">
+          <div class="sw-ctrl-accent" id="sw-accent-account" style="background:linear-gradient(90deg,#3b82f6,#8b5cf6)"></div>
+          <div class="sw-ctrl-top">
+            <div style="min-width:0">
+              <div class="sw-ctrl-label">Trading Account</div>
+              <div class="sw-ctrl-value" id="sw-account-value">DUM895161</div>
+              <div class="sw-ctrl-sub" id="sw-account-sub">Paper trading · vtsdxs036</div>
+            </div>
+            <div class="sw-toggle-wrap">
+              <span class="sw-toggle-lbl">Paper</span>
+              <label class="sw-tgl">
+                <input type="checkbox" id="sw-paper-live-toggle">
+                <span class="sw-tgl-track" id="sw-paper-live-track">
+                  <span class="sw-tgl-thumb"></span>
+                </span>
+              </label>
+              <span class="sw-toggle-lbl">Live</span>
+            </div>
+          </div>
+          <div class="sw-ctrl-accounts">
+            <div class="sw-acct active" id="sw-acct-paper">
+              <div class="sw-acct-dot" style="background:#3b82f6"></div>
               <div>
-                <div style="font-size:22px;font-weight:900;color:var(--b1);margin-bottom:4px" id="sw-current-account">DUM895161</div>
-                <div style="font-size:11px;color:var(--txt4)">Interactive Brokers account</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:10px;font-weight:700;color:var(--txt4);margin-bottom:6px;text-transform:uppercase">PAPER</div>
-                <label style="position:relative;display:inline-block;width:52px;height:26px;cursor:pointer">
-                  <input type="checkbox" id="sw-paper-live-toggle" style="opacity:0;width:0;height:0">
-                  <span id="sw-paper-live-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#3b82f6;border-radius:26px;transition:0.3s">
-                    <span style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.3s;display:block" id="sw-paper-live-knob"></span>
-                  </span>
-                </label>
-                <div style="font-size:10px;font-weight:700;color:var(--txt4);margin-top:6px;text-transform:uppercase">LIVE</div>
+                <div class="sw-acct-id">DUM895161</div>
+                <div class="sw-acct-name">vtsdxs036 · Paper simulation · Zero risk</div>
               </div>
             </div>
-            <div style="background:var(--surf2);border-radius:10px;padding:12px;margin-bottom:14px">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div style="text-align:center;padding:8px;background:rgba(59,130,246,0.06);border-radius:7px;border:1px solid rgba(59,130,246,0.15)">
-                  <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Paper</div>
-                  <div style="font-size:11px;font-weight:700;color:var(--b1);font-family:var(--mono)">DUM895161</div>
-                  <div style="font-size:9px;color:var(--txt4)">vtsdxs036 · $0 risk</div>
-                </div>
-                <div style="text-align:center;padding:8px;background:rgba(239,68,68,0.06);border-radius:7px;border:1px solid rgba(239,68,68,0.15)">
-                  <div style="font-size:9px;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Live</div>
-                  <div style="font-size:11px;font-weight:700;color:var(--r);font-family:var(--mono)">U21160314</div>
-                  <div style="font-size:9px;color:var(--txt4)">raphnardone · Real $</div>
-                </div>
-              </div>
-            </div>
-            <div style="font-size:10px;color:var(--txt4);display:flex;align-items:center;gap:5px">
-              <i class="fa-solid fa-shield-halved" style="color:var(--g)"></i>
-              Secured via Cloudflare Worker — type <strong>"LIVE"</strong> to confirm live mode
-            </div>
-          </div>
-        </div>
-
-        <!-- Card 2: AUTO / MANUAL -->
-        <div class="card" style="border:2px solid var(--bord);position:relative;overflow:hidden">
-          <div id="sw-exec-top-bar" style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10b981,#06b6d4)"></div>
-          <div class="card-header" style="border-bottom:1px solid var(--bord)">
-            <i class="fa-solid fa-robot" style="color:var(--g)"></i>
-            <strong>Execution Mode</strong>
-            <span id="sw-exec-badge" style="margin-left:auto;font-size:10px;padding:3px 10px;border-radius:12px;background:rgba(16,185,129,0.1);color:var(--g);border:1px solid rgba(16,185,129,0.3)">AUTO</span>
-          </div>
-          <div style="padding:20px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div class="sw-acct" id="sw-acct-live">
+              <div class="sw-acct-dot" style="background:#ef4444"></div>
               <div>
-                <div style="font-size:22px;font-weight:900;color:var(--g);margin-bottom:4px" id="sw-exec-mode-label">🤖 AUTO</div>
-                <div style="font-size:11px;color:var(--txt4)" id="sw-exec-mode-sublabel">All 13 agents active — orders transmitted</div>
-              </div>
-              <div style="text-align:center">
-                <div style="font-size:10px;font-weight:700;color:var(--txt4);margin-bottom:6px;text-transform:uppercase">MANUAL</div>
-                <label style="position:relative;display:inline-block;width:52px;height:26px;cursor:pointer">
-                  <input type="checkbox" id="sw-exec-mode-toggle" style="opacity:0;width:0;height:0">
-                  <span id="sw-exec-slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#10b981;border-radius:26px;transition:0.3s">
-                    <span style="position:absolute;height:20px;width:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.3s;display:block" id="sw-exec-knob"></span>
-                  </span>
-                </label>
-                <div style="font-size:10px;font-weight:700;color:var(--txt4);margin-top:6px;text-transform:uppercase">AUTO</div>
+                <div class="sw-acct-id">U21160314</div>
+                <div class="sw-acct-name">raphnardone · Live account · Real capital</div>
               </div>
             </div>
+          </div>
+          <div class="sw-ctrl-footer">
+            Secured via Cloudflare Worker — requires <span class="sw-code">LIVE</span> confirmation to switch
+          </div>
+        </div>
 
-            <!-- Mode descriptions -->
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-              <div id="sw-auto-desc" style="padding:10px;background:rgba(16,185,129,0.06);border-radius:8px;border:1.5px solid rgba(16,185,129,0.3)">
-                <div style="font-size:10px;font-weight:800;color:var(--g);text-transform:uppercase;margin-bottom:5px">
-                  <i class="fa-solid fa-robot"></i> AUTO Mode
-                </div>
-                <div style="font-size:10px;color:var(--txt3);line-height:1.5">
-                  ✓ 13 agents analyze<br>
-                  ✓ Orders transmitted<br>
-                  ✓ 5-min pipeline active<br>
-                  ✓ Full automation
-                </div>
+        <!-- Card: Execution Mode -->
+        <div class="sw-ctrl-card" id="sw-card-exec">
+          <div class="sw-ctrl-accent" id="sw-accent-exec" style="background:linear-gradient(90deg,#10b981,#3b82f6)"></div>
+          <div class="sw-ctrl-top">
+            <div style="min-width:0">
+              <div class="sw-ctrl-label">Execution Mode</div>
+              <div class="sw-ctrl-value" id="sw-exec-mode-label" style="color:#10b981">AUTO</div>
+              <div class="sw-ctrl-sub" id="sw-exec-mode-sublabel">All 13 agents active — orders transmitted</div>
+            </div>
+            <div class="sw-toggle-wrap">
+              <span class="sw-toggle-lbl">Auto</span>
+              <label class="sw-tgl">
+                <input type="checkbox" id="sw-exec-mode-toggle">
+                <span class="sw-tgl-track" id="sw-exec-track">
+                  <span class="sw-tgl-thumb"></span>
+                </span>
+              </label>
+              <span class="sw-toggle-lbl">Manual</span>
+            </div>
+          </div>
+          <div class="sw-exec-modes">
+            <div class="sw-exec-mode active" id="sw-mode-auto">
+              <div class="sw-exec-mode-header">
+                <div class="sw-exec-mode-dot" style="background:#10b981"></div>
+                AUTO
               </div>
-              <div id="sw-manual-desc" style="padding:10px;background:var(--surf2);border-radius:8px;border:1.5px solid var(--bord);opacity:0.7">
-                <div style="font-size:10px;font-weight:800;color:var(--y);text-transform:uppercase;margin-bottom:5px">
-                  <i class="fa-solid fa-hand"></i> MANUAL Mode
-                </div>
-                <div style="font-size:10px;color:var(--txt4);line-height:1.5">
-                  ✓ Agents still analyze<br>
-                  ✗ Orders BLOCKED<br>
-                  ✓ Signals for analysis<br>
-                  ✓ Terminal orders only
-                </div>
+              <div class="sw-exec-mode-items">
+                <div>13 agents active</div>
+                <div>Orders transmitted</div>
+                <div>Pipeline every 5 min</div>
               </div>
             </div>
-            <div style="font-size:10px;color:var(--txt4);display:flex;align-items:center;gap:5px">
-              <i class="fa-solid fa-shield-halved" style="color:var(--g)"></i>
-              Type <strong>"MANUAL"</strong> to confirm — instant effect via GitHub Actions
+            <div class="sw-exec-mode inactive" id="sw-mode-manual">
+              <div class="sw-exec-mode-header">
+                <div class="sw-exec-mode-dot" style="background:#f59e0b"></div>
+                MANUAL
+              </div>
+              <div class="sw-exec-mode-items">
+                <div>Agents still analyze</div>
+                <div>ML orders blocked</div>
+                <div>Terminal orders active</div>
+              </div>
             </div>
+          </div>
+          <div class="sw-ctrl-footer">
+            Requires <span class="sw-code">MANUAL</span> confirmation — instant via GitHub Actions
           </div>
         </div>
 
       </div>
 
-      <!-- ══════════════════════════════════════════════
-           CONFIRMATION MODAL — Execution Mode Switch
-      ══════════════════════════════════════════════ -->
-      <div id="exec-mode-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center">
-        <div style="background:var(--surf);border:1px solid var(--bord);border-radius:20px;padding:36px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
-          <div style="text-align:center;margin-bottom:24px">
-            <div id="exec-modal-icon" style="font-size:40px;margin-bottom:12px">✋</div>
-            <h3 id="exec-modal-title" style="font-size:20px;font-weight:900;color:var(--txt);margin-bottom:8px">Switch to MANUAL Mode</h3>
-            <p id="exec-modal-desc" style="font-size:13px;color:var(--txt3);line-height:1.6">
-              All automated order transmission will be <strong>immediately blocked</strong>.<br>
-              Agents will continue analyzing but no orders will be placed.<br>
-              You can place manual orders via the Trading Terminal.
-            </p>
-          </div>
-          <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px;margin-bottom:20px" id="exec-modal-warning">
-            <div style="font-size:11px;font-weight:700;color:var(--r);margin-bottom:4px">
-              <i class="fa-solid fa-triangle-exclamation"></i> Confirmation Required
-            </div>
-            <div style="font-size:11px;color:var(--txt4)">
-              Type <strong id="exec-modal-confirm-word" style="color:var(--txt);font-family:var(--mono)">MANUAL</strong> below to confirm this action.
-            </div>
-          </div>
-          <input type="text" id="exec-modal-input"
-                 placeholder='Type "MANUAL" to confirm'
-                 style="width:100%;padding:12px 14px;border:2px solid var(--bord);border-radius:10px;background:var(--surf2);color:var(--txt);font-size:14px;font-family:var(--mono);font-weight:700;text-align:center;box-sizing:border-box;outline:none;margin-bottom:16px;letter-spacing:2px;text-transform:uppercase">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <button onclick="window._swExecModalCancel()" style="padding:12px;border:2px solid var(--bord);border-radius:10px;background:transparent;color:var(--txt3);font-size:13px;font-weight:700;cursor:pointer">
-              <i class="fa-solid fa-xmark"></i> Cancel
-            </button>
-            <button id="exec-modal-confirm-btn" onclick="window._swExecModalConfirm()"
-                    style="padding:12px;border:none;border-radius:10px;background:var(--r);color:white;font-size:13px;font-weight:800;cursor:pointer;opacity:0.4" disabled>
-              <i class="fa-solid fa-check"></i> Confirm Switch
-            </button>
-          </div>
-          <div id="exec-modal-status" style="margin-top:12px;font-size:11px;color:var(--txt4);text-align:center;display:none"></div>
+      <!-- Architecture Diagram -->
+      <div class="sw-arch">
+        <div class="sw-arch-header">
+          <div class="sw-arch-title">Infrastructure</div>
+          <div class="sw-arch-sub">End-to-end data flow · GitHub Actions — Oracle Cloud — IBKR</div>
         </div>
-      </div>
+        <div class="sw-arch-flow">
 
-      <!-- ══════════════════════════════════════════════
-           ARCHITECTURE DIAGRAM
-      ══════════════════════════════════════════════ -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">
-          <i class="fa-solid fa-diagram-project" style="color:var(--b1)"></i>
-          <strong>System Architecture</strong>
-          <span style="margin-left:auto;font-size:10px;color:var(--txt4)">AlphaVault Quant v2.5 — Full-stack automated trading</span>
-        </div>
-        <div style="padding:20px;overflow-x:auto">
-
-          <!-- Layer 1: Frontend -->
-          <div style="text-align:center;margin-bottom:8px">
-            <div style="display:inline-flex;align-items:center;gap:10px;padding:12px 24px;background:linear-gradient(135deg,rgba(59,130,246,0.12),rgba(139,92,246,0.12));border:2px solid rgba(59,130,246,0.3);border-radius:14px;min-width:320px">
-              <i class="fa-solid fa-display" style="color:var(--b1);font-size:20px"></i>
-              <div style="text-align:left">
-                <div style="font-size:13px;font-weight:800;color:var(--b1)">GitHub Pages Dashboard</div>
-                <div style="font-size:10px;color:var(--txt4)">raph33ai.github.io/alphavault-quant · Reads JSON every 60s</div>
-              </div>
-              <span style="margin-left:auto;font-size:9px;padding:2px 8px;background:rgba(59,130,246,0.15);border-radius:10px;color:var(--b1)">FRONTEND</span>
-            </div>
-          </div>
-
-          <!-- Arrow -->
-          <div style="text-align:center;margin:4px 0;color:var(--txt4);font-size:11px">
-            <div style="font-size:18px;color:var(--b1)">⇅</div>
-            <div style="font-size:10px;color:var(--txt4)">REST API · workflow_dispatch · JSON signals</div>
-          </div>
-
-          <!-- Layer 2: Cloudflare Workers -->
-          <div style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-            <div style="padding:10px 14px;background:rgba(249,115,22,0.08);border:1.5px solid rgba(249,115,22,0.3);border-radius:10px;text-align:center;min-width:130px">
-              <i class="fa-solid fa-cloud" style="color:#f97316;margin-bottom:4px;display:block"></i>
-              <div style="font-size:11px;font-weight:700;color:#f97316">finance-hub-api</div>
-              <div style="font-size:9px;color:var(--txt4)">Twelve Data · FinnHub · Stripe</div>
-            </div>
-            <div style="padding:10px 14px;background:rgba(249,115,22,0.08);border:1.5px solid rgba(249,115,22,0.3);border-radius:10px;text-align:center;min-width:130px">
-              <i class="fa-solid fa-brain" style="color:#f97316;margin-bottom:4px;display:block"></i>
-              <div style="font-size:11px;font-weight:700;color:#f97316">gemini-ai-proxy</div>
-              <div style="font-size:9px;color:var(--txt4)">Gemini 2.5-Flash · LLM</div>
-            </div>
-            <div style="padding:10px 14px;background:rgba(249,115,22,0.08);border:1.5px solid rgba(249,115,22,0.3);border-radius:10px;text-align:center;min-width:130px">
-              <i class="fa-solid fa-shield-halved" style="color:#f97316;margin-bottom:4px;display:block"></i>
-              <div style="font-size:11px;font-weight:700;color:#f97316">alphavault-gh-proxy</div>
-              <div style="font-size:9px;color:var(--txt4)">GitHub API · PAT secured</div>
-            </div>
-            <div style="padding:10px 14px;background:rgba(249,115,22,0.08);border:1.5px solid rgba(249,115,22,0.3);border-radius:10px;text-align:center;min-width:130px">
-              <i class="fa-solid fa-chart-line" style="color:#f97316;margin-bottom:4px;display:block"></i>
-              <div style="font-size:11px;font-weight:700;color:#f97316">economic-data</div>
-              <div style="font-size:9px;color:var(--txt4)">ECB · FRED</div>
-            </div>
-          </div>
-          <div style="text-align:center;font-size:9px;color:var(--txt4);margin-bottom:8px;font-weight:700;letter-spacing:0.5px">☁ CLOUDFLARE WORKERS (4)</div>
-
-          <!-- Arrow -->
-          <div style="text-align:center;margin:4px 0">
-            <div style="font-size:18px;color:var(--b2)">⇅</div>
-            <div style="font-size:10px;color:var(--txt4)">SSH · workflow_dispatch · JSON polling every 30s</div>
-          </div>
-
-          <!-- Layer 3: GitHub Actions (2 rows) -->
-          <div style="background:rgba(139,92,246,0.05);border:2px solid rgba(139,92,246,0.2);border-radius:14px;padding:12px;margin-bottom:8px">
-            <div style="font-size:10px;font-weight:800;color:var(--b2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;text-align:center">
-              <i class="fa-brands fa-github"></i> GITHUB ACTIONS — Workflows
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:8px">
-              <div style="padding:8px 14px;background:rgba(139,92,246,0.1);border:1.5px solid rgba(139,92,246,0.25);border-radius:8px;text-align:center">
-                <div style="font-size:11px;font-weight:700;color:var(--b2)"><i class="fa-solid fa-rotate"></i> trading-loop.yml</div>
-                <div style="font-size:9px;color:var(--txt4)">Every 5min · 13 agents · 550+ symbols</div>
-              </div>
-              <div style="padding:8px 14px;background:rgba(139,92,246,0.1);border:1.5px solid rgba(139,92,246,0.25);border-radius:8px;text-align:center">
-                <div style="font-size:11px;font-weight:700;color:var(--b2)"><i class="fa-solid fa-toggle-on"></i> switch-mode.yml</div>
-                <div style="font-size:9px;color:var(--txt4)">Paper ↔ Live · via Dashboard</div>
-              </div>
-              <div style="padding:8px 14px;background:rgba(16,185,129,0.12);border:1.5px solid rgba(16,185,129,0.3);border-radius:8px;text-align:center">
-                <div style="font-size:11px;font-weight:700;color:var(--g)"><i class="fa-solid fa-hand"></i> switch-execution-mode.yml</div>
-                <div style="font-size:9px;color:var(--txt4)">AUTO ↔ MANUAL · NEW ✦</div>
-              </div>
-            </div>
-            <!-- ML Pipeline detail -->
-            <div style="background:rgba(0,0,0,0.05);border-radius:10px;padding:10px;margin-top:8px">
-              <div style="font-size:10px;font-weight:700;color:var(--txt3);margin-bottom:6px;text-align:center">ML Pipeline (inside trading-loop.yml)</div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
-                <span style="font-size:9px;padding:2px 8px;background:var(--surf3);border-radius:6px;color:var(--txt3)">Feature Builder (80+ features)</span>
-                <span style="font-size:9px;padding:2px 8px;background:var(--surf3);border-radius:6px;color:var(--txt3)">XGBoost + LightGBM + LogReg</span>
-                <span style="font-size:9px;padding:2px 8px;background:var(--surf3);border-radius:6px;color:var(--txt3)">Regime Model (8 regimes + HMM)</span>
-                <span style="font-size:9px;padding:2px 8px;background:var(--surf3);border-radius:6px;color:var(--txt3)">13 Specialized Agents</span>
-                <span style="font-size:9px;padding:2px 8px;background:var(--surf3);border-radius:6px;color:var(--txt3)">MultiAgent Council</span>
-                <span style="font-size:9px;padding:2px 8px;background:rgba(16,185,129,0.15);border-radius:6px;color:var(--g)">→ pending_orders.json</span>
+          <div class="sw-layer">
+            <div class="sw-layer-nodes sw-layer-nodes-1">
+              <div class="sw-node sw-node-blue">
+                <div class="sw-node-label">DASHBOARD</div>
+                <div class="sw-node-value">raph33ai.github.io/alphavault-quant</div>
+                <div class="sw-node-meta">Auto-refresh 60s · JSON signals · Static CDN · GitHub Pages</div>
               </div>
             </div>
           </div>
 
-          <!-- Arrow -->
-          <div style="text-align:center;margin:4px 0">
-            <div style="font-size:18px;color:var(--y)">⇅</div>
-            <div style="font-size:10px;color:var(--txt4)">SSH (appleboy/ssh-action) · git pull (polling 30s)</div>
+          <div class="sw-connector">
+            <div class="sw-connector-line"></div>
+            <div class="sw-connector-label">REST API · workflow_dispatch · JSON polling</div>
           </div>
 
-          <!-- Layer 4: Oracle VM -->
-          <div style="background:rgba(234,179,8,0.05);border:2px solid rgba(234,179,8,0.25);border-radius:14px;padding:12px;margin-bottom:8px">
-            <div style="font-size:10px;font-weight:800;color:var(--y);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;text-align:center">
-              <i class="fa-solid fa-server"></i> ORACLE CLOUD VM — 141.253.96.130 (Ubuntu 22.04 · AMD Micro · 1GB RAM + 3GB Swap)
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
-              <div style="padding:10px 14px;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.2);border-radius:10px;text-align:center;min-width:140px">
-                <i class="fa-solid fa-eye" style="color:var(--y);margin-bottom:4px;display:block"></i>
-                <div style="font-size:11px;font-weight:700;color:var(--y)">ibkr_watcher.py</div>
-                <div style="font-size:9px;color:var(--txt4)">v3.1 · Flask :5000</div>
-                <div style="font-size:9px;color:var(--txt4)">Polls pending_orders.json</div>
+          <div class="sw-layer">
+            <div class="sw-layer-nodes sw-layer-nodes-4">
+              <div class="sw-node sw-node-orange">
+                <div class="sw-node-label">finance-hub-api</div>
+                <div class="sw-node-meta">Twelve Data · FinnHub · Stripe · Simulations</div>
               </div>
-              <div style="padding:10px 14px;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.2);border-radius:10px;text-align:center;min-width:140px">
-                <i class="fa-brands fa-docker" style="color:var(--y);margin-bottom:4px;display:block"></i>
-                <div style="font-size:11px;font-weight:700;color:var(--y)">IBeam Docker</div>
-                <div style="font-size:9px;color:var(--txt4)">:5055 · Client Portal GW</div>
-                <div style="font-size:9px;color:var(--txt4)">mem_limit: 180m</div>
+              <div class="sw-node sw-node-orange">
+                <div class="sw-node-label">gemini-ai-proxy</div>
+                <div class="sw-node-meta">Gemini 2.5-Flash · LLM council</div>
               </div>
-              <div style="padding:10px 14px;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.2);border-radius:10px;text-align:center;min-width:140px">
-                <i class="fa-solid fa-clock" style="color:var(--y);margin-bottom:4px;display:block"></i>
-                <div style="font-size:11px;font-weight:700;color:var(--y)">Anti-Idle Cron</div>
-                <div style="font-size:9px;color:var(--txt4)">*/4 min · Monte Carlo GBM</div>
-                <div style="font-size:9px;color:var(--txt4)">CPU > 20% → no reclaim</div>
+              <div class="sw-node sw-node-orange">
+                <div class="sw-node-label">alphavault-gh-proxy</div>
+                <div class="sw-node-meta">GitHub API · PAT secured · Dispatch</div>
               </div>
-              <div style="padding:10px 14px;background:rgba(234,179,8,0.08);border:1.5px solid rgba(234,179,8,0.2);border-radius:10px;text-align:center;min-width:140px">
-                <i class="fa-solid fa-toggle-on" style="color:var(--g);margin-bottom:4px;display:block"></i>
-                <div style="font-size:11px;font-weight:700;color:var(--g)">switch-execution-mode.sh</div>
-                <div style="font-size:9px;color:var(--txt4)">NEW ✦ · Updates .env</div>
-                <div style="font-size:9px;color:var(--txt4)">TRADE_AUTO_MODE=auto|manual</div>
+              <div class="sw-node sw-node-orange">
+                <div class="sw-node-label">economic-data</div>
+                <div class="sw-node-meta">Macro indicators · Time series</div>
               </div>
             </div>
+            <div class="sw-layer-tag">Cloudflare Workers</div>
           </div>
 
-          <!-- Arrow -->
-          <div style="text-align:center;margin:4px 0">
-            <div style="font-size:18px;color:var(--r)">⇅</div>
-            <div style="font-size:10px;color:var(--txt4)">IBKR Client Portal API (IBeam) · :5055 → :7497</div>
+          <div class="sw-connector">
+            <div class="sw-connector-line"></div>
+            <div class="sw-connector-label">SSH · workflow_dispatch · git pull every 30s</div>
           </div>
 
-          <!-- Layer 5: IBKR -->
-          <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">
-            <div style="padding:12px 24px;background:rgba(16,185,129,0.08);border:2px solid rgba(16,185,129,0.3);border-radius:12px;text-align:center;min-width:180px">
-              <i class="fa-solid fa-flask" style="color:var(--g);font-size:18px;margin-bottom:6px;display:block"></i>
-              <div style="font-size:13px;font-weight:800;color:var(--g)">Paper Trading</div>
-              <div style="font-size:11px;font-family:var(--mono);color:var(--g);margin:3px 0">DUM895161</div>
-              <div style="font-size:9px;color:var(--txt4)">vtsdxs036 · $0 risk · Current default</div>
+          <div class="sw-layer">
+            <div class="sw-layer-nodes sw-layer-nodes-3">
+              <div class="sw-node sw-node-purple">
+                <div class="sw-node-label">trading-loop.yml</div>
+                <div class="sw-node-meta">Every 5 min · 550+ symbols · 13 agents</div>
+              </div>
+              <div class="sw-node sw-node-purple">
+                <div class="sw-node-label">switch-mode.yml</div>
+                <div class="sw-node-meta">Paper / Live account switch</div>
+              </div>
+              <div class="sw-node sw-node-purple" style="border-left-color:#a78bfa;background:rgba(139,92,246,0.04)">
+                <div class="sw-node-label">switch-execution-mode.yml</div>
+                <div class="sw-node-meta">AUTO / MANUAL execution switch</div>
+              </div>
             </div>
-            <div style="padding:12px 24px;background:rgba(239,68,68,0.06);border:2px solid rgba(239,68,68,0.2);border-radius:12px;text-align:center;min-width:180px;opacity:0.7">
-              <i class="fa-solid fa-circle-dollar-to-slot" style="color:var(--r);font-size:18px;margin-bottom:6px;display:block"></i>
-              <div style="font-size:13px;font-weight:800;color:var(--r)">Live Trading</div>
-              <div style="font-size:11px;font-family:var(--mono);color:var(--r);margin:3px 0">U21160314</div>
-              <div style="font-size:9px;color:var(--txt4)">raphnardone · After IBEAM_KEY + validation</div>
-            </div>
+            <div class="sw-layer-tag">GitHub Actions</div>
           </div>
-          <div style="text-align:center;margin-top:8px;font-size:9px;color:var(--txt4);font-weight:700;letter-spacing:0.5px">INTERACTIVE BROKERS GATEWAY</div>
+
+          <div class="sw-connector">
+            <div class="sw-connector-line"></div>
+            <div class="sw-connector-label">SSH · appleboy/ssh-action · pending_orders.json</div>
+          </div>
+
+          <div class="sw-layer">
+            <div class="sw-layer-nodes sw-layer-nodes-3">
+              <div class="sw-node sw-node-amber">
+                <div class="sw-node-label">ibkr_watcher.py v3.2</div>
+                <div class="sw-node-meta">Flask :5000 · Poll 30s · systemd</div>
+              </div>
+              <div class="sw-node sw-node-amber">
+                <div class="sw-node-label">IBeam Docker</div>
+                <div class="sw-node-meta">:5055 · Client Portal GW · 180m limit</div>
+              </div>
+              <div class="sw-node sw-node-amber">
+                <div class="sw-node-label">Anti-Idle Cron</div>
+                <div class="sw-node-meta">*/4 min · Monte Carlo GBM · CPU &gt; 20%</div>
+              </div>
+            </div>
+            <div class="sw-layer-tag">Oracle Cloud VM · 141.253.96.130 · Ubuntu 22.04 · AMD Micro · 1GB RAM + 3GB Swap</div>
+          </div>
+
+          <div class="sw-connector">
+            <div class="sw-connector-line"></div>
+            <div class="sw-connector-label">IBKR Client Portal API · :5055</div>
+          </div>
+
+          <div class="sw-layer">
+            <div class="sw-layer-nodes sw-layer-nodes-2">
+              <div class="sw-node sw-node-green sw-node-active-account" id="sw-node-paper">
+                <div class="sw-node-label">Paper Trading</div>
+                <div class="sw-node-value">DUM895161</div>
+                <div class="sw-node-meta">vtsdxs036 · Zero risk · Default</div>
+              </div>
+              <div class="sw-node sw-node-red" id="sw-node-live" style="opacity:0.6">
+                <div class="sw-node-label">Live Trading</div>
+                <div class="sw-node-value">U21160314</div>
+                <div class="sw-node-meta">raphnardone · Real capital · After IBEAM_KEY</div>
+              </div>
+            </div>
+            <div class="sw-layer-tag">Interactive Brokers Gateway</div>
+          </div>
 
         </div>
       </div>
 
-      <!-- ══════════════════════════════════════════════
-           13 AGENTS TABLE
-      ══════════════════════════════════════════════ -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header">
-          <i class="fa-solid fa-brain" style="color:var(--b2)"></i>
-          <strong>13 Specialized Agents</strong>
-          <span style="margin-left:auto;font-size:10px;color:var(--txt4)">All run inside GitHub Actions · No server required</span>
+      <!-- ML Pipeline -->
+      <div class="sw-pipeline">
+        <div class="sw-arch-header">
+          <div class="sw-arch-title">ML Pipeline</div>
+          <div class="sw-arch-sub">Runs inside trading-loop.yml · GitHub Actions · No server required</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;padding:16px">
-          <div style="display:contents" id="sw-agents-grid">
-            <!-- Injected by terminal.js _renderSoftware() -->
-          </div>
+        <div class="sw-pipeline-flow">
+          <div class="sw-pipe-step">Feature Builder<span>80+ features</span></div>
+          <div class="sw-pipe-arrow"></div>
+          <div class="sw-pipe-step">Signal Model<span>XGBoost + LightGBM + LogReg</span></div>
+          <div class="sw-pipe-arrow"></div>
+          <div class="sw-pipe-step">Regime Model<span>8 regimes + HMM</span></div>
+          <div class="sw-pipe-arrow"></div>
+          <div class="sw-pipe-step">Risk Manager<span>Kelly + VaR + CVaR</span></div>
+          <div class="sw-pipe-arrow"></div>
+          <div class="sw-pipe-step">13 Agents<span>MultiAgent Council vote</span></div>
+          <div class="sw-pipe-arrow"></div>
+          <div class="sw-pipe-step sw-pipe-step-accent">pending_orders.json<span>Bridge ML to Oracle</span></div>
         </div>
       </div>
 
-      <!-- ══════════════════════════════════════════════
-           PRIORITY CHECKLIST
-      ══════════════════════════════════════════════ -->
-      <div class="card">
-        <div class="card-header">
-          <i class="fa-solid fa-list-check" style="color:var(--b1)"></i>
-          <strong>Remaining Setup Items</strong>
-          <span id="sw-todo-count" style="margin-left:auto;font-size:10px;color:var(--txt4)">Loading...</span>
+      <!-- Agents -->
+      <div class="sw-agents">
+        <div class="sw-arch-header">
+          <div class="sw-arch-title">Agent Council</div>
+          <div class="sw-arch-sub">13 specialized agents · All run inside GitHub Actions · No server required</div>
         </div>
-        <div style="padding:16px" id="sw-checklist">
-          <!-- Injected by terminal.js -->
-        </div>
+        <div class="sw-agents-grid" id="sw-agents-grid"></div>
       </div>
 
     </section>
