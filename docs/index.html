@@ -1697,6 +1697,44 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════════════════════
+     MODAL — Execution Mode Confirmation (AUTO / MANUAL)
+═══════════════════════════════════════════════════════ -->
+<div id="exec-mode-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:var(--surf);border:1px solid var(--bord);border-radius:20px;padding:36px;max-width:460px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.4)">
+    <div style="text-align:center;margin-bottom:24px">
+      <div id="exec-modal-icon" style="font-size:40px;margin-bottom:12px">✋</div>
+      <h3 id="exec-modal-title" style="font-size:20px;font-weight:900;color:var(--txt);margin-bottom:8px">Switch to MANUAL Mode</h3>
+      <p id="exec-modal-desc" style="font-size:13px;color:var(--txt3);line-height:1.6">
+        All automated order transmission will be immediately blocked.
+      </p>
+    </div>
+    <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:14px;margin-bottom:20px" id="exec-modal-warning">
+      <div style="font-size:11px;font-weight:700;color:var(--r);margin-bottom:4px">
+        <i class="fa-solid fa-triangle-exclamation"></i> Confirmation Required
+      </div>
+      <div id="exec-modal-warning-text" style="font-size:11px;color:var(--txt4)">
+        Type <strong id="exec-modal-confirm-word" style="color:var(--txt);font-family:var(--mono)">MANUAL</strong> below to confirm.
+      </div>
+    </div>
+    <input type="text" id="exec-modal-input"
+           placeholder='Type "MANUAL" to confirm'
+           autocomplete="off"
+           style="width:100%;padding:12px 14px;border:2px solid var(--bord);border-radius:10px;background:var(--surf2);color:var(--txt);font-size:14px;font-family:var(--mono);font-weight:700;text-align:center;box-sizing:border-box;outline:none;margin-bottom:16px;letter-spacing:2px;text-transform:uppercase">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <button onclick="window._swExecModalCancel()"
+              style="padding:12px;border:2px solid var(--bord);border-radius:10px;background:transparent;color:var(--txt3);font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s">
+        <i class="fa-solid fa-xmark"></i> Cancel
+      </button>
+      <button id="exec-modal-confirm-btn" onclick="window._swExecModalConfirm()"
+              style="padding:12px;border:none;border-radius:10px;background:#f59e0b;color:white;font-size:13px;font-weight:800;cursor:pointer;opacity:0.4;transition:opacity 0.2s" disabled>
+        <i class="fa-solid fa-check"></i> Confirm Switch
+      </button>
+    </div>
+    <div id="exec-modal-status" style="margin-top:12px;font-size:11px;color:var(--txt4);text-align:center;display:none"></div>
+  </div>
+</div>
+
 <!-- Toast container -->
 <div class="toast-wrap" id="toast-wrap"></div>
 
