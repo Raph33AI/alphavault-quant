@@ -1,48 +1,8 @@
 {
-  "timestamp": "2026-04-17T23:57:15.990559",
-  "run_id": "run_18",
+  "timestamp": "2026-04-19T12:05:46.240139+00:00",
+  "run_id": "20260419_120546",
   "total": 500,
   "logs": [
-    {
-      "ts": "2026-04-17T23:08:58.463007",
-      "level": "SIGNAL",
-      "module": "signal_engine",
-      "symbol": "O",
-      "message": "BUY | score=0.111 | council=wait",
-      "details": {
-        "direction": "buy",
-        "final_score": 0.1113,
-        "confidence": 0.5521,
-        "buy_prob": 0.7801,
-        "trade_action": "wait",
-        "council": "wait",
-        "price": 65.08999633789062,
-        "change_pct": 0.696,
-        "regime": "trend_up",
-        "sector": "Real Estate"
-      },
-      "run_id": "run_17"
-    },
-    {
-      "ts": "2026-04-17T23:08:58.463007",
-      "level": "SIGNAL",
-      "module": "signal_engine",
-      "symbol": "WELL",
-      "message": "BUY | score=0.103 | council=wait",
-      "details": {
-        "direction": "buy",
-        "final_score": 0.1029,
-        "confidence": 0.5288,
-        "buy_prob": 0.7703,
-        "trade_action": "wait",
-        "council": "wait",
-        "price": 210.52000427246094,
-        "change_pct": -1.86,
-        "regime": "trend_up",
-        "sector": "Real Estate"
-      },
-      "run_id": "run_17"
-    },
     {
       "ts": "2026-04-17T23:08:58.463007",
       "level": "SIGNAL",
@@ -10106,6 +10066,39 @@
         "var_metrics": {}
       },
       "run_id": "run_18"
+    },
+    {
+      "ts": "2026-04-19T12:05:46.236587+00:00",
+      "level": "INFO",
+      "module": "manual_trade",
+      "symbol": "ORCL",
+      "message": "D\u00e9marrage ordre manuel: SELL 10x ORCL",
+      "details": {
+        "action": "SELL",
+        "quantity": 10,
+        "order_type": "MKT",
+        "limit_price": null,
+        "stop_price": null,
+        "dry_run": true
+      },
+      "run_id": "20260419_120546"
+    },
+    {
+      "ts": "2026-04-19T12:05:46.237261+00:00",
+      "level": "ORDER_OK",
+      "module": "ibkr_executor",
+      "symbol": "ORCL",
+      "message": "SELL 10x ORCL @ MKT \u2192 simulated",
+      "details": {
+        "action": "SELL",
+        "quantity": 10,
+        "order_type": "MKT",
+        "status": "simulated",
+        "order_id": -1,
+        "fill_price": null,
+        "error": null
+      },
+      "run_id": "20260419_120546"
     }
   ]
 }
