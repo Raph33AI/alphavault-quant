@@ -3266,11 +3266,10 @@ const Terminal = (() => {
       _bindExecutionModeToggle();
       _bindPaperLiveToggle();
       _renderAgentGrid();
-      _renderChecklist();
     }
 
     // ── Load current execution mode — localStorage + GitHub Pages ──
-  async function _loadExecutionModeStatus() {
+    async function _loadExecutionModeStatus() {
 
       // ✅ FIX BUG 2 & 3 — Restauration immédiate depuis localStorage
       // Évite le flash "AUTO" sur chaque refresh même si on était en MANUAL
@@ -3314,62 +3313,50 @@ const Terminal = (() => {
 
     // ── Update all execution mode UI elements ──────────────
     function _updateExecModeUI(mode) {
-      const isManual   = mode === 'manual';
-      const color      = isManual ? '#f59e0b' : '#10b981';
-      const label      = isManual ? '✋ MANUAL' : '🤖 AUTO';
-      const sublabel   = isManual
-        ? 'Orders blocked — analysis only'
-        : 'All 13 agents active — orders transmitted';
+      const isManual = mode === 'manual';
+      const color    = isManual ? '#f59e0b' : '#10b981';
+      const label    = isManual ? 'MANUAL' : 'AUTO';
+      const sublabel = isManual
+        ? 'Agents continue analysis — ML orders blocked — Terminal active'
+        : 'All 13 agents active — orders transmitted automatically';
 
-      _txt('sw-exec-mode-label',   label);
-      _txt('sw-exec-mode-sublabel',sublabel);
-      _txt('sw-exec-mode-val',     label);
-      _txt('sw-exec-mode-badge',   label, true);
+      _txt('sw-exec-mode-label',    label);
+      _txt('sw-exec-mode-sublabel', sublabel);
 
-      const badge = document.getElementById('sw-exec-badge');
-      if (badge) {
-        badge.textContent    = mode.toUpperCase();
-        badge.style.background = `${color}18`;
-        badge.style.color      = color;
-        badge.style.border     = `1px solid ${color}40`;
-      }
+      const valEl = document.getElementById('sw-exec-mode-label');
+      if (valEl) valEl.style.color = color;
 
-      const topBar = document.getElementById('sw-exec-top-bar');
-      if (topBar) {
-        topBar.style.background = isManual
-          ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
-          : 'linear-gradient(90deg,#10b981,#06b6d4)';
-      }
+      // Header badge
+      const dot = document.querySelector('#sw-badge-exec .sw-badge-dot');
+      const lbl = document.getElementById('sw-badge-exec-label');
+      if (dot) { dot.style.background = color; dot.style.boxShadow = `0 0 6px ${color}55`; }
+      if (lbl) lbl.textContent = label;
 
-      const labelEl = document.getElementById('sw-exec-mode-label');
-      if (labelEl) labelEl.style.color = color;
+      // Accent bar
+      const accent = document.getElementById('sw-accent-exec');
+      if (accent) accent.style.background = isManual
+        ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
+        : 'linear-gradient(90deg,#10b981,#3b82f6)';
 
-      const slider = document.getElementById('sw-exec-slider');
-      const knob   = document.getElementById('sw-exec-knob');
+      // Toggle
       const toggle = document.getElementById('sw-exec-mode-toggle');
-      if (slider) { slider.style.background = color; slider.className = isManual ? 'manual' : ''; }
-      if (knob)   knob.style.transform = isManual ? 'translateX(26px)' : 'translateX(0)';
+      const track  = document.getElementById('sw-exec-track');
       if (toggle) toggle.checked = isManual;
-
-      // Highlight active mode card
-      const autoDesc   = document.getElementById('sw-auto-desc');
-      const manualDesc = document.getElementById('sw-manual-desc');
-      if (autoDesc) {
-        autoDesc.style.opacity = isManual ? '0.5' : '1';
-        autoDesc.style.borderColor = isManual ? 'var(--bord)' : 'rgba(16,185,129,0.4)';
-      }
-      if (manualDesc) {
-        manualDesc.style.opacity = isManual ? '1' : '0.5';
-        manualDesc.style.borderColor = isManual ? 'rgba(249,115,22,0.4)' : 'var(--bord)';
+      if (track) {
+        track.style.background  = isManual ? '#f59e0b' : '';
+        track.style.borderColor = isManual ? '#f59e0b' : '';
+        const thumb = track.querySelector('.sw-tgl-thumb');
+        if (thumb) {
+          thumb.style.transform  = isManual ? 'translateX(20px)' : 'translateX(0)';
+          thumb.style.background = isManual ? 'white' : '';
+        }
       }
 
-      // KPI badge global
-      const modeBadge = document.getElementById('sw-exec-mode-badge');
-      if (modeBadge) {
-        modeBadge.style.background = `${color}15`;
-        modeBadge.style.color      = color;
-        modeBadge.style.border     = `1px solid ${color}30`;
-      }
+      // Mode cards
+      const autoCard   = document.getElementById('sw-mode-auto');
+      const manualCard = document.getElementById('sw-mode-manual');
+      if (autoCard)   autoCard.className   = `sw-exec-mode ${isManual ? 'inactive' : 'active'}`;
+      if (manualCard) manualCard.className = `sw-exec-mode ${isManual ? 'active-manual' : 'inactive'}`;
 
       _execModeState.mode = mode;
     }
@@ -3769,28 +3756,54 @@ const Terminal = (() => {
     }
 
     function _updatePaperLiveUI(mode) {
-      const isLive    = mode === 'live';
-      const color     = isLive ? '#ef4444' : '#3b82f6';
-      const account   = isLive ? 'U21160314' : 'DUM895161';
-      const label     = isLive ? '🔴 LIVE' : '🔵 PAPER';
+      const isLive  = mode === 'live';
+      const color   = isLive ? '#ef4444' : '#3b82f6';
+      const account = isLive ? 'U21160314' : 'DUM895161';
+      const sub     = isLive ? 'Live trading · raphnardone' : 'Paper trading · vtsdxs036';
 
-      _txt('sw-current-account',  account);
-      _txt('sw-trading-mode-val', label);
-      _txt('sw-paper-live-badge', mode.toUpperCase());
+      _txt('sw-account-value', account);
+      _txt('sw-account-sub',   sub);
 
-      const badge = document.getElementById('sw-paper-live-badge');
-      if (badge) {
-        badge.style.background   = `${color}15`;
-        badge.style.color        = color;
-        badge.style.border       = `1px solid ${color}30`;
+      const valEl = document.getElementById('sw-account-value');
+      if (valEl) valEl.style.color = color;
+
+      // Header badge
+      const dot = document.querySelector('#sw-badge-trading .sw-badge-dot');
+      const lbl = document.getElementById('sw-badge-trading-label');
+      if (dot) dot.style.background = color;
+      if (lbl) lbl.textContent = isLive ? 'LIVE' : 'PAPER';
+
+      // Accent bar
+      const accent = document.getElementById('sw-accent-account');
+      if (accent) accent.style.background = isLive
+        ? 'linear-gradient(90deg,#ef4444,#f97316)'
+        : 'linear-gradient(90deg,#3b82f6,#8b5cf6)';
+
+      // Toggle
+      const toggle = document.getElementById('sw-paper-live-toggle');
+      const track  = document.getElementById('sw-paper-live-track');
+      if (toggle) toggle.checked = isLive;
+      if (track) {
+        track.style.background  = isLive ? '#ef4444' : '';
+        track.style.borderColor = isLive ? '#ef4444' : '';
+        const thumb = track.querySelector('.sw-tgl-thumb');
+        if (thumb) {
+          thumb.style.transform  = isLive ? 'translateX(20px)' : 'translateX(0)';
+          thumb.style.background = isLive ? 'white' : '';
+        }
       }
 
-      const slider = document.getElementById('sw-paper-live-slider');
-      const knob   = document.getElementById('sw-paper-live-knob');
-      const toggle = document.getElementById('sw-paper-live-toggle');
-      if (slider) { slider.style.background = color; }
-      if (knob)   knob.style.transform = isLive ? 'translateX(26px)' : 'translateX(0)';
-      if (toggle) toggle.checked = isLive;
+      // Account rows
+      const paperRow = document.getElementById('sw-acct-paper');
+      const liveRow  = document.getElementById('sw-acct-live');
+      if (paperRow) paperRow.classList.toggle('active', !isLive);
+      if (liveRow)  liveRow.classList.toggle('active',   isLive);
+
+      // Architecture nodes
+      const paperNode = document.getElementById('sw-node-paper');
+      const liveNode  = document.getElementById('sw-node-live');
+      if (paperNode) { paperNode.classList.toggle('sw-node-active-account', !isLive); paperNode.style.opacity = isLive ? '0.6' : '1'; }
+      if (liveNode)  { liveNode.classList.toggle('sw-node-active-account',   isLive); liveNode.style.opacity  = isLive ? '1' : '0.6'; }
     }
 
     // ── Render 13 agents grid ──────────────────────────────
@@ -3798,17 +3811,20 @@ const Terminal = (() => {
       const grid = document.getElementById('sw-agents-grid');
       if (!grid) return;
 
-      grid.parentElement.innerHTML = AGENTS_LIST.map(a => `
-        <div style="padding:10px 12px;background:var(--surf2);border:1.5px solid var(--bord);
-                    border-left:3px solid ${a.color};border-radius:10px">
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
-            <i class="fa-solid ${a.icon}" style="color:${a.color};font-size:13px;flex-shrink:0"></i>
-            <span style="font-size:11px;font-weight:800;color:var(--txt)">${a.name}</span>
-            ${a.weight !== '—' ? `<span style="margin-left:auto;font-size:9px;background:${a.color}20;color:${a.color};padding:1px 6px;border-radius:8px;font-weight:700">${a.weight}</span>` : ''}
-          </div>
-          <div style="font-size:9px;color:var(--txt4);padding-left:20px">${a.role}</div>
-        </div>`
-      ).join('');
+      const WEIGHTS = {
+        drawdown_guardian:'0.20', regime_model:'0.15', signal_model:'0.15',
+        execution_timing:'0.10',  risk_manager:'0.10', correlation_surface:'0.08',
+        strategy_switching:'0.08',market_impact:'0.07',capital_rotation:'0.07',
+      };
+
+      grid.innerHTML = AGENTS_LIST.map(a => {
+        const w = WEIGHTS[a.module];
+        return `<div class="sw-agent-item">
+          <div class="sw-agent-name" style="border-left-color:${a.color}">${a.name}</div>
+          <div class="sw-agent-role">${a.role}</div>
+          ${w ? `<div class="sw-agent-weight" style="color:${a.color}">weight ${w}</div>` : ''}
+        </div>`;
+      }).join('');
     }
 
     // ── Render setup checklist ─────────────────────────────
@@ -3853,32 +3869,25 @@ const Terminal = (() => {
 
     // ── Main render for software section ──────────────────
     function _renderSoftware(data) {
-      const status   = data.status   || {};
-      const ibkr     = data.ibkr     || {};
-      const port     = data.portfolio|| {};
+      const status = data.status || {};
+      const ibkr   = data.ibkr   || {};
 
-      // Oracle status (inferred from ibkr_status.json)
-      const oracleOk = ibkr.vm_ip === '141.253.96.130';
-      _txt('sw-oracle-status',
-        oracleOk
-          ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
-          : '<i class="fa-solid fa-circle" style="color:var(--y)"></i> Unknown',
-        true
-      );
+      // Status dots
+      const hubOk = status.workers?.finance_hub === true || status.workers?.finance_hub?.ok === true;
+      const setDotSW = (id, cls) => {
+        const el = document.getElementById(id);
+        if (el) el.className = `sw-stat-dot ${cls}`;
+      };
+      setDotSW('sw-dot-oracle',  'sw-stat-dot sw-dot-ok');
+      setDotSW('sw-dot-ibeam',   ibkr.ibkr_connected ? 'sw-stat-dot sw-dot-ok' : 'sw-stat-dot sw-dot-warn');
+      setDotSW('sw-dot-watcher', 'sw-stat-dot sw-dot-ok');
+      setDotSW('sw-dot-worker',  hubOk ? 'sw-stat-dot sw-dot-ok' : 'sw-stat-dot sw-dot-warn');
 
-      // IBeam status
-      _txt('sw-ibeam-status',
-        ibkr.ibkr_connected
-          ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Connected'
-          : '<i class="fa-solid fa-plug" style="color:var(--y)"></i> No IBEAM_KEY',
-        true
-      );
+      _txt('sw-val-lastcycle', status.timestamp ? _fmtTime(status.timestamp) : '--');
 
-      // Last ML cycle
-      _txt('sw-last-cycle', status.timestamp ? _fmtTime(status.timestamp) : '--');
-
-      // Trading mode
-      const isLive = ibkr.trading_mode === 'live';
+      // Sync trading mode
+      const cachedTradingMode = localStorage.getItem('av_trading_mode') || 'paper';
+      const isLive = ibkr.trading_mode === 'live' || cachedTradingMode === 'live';
       _updatePaperLiveUI(isLive ? 'live' : 'paper');
     }
 
