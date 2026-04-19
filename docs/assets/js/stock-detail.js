@@ -1,20 +1,16 @@
 // ============================================================
-// stock-detail.js — AlphaVault Quant v3.1
-// ✅ Full-page (plein écran) — plus de modal slide-in
-// ✅ Yahoo Finance UNIQUEMENT via yahoo-proxy Worker v2
-// ✅ KV cache côté Worker (TTL par route)
-// ✅ Fallback v11 → v10 → chart_endpoint
-// ✅ Fix chart infinite growth (height explicite + ResizeObserver)
-// ✅ Tabs: Overview | Chart | Financials | Earnings | News
+// stock-detail.js — AlphaVault Quant v3.2
+// Full-page stock detail — Multi-source financial data
+// Chart: LightweightCharts | Indicators: Chart.js
 // ============================================================
 
 // ════════════════════════════════════════════════════════════
-// YAHOO FINANCE CLIENT — Proxy Worker v2 uniquement
+// YAHOO FINANCE CLIENT — chart + quote + news + search
 // ════════════════════════════════════════════════════════════
 const YahooFinance = (() => {
 
   const PROXY = 'https://yahoo-proxy.raphnardone.workers.dev';
-  const _mem  = new Map();   // mémoire courte session (60s)
+  const _mem  = new Map();
   const TTL   = 60_000;
 
   async function _get(path, bustCache = false) {
@@ -33,18 +29,17 @@ const YahooFinance = (() => {
       return data;
     } catch(e) {
       console.warn(`YahooFinance ${path}: ${e.message}`);
-      if (hit?.data) return hit.data;   // stale fallback
+      if (hit?.data) return hit.data;
       return null;
     }
   }
 
-  // ── OHLCV Chart Data ──────────────────────────────────────
   async function getChart(sym, interval = '1d', range = '1y') {
     const data = await _get(`/chart/${sym}?interval=${interval}&range=${range}`, true);
     if (!data?.chart?.result?.[0]) return [];
-    const r    = data.chart.result[0];
-    const ts   = r.timestamp || [];
-    const q    = r.indicators?.quote?.[0] || {};
+    const r  = data.chart.result[0];
+    const ts = r.timestamp || [];
+    const q  = r.indicators?.quote?.[0] || {};
     return ts
       .map((t, i) => ({
         time:   t,
@@ -57,56 +52,49 @@ const YahooFinance = (() => {
       .filter(c => c.close > 0);
   }
 
-  // ── Real-time Quote ───────────────────────────────────────
   async function getQuote(sym) {
     const data = await _get(`/chart/${sym}?interval=1d&range=5d`);
     if (!data?.chart?.result?.[0]) return null;
-    const meta  = data.chart.result[0].meta || {};
-    const closes= (data.chart.result[0].indicators?.quote?.[0]?.close || []).filter(Boolean);
-    const price = meta.regularMarketPrice || closes.at(-1) || 0;
-    const prev  = meta.previousClose      || closes.at(-2) || price;
-    const chgPct= prev ? ((price - prev) / prev * 100) : 0;
+    const meta   = data.chart.result[0].meta || {};
+    const closes = (data.chart.result[0].indicators?.quote?.[0]?.close || []).filter(Boolean);
+    const price  = meta.regularMarketPrice || closes.at(-1) || 0;
+    const prev   = meta.previousClose      || closes.at(-2) || price;
+    const chgPct = prev ? ((price - prev) / prev * 100) : 0;
     return {
-      symbol:    meta.symbol  || sym,
+      symbol:     meta.symbol  || sym,
       price,
       prev_close: prev,
-      change:    price - prev,
+      change:     price - prev,
       change_pct: chgPct,
-      open:      meta.regularMarketOpen,
-      high:      meta.regularMarketDayHigh,
-      low:       meta.regularMarketDayLow,
-      volume:    meta.regularMarketVolume,
-      market_cap:meta.marketCap,
-      currency:  meta.currency || 'USD',
-      exchange:  meta.exchangeName || '',
-      '52w_high':meta.fiftyTwoWeekHigh,
-      '52w_low': meta.fiftyTwoWeekLow,
-      '50d_avg': meta.fiftyDayAverage,
-      '200d_avg':meta.twoHundredDayAverage,
-      source:    'yahoo',
+      open:       meta.regularMarketOpen,
+      high:       meta.regularMarketDayHigh,
+      low:        meta.regularMarketDayLow,
+      volume:     meta.regularMarketVolume,
+      market_cap: meta.marketCap,
+      currency:   meta.currency || 'USD',
+      exchange:   meta.exchangeName || '',
+      '52w_high': meta.fiftyTwoWeekHigh,
+      '52w_low':  meta.fiftyTwoWeekLow,
+      '50d_avg':  meta.fiftyDayAverage,
+      '200d_avg': meta.twoHundredDayAverage,
+      source:     'chart',
     };
   }
 
-  // ── Financial Summary ─────────────────────────────────────
   async function getFinancials(sym) {
     const data = await _get(`/summary/${sym}`);
     if (!data) return null;
-    // Worker v2 retourne quoteSummary.result[0]
     const result = data?.quoteSummary?.result?.[0];
     if (result) return result;
-    // fallback: data est déjà le result object
     if (data?.price || data?.financialData) return data;
     return null;
   }
 
-  // ── News ──────────────────────────────────────────────────
   async function getNews(sym, count = 50) {
     const data = await _get(`/news/${sym}?count=${count}`, true);
-    // Support plusieurs formats de réponse
     return data?.news || data?.items || data?.articles || [];
   }
 
-  // ── Symbol Search ─────────────────────────────────────────
   async function search(q) {
     const data = await _get(`/search/${encodeURIComponent(q)}`);
     return data?.quotes || [];
@@ -119,14 +107,14 @@ const YahooFinance = (() => {
 window.YahooFinance = YahooFinance;
 
 // ════════════════════════════════════════════════════════════
-// FINANCE HUB CLIENT — FinnHub + Twelve Data via finance-hub-api
-// Source primaire quand Yahoo Finance bloque les Workers IPs
+// FINANCE HUB CLIENT — FinnHub + Twelve Data
+// via finance-hub-api Worker — source primaire des fondamentaux
 // ════════════════════════════════════════════════════════════
 const FinanceHub = (() => {
 
   const BASE = 'https://finance-hub-api.raphnardone.workers.dev';
   const _mem  = new Map();
-  const TTL   = 300_000; // 5 min cache session
+  const TTL   = 300_000;
 
   async function _get(path) {
     const now = Date.now();
@@ -147,36 +135,29 @@ const FinanceHub = (() => {
     }
   }
 
-  // Métriques fondamentales FinnHub (P/E, marges, ROE, etc.)
   async function getBasicFinancials(sym) {
     return await _get(`/api/finnhub/basic-financials?symbol=${sym}&metric=all`);
   }
 
-  // Historique EPS (actual vs estimated, surprises)
   async function getEarnings(sym) {
     return await _get(`/api/finnhub/earnings?symbol=${sym}`);
   }
 
-  // Prochain calendar d'earnings (date, estimate EPS/Rev)
   async function getEarningsCalendar(sym) {
     const from = new Date().toISOString().split('T')[0];
     const to   = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     return await _get(`/api/finnhub/earnings-calendar?symbol=${sym}&from=${from}&to=${to}`);
   }
 
-  // Profil entreprise (secteur, pays, site, logo)
   async function getCompanyProfile(sym) {
     return await _get(`/api/finnhub/company-profile?symbol=${sym}`);
   }
 
-  // Statistiques Twelve Data (valorisation, P/S, P/B, EV/EBITDA, etc.)
   async function getStatistics(sym) {
     return await _get(`/api/statistics?symbol=${sym}`);
   }
 
-  // Vide le cache pour un symbole (retry)
   function clearCache(sym) {
-    const prefix = `/${sym}`;
     for (const key of _mem.keys()) {
       if (key.includes(sym)) _mem.delete(key);
     }
@@ -189,7 +170,7 @@ const FinanceHub = (() => {
 window.FinanceHub = FinanceHub;
 
 // ════════════════════════════════════════════════════════════
-// HELPER: Fix Chart Container Heights (empêche la croissance infinie)
+// HELPER — Fix Chart Container Heights
 // ════════════════════════════════════════════════════════════
 function _fixChartHeights() {
   const rules = [
@@ -214,19 +195,18 @@ function _fixChartHeights() {
 // ════════════════════════════════════════════════════════════
 const StockDetail = (() => {
 
-  // ── State ────────────────────────────────────────────────
   let _sym       = null;
   let _tab       = 'overview';
   let _iv        = '1d';
   let _range     = '1y';
-  let _data      = {};     // { sym: { quote, summary, news } }
-  let _fpChart   = null;   // LWC full-page chart instance
+  let _data      = {};
+  let _fpChart   = null;
   let _fpSeries  = null;
   let _lastFPWidth = 0;
-  const _sdCJ = {};          // Chart.js instances StockDetail
+  const _sdCJ    = {};
 
   // ────────────────────────────────────────────────────────
-  // BUILD HTML (une seule fois au premier appel)
+  // BUILD HTML
   // ────────────────────────────────────────────────────────
   function _build() {
     if (document.getElementById('sdp-fullpage')) return;
@@ -234,7 +214,6 @@ const StockDetail = (() => {
     document.body.insertAdjacentHTML('beforeend', `
       <div class="sdp-fullpage" id="sdp-fullpage">
 
-        <!-- ── HEADER ── -->
         <div class="sdp-fp-header">
           <button class="sdp-fp-back" id="sdp-back">
             <i class="fa-solid fa-arrow-left"></i> Back
@@ -268,13 +247,8 @@ const StockDetail = (() => {
               <i class="fa-regular fa-star"></i> Watchlist
             </button>
           </div>
-
-          <div class="sdp-source-badge">
-            <i class="fa-brands fa-yahoo"></i> Yahoo Finance
-          </div>
         </div>
 
-        <!-- ── TABS ── -->
         <div class="sdp-fp-tabs" id="sdp-fp-tabs">
           <button class="sdp-fp-tab active" data-tab="overview">
             <i class="fa-solid fa-chart-pie"></i> Overview
@@ -287,31 +261,27 @@ const StockDetail = (() => {
           </button>
         </div>
 
-        <!-- ── CONTENT ── -->
         <div class="sdp-fp-body layout-overview" id="sdp-fp-body">
           <div style="display:flex;align-items:center;justify-content:center;gap:12px;color:var(--txt4);grid-column:1/-1">
             <i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1)"></i>
-            Loading data from Yahoo Finance...
+            Loading data...
           </div>
         </div>
 
       </div>`);
 
-    // ── Lazy logo dans le header ─────────────────────────
     const logoContainer = document.createElement('div');
     logoContainer.id    = 'sdp-fp-logo';
     logoContainer.style.cssText = 'flex-shrink:0;margin-right:-4px';
     const headerEl = document.querySelector('#sdp-fullpage .sdp-fp-header');
     if (headerEl) {
-    const backBtn = document.getElementById('sdp-back');
-    if (backBtn && backBtn.nextSibling) {
+      const backBtn = document.getElementById('sdp-back');
+      if (backBtn && backBtn.nextSibling) {
         headerEl.insertBefore(logoContainer, backBtn.nextSibling);
-    }
+      }
     }
 
-    // ── Event bindings ───────────────────────────────────
-    document.getElementById('sdp-back')
-      .addEventListener('click', close);
+    document.getElementById('sdp-back').addEventListener('click', close);
 
     document.querySelectorAll('.sdp-fp-tab').forEach(tab => {
       tab.addEventListener('click', () => _switchTab(tab.dataset.tab));
@@ -333,7 +303,6 @@ const StockDetail = (() => {
 
     document.getElementById('sdp-fp-wl').addEventListener('click', _toggleWL);
 
-    // ESC key
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && document.getElementById('sdp-fullpage')?.classList.contains('open')) {
         close();
@@ -354,49 +323,39 @@ const StockDetail = (() => {
     _build();
 
     const fp = document.getElementById('sdp-fullpage');
-    if (!fp) {
-    console.error('[StockDetail] sdp-fullpage introuvable — _build() a échoué');
-    return;
-    }
-    // Double sécurité : CSS class + style direct
+    if (!fp) { console.error('[StockDetail] sdp-fullpage not found'); return; }
+
     fp.classList.add('open');
     fp.style.setProperty('display', 'flex', 'important');
     fp.style.setProperty('z-index', '9999', 'important');
     document.body.style.overflow = 'hidden';
-    console.log(`[StockDetail] open() → ${_sym}`);
 
-    // Fix all chart heights immediately
     _fixChartHeights();
 
-    // Initial header
     const meta = window.WatchlistManager?.getSymbolMeta(_sym) || { name: _sym, sector: '--' };
     _t('sdp-fp-sym',    _sym);
     _t('sdp-fp-name',   meta.name);
     _t('sdp-fp-sector', meta.sector);
-    // Mise à jour du logo dans le header
+
     const logoSlot = document.getElementById('sdp-fp-logo');
     if (logoSlot) {
-    logoSlot.innerHTML = typeof window._getLogoHtml === 'function'
-        ? window._getLogoHtml(_sym, 36)
-        : '';
+      logoSlot.innerHTML = typeof window._getLogoHtml === 'function'
+        ? window._getLogoHtml(_sym, 36) : '';
     }
     _updateWLBtn();
 
-    // Reset tabs UI
     document.querySelectorAll('.sdp-fp-tab').forEach(t =>
       t.classList.toggle('active', t.dataset.tab === 'overview')
     );
 
-    // Show loading
-    _bodyHtml('<div style="display:flex;align-items:center;justify-content:center;gap:12px;color:var(--txt4);grid-column:1/-1;padding:60px">' +
+    _bodyHtml(
+      '<div style="display:flex;align-items:center;justify-content:center;gap:12px;color:var(--txt4);grid-column:1/-1;padding:60px">' +
       '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:22px;color:var(--b1)"></i>' +
-      `Loading Yahoo Finance data for <strong style="color:var(--txt)">${_sym}</strong>...</div>`,
-      'layout-overview');
+      `Loading data for <strong style="color:var(--txt)">${_sym}</strong>...</div>`,
+      'layout-overview'
+    );
 
-    // Fetch all data in parallel
     await _fetchAll(_sym);
-
-    // Render first tab
     _switchTab('overview');
   }
 
@@ -407,7 +366,7 @@ const StockDetail = (() => {
     const fp = document.getElementById('sdp-fullpage');
     if (fp) {
       fp.classList.remove('open');
-      fp.style.removeProperty('display');   // ← Supprime le style inline posé par open()
+      fp.style.removeProperty('display');
       fp.style.removeProperty('z-index');
       fp.style.removeProperty('flex-direction');
     }
@@ -416,12 +375,11 @@ const StockDetail = (() => {
   }
 
   // ────────────────────────────────────────────────────────
-  // DATA FETCH — Yahoo chart/news + FinnHub + Twelve Data
+  // DATA FETCH — Chart/Quote + Financials + Fundamentals
   // ────────────────────────────────────────────────────────
   async function _fetchAll(sym) {
     if (!_data[sym]) _data[sym] = {};
 
-    // Fetch toutes les sources en parallèle
     const [
       quoteRes, summaryRes, newsRes,
       fhBasicRes, fhEarnRes, fhCalRes, fhProfileRes, fhStatsRes,
@@ -445,17 +403,6 @@ const StockDetail = (() => {
     _data[sym].fhProfile  = fhProfileRes.status   === 'fulfilled' ? fhProfileRes.value  : null;
     _data[sym].fhStats    = fhStatsRes.status     === 'fulfilled' ? fhStatsRes.value    : null;
 
-    console.log(`[StockDetail] Data fetched for ${sym}:`, {
-      yahoo_quote:   !!_data[sym].quote,
-      yahoo_summary: _data[sym].summary?._source || 'null',
-      fh_basic:      !!_data[sym].fhBasic?.metric,
-      fh_earnings:   Array.isArray(_data[sym].fhEarnings) ? _data[sym].fhEarnings.length + ' records' : 'null',
-      fh_cal:        !!_data[sym].fhCal?.earningsCalendar,
-      fh_profile:    !!_data[sym].fhProfile?.name,
-      td_stats:      !!_data[sym].fhStats?.valuations_metrics,
-    });
-
-    // Mise à jour header depuis Yahoo quote (toujours disponible)
     const q = _data[sym].quote;
     if (q && q.price > 0) {
       _t('sdp-fp-price', `$${q.price.toFixed(2)}`);
@@ -483,10 +430,9 @@ const StockDetail = (() => {
     );
 
     switch(tab) {
-      case 'overview':   _renderOverview();          break;
-      case 'financials': _renderFinancialsEarnings(); break; // ← fusionné
-      case 'news':       _renderNews();              break;
-      // 'chart' et 'earnings' supprimés
+      case 'overview':   _renderOverview();           break;
+      case 'financials': _renderFinancialsEarnings();  break;
+      case 'news':       _renderNews();               break;
     }
 
     setTimeout(_fixChartHeights, 50);
@@ -499,49 +445,45 @@ const StockDetail = (() => {
     const sym     = _sym;
     const q       = _data[sym]?.quote   || {};
     const sum     = _data[sym]?.summary || {};
-    const price   = sum.price            || {};
-    const detail  = sum.summaryDetail    || {};
+    const price   = sum.price                || {};
+    const detail  = sum.summaryDetail        || {};
     const stats   = sum.defaultKeyStatistics || {};
-    const fin     = sum.financialData    || {};
-    const profile = sum.assetProfile     || {};
+    const fin     = sum.financialData        || {};
+    const profile = sum.assetProfile         || {};
+    const fhM     = _data[sym]?.fhBasic?.metric || {};
+    const fhProf  = _data[sym]?.fhProfile       || {};
     const signal  = _sig(sym);
-    const isFallback = sum._source === 'chart_fallback';
 
-    // ── Key Stats ──
     const kstats = [
-      { l:'Open',         v: _f(q.open || detail.open?.raw,        '$') },
-      { l:'Day High',     v: _f(q.high || detail.dayHigh?.raw,     '$') },
-      { l:'Day Low',      v: _f(q.low  || detail.dayLow?.raw,      '$') },
-      { l:'Prev Close',   v: _f(q.prev_close || detail.previousClose?.raw, '$') },
-      { l:'Volume',       v: _fmtNum(q.volume || detail.volume?.raw) },
-      { l:'Avg Volume',   v: _fmtNum(detail.averageVolume?.raw) },
-      { l:'Market Cap',   v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
-      { l:'P/E (TTM)',    v: _f(detail.trailingPE?.raw,  '', 2) },
-      { l:'Fwd P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
-      { l:'EPS (TTM)',    v: _f(stats.trailingEps?.raw,  '$', 2) },
-      { l:'Div Yield',    v: _f(detail.dividendYield?.raw != null ? detail.dividendYield.raw * 100 : null, '', 2, '%') },
-      { l:'Beta',         v: _f(detail.beta?.raw,         '', 2) },
-      { l:'52W High',     v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw,     '$') },
-      { l:'52W Low',      v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw,      '$') },
-      { l:'50D Avg',      v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw,      '$') },
-      { l:'200D Avg',     v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
-      { l:'Profit Margin',v: _f(fin.profitMargins?.raw != null ? fin.profitMargins.raw * 100 : null, '', 2, '%') },
-      { l:'ROE',          v: _f(fin.returnOnEquity?.raw  != null ? fin.returnOnEquity.raw  * 100 : null, '', 2, '%') },
-      { l:'Debt/Equity',  v: _f(fin.debtToEquity?.raw,   '', 2) },
-      { l:'Revenue (TTM)',v: _fmtMCap(fin.totalRevenue?.raw) },
-      { l:'Gross Margin', v: _f(fin.grossMargins?.raw    != null ? fin.grossMargins.raw    * 100 : null, '', 2, '%') },
-      { l:'Float',        v: _fmtNum(stats.floatShares?.raw) },
-      { l:'Short %',      v: _f(stats.shortPercentOfFloat?.raw != null ? stats.shortPercentOfFloat.raw * 100 : null, '', 2, '%') },
+      { l:'Open',          v: _f(q.open   || detail.open?.raw,        '$') },
+      { l:'Day High',      v: _f(q.high   || detail.dayHigh?.raw,     '$') },
+      { l:'Day Low',       v: _f(q.low    || detail.dayLow?.raw,      '$') },
+      { l:'Prev Close',    v: _f(q.prev_close || detail.previousClose?.raw, '$') },
+      { l:'Volume',        v: _fmtNum(q.volume || detail.volume?.raw) },
+      { l:'Avg Volume',    v: _fmtNum(detail.averageVolume?.raw) },
+      { l:'Market Cap',    v: _fmtMCap(price.marketCap?.raw || q.market_cap || (fhM.marketCapitalization ? fhM.marketCapitalization * 1e6 : null)) },
+      { l:'P/E (TTM)',     v: _f(detail.trailingPE?.raw || fhM.peBasicExclExtraTTM, '', 2) },
+      { l:'Fwd P/E',       v: _f(detail.forwardPE?.raw  || fhM.forwardPE,           '', 2) },
+      { l:'EPS (TTM)',     v: _f(stats.trailingEps?.raw  || fhM.epsNormalizedAnnual, '$', 2) },
+      { l:'Div Yield',     v: _f(detail.dividendYield?.raw != null ? detail.dividendYield.raw * 100 : (fhM.dividendYieldIndicatedAnnual || null), '', 2, '%') },
+      { l:'Beta',          v: _f(detail.beta?.raw || fhM.beta, '', 2) },
+      { l:'52W High',      v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw || fhM['52WeekHigh'], '$') },
+      { l:'52W Low',       v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw  || fhM['52WeekLow'],  '$') },
+      { l:'50D Avg',       v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw,      '$') },
+      { l:'200D Avg',      v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
+      { l:'Profit Margin', v: _f(fin.profitMargins?.raw != null ? fin.profitMargins.raw * 100 : (fhM.netMarginAnnual || null), '', 2, '%') },
+      { l:'ROE',           v: _f(fin.returnOnEquity?.raw  != null ? fin.returnOnEquity.raw  * 100 : (fhM.roeTTM  || null), '', 2, '%') },
+      { l:'Debt/Equity',   v: _f(fin.debtToEquity?.raw || fhM['totalDebt/totalEquityAnnual'], '', 2) },
+      { l:'Revenue (TTM)', v: _fmtMCap(fin.totalRevenue?.raw) },
+      { l:'Gross Margin',  v: _f(fin.grossMargins?.raw    != null ? fin.grossMargins.raw    * 100 : (fhM.grossMarginAnnual || null), '', 2, '%') },
     ].filter(i => i.v && i.v !== '--');
 
-    // ── Row 1 : Signal + Mini chart côte à côte ──────────────
-    const sigBg    = signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.06)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.06)' : 'var(--surf2)') : 'var(--surf2)';
-    const sigBorder= signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.25)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.25)' : 'var(--bord)') : 'var(--bord)';
+    const sigBg     = signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.06)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.06)' : 'var(--surf2)') : 'var(--surf2)';
+    const sigBorder = signal ? (signal.direction === 'buy' ? 'rgba(16,185,129,0.25)' : signal.direction === 'sell' ? 'rgba(239,68,68,0.25)' : 'var(--bord)') : 'var(--bord)';
 
     const row1 = `
       <div style="display:grid;grid-template-columns:1fr 320px;gap:12px;align-items:start">
 
-        <!-- Signal block -->
         <div class="sdp-fp-stat-section" style="background:${sigBg};border-color:${sigBorder};padding:14px">
           <div class="sdp-fp-stat-title" style="margin-bottom:10px">
             <i class="fa-solid fa-brain"></i> AlphaVault ML Signal
@@ -578,43 +520,46 @@ const StockDetail = (() => {
           ` : `<div style="color:var(--txt4);font-size:12px"><i class="fa-solid fa-clock"></i> Awaiting signal cycle...</div>`}
         </div>
 
-        <!-- Mini chart -->
         <div class="sdp-fp-stat-section" style="padding:12px">
           <div class="sdp-fp-stat-title" style="margin-bottom:8px">
             <i class="fa-solid fa-chart-line"></i> Price Chart (1Y)
           </div>
           <div id="sdp-fp-chart-mini" class="sdp-fp-chart-mini-sm"></div>
           <div style="font-size:9px;color:var(--txt4);text-align:center;margin-top:4px">
-            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · Daily
+            <i class="fa-solid fa-calendar-days" style="font-size:8px"></i> 1Y · Daily
           </div>
         </div>
 
       </div>`;
 
-    // ── Row 2 : Company profile ───────────────────────────────
-    const descBlock = profile.longBusinessSummary ? `
+    const profSector = profile.sector || fhProf.finnhubIndustry || '';
+    const profIndustry = profile.industry || '';
+    const profCountry  = profile.country  || fhProf.country || '';
+    const profEmployees= profile.fullTimeEmployees || null;
+    const profDesc     = profile.longBusinessSummary || '';
+
+    const descBlock = (profDesc || profSector) ? `
       <div class="sdp-fp-stat-section" style="padding:14px">
         <div class="sdp-fp-stat-title" style="margin-bottom:8px">
           <i class="fa-solid fa-building"></i> About ${sym}
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
-          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
-          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
-          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
-          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+          ${profSector   ? `<span class="regime-chip">${profSector}</span>` : ''}
+          ${profIndustry && profIndustry !== profSector ? `<span class="regime-chip">${profIndustry}</span>` : ''}
+          ${profCountry  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profCountry}</span>` : ''}
+          ${profEmployees? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profEmployees)}</span>` : ''}
         </div>
+        ${profDesc ? `
         <p id="sdp-desc-p" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">
-          ${profile.longBusinessSummary}
+          ${profDesc}
         </p>
-        <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>
+        <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>` : ''}
       </div>` : '';
 
-    // ── Row 3 : Key stats grid ────────────────────────────────
     const statsBlock = `
       <div class="sdp-fp-stat-section" style="padding:14px">
         <div class="sdp-fp-stat-title" style="margin-bottom:10px">
           <i class="fa-solid fa-table"></i> Key Statistics
-          ${isFallback ? `<span style="font-size:9px;color:var(--y);margin-left:8px">(partial data)</span>` : ''}
         </div>
         ${kstats.length ? `
           <div class="sdp-fp-stats">
@@ -625,14 +570,12 @@ const StockDetail = (() => {
               </div>`).join('')}
           </div>` : `<div style="color:var(--txt4);font-size:12px;text-align:center;padding:12px">
             <i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i>
-            Yahoo Finance data unavailable.
+            Financial data unavailable.
           </div>`}
       </div>`;
 
-    // ── Assemble en layout mono-colonne ───────────────────────
     _bodyHtml(row1 + descBlock + statsBlock, 'layout-overview-v2');
 
-    // ── Description toggle ───────────────────────────────────
     const tog  = document.getElementById('sdp-desc-toggle');
     const para = document.getElementById('sdp-desc-p');
     if (tog && para) {
@@ -645,15 +588,12 @@ const StockDetail = (() => {
       });
     }
 
-    // ── Mini chart (hauteur réduite 180px) ───────────────────
     setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', _sym, '1d', '1y', 180), 80);
-
-    // ── TA Charts ────────────────────────────────────────────
     setTimeout(() => _appendSDTASection(_sym), 150);
   }
 
   // ════════════════════════════════════════════════════════
-  // TAB: CHART (full width, 420px)
+  // TAB: CHART
   // ════════════════════════════════════════════════════════
   function _renderChart() {
     const INTERVALS = [
@@ -676,12 +616,11 @@ const StockDetail = (() => {
       </div>
       <div class="sdp-fp-chart" id="sdp-fp-chart-main"></div>
       <div style="font-size:10px;color:var(--txt4);text-align:center;margin-top:8px">
-        <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance — interval ${_iv}
+        Interval: ${_iv}
       </div>`;
 
     _bodyHtml(ivTabs, 'layout-chart');
 
-    // Bind interval buttons
     document.querySelectorAll('.sdp-iv-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.sdp-iv-btn').forEach(b => b.classList.remove('active'));
@@ -697,256 +636,12 @@ const StockDetail = (() => {
   }
 
   // ════════════════════════════════════════════════════════
-  // TAB: FINANCIALS
-  // ════════════════════════════════════════════════════════
-  function _renderFinancials() {
-    const sum    = _data[_sym]?.summary || {};
-    const fin    = sum.financialData          || {};
-    const stats  = sum.defaultKeyStatistics   || {};
-    const detail = sum.summaryDetail          || {};
-    const price  = sum.price                  || {};
-    const profile= sum.assetProfile           || {};
-    const q      = _data[_sym]?.quote         || {};
-
-    // ── Fusionne les données disponibles (summary + quote) ──
-    const kstats = [
-      { l:'Market Cap',      v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
-      { l:'Price',           v: _f(q.price || detail.regularMarketPrice?.raw, '$') },
-      { l:'Open',            v: _f(q.open  || detail.open?.raw, '$') },
-      { l:'Day High',        v: _f(q.high  || detail.dayHigh?.raw, '$') },
-      { l:'Day Low',         v: _f(q.low   || detail.dayLow?.raw, '$') },
-      { l:'Prev Close',      v: _f(q.prev_close || detail.previousClose?.raw, '$') },
-      { l:'Volume',          v: _fmtNum(q.volume || detail.volume?.raw) },
-      { l:'Avg Volume',      v: _fmtNum(detail.averageVolume?.raw) },
-      { l:'52W High',        v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, '$') },
-      { l:'52W Low',         v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw, '$') },
-      { l:'50D Avg',         v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw, '$') },
-      { l:'200D Avg',        v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
-      { l:'P/E (TTM)',       v: _f(detail.trailingPE?.raw, '', 2) },
-      { l:'Forward P/E',     v: _f(detail.forwardPE?.raw, '', 2) },
-      { l:'EPS (TTM)',       v: _f(stats.trailingEps?.raw, '$', 2) },
-      { l:'Beta',            v: _f(detail.beta?.raw, '', 2) },
-      { l:'Div Yield',       v: _fPct(detail.dividendYield?.raw) },
-      { l:'Enterprise Value',v: _fmtMCap(stats.enterpriseValue?.raw) },
-      { l:'P/S Ratio',       v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
-      { l:'P/B Ratio',       v: _f(stats.priceToBook?.raw, '', 2) },
-      { l:'EV/EBITDA',       v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
-      { l:'PEG Ratio',       v: _f(stats.pegRatio?.raw, '', 2) },
-      // Profitability
-      { l:'Revenue (TTM)',   v: _fmtMCap(fin.totalRevenue?.raw) },
-      { l:'Gross Margin',    v: _fPct(fin.grossMargins?.raw) },
-      { l:'Operating Margin',v: _fPct(fin.operatingMargins?.raw) },
-      { l:'Profit Margin',   v: _fPct(fin.profitMargins?.raw) },
-      { l:'EBITDA',          v: _fmtMCap(fin.ebitda?.raw) },
-      { l:'Revenue Growth',  v: _fPct(fin.revenueGrowth?.raw) },
-      { l:'Earnings Growth', v: _fPct(fin.earningsGrowth?.raw) },
-      // Balance Sheet
-      { l:'Total Cash',      v: _fmtMCap(fin.totalCash?.raw) },
-      { l:'Total Debt',      v: _fmtMCap(fin.totalDebt?.raw) },
-      { l:'Debt/Equity',     v: _f(fin.debtToEquity?.raw, '', 2) },
-      { l:'Free Cash Flow',  v: _fmtMCap(fin.freeCashflow?.raw) },
-      { l:'Current Ratio',   v: _f(fin.currentRatio?.raw, '', 2) },
-      // Returns
-      { l:'ROE',             v: _fPct(fin.returnOnEquity?.raw) },
-      { l:'ROA',             v: _fPct(fin.returnOnAssets?.raw) },
-      { l:'Short % Float',   v: _fPct(stats.shortPercentOfFloat?.raw) },
-      { l:'Insider Own.',    v: _fPct(stats.heldPercentInsiders?.raw) },
-      { l:'Institution Own.',v: _fPct(stats.heldPercentInstitutions?.raw) },
-    ].filter(i => i.v && i.v !== '--');
-
-    // Source indicator
-    const hasFull = fin.totalRevenue || stats.enterpriseValue;
-    const srcBadge = hasFull
-      ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)">
-          <i class="fa-solid fa-circle-check"></i> Full Data
-        </span>`
-      : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)" title="Full financials unavailable — proxy may need /summary module">
-          <i class="fa-solid fa-triangle-exclamation"></i> Partial Data (quote only)
-        </span>`;
-
-    // Company profile
-    const profileBlock = profile.longBusinessSummary ? `
-      <div class="sdp-fp-stat-section" style="margin-bottom:16px">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-building"></i> About ${_sym}</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
-          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
-          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
-          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
-        </div>
-        <p id="sdp-desc-p" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
-          ${profile.longBusinessSummary}
-        </p>
-        <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>
-      </div>` : '';
-
-    const statsBlock = `
-      <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-table"></i> Key Statistics &amp; Financials
-          <div style="margin-left:auto">${srcBadge}</div>
-        </div>
-        ${kstats.length ? `
-          <div class="sdp-fp-stats">
-            ${kstats.map(i => `
-              <div class="sdp-fp-stat-item">
-                <div class="sdp-fp-stat-lbl">${i.l}</div>
-                <div class="sdp-fp-stat-val">${i.v}</div>
-              </div>`).join('')}
-          </div>` : `
-          <div style="text-align:center;padding:40px;color:var(--txt4)">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:28px;color:var(--y);margin-bottom:10px;display:block"></i>
-            <strong style="color:var(--txt)">Financial data unavailable</strong><br>
-            <span style="font-size:12px;margin-top:6px;display:block">
-              The Yahoo Finance proxy (<code>/summary/${_sym}</code>) did not return data.<br>
-              Ensure the worker implements the <code>/summary/</code> endpoint with <code>quoteSummary</code> modules.
-            </span>
-            <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:12px">
-              <i class="fa-solid fa-rotate"></i> Retry
-            </button>
-          </div>`}
-      </div>`;
-
-    _bodyHtml(profileBlock + statsBlock, 'layout-financials');
-
-    // Bind description toggle
-    const tog  = document.getElementById('sdp-desc-toggle');
-    const para = document.getElementById('sdp-desc-p');
-    if (tog && para) {
-      let expanded = false;
-      tog.addEventListener('click', () => {
-        expanded = !expanded;
-        para.style.webkitLineClamp = expanded ? 'unset' : '3';
-        para.style.overflow        = expanded ? 'visible' : 'hidden';
-        tog.textContent            = expanded ? 'Show less' : 'Show more';
-      });
-    }
-  }
-
-  // ── Retry — vide Yahoo ET FinnHub cache ───────────────────
-  async function _retryFinancials() {
-    if (!_sym) return;
-    // Clear Yahoo cache
-    if (_data[_sym]) {
-      delete _data[_sym].summary;
-      delete _data[_sym].fhBasic;
-      delete _data[_sym].fhEarnings;
-      delete _data[_sym].fhCal;
-      delete _data[_sym].fhProfile;
-      delete _data[_sym].fhStats;
-    }
-    // Clear FinanceHub session cache
-    FinanceHub.clearCache(_sym);
-
-    // Refetch tout
-    await _fetchAll(_sym);
-    _renderFinancialsEarnings();
-  }
-
-  // ════════════════════════════════════════════════════════
-  // TAB: EARNINGS
-  // ════════════════════════════════════════════════════════
-  function _renderEarnings() {
-    const sum      = _data[_sym]?.summary || {};
-    const q        = _data[_sym]?.quote   || {};
-
-    // Multiple data paths
-    const trend    = sum.earningsTrend?.trend
-      || sum.earnings?.earningsChart?.quarterly
-      || [];
-    const calendar = sum.calendarEvents?.earnings || {};
-    const nextDates= (calendar.earningsDate || [])
-      .map(d => new Date((d.raw || d) * 1000))
-      .filter(d => d > new Date());
-    const nextEarnings = nextDates[0]?.toLocaleDateString('en-US', {
-      month:'long', day:'numeric', year:'numeric'
-    });
-
-    // EPS from quote (if available)
-    const epsFromQuote = sum.defaultKeyStatistics?.trailingEps?.raw
-      || sum.defaultKeyStatistics?.forwardEps?.raw;
-
-    const PERIOD_LABELS = {
-      '0q':'Current Quarter', '+1q':'Next Quarter',
-      '0y':'Current Year',    '+1y':'Next Year',
-    };
-
-    const epsSection = trend.length ? `
-      <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-chart-bar"></i> EPS &amp; Revenue Estimates
-        </div>
-        ${trend.map(t => {
-          const epsEst  = t.earningsEstimate?.avg?.raw;
-          const epsYago = t.earningsEstimate?.yearAgoEps?.raw;
-          const revEst  = t.revenueEstimate?.avg?.raw;
-          const revGrow = t.revenueEstimate?.growth?.raw;
-          const period  = PERIOD_LABELS[t.period] || t.period;
-          return `
-            <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bord)">
-              <div style="font-size:13px;font-weight:700;color:var(--txt);margin-bottom:10px;display:flex;align-items:center;gap:10px">
-                ${period}
-                ${revGrow != null ? `<span style="font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">
-                  Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY
-                </span>` : ''}
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
-                ${epsEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">EPS Estimate</div><div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div></div>` : ''}
-                ${epsYago != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Year Ago EPS</div><div class="sdp-fp-stat-val">$${epsYago.toFixed(2)}</div></div>` : ''}
-                ${revEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">Rev Estimate</div><div class="sdp-fp-stat-val">${_fmtMCap(revEst)}</div></div>` : ''}
-              </div>
-            </div>`;
-        }).join('')}
-      </div>` : '';
-
-    const calSection = nextEarnings ? `
-      <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-calendar-check"></i> Next Earnings Date</div>
-        <div style="font-size:28px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:6px">${nextEarnings}</div>
-      </div>` : '';
-
-    const epsCard = epsFromQuote ? `
-      <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-dollar-sign"></i> EPS Summary</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
-          <div class="sdp-fp-stat-item">
-            <div class="sdp-fp-stat-lbl">EPS (TTM)</div>
-            <div class="sdp-fp-stat-val" style="color:${epsFromQuote>0?'var(--g)':'var(--r)'}">
-              $${epsFromQuote.toFixed(2)}
-            </div>
-          </div>
-          ${q.price && epsFromQuote ? `
-          <div class="sdp-fp-stat-item">
-            <div class="sdp-fp-stat-lbl">P/E (TTM)</div>
-            <div class="sdp-fp-stat-val">${(q.price / epsFromQuote).toFixed(2)}</div>
-          </div>` : ''}
-        </div>
-      </div>` : '';
-
-    const fallback = !trend.length && !nextEarnings && !epsFromQuote ? `
-      <div style="grid-column:1/-1;text-align:center;padding:50px;color:var(--txt4)">
-        <i class="fa-solid fa-calendar-xmark" style="font-size:32px;color:var(--txt4);margin-bottom:12px;display:block"></i>
-        <strong style="color:var(--txt);font-size:14px">Earnings data unavailable for ${_sym}</strong>
-        <div style="font-size:12px;margin-top:8px">
-          ${_sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT)$/)
-            ? 'ETFs do not report individual earnings.'
-            : 'The /summary proxy endpoint needs to include <code>earningsTrend</code> and <code>calendarEvents</code> modules.'}
-        </div>
-        <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:14px">
-          <i class="fa-solid fa-rotate"></i> Retry
-        </button>
-      </div>` : '';
-
-    _bodyHtml(calSection + epsCard + epsSection + fallback, 'layout-earnings');
-  }
-
-  // ════════════════════════════════════════════════════════
-  // TAB: FINANCIALS & EARNINGS — Yahoo + FinnHub + Twelve Data
+  // TAB: FINANCIALS & EARNINGS
   // ════════════════════════════════════════════════════════
   function _renderFinancialsEarnings() {
     const sym = _sym;
 
-    // ── Sources de données ────────────────────────────────
+    // Sources
     const sum     = _data[sym]?.summary  || {};
     const q       = _data[sym]?.quote    || {};
     const fin     = sum.financialData          || {};
@@ -954,26 +649,19 @@ const StockDetail = (() => {
     const detail  = sum.summaryDetail          || {};
     const priceObj= sum.price                  || {};
     const profile = sum.assetProfile           || {};
-    const yahooTrend = sum.earningsTrend?.trend || [];
+    const yahooTrend    = sum.earningsTrend?.trend || [];
     const yahooCalendar = sum.calendarEvents?.earnings || {};
-    const isYahooFallback = sum._source === 'chart_fallback' || !sum._source;
 
-    // FinnHub
-    const fhM       = _data[sym]?.fhBasic?.metric || {};
-    const fhSeries  = _data[sym]?.fhBasic?.series  || {};
-    const fhEarnArr = Array.isArray(_data[sym]?.fhEarnings) ? _data[sym].fhEarnings : [];
-    const fhCalArr  = _data[sym]?.fhCal?.earningsCalendar || [];
-    const fhProf    = _data[sym]?.fhProfile || {};
+    const fhM      = _data[sym]?.fhBasic?.metric || {};
+    const fhEarnArr= Array.isArray(_data[sym]?.fhEarnings) ? _data[sym].fhEarnings : [];
+    const fhCalArr = _data[sym]?.fhCal?.earningsCalendar || [];
+    const fhProf   = _data[sym]?.fhProfile || {};
 
-    // Twelve Data statistics
     const tdVal    = _data[sym]?.fhStats?.valuations_metrics || {};
     const tdIncome = _data[sym]?.fhStats?.financials?.income_statement
                   || _data[sym]?.fhStats?.income_statement || {};
-    const tdBal    = _data[sym]?.fhStats?.financials?.balance_sheet
-                  || _data[sym]?.fhStats?.balance_sheet || {};
-    const tdStats  = _data[sym]?.fhStats?.statistics || {};
 
-    // ── Helpers merge Yahoo → FinnHub → Twelve Data ───────
+    // Merge helper: Yahoo prioritaire, FinnHub/TD en fallback
     const _rv = (yahooRaw, ...fallbacks) => {
       const y = yahooRaw?.raw ?? yahooRaw;
       if (y != null && !isNaN(parseFloat(y)) && y !== 0) return y;
@@ -991,130 +679,109 @@ const StockDetail = (() => {
     const _fpv = (yahooRaw, ...fallbacks) => {
       const v = _rv(yahooRaw, ...fallbacks);
       if (v == null) return '--';
-      // FinnHub donne les marges en %, Yahoo en décimal
       const isDecimal = Math.abs(parseFloat(v)) < 5;
       return isDecimal
         ? `${(parseFloat(v) * 100).toFixed(2)}%`
         : `${parseFloat(v).toFixed(2)}%`;
     };
 
-    const _fmv = (yahooRaw, ...fallbacks) => {
-      const v = _rv(yahooRaw, ...fallbacks);
-      return v != null ? _fmtMCap(v) : '--';
+    const _fmv = (...vals) => {
+      for (const v of vals) {
+        if (v != null && !isNaN(parseFloat(v)) && parseFloat(v) !== 0)
+          return _fmtMCap(v);
+      }
+      return '--';
     };
 
-    // Prix courant
     const currentPrice = q.price || detail.regularMarketPrice?.raw || priceObj.regularMarketPrice?.raw || 0;
 
-    // Market Cap
     const mktCapYahoo = priceObj.marketCap?.raw || q.market_cap;
     const mktCapFH    = fhM.marketCapitalization ? fhM.marketCapitalization * 1_000_000 : null;
     const mktCapTD    = tdVal.market_capitalization;
 
-    // EPS & P/E
-    const epsYahoo   = stats.trailingEps?.raw;
-    const epsFH      = fhM.epsNormalizedAnnual || fhM.epsBasicExclExtraAnnual;
-    const epsTD      = tdIncome.diluted_eps_ttm;
-    const epsUse     = _rv(epsYahoo, epsFH, epsTD);
+    const epsYahoo = stats.trailingEps?.raw;
+    const epsFH    = fhM.epsNormalizedAnnual || fhM.epsBasicExclExtraAnnual;
+    const epsTD    = tdIncome.diluted_eps_ttm;
+    const epsUse   = _rv(epsYahoo, epsFH, epsTD);
 
-    const peYahoo    = detail.trailingPE?.raw;
-    const peFH       = fhM.peBasicExclExtraTTM || fhM.peTTM;
-    const peTD       = tdVal.trailing_pe;
-    const peCalc     = (currentPrice && epsUse && epsUse > 0) ? currentPrice / epsUse : null;
-    const peUse      = _rv(peYahoo, peFH, peTD, peCalc);
+    const peYahoo  = detail.trailingPE?.raw;
+    const peFH     = fhM.peBasicExclExtraTTM || fhM.peTTM;
+    const peTD     = tdVal.trailing_pe;
+    const peCalc   = (currentPrice && epsUse && parseFloat(epsUse) > 0) ? currentPrice / parseFloat(epsUse) : null;
+    const peUse    = _rv(peYahoo, peFH, peTD, peCalc);
 
-    const fwdPE      = _rv(detail.forwardPE?.raw, fhM.forwardPE, tdVal.forward_pe);
-    const fwdEPS     = _rv(stats.forwardEps?.raw, null, tdIncome.diluted_eps_ttm);
-    const pegRatio   = _rv(stats.pegRatio?.raw, tdVal.peg_ratio);
+    const fwdPE    = _rv(detail.forwardPE?.raw, fhM.forwardPE, tdVal.forward_pe);
+    const fwdEPS   = _rv(stats.forwardEps?.raw);
+    const pegRatio = _rv(stats.pegRatio?.raw, tdVal.peg_ratio);
+    const psRatio  = _rv(stats.priceToSalesTrailing12Months?.raw, tdVal.price_to_sales_ttm);
+    const pbRatio  = _rv(stats.priceToBook?.raw, tdVal.price_to_book_mrq);
+    const evEbitda = _rv(stats.enterpriseToEbitda?.raw, tdVal.enterprise_to_ebitda);
+    const ev       = _rv(stats.enterpriseValue?.raw, tdVal.enterprise_value);
+    const betaUse  = _rv(detail.beta?.raw, fhM.beta);
+    const divYield = _rv(detail.dividendYield?.raw, fhM.dividendYieldIndicatedAnnual ? fhM.dividendYieldIndicatedAnnual / 100 : null);
 
-    // Ratios de valorisation
-    const psRatio   = _rv(stats.priceToSalesTrailing12Months?.raw, tdVal.price_to_sales_ttm);
-    const pbRatio   = _rv(stats.priceToBook?.raw, tdVal.price_to_book_mrq);
-    const evEbitda  = _rv(stats.enterpriseToEbitda?.raw, tdVal.enterprise_to_ebitda);
-    const ev        = _rv(stats.enterpriseValue?.raw, tdVal.enterprise_value);
+    const revenueUse  = _rv(fin.totalRevenue?.raw, tdIncome.revenue_ttm);
+    const grossMgn    = _rv(fin.grossMargins?.raw, fhM.grossMarginAnnual);
+    const opMgn       = _rv(fin.operatingMargins?.raw, fhM.operatingMarginAnnual);
+    const netMgn      = _rv(fin.profitMargins?.raw, fhM.netMarginAnnual);
+    const ebitda      = _rv(fin.ebitda?.raw, tdIncome.ebitda);
+    const revGrowth   = _rv(fin.revenueGrowth?.raw, fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y / 100 : null);
+    const earnGrowth  = _rv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y ? fhM.epsGrowth3Y / 100 : null);
+    const totalCash   = _rv(fin.totalCash?.raw);
+    const totalDebt   = _rv(fin.totalDebt?.raw);
+    const d2e         = _rv(fin.debtToEquity?.raw, fhM['totalDebt/totalEquityAnnual']);
+    const currRatio   = _rv(fin.currentRatio?.raw, fhM.currentRatioAnnual);
+    const fcf         = _rv(fin.freeCashflow?.raw, fhM.freeCashFlowAnnual ? fhM.freeCashFlowAnnual * 1_000_000 : null);
+    const roe         = _rv(fin.returnOnEquity?.raw, fhM.roeTTM ? fhM.roeTTM / 100 : null);
+    const roa         = _rv(fin.returnOnAssets?.raw, fhM.roaRfy  ? fhM.roaRfy  / 100 : null);
+    const shortPct    = _rv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat / 100 : null);
+    const insiderPct  = _rv(stats.heldPercentInsiders?.raw);
+    const instPct     = _rv(stats.heldPercentInstitutions?.raw);
 
-    // Fondamentaux
-    const revenueYahoo = fin.totalRevenue?.raw;
-    const revenueTD    = tdIncome.revenue_ttm;
-    const revenueUse   = _rv(revenueYahoo, revenueTD);
-
-    const grossMgn  = _rv(fin.grossMargins?.raw, fhM.grossMarginAnnual, tdIncome.gross_profit_ttm && revenueUse ? tdIncome.gross_profit_ttm / revenueUse : null);
-    const opMgn     = _rv(fin.operatingMargins?.raw, fhM.operatingMarginAnnual);
-    const netMgn    = _rv(fin.profitMargins?.raw, fhM.netMarginAnnual);
-    const ebitda    = _rv(fin.ebitda?.raw, null, tdIncome.ebitda);
-    const revGrowth = _rv(fin.revenueGrowth?.raw, fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y / 100 : null);
-    const earnGrowth= _rv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y ? fhM.epsGrowth3Y / 100 : null);
-
-    // Bilan
-    const totalCash = _rv(fin.totalCash?.raw);
-    const totalDebt = _rv(fin.totalDebt?.raw);
-    const d2e       = _rv(fin.debtToEquity?.raw, fhM['totalDebt/totalEquityAnnual']);
-    const currRatio = _rv(fin.currentRatio?.raw, fhM.currentRatioAnnual);
-    const fcf       = _rv(fin.freeCashflow?.raw, fhM.freeCashFlowAnnual ? fhM.freeCashFlowAnnual * 1_000_000 : null);
-
-    // Rendements
-    const roe       = _rv(fin.returnOnEquity?.raw, fhM.roeTTM ? fhM.roeTTM / 100 : null);
-    const roa       = _rv(fin.returnOnAssets?.raw, fhM.roaRfy  ? fhM.roaRfy  / 100 : null);
-
-    // Actions
-    const shortPct  = _rv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat / 100 : null);
-    const insiderPct= _rv(stats.heldPercentInsiders?.raw);
-    const instPct   = _rv(stats.heldPercentInstitutions?.raw);
-
-    // Beta
-    const betaUse   = _rv(detail.beta?.raw, fhM.beta);
-
-    // Dividende
-    const divYield  = _rv(detail.dividendYield?.raw, fhM.dividendYieldIndicatedAnnual ? fhM.dividendYieldIndicatedAnnual / 100 : null);
-
-    // ── Construction du tableau kstats ────────────────────
+    // ── kstats tableau ────────────────────────────────────
     const kstats = [
       { l:'Market Cap',         v: _fmv(mktCapYahoo, mktCapFH, mktCapTD) },
       { l:'Price',              v: currentPrice ? `$${parseFloat(currentPrice).toFixed(2)}` : '--' },
       { l:'52W High',           v: _fv(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, 2, '$', '', fhM['52WeekHigh']) },
       { l:'52W Low',            v: _fv(q['52w_low']  || detail.fiftyTwoWeekLow?.raw,  2, '$', '', fhM['52WeekLow']) },
-      { l:'P/E (TTM)',          v: peUse     != null ? parseFloat(peUse).toFixed(2) : '--' },
-      { l:'Forward P/E',        v: fwdPE     != null ? parseFloat(fwdPE).toFixed(2) : '--' },
-      { l:'EPS (TTM)',          v: epsUse    != null ? `$${parseFloat(epsUse).toFixed(2)}` : '--' },
-      { l:'Forward EPS',        v: fwdEPS    != null ? `$${parseFloat(fwdEPS).toFixed(2)}` : '--' },
-      { l:'PEG Ratio',          v: pegRatio  != null ? parseFloat(pegRatio).toFixed(2) : '--' },
-      { l:'P/S Ratio',          v: psRatio   != null ? parseFloat(psRatio).toFixed(2) : '--' },
-      { l:'P/B Ratio',          v: pbRatio   != null ? parseFloat(pbRatio).toFixed(2) : '--' },
-      { l:'EV/EBITDA',          v: evEbitda  != null ? parseFloat(evEbitda).toFixed(2) : '--' },
+      { l:'P/E (TTM)',          v: peUse    != null ? parseFloat(peUse).toFixed(2)    : '--' },
+      { l:'Forward P/E',        v: fwdPE    != null ? parseFloat(fwdPE).toFixed(2)    : '--' },
+      { l:'EPS (TTM)',          v: epsUse   != null ? `$${parseFloat(epsUse).toFixed(2)}`   : '--' },
+      { l:'Forward EPS',        v: fwdEPS   != null ? `$${parseFloat(fwdEPS).toFixed(2)}`   : '--' },
+      { l:'PEG Ratio',          v: pegRatio != null ? parseFloat(pegRatio).toFixed(2) : '--' },
+      { l:'P/S Ratio',          v: psRatio  != null ? parseFloat(psRatio).toFixed(2)  : '--' },
+      { l:'P/B Ratio',          v: pbRatio  != null ? parseFloat(pbRatio).toFixed(2)  : '--' },
+      { l:'EV/EBITDA',          v: evEbitda != null ? parseFloat(evEbitda).toFixed(2) : '--' },
       { l:'Enterprise Value',   v: _fmv(ev) },
-      { l:'Beta',               v: betaUse   != null ? parseFloat(betaUse).toFixed(2) : '--' },
-      { l:'Div Yield',          v: divYield  != null ? `${(parseFloat(divYield) < 1 ? parseFloat(divYield)*100 : parseFloat(divYield)).toFixed(2)}%` : '--' },
+      { l:'Beta',               v: betaUse  != null ? parseFloat(betaUse).toFixed(2)  : '--' },
+      { l:'Div Yield',          v: divYield != null ? `${(parseFloat(divYield) < 1 ? parseFloat(divYield) * 100 : parseFloat(divYield)).toFixed(2)}%` : '--' },
       { l:'Revenue (TTM)',      v: _fmv(revenueUse) },
-      { l:'Gross Margin',       v: grossMgn  != null ? _fpv(fin.grossMargins?.raw, fhM.grossMarginAnnual)  : '--' },
+      { l:'Gross Margin',       v: grossMgn  != null ? _fpv(fin.grossMargins?.raw,    fhM.grossMarginAnnual)    : '--' },
       { l:'Operating Margin',   v: opMgn     != null ? _fpv(fin.operatingMargins?.raw, fhM.operatingMarginAnnual) : '--' },
-      { l:'Profit Margin',      v: netMgn    != null ? _fpv(fin.profitMargins?.raw, fhM.netMarginAnnual)   : '--' },
+      { l:'Profit Margin',      v: netMgn    != null ? _fpv(fin.profitMargins?.raw,   fhM.netMarginAnnual)      : '--' },
       { l:'EBITDA',             v: _fmv(ebitda) },
-      { l:'Revenue Growth',     v: revGrowth != null ? _fpv(fin.revenueGrowth?.raw, fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y/100 : null) : '--' },
-      { l:'Earnings Growth',    v: earnGrowth!= null ? _fpv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y ? fhM.epsGrowth3Y/100 : null) : '--' },
+      { l:'Revenue Growth',     v: revGrowth != null ? _fpv(fin.revenueGrowth?.raw,  fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y / 100 : null)  : '--' },
+      { l:'Earnings Growth',    v: earnGrowth!= null ? _fpv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y   ? fhM.epsGrowth3Y   / 100 : null)      : '--' },
       { l:'Total Cash',         v: _fmv(totalCash) },
       { l:'Total Debt',         v: _fmv(totalDebt) },
-      { l:'Debt/Equity',        v: d2e      != null ? parseFloat(d2e).toFixed(2) : '--' },
+      { l:'Debt/Equity',        v: d2e      != null ? parseFloat(d2e).toFixed(2)      : '--' },
       { l:'Free Cash Flow',     v: _fmv(fcf) },
       { l:'Current Ratio',      v: currRatio!= null ? parseFloat(currRatio).toFixed(2) : '--' },
-      { l:'ROE',                v: roe      != null ? _fpv(fin.returnOnEquity?.raw, fhM.roeTTM ? fhM.roeTTM/100 : null) : '--' },
-      { l:'ROA',                v: roa      != null ? _fpv(fin.returnOnAssets?.raw, fhM.roaRfy  ? fhM.roaRfy/100  : null) : '--' },
-      { l:'Short % Float',      v: shortPct != null ? _fpv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat/100 : null) : '--' },
-      { l:'Insider Own.',       v: insiderPct!= null ? _fPct(insiderPct) : '--' },
+      { l:'ROE',                v: roe      != null ? _fpv(fin.returnOnEquity?.raw,  fhM.roeTTM ? fhM.roeTTM / 100 : null)  : '--' },
+      { l:'ROA',                v: roa      != null ? _fpv(fin.returnOnAssets?.raw,  fhM.roaRfy  ? fhM.roaRfy  / 100 : null) : '--' },
+      { l:'Short % Float',      v: shortPct != null ? _fpv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat / 100 : null) : '--' },
+      { l:'Insider Own.',       v: insiderPct != null ? _fPct(insiderPct) : '--' },
       { l:'Institution Own.',   v: instPct  != null ? _fPct(instPct) : '--' },
     ].filter(i => i.v && i.v !== '--');
 
-    // ── Badge source de données ────────────────────────────
-    const hasYahooFull = !!(fin.totalRevenue?.raw || stats.enterpriseValue?.raw);
-    const hasFHFull    = !!(fhM.marketCapitalization || fhM.peBasicExclExtraTTM);
-    const hasTDFull    = !!(tdVal.trailing_pe || tdVal.market_capitalization);
-
-    const srcBadge = hasYahooFull
+    const hasFullData = kstats.length > 5;
+    const srcBadge = hasFullData
       ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)">
-            <i class="fa-solid fa-circle-check"></i> Yahoo Finance
+            <i class="fa-solid fa-circle-check"></i> Full Data
          </span>`
-      : (hasFHFull || hasTDFull)
+      : kstats.length > 0
         ? `<span style="font-size:10px;color:var(--b1);background:rgba(59,130,246,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(59,130,246,0.25)">
-              <i class="fa-solid fa-database"></i> FinnHub + Twelve Data
+              <i class="fa-solid fa-circle-half-stroke"></i> Partial Data
            </span>`
         : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)">
               <i class="fa-solid fa-triangle-exclamation"></i> Quote Only
@@ -1138,7 +805,7 @@ const StockDetail = (() => {
           <div style="text-align:center;padding:24px;color:var(--txt4)">
             <i class="fa-solid fa-triangle-exclamation" style="font-size:22px;color:var(--y);margin-bottom:8px;display:block"></i>
             <strong style="color:var(--txt)">Financial data unavailable</strong><br>
-            <span style="font-size:11px;margin-top:4px;display:block">Vérifiez que FINNHUB_API_KEY et TWELVE_DATA_API_KEY sont configurés dans le Worker.</span>
+            <span style="font-size:11px;margin-top:4px;display:block">Verify API keys are configured in the backend worker.</span>
             <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:10px">
               <i class="fa-solid fa-rotate"></i> Retry
             </button>
@@ -1148,12 +815,10 @@ const StockDetail = (() => {
     // ── Section 2 : Next Earnings Date ────────────────────
     const now = new Date();
 
-    // FinnHub calendar (priorité)
     const nextFHCal = fhCalArr
       .filter(e => e.symbol === sym && new Date(e.date) > now)
       .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
-    // Yahoo calendar (fallback)
     const yahooDates = (yahooCalendar.earningsDate || [])
       .map(d => new Date((d.raw || d) * 1000))
       .filter(d => d > now);
@@ -1166,9 +831,6 @@ const StockDetail = (() => {
       <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
         <div class="sdp-fp-stat-title">
           <i class="fa-solid fa-calendar-check"></i> Next Earnings Date
-          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
-            <i class="fa-solid fa-database"></i> ${nextFHCal ? 'FinnHub' : 'Yahoo'}
-          </span>
         </div>
         <div style="font-size:24px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:4px">${nextEarningsDate}</div>
         ${nextFHCal ? `
@@ -1185,8 +847,14 @@ const StockDetail = (() => {
               </div>` : ''}
             ${nextFHCal.hour ? `
               <div class="sdp-fp-stat-item" style="min-width:120px">
-                <div class="sdp-fp-stat-lbl">Time</div>
-                <div class="sdp-fp-stat-val">${nextFHCal.hour === 'bmo' ? '🌅 Before Open' : nextFHCal.hour === 'amc' ? '🌙 After Close' : nextFHCal.hour.toUpperCase()}</div>
+                <div class="sdp-fp-stat-lbl">Release</div>
+                <div class="sdp-fp-stat-val">
+                  ${nextFHCal.hour === 'bmo'
+                    ? '<i class="fa-solid fa-sun" style="color:var(--y)"></i> Before Open'
+                    : nextFHCal.hour === 'amc'
+                      ? '<i class="fa-solid fa-moon" style="color:var(--b2)"></i> After Close'
+                      : nextFHCal.hour.toUpperCase()}
+                </div>
               </div>` : ''}
             ${nextFHCal.quarter ? `
               <div class="sdp-fp-stat-item" style="min-width:120px">
@@ -1206,34 +874,33 @@ const StockDetail = (() => {
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
           <div class="sdp-fp-stat-item">
             <div class="sdp-fp-stat-lbl">EPS (TTM)</div>
-            <div class="sdp-fp-stat-val" style="color:${parseFloat(epsUse)>0?'var(--g)':'var(--r)'}">$${parseFloat(epsUse).toFixed(2)}</div>
+            <div class="sdp-fp-stat-val" style="color:${parseFloat(epsUse)>0?'var(--g)':'var(--r)'}">
+              $${parseFloat(epsUse).toFixed(2)}
+            </div>
           </div>
           ${currentPrice && epsUse && parseFloat(epsUse) > 0 ? `
           <div class="sdp-fp-stat-item">
             <div class="sdp-fp-stat-lbl">P/E (TTM)</div>
-            <div class="sdp-fp-stat-val">${peUse != null ? parseFloat(peUse).toFixed(2) : (currentPrice/parseFloat(epsUse)).toFixed(2)}</div>
+            <div class="sdp-fp-stat-val">${peUse != null ? parseFloat(peUse).toFixed(2) : (currentPrice / parseFloat(epsUse)).toFixed(2)}</div>
           </div>` : ''}
           ${fwdEPS != null ? `
           <div class="sdp-fp-stat-item">
-            <div class="sdp-fp-stat-lbl">Fwd EPS</div>
+            <div class="sdp-fp-stat-lbl">Forward EPS</div>
             <div class="sdp-fp-stat-val" style="color:var(--b1)">$${parseFloat(fwdEPS).toFixed(2)}</div>
           </div>` : ''}
           ${fwdPE != null ? `
           <div class="sdp-fp-stat-item">
-            <div class="sdp-fp-stat-lbl">Fwd P/E</div>
+            <div class="sdp-fp-stat-lbl">Forward P/E</div>
             <div class="sdp-fp-stat-val">${parseFloat(fwdPE).toFixed(2)}</div>
           </div>` : ''}
         </div>
       </div>` : '';
 
-    // ── Section 4 : Earnings History (FinnHub) — NOUVEAU ─
+    // ── Section 4 : Earnings History ─────────────────────
     const earningsHistoryBlock = fhEarnArr.length > 0 ? `
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-chart-bar"></i> Earnings History
-          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
-            <i class="fa-solid fa-database"></i> FinnHub · Actual vs Estimated
-          </span>
+          <i class="fa-solid fa-chart-bar"></i> Earnings History — Actual vs Estimated
         </div>
         <div style="overflow-x:auto">
           <table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -1243,7 +910,7 @@ const StockDetail = (() => {
                 <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Estimated</th>
                 <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Actual</th>
                 <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Surprise</th>
-                <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Beat?</th>
+                <th style="padding:8px 10px;text-align:center;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Result</th>
               </tr>
             </thead>
             <tbody>
@@ -1255,7 +922,8 @@ const StockDetail = (() => {
                 return `
                   <tr style="background:${inline};border-bottom:1px solid var(--bord)">
                     <td style="padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--txt)">
-                      ${e.period} <span style="color:var(--txt4);font-size:10px">Q${e.quarter} ${e.year}</span>
+                      ${e.period}
+                      <span style="color:var(--txt4);font-size:10px;margin-left:4px">Q${e.quarter} ${e.year}</span>
                     </td>
                     <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:var(--txt3)">
                       ${e.estimate != null ? `$${parseFloat(e.estimate).toFixed(2)}` : '--'}
@@ -1266,23 +934,28 @@ const StockDetail = (() => {
                     <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:${surprise>0?'var(--g)':surprise<0?'var(--r)':'var(--txt4)'}">
                       ${surprise != null ? `${surprise > 0 ? '+' : ''}${parseFloat(surprise).toFixed(2)}%` : '--'}
                     </td>
-                    <td style="padding:8px 10px;text-align:right">
-                      ${e.actual == null ? '<span style="color:var(--txt4)">--</span>'
-                        : beat ? '<span style="color:var(--g);font-size:14px">✅</span>'
-                        : miss ? '<span style="color:var(--r);font-size:14px">❌</span>'
-                        : '<span style="color:var(--y);font-size:14px">➖</span>'}
+                    <td style="padding:8px 10px;text-align:center">
+                      ${e.actual == null
+                        ? '<span style="color:var(--txt4);font-size:11px">--</span>'
+                        : beat
+                          ? '<i class="fa-solid fa-circle-check" style="color:var(--g);font-size:13px"></i>'
+                          : miss
+                            ? '<i class="fa-solid fa-circle-xmark" style="color:var(--r);font-size:13px"></i>'
+                            : '<i class="fa-solid fa-minus" style="color:var(--y);font-size:13px"></i>'}
                     </td>
                   </tr>`;
               }).join('')}
             </tbody>
           </table>
         </div>
-        <div style="font-size:10px;color:var(--txt4);margin-top:8px;text-align:right">
-          ✅ Beat &nbsp; ❌ Miss &nbsp; ➖ In-line
+        <div style="font-size:10px;color:var(--txt4);margin-top:8px;text-align:right;display:flex;gap:14px;justify-content:flex-end">
+          <span><i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Beat</span>
+          <span><i class="fa-solid fa-circle-xmark" style="color:var(--r)"></i> Miss</span>
+          <span><i class="fa-solid fa-minus" style="color:var(--y)"></i> In-line</span>
         </div>
       </div>` : '';
 
-    // ── Section 5 : Estimates par période (Yahoo si dispo) ─
+    // ── Section 5 : Analyst Estimates (Yahoo earningsTrend) ─
     const PERIOD_LABELS = {
       '0q':'Current Quarter', '+1q':'Next Quarter',
       '0y':'Current Year',    '+1y':'Next Year',
@@ -1296,9 +969,6 @@ const StockDetail = (() => {
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
           <i class="fa-solid fa-binoculars"></i> Analyst Estimates
-          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
-            <i class="fa-brands fa-yahoo"></i> Yahoo Finance
-          </span>
         </div>
         ${trendFiltered.map(t => {
           const epsEst  = t.earningsEstimate?.avg?.raw;
@@ -1323,27 +993,25 @@ const StockDetail = (() => {
       </div>` : '';
 
     // ── Section 6 : Company Profile ──────────────────────
-    // Fusionne Yahoo + FinnHub
-    const profSector   = profile.sector   || fhProf.finnhubIndustry || '';
-    const profIndustry = profile.industry || fhProf.finnhubIndustry || '';
-    const profCountry  = profile.country  || fhProf.country || '';
-    const profEmployees= profile.fullTimeEmployees || null;
-    const profDesc     = profile.longBusinessSummary || '';
-    const profWebsite  = profile.website  || fhProf.weburl || '';
-    const profLogo     = fhProf.logo || '';
+    const profSector    = profile.sector   || fhProf.finnhubIndustry || '';
+    const profIndustry  = profile.industry || '';
+    const profCountry   = profile.country  || fhProf.country || '';
+    const profEmployees = profile.fullTimeEmployees || null;
+    const profDesc      = profile.longBusinessSummary || '';
+    const profWebsite   = profile.website  || fhProf.weburl || '';
 
     const profileBlock = (profSector || profDesc || profWebsite) ? `
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
           <i class="fa-solid fa-building"></i> About ${sym}
-          ${profLogo ? `<img src="${profLogo}" alt="" style="height:20px;width:auto;border-radius:4px;margin-left:8px;object-fit:contain" onerror="this.style.display='none'">` : ''}
         </div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
           ${profSector   ? `<span class="regime-chip">${profSector}</span>` : ''}
           ${profIndustry && profIndustry !== profSector ? `<span class="regime-chip">${profIndustry}</span>` : ''}
           ${profCountry  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profCountry}</span>` : ''}
           ${profEmployees? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profEmployees)}</span>` : ''}
-          ${profWebsite  ? `<a href="${profWebsite}" target="_blank" rel="noopener noreferrer" class="regime-chip" style="color:var(--b1);text-decoration:none">
+          ${profWebsite  ? `<a href="${profWebsite}" target="_blank" rel="noopener noreferrer" class="regime-chip"
+              style="color:var(--b1);text-decoration:none">
               <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:8px"></i> Website</a>` : ''}
         </div>
         ${profDesc ? `
@@ -1351,9 +1019,6 @@ const StockDetail = (() => {
             ${profDesc}
           </p>
           <button class="sdp-desc-toggle" id="sdp-desc-toggle2">Show more</button>` : ''}
-        <div style="font-size:10px;color:var(--txt4);margin-top:8px">
-          <i class="fa-solid fa-database"></i> ${profile.longBusinessSummary ? 'Yahoo Finance' : 'FinnHub'}
-        </div>
       </div>` : '';
 
     // ── Fallback total ────────────────────────────────────
@@ -1364,21 +1029,19 @@ const StockDetail = (() => {
         <strong style="color:var(--txt)">Data not yet available for ${sym}</strong><br>
         <span style="font-size:12px;margin-top:6px;display:block">
           ${sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT|AGG|BND|XLK|XLF|XLE|XLV|XLI|ARKK)$/)
-            ? 'ETFs/Funds show limited fundamental data.'
-            : 'Verify FINNHUB_API_KEY and TWELVE_DATA_API_KEY are set in finance-hub-api Worker.'}
+            ? 'ETFs and funds show limited fundamental data.'
+            : 'Verify that API keys are correctly configured in the backend worker.'}
         </span>
         <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:12px">
           <i class="fa-solid fa-rotate"></i> Retry
         </button>
       </div>` : '';
 
-    // ── Assemblage final ──────────────────────────────────
     _bodyHtml(
       calSection + epsCard + statsBlock + earningsHistoryBlock + epsSection + profileBlock + fallback,
       'layout-overview-v2'
     );
 
-    // Description toggle
     const tog2  = document.getElementById('sdp-desc-toggle2');
     const para2 = document.getElementById('sdp-desc-p2');
     if (tog2 && para2) {
@@ -1392,17 +1055,29 @@ const StockDetail = (() => {
     }
   }
 
+  // ── Retry — vide tous les caches ─────────────────────────
+  async function _retryFinancials() {
+    if (!_sym) return;
+    if (_data[_sym]) {
+      delete _data[_sym].summary;
+      delete _data[_sym].fhBasic;
+      delete _data[_sym].fhEarnings;
+      delete _data[_sym].fhCal;
+      delete _data[_sym].fhProfile;
+      delete _data[_sym].fhStats;
+    }
+    FinanceHub.clearCache(_sym);
+    await _fetchAll(_sym);
+    _renderFinancialsEarnings();
+  }
+
   // ════════════════════════════════════════════════════════
   // TAB: NEWS
-  // ════════════════════════════════════════════════════════
-  // ════════════════════════════════════════════════════════
-  // TAB: NEWS — Modern full-width render
   // ════════════════════════════════════════════════════════
   function _renderNews() {
     const news     = _data[_sym]?.news || [];
     const MAX_NEWS = 50;
 
-    // ── Chargement si articles insuffisants ──────────────
     if (news.length < 5) {
       YahooFinance.getNews(_sym, 50).then(articles => {
         if (_tab === 'news') {
@@ -1420,11 +1095,9 @@ const StockDetail = (() => {
       return;
     }
 
-    // ── Render complet ────────────────────────────────────
     const html = `
       <div class="sdp-news-page">
 
-        <!-- Header -->
         <div class="sdp-news-header">
           <div style="display:flex;align-items:center;gap:8px">
             <i class="fa-solid fa-newspaper" style="color:var(--b1);font-size:14px"></i>
@@ -1437,13 +1110,12 @@ const StockDetail = (() => {
           </button>
         </div>
 
-        <!-- News list -->
         <div class="sdp-news-list">
           ${news.slice(0, MAX_NEWS).map((a, idx) => {
             const thumb = a.thumbnail?.resolutions
               ?.sort((x, y) => (y.width || 0) - (x.width || 0))
               ?.find(r => r.url && (r.width || 0) >= 60)?.url;
-            const pub   = a.publisher || 'Yahoo Finance';
+            const pub   = a.publisher || 'Market News';
             const time  = a.providerPublishTime ? _timeAgo(a.providerPublishTime * 1000) : '';
             const sent  = _sentiment(a.title || '');
             const title = a.title || 'No title';
@@ -1456,7 +1128,6 @@ const StockDetail = (() => {
                  class="sdp-news-card"
                  style="animation-delay:${idx * 0.03}s">
 
-                <!-- Thumbnail -->
                 <div class="sdp-news-card-thumb">
                   ${thumb
                     ? `<img src="${thumb}" alt="${pub}" loading="lazy"
@@ -1464,7 +1135,6 @@ const StockDetail = (() => {
                     : `<i class="fa-solid fa-newspaper sdp-news-thumb-icon"></i>`}
                 </div>
 
-                <!-- Content -->
                 <div class="sdp-news-card-body">
                   <div class="sdp-news-card-title">${title}</div>
                   ${summ ? `<div class="sdp-news-card-summary">${summ}</div>` : ''}
@@ -1478,7 +1148,6 @@ const StockDetail = (() => {
                   </div>
                 </div>
 
-                <!-- Link icon -->
                 <div class="sdp-news-card-action">
                   <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </div>
@@ -1487,9 +1156,8 @@ const StockDetail = (() => {
           }).join('')}
         </div>
 
-        <!-- Footer -->
         <div class="sdp-news-footer">
-          <i class="fa-brands fa-yahoo"></i> Source: Yahoo Finance &nbsp;·&nbsp;
+          <i class="fa-solid fa-newspaper" style="font-size:10px"></i>
           Showing ${Math.min(news.length, MAX_NEWS)} articles
         </div>
 
@@ -1497,7 +1165,6 @@ const StockDetail = (() => {
 
     _bodyHtml(html, 'layout-overview-v2');
 
-    // Bind refresh button
     document.getElementById('sd-news-refresh-btn')?.addEventListener('click', async () => {
       const btn = document.getElementById('sd-news-refresh-btn');
       if (btn) btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Loading...';
@@ -1512,8 +1179,7 @@ const StockDetail = (() => {
   // CHART HELPERS
   // ════════════════════════════════════════════════════════
   async function _loadMainFPChart() {
-    const containerId = 'sdp-fp-chart-main';
-    await _loadChart(containerId, _sym, _iv, _range, 420);
+    await _loadChart('sdp-fp-chart-main', _sym, _iv, _range, 420);
   }
 
   async function _loadMiniChart(containerId, sym, iv, range, height = 260) {
@@ -1524,7 +1190,6 @@ const StockDetail = (() => {
     const container = document.getElementById(containerId);
     if (!container || typeof LightweightCharts === 'undefined') return;
 
-    // Enforce explicit height BEFORE creating chart
     container.style.height    = `${height}px`;
     container.style.minHeight = `${height}px`;
     container.style.maxHeight = `${height}px`;
@@ -1537,7 +1202,6 @@ const StockDetail = (() => {
 
     const candles = await YahooFinance.getChart(sym, iv, range);
 
-    // Re-check container (user might have switched tab)
     const c2 = document.getElementById(containerId);
     if (!c2) return;
 
@@ -1561,7 +1225,7 @@ const StockDetail = (() => {
 
       _fpChart = LightweightCharts.createChart(c2, {
         width:  w,
-        height, // explicit pixel height — NEVER container.clientHeight
+        height,
         layout: {
           background: { color: 'transparent' },
           textColor:  isDark ? '#9db3d8' : '#3d4f7c',
@@ -1584,8 +1248,12 @@ const StockDetail = (() => {
         crosshair: { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
       });
 
-      const v = typeof LightweightCharts.CandlestickSeries !== 'undefined' ? 4 : 3;
-      const opts = { upColor:'#10b981', downColor:'#ef4444', borderUpColor:'#10b981', borderDownColor:'#ef4444', wickUpColor:'#10b981', wickDownColor:'#ef4444' };
+      const v    = typeof LightweightCharts.CandlestickSeries !== 'undefined' ? 4 : 3;
+      const opts = {
+        upColor:       '#10b981', downColor:       '#ef4444',
+        borderUpColor: '#10b981', borderDownColor: '#ef4444',
+        wickUpColor:   '#10b981', wickDownColor:   '#ef4444',
+      };
       _fpSeries = v === 4
         ? _fpChart.addSeries(LightweightCharts.CandlestickSeries, opts)
         : _fpChart.addCandlestickSeries(opts);
@@ -1593,7 +1261,6 @@ const StockDetail = (() => {
       _fpSeries.setData(candles);
       _fpChart.timeScale().fitContent();
 
-      // ResizeObserver — WIDTH only, NEVER touch height
       if (typeof ResizeObserver !== 'undefined') {
         const ro = new ResizeObserver(entries => {
           if (!_fpChart || !entries[0]) return;
@@ -1614,9 +1281,6 @@ const StockDetail = (() => {
     }
   }
 
-  // ────────────────────────────────────────────────────────
-  // Destroy all Chart.js instances créés dans StockDetail
-  // ────────────────────────────────────────────────────────
   function _destroyAllSDCJ() {
     Object.keys(_sdCJ).forEach(id => {
       if (_sdCJ[id]) {
@@ -1701,34 +1365,33 @@ const StockDetail = (() => {
   }
 
   function _timeAgo(ts) {
-    const d = Date.now() - ts;
-    const m = Math.floor(d/60000), h = Math.floor(m/60), dy = Math.floor(h/24);
+    const d  = Date.now() - ts;
+    const m  = Math.floor(d / 60000);
+    const h  = Math.floor(m / 60);
+    const dy = Math.floor(h / 24);
     return dy > 0 ? `${dy}d ago` : h > 0 ? `${h}h ago` : m > 0 ? `${m}m ago` : 'Just now';
   }
 
   function _sentiment(h) {
     h = h.toLowerCase();
-    const p = ['beat','surges','rises','gains','record','growth','strong','upgrade','bullish','profit'];
-    const n = ['miss','falls','drops','loss','cuts','crash','downgrade','bearish','decline','layoff'];
+    const p  = ['beat','surges','rises','gains','record','growth','strong','upgrade','bullish','profit'];
+    const n  = ['miss','falls','drops','loss','cuts','crash','downgrade','bearish','decline','layoff'];
     const ps = p.filter(w => h.includes(w)).length;
     const ns = n.filter(w => h.includes(w)).length;
-    if (ps > ns) return { cls:'positive', label:'▲ Positive' };
-    if (ns > ps) return { cls:'negative', label:'▼ Negative' };
-    return { cls:'neutral', label:'— Neutral' };
+    if (ps > ns) return { cls:'positive', label:'<i class="fa-solid fa-arrow-up" style="font-size:9px"></i> Positive' };
+    if (ns > ps) return { cls:'negative', label:'<i class="fa-solid fa-arrow-down" style="font-size:9px"></i> Negative' };
+    return { cls:'neutral', label:'<i class="fa-solid fa-minus" style="font-size:9px"></i> Neutral' };
   }
 
   // ════════════════════════════════════════════════════════
-  // TA CHARTS — Calculs & Rendu Chart.js pour Stock Detail
-  // 100% Yahoo Finance data (getChart)
+  // TA CHARTS — RSI, MACD, Ichimoku, Fibonacci
   // ════════════════════════════════════════════════════════
-
-  // ── Helpers TA (autonomes, pas de dépendance à terminal.js) ──
 
   function _sdEma(arr, p) {
     if (arr.length < p) return arr.map(() => null);
     const k   = 2 / (p + 1);
     const out = Array(p - 1).fill(null);
-    let v     = arr.slice(0, p).reduce((a, b) => a + b, 0) / p;
+    let v = arr.slice(0, p).reduce((a, b) => a + b, 0) / p;
     out.push(v);
     for (let i = p; i < arr.length; i++) { v = arr[i] * k + v * (1 - k); out.push(v); }
     return out;
@@ -1775,25 +1438,15 @@ const StockDetail = (() => {
     const hh = (a, i, p) => Math.max(...a.slice(Math.max(0, i - p + 1), i + 1));
     const ll = (a, i, p) => Math.min(...a.slice(Math.max(0, i - p + 1), i + 1));
 
-    const tenkan   = candles.map((_, i) => i >= 8  ? (hh(H, i, 9)  + ll(L, i, 9))  / 2 : null);
-    const kijun    = candles.map((_, i) => i >= 25 ? (hh(H, i, 26) + ll(L, i, 26)) / 2 : null);
-    const senkouA  = candles.map((_, i) =>
+    const tenkan  = candles.map((_, i) => i >= 8  ? (hh(H, i, 9)  + ll(L, i, 9))  / 2 : null);
+    const kijun   = candles.map((_, i) => i >= 25 ? (hh(H, i, 26) + ll(L, i, 26)) / 2 : null);
+    const senkouA = candles.map((_, i) =>
       tenkan[i] != null && kijun[i] != null ? (tenkan[i] + kijun[i]) / 2 : null
     );
-    const senkouB  = candles.map((_, i) => i >= 51 ? (hh(H, i, 52) + ll(L, i, 52)) / 2 : null);
-    const chikou   = [...C.slice(26), ...Array(26).fill(null)]; // Lagging
+    const senkouB = candles.map((_, i) => i >= 51 ? (hh(H, i, 52) + ll(L, i, 52)) / 2 : null);
+    const chikou  = [...C.slice(26), ...Array(26).fill(null)];
 
-    // Kumo twist points
-    const twists = [];
-    for (let i = 1; i < n; i++) {
-      if (senkouA[i] != null && senkouB[i] != null && senkouA[i-1] != null && senkouB[i-1] != null) {
-        if ((senkouA[i] > senkouB[i]) !== (senkouA[i-1] > senkouB[i-1])) {
-          twists.push(i);
-        }
-      }
-    }
-
-    return { tenkan, kijun, senkouA, senkouB, chikou, price: C, twists };
+    return { tenkan, kijun, senkouA, senkouB, chikou, price: C };
   }
 
   function _sdFibCalc(candles) {
@@ -1817,17 +1470,13 @@ const StockDetail = (() => {
     return { hi, lo, d, levels, exts };
   }
 
-  // ── Append TA section au body (appelé depuis _renderOverview) ──
-
   async function _appendSDTASection(sym) {
     const body = document.getElementById('sdp-fp-body');
     if (!body) return;
 
-    // Supprime l'ancienne section si elle existe
     const old = document.getElementById('sd-ta-full');
     if (old) old.remove();
 
-    // Créer le container full-width
     const div = document.createElement('div');
     div.id    = 'sd-ta-full';
     div.style.cssText = 'grid-column:1/-1;margin-top:4px';
@@ -1837,14 +1486,13 @@ const StockDetail = (() => {
           <i class="fa-solid fa-chart-candlestick" style="color:var(--b1)"></i>
           Technical Analysis Charts
           <span style="margin-left:auto;font-size:10px;color:var(--txt4);font-weight:400">
-            <i class="fa-brands fa-yahoo"></i> Yahoo Finance · 1Y Daily
+            <i class="fa-solid fa-calendar-days" style="font-size:9px"></i> 1Y · Daily
           </span>
           <div id="sd-ta-loading" style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--txt4);font-weight:400">
             <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--b1)"></i> Loading indicators...
           </div>
         </div>
 
-        <!-- Grid RSI + MACD -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between">
@@ -1866,7 +1514,6 @@ const StockDetail = (() => {
           </div>
         </div>
 
-        <!-- Ichimoku Cloud Chart -->
         <div style="margin-bottom:12px">
           <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
             <span><i class="fa-solid fa-cloud" style="color:var(--c)"></i> Ichimoku Cloud (9,26,52)</span>
@@ -1877,7 +1524,6 @@ const StockDetail = (() => {
           </div>
         </div>
 
-        <!-- Fibonacci Retracement Visualization -->
         <div>
           <div style="font-size:10px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
             <i class="fa-solid fa-layer-group" style="color:var(--b2)"></i> Fibonacci Retracement (60D)
@@ -1891,8 +1537,6 @@ const StockDetail = (() => {
       </div>`;
 
     body.appendChild(div);
-
-    // Charge les données et rend les graphiques
     await _renderSDTACharts(sym);
   }
 
@@ -1900,7 +1544,6 @@ const StockDetail = (() => {
     const loadingEl = document.getElementById('sd-ta-loading');
 
     try {
-      // Fetch 1Y daily candles depuis Yahoo Finance
       const candles = await YahooFinance.getChart(sym, '1d', '1y');
 
       if (!candles || candles.length < 55) {
@@ -1917,7 +1560,6 @@ const StockDetail = (() => {
         return `${d.getMonth()+1}/${d.getDate()}`;
       });
 
-      // ── RSI ─────────────────────────────────────────────
       const rsiArr  = _sdRsiCalc(closes, 14);
       const rsiLast = rsiArr.filter(v => v != null).at(-1) ?? 50;
       const rsiEl   = document.getElementById('sd-rsi-val');
@@ -1927,23 +1569,21 @@ const StockDetail = (() => {
       }
       _sdRenderRSI('sd-rsi-chart', labels, rsiArr, isDark);
 
-      // ── MACD ────────────────────────────────────────────
       const macdData = _sdMacdCalc(closes);
       const macdLast = macdData.line.filter(v => v != null).at(-1) ?? 0;
       const sigLast  = macdData.signal.filter(v => v != null).at(-1) ?? 0;
       const macdEl   = document.getElementById('sd-macd-val');
       if (macdEl) {
-        macdEl.textContent = `${macdLast > sigLast ? '▲' : '▼'} ${macdLast.toFixed(4)}`;
+        macdEl.textContent = `${macdLast > sigLast ? 'BULL' : 'BEAR'} ${macdLast.toFixed(4)}`;
         macdEl.style.color = macdLast > sigLast ? 'var(--g)' : 'var(--r)';
       }
       _sdRenderMACD('sd-macd-chart', labels, macdData, isDark);
 
-      // ── Ichimoku ─────────────────────────────────────────
-      const ichi       = _sdIchimokuCalc(candles);
-      const lastPrice  = closes[closes.length - 1];
-      const lastA      = ichi.senkouA.filter(v => v != null).at(-1);
-      const lastB      = ichi.senkouB.filter(v => v != null).at(-1);
-      const cloudSig   = lastA && lastB
+      const ichi      = _sdIchimokuCalc(candles);
+      const lastPrice = closes[closes.length - 1];
+      const lastA     = ichi.senkouA.filter(v => v != null).at(-1);
+      const lastB     = ichi.senkouB.filter(v => v != null).at(-1);
+      const cloudSig  = lastA && lastB
         ? (lastPrice > Math.max(lastA, lastB) ? 'BULLISH'
           : lastPrice < Math.min(lastA, lastB) ? 'BEARISH' : 'IN CLOUD')
         : 'N/A';
@@ -1955,7 +1595,6 @@ const StockDetail = (() => {
       }
       _sdRenderIchimoku('sd-ichi-chart', labels, ichi, isDark);
 
-      // ── Fibonacci ────────────────────────────────────────
       const fib = _sdFibCalc(candles);
       _sdRenderFibViz('sd-fib-viz', fib, lastPrice, isDark);
 
@@ -1965,17 +1604,13 @@ const StockDetail = (() => {
     }
   }
 
-  // ── RSI Chart.js ─────────────────────────────────────────
   function _sdRenderRSI(canvasId, labels, rsiArr, isDark) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || typeof Chart === 'undefined') return;
-    _destroyAllSDCJ(); // handled per-chart below
     if (_sdCJ[canvasId]) { try { _sdCJ[canvasId].destroy(); } catch(e) {} }
 
     const txtColor  = isDark ? '#9db3d8' : '#64748b';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-
-    // Slice to last 120 bars for readability
     const N   = 120;
     const rsi = rsiArr.slice(-N);
     const lbl = labels.slice(-N);
@@ -1985,70 +1620,29 @@ const StockDetail = (() => {
       data: {
         labels: lbl,
         datasets: [
-          {
-            label:           'RSI',
-            data:            rsi,
-            borderColor:     '#8b5cf6',
-            backgroundColor: 'transparent',
-            borderWidth:     1.5,
-            pointRadius:     0,
-            tension:         0.4,
-            spanGaps:        true,
-          },
-          {
-            label:           'OB',
-            data:            lbl.map(() => 70),
-            borderColor:     'rgba(239,68,68,0.4)',
-            borderWidth:     1,
-            borderDash:      [4, 3],
-            pointRadius:     0,
-            fill:            false,
-          },
-          {
-            label:           'OS',
-            data:            lbl.map(() => 30),
-            borderColor:     'rgba(16,185,129,0.4)',
-            borderWidth:     1,
-            borderDash:      [4, 3],
-            pointRadius:     0,
-            fill:            false,
-          },
+          { label:'RSI', data:rsi, borderColor:'#8b5cf6', backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:0.4, spanGaps:true },
+          { label:'OB',  data:lbl.map(()=>70), borderColor:'rgba(239,68,68,0.4)', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false },
+          { label:'OS',  data:lbl.map(()=>30), borderColor:'rgba(16,185,129,0.4)', borderWidth:1, borderDash:[4,3], pointRadius:0, fill:false },
         ],
       },
       options: {
-        responsive:          true,
-        maintainAspectRatio: false,
-        animation:           false,
+        responsive: true, maintainAspectRatio: false, animation: false,
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: isDark ? '#0d1530' : '#fff',
-            bodyColor:       txtColor,
-            borderColor:     isDark ? '#1a2845' : '#dde3f0',
-            borderWidth:     1,
-            callbacks: {
-              label: ctx => ` RSI: ${parseFloat(ctx.parsed.y).toFixed(1)}`,
-              filter: item => item.datasetIndex === 0,
-            },
+            backgroundColor: isDark?'#0d1530':'#fff', bodyColor:txtColor,
+            borderColor:isDark?'#1a2845':'#dde3f0', borderWidth:1,
+            callbacks: { label:ctx=>` RSI: ${parseFloat(ctx.parsed.y).toFixed(1)}`, filter:item=>item.datasetIndex===0 },
           },
         },
         scales: {
-          x: {
-            ticks:  { color: txtColor, maxTicksLimit: 6, font: { size: 9 } },
-            grid:   { color: gridColor },
-          },
-          y: {
-            min:    0,
-            max:    100,
-            ticks:  { color: txtColor, font: { size: 9 }, callback: v => v },
-            grid:   { color: gridColor },
-          },
+          x: { ticks:{color:txtColor,maxTicksLimit:6,font:{size:9}}, grid:{color:gridColor} },
+          y: { min:0, max:100, ticks:{color:txtColor,font:{size:9}}, grid:{color:gridColor} },
         },
       },
     });
   }
 
-  // ── MACD Chart.js ────────────────────────────────────────
   function _sdRenderMACD(canvasId, labels, macdData, isDark) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || typeof Chart === 'undefined') return;
@@ -2056,7 +1650,6 @@ const StockDetail = (() => {
 
     const txtColor  = isDark ? '#9db3d8' : '#64748b';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-
     const N    = 120;
     const hist = macdData.hist.slice(-N);
     const line = macdData.line.slice(-N);
@@ -2068,68 +1661,25 @@ const StockDetail = (() => {
       data: {
         labels: lbl,
         datasets: [
-          {
-            type:            'bar',
-            label:           'Histogram',
-            data:            hist,
-            backgroundColor: hist.map(v =>
-              v == null ? 'transparent' : v >= 0 ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)'
-            ),
-            borderWidth:     0,
-            borderRadius:    1,
-          },
-          {
-            type:            'line',
-            label:           'MACD Line',
-            data:            line,
-            borderColor:     '#3b82f6',
-            borderWidth:     1.5,
-            pointRadius:     0,
-            tension:         0.3,
-            fill:            false,
-            spanGaps:        true,
-          },
-          {
-            type:            'line',
-            label:           'Signal',
-            data:            sig,
-            borderColor:     '#f97316',
-            borderWidth:     1.5,
-            pointRadius:     0,
-            tension:         0.3,
-            fill:            false,
-            spanGaps:        true,
-          },
+          { type:'bar',  label:'Histogram', data:hist, backgroundColor:hist.map(v=>v==null?'transparent':v>=0?'rgba(16,185,129,0.6)':'rgba(239,68,68,0.6)'), borderWidth:0, borderRadius:1 },
+          { type:'line', label:'MACD Line', data:line, borderColor:'#3b82f6', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false, spanGaps:true },
+          { type:'line', label:'Signal',    data:sig,  borderColor:'#f97316', borderWidth:1.5, pointRadius:0, tension:0.3, fill:false, spanGaps:true },
         ],
       },
       options: {
-        responsive:          true,
-        maintainAspectRatio: false,
-        animation:           false,
+        responsive:true, maintainAspectRatio:false, animation:false,
         plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: isDark ? '#0d1530' : '#fff',
-            bodyColor:       txtColor,
-            borderColor:     isDark ? '#1a2845' : '#dde3f0',
-            borderWidth:     1,
-          },
+          legend: { display:false },
+          tooltip: { backgroundColor:isDark?'#0d1530':'#fff', bodyColor:txtColor, borderColor:isDark?'#1a2845':'#dde3f0', borderWidth:1 },
         },
         scales: {
-          x: {
-            ticks: { color: txtColor, maxTicksLimit: 6, font: { size: 9 } },
-            grid:  { color: gridColor },
-          },
-          y: {
-            ticks: { color: txtColor, font: { size: 9 } },
-            grid:  { color: gridColor },
-          },
+          x: { ticks:{color:txtColor,maxTicksLimit:6,font:{size:9}}, grid:{color:gridColor} },
+          y: { ticks:{color:txtColor,font:{size:9}}, grid:{color:gridColor} },
         },
       },
     });
   }
 
-  // ── Ichimoku Cloud Chart.js ───────────────────────────────
   function _sdRenderIchimoku(canvasId, labels, ichi, isDark) {
     const canvas = document.getElementById(canvasId);
     if (!canvas || typeof Chart === 'undefined') return;
@@ -2137,8 +1687,6 @@ const StockDetail = (() => {
 
     const txtColor  = isDark ? '#9db3d8' : '#64748b';
     const gridColor = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
-
-    // Slice derniers 120 bars
     const N  = 120;
     const sl = (arr) => arr.slice(-N);
     const lbl = labels.slice(-N);
@@ -2148,117 +1696,46 @@ const StockDetail = (() => {
       data: {
         labels: lbl,
         datasets: [
-          {
-            label:           'Senkou A',
-            data:            sl(ichi.senkouA),
-            borderColor:     'rgba(16,185,129,0.6)',
-            backgroundColor: 'rgba(16,185,129,0.12)',
-            borderWidth:     1,
-            pointRadius:     0,
-            fill:            '+1',   // ← cloud fill vers Senkou B
-            spanGaps:        true,
-            tension:         0.2,
-          },
-          {
-            label:           'Senkou B',
-            data:            sl(ichi.senkouB),
-            borderColor:     'rgba(239,68,68,0.6)',
-            backgroundColor: 'rgba(239,68,68,0.12)',
-            borderWidth:     1,
-            pointRadius:     0,
-            fill:            false,
-            spanGaps:        true,
-            tension:         0.2,
-          },
-          {
-            label:           'Tenkan-sen',
-            data:            sl(ichi.tenkan),
-            borderColor:     '#ef4444',
-            backgroundColor: 'transparent',
-            borderWidth:     1.5,
-            pointRadius:     0,
-            fill:            false,
-            spanGaps:        true,
-          },
-          {
-            label:           'Kijun-sen',
-            data:            sl(ichi.kijun),
-            borderColor:     '#3b82f6',
-            backgroundColor: 'transparent',
-            borderWidth:     1.5,
-            pointRadius:     0,
-            fill:            false,
-            spanGaps:        true,
-          },
-          {
-            label:           'Price',
-            data:            sl(ichi.price),
-            borderColor:     '#8b5cf6',
-            backgroundColor: 'transparent',
-            borderWidth:     2,
-            pointRadius:     0,
-            fill:            false,
-            spanGaps:        true,
-          },
+          { label:'Senkou A', data:sl(ichi.senkouA), borderColor:'rgba(16,185,129,0.6)',  backgroundColor:'rgba(16,185,129,0.12)', borderWidth:1, pointRadius:0, fill:'+1', spanGaps:true, tension:0.2 },
+          { label:'Senkou B', data:sl(ichi.senkouB), borderColor:'rgba(239,68,68,0.6)',   backgroundColor:'rgba(239,68,68,0.12)',  borderWidth:1, pointRadius:0, fill:false, spanGaps:true, tension:0.2 },
+          { label:'Tenkan',   data:sl(ichi.tenkan),  borderColor:'#ef4444',               backgroundColor:'transparent',           borderWidth:1.5, pointRadius:0, fill:false, spanGaps:true },
+          { label:'Kijun',    data:sl(ichi.kijun),   borderColor:'#3b82f6',               backgroundColor:'transparent',           borderWidth:1.5, pointRadius:0, fill:false, spanGaps:true },
+          { label:'Price',    data:sl(ichi.price),   borderColor:'#8b5cf6',               backgroundColor:'transparent',           borderWidth:2,   pointRadius:0, fill:false, spanGaps:true },
         ],
       },
       options: {
-        responsive:          true,
-        maintainAspectRatio: false,
-        animation:           false,
-        interaction:         { mode: 'index', intersect: false },
+        responsive:true, maintainAspectRatio:false, animation:false,
+        interaction:{ mode:'index', intersect:false },
         plugins: {
-          legend: {
-            display:  true,
-            position: 'bottom',
-            labels:   { color: txtColor, font: { size: 9 }, padding: 8, boxWidth: 12 },
-          },
+          legend: { display:true, position:'bottom', labels:{ color:txtColor, font:{size:9}, padding:8, boxWidth:12 } },
           tooltip: {
-            backgroundColor: isDark ? '#0d1530' : '#fff',
-            bodyColor:       txtColor,
-            borderColor:     isDark ? '#1a2845' : '#dde3f0',
-            borderWidth:     1,
-            callbacks: {
-              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y != null ? '$'+ctx.parsed.y.toFixed(2) : '--'}`,
-            },
+            backgroundColor:isDark?'#0d1530':'#fff', bodyColor:txtColor,
+            borderColor:isDark?'#1a2845':'#dde3f0', borderWidth:1,
+            callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y!=null?'$'+ctx.parsed.y.toFixed(2):'--'}` },
           },
         },
         scales: {
-          x: {
-            ticks: { color: txtColor, maxTicksLimit: 8, font: { size: 9 } },
-            grid:  { color: gridColor },
-          },
-          y: {
-            ticks: {
-              color:    txtColor,
-              font:     { size: 9 },
-              callback: v => '$' + v.toFixed(0),
-            },
-            grid: { color: gridColor },
-          },
+          x: { ticks:{color:txtColor,maxTicksLimit:8,font:{size:9}}, grid:{color:gridColor} },
+          y: { ticks:{color:txtColor,font:{size:9},callback:v=>'$'+v.toFixed(0)}, grid:{color:gridColor} },
         },
       },
     });
   }
 
-  // ── Fibonacci HTML Visualization ─────────────────────────
   function _sdRenderFibViz(containerId, fib, currentPrice, isDark) {
     const el = document.getElementById(containerId);
     if (!el) return;
 
-    const range  = fib.hi - fib.lo;
-    const priceBarPct = range > 0 ? Math.max(0, Math.min(100, ((fib.hi - currentPrice) / range) * 100)) : 50;
+    const range = fib.hi - fib.lo;
 
     el.innerHTML = `
       <div style="padding:4px 0">
-        <!-- Price indicator bar -->
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding:8px;background:rgba(139,92,246,0.08);border-radius:8px;border:1px solid rgba(139,92,246,0.2)">
           <i class="fa-solid fa-crosshairs" style="color:var(--b2)"></i>
           <span style="font-size:11px;font-weight:700;color:var(--txt)">Current: $${currentPrice.toFixed(2)}</span>
           <span style="font-size:10px;color:var(--txt4);margin-left:auto">Range: $${fib.lo.toFixed(2)} — $${fib.hi.toFixed(2)}</span>
         </div>
 
-        <!-- Fibonacci levels -->
         <div style="position:relative">
           ${fib.levels.map(lv => {
             const barPct  = range > 0 ? ((fib.hi - lv.price) / range) * 100 : 50;
@@ -2267,21 +1744,20 @@ const StockDetail = (() => {
             const levelColor = lv.key ? 'var(--b1)' : 'var(--txt3)';
 
             return `<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;margin-bottom:3px;border-radius:6px;
-                                background:${isNear ? 'rgba(59,130,246,0.08)' : 'transparent'};
-                                border:1px solid ${isNear ? 'rgba(59,130,246,0.2)' : 'transparent'}">
+                                background:${isNear?'rgba(59,130,246,0.08)':'transparent'};
+                                border:1px solid ${isNear?'rgba(59,130,246,0.2)':'transparent'}">
               <span style="font-size:10px;font-weight:800;color:${levelColor};min-width:38px;font-family:var(--mono)">${lv.label}</span>
               <div style="flex:1;height:6px;background:var(--surf3);border-radius:3px;overflow:hidden;position:relative">
-                <div style="width:${barPct.toFixed(1)}%;height:100%;background:${isAbove ? 'var(--g)' : 'var(--surf3)'};border-radius:3px;transition:width 0.6s ease"></div>
+                <div style="width:${barPct.toFixed(1)}%;height:100%;background:${isAbove?'var(--g)':'var(--surf3)'};border-radius:3px;transition:width 0.6s ease"></div>
               </div>
               <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${levelColor};min-width:65px;text-align:right">
                 $${lv.price.toFixed(2)}
               </span>
               ${lv.key ? `<span style="font-size:8px;color:var(--b2);font-weight:700;background:rgba(139,92,246,0.1);padding:1px 5px;border-radius:3px;flex-shrink:0">KEY</span>` : '<span style="min-width:32px"></span>'}
-              ${isNear ? `<span style="font-size:9px;color:var(--b1);font-weight:800;flex-shrink:0">← NOW</span>` : ''}
+              ${isNear ? `<span style="font-size:9px;color:var(--b1);font-weight:800;flex-shrink:0"><i class="fa-solid fa-caret-left"></i> NOW</span>` : ''}
             </div>`;
           }).join('')}
 
-          <!-- Current price line -->
           <div style="position:relative;margin:8px 0;display:flex;align-items:center;gap:8px">
             <div style="flex:1;height:2px;background:linear-gradient(90deg,var(--b2),transparent);border-radius:1px"></div>
             <span style="font-size:10px;font-weight:800;color:var(--b2);font-family:var(--mono);white-space:nowrap">
@@ -2290,10 +1766,9 @@ const StockDetail = (() => {
             <div style="flex:1;height:2px;background:linear-gradient(270deg,var(--b2),transparent);border-radius:1px"></div>
           </div>
 
-          <!-- Extensions -->
           <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bord)">
             <div style="font-size:9px;font-weight:700;color:var(--txt4);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
-              Fibonacci Extensions
+              <i class="fa-solid fa-arrow-trend-up" style="font-size:8px"></i> Fibonacci Extensions
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
               ${fib.exts.map(e => `
@@ -2328,8 +1803,7 @@ const StockDetail = (() => {
 window.StockDetail = StockDetail;
 
 // ════════════════════════════════════════════════════════════
-// FIX GLOBAL: Appel immédiat et après DOMContentLoaded
-// Empêche les charts de grandir à l'infini
+// FIX GLOBAL — Chart height anti-growth loop
 // ════════════════════════════════════════════════════════════
 (function applyChartHeightFix() {
   const apply = () => {
@@ -2342,8 +1816,7 @@ window.StockDetail = StockDetail;
   };
   apply();
   document.addEventListener('DOMContentLoaded', apply);
-  // Re-apply after any section switch
   setInterval(apply, 3000);
 })();
 
-console.log('✅ StockDetail v3.1 loaded — Full-page | Yahoo Finance only | Chart height fix');
+console.log('stock-detail.js v3.2 loaded — Multi-source financials | Chart height fix');
