@@ -4117,71 +4117,135 @@ const Terminal = (() => {
 
   function _pad(n) { return String(n).padStart(2, '0'); }
 
+  // ════════════════════════════════════════════════════════
+  // CLOCK + EXCHANGE BAR — UTC + Paris + 6 bourses
+  // Affiche heure locale de chaque bourse + statut open/closed
+  // ════════════════════════════════════════════════════════
   function _startClock() {
-    // ── Exchange schedules (UTC hours) ─────────────────────
+
+    // ── Définition des bourses ─────────────────────────────
     const EXCHANGES = [
-        { id:'nyse',     name:'NYSE',      tz:'America/New_York',  open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
-        { id:'nasdaq',   name:'NASDAQ',    tz:'America/New_York',  open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
-        { id:'lse',      name:'LSE',       tz:'Europe/London',     open:[8,0],   close:[16,30], days:[1,2,3,4,5] },
-        { id:'euronext', name:'Euronext',  tz:'Europe/Paris',      open:[9,0],   close:[17,30], days:[1,2,3,4,5] },
-        { id:'tse',      name:'TSE',       tz:'Asia/Tokyo',        open:[9,0],   close:[15,30], days:[1,2,3,4,5] },
-        { id:'hkex',     name:'HKEX',      tz:'Asia/Hong_Kong',    open:[9,30],  close:[16,0],  days:[1,2,3,4,5] },
+      {
+        id: 'nyse',     name: 'NYSE',
+        label: 'New York Stock Exchange',
+        tz: 'America/New_York',
+        open: [9, 30], close: [16, 0], days: [1,2,3,4,5],
+      },
+      {
+        id: 'nasdaq',   name: 'NASDAQ',
+        label: 'Nasdaq — New York',
+        tz: 'America/New_York',
+        open: [9, 30], close: [16, 0], days: [1,2,3,4,5],
+      },
+      {
+        id: 'lse',      name: 'LSE',
+        label: 'London Stock Exchange',
+        tz: 'Europe/London',
+        open: [8, 0],  close: [16, 30], days: [1,2,3,4,5],
+      },
+      {
+        id: 'euronext', name: 'Euronext',
+        label: 'Euronext Paris',
+        tz: 'Europe/Paris',
+        open: [9, 0],  close: [17, 30], days: [1,2,3,4,5],
+      },
+      {
+        id: 'tse',      name: 'TSE',
+        label: 'Tokyo Stock Exchange',
+        tz: 'Asia/Tokyo',
+        open: [9, 0],  close: [15, 30], days: [1,2,3,4,5],
+      },
+      {
+        id: 'hkex',     name: 'HKEX',
+        label: 'Hong Kong Exchange',
+        tz: 'Asia/Hong_Kong',
+        open: [9, 30], close: [16, 0],  days: [1,2,3,4,5],
+      },
     ];
 
+    // ── Vérifie si une bourse est ouverte ─────────────────
     function _isOpen(ex) {
-        try {
+      try {
         const now   = new Date();
         const parts = new Intl.DateTimeFormat('en-US', {
-            hour:'numeric', minute:'numeric', weekday:'short',
-            hour12:false, timeZone: ex.tz,
+          hour: 'numeric', minute: 'numeric', weekday: 'short',
+          hour12: false, timeZone: ex.tz,
         }).formatToParts(now);
-        const get = (t) => parseInt(parts.find(p => p.type === t)?.value || '0');
+
+        const get     = (t) => parseInt(parts.find(p => p.type === t)?.value || '0');
         const DAY_MAP = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
         const wdStr   = parts.find(p => p.type === 'weekday')?.value || 'Sun';
         const weekday = DAY_MAP[wdStr] ?? 0;
         const timeDec = get('hour') + get('minute') / 60;
         const openDec = ex.open[0]  + ex.open[1]  / 60;
         const closDec = ex.close[0] + ex.close[1] / 60;
+
         return ex.days.includes(weekday) && timeDec >= openDec && timeDec < closDec;
-        } catch(e) { return false; }
+      } catch (e) {
+        return false;
+      }
     }
 
-    function _getLocalTime(tz) {
-        return new Intl.DateTimeFormat('en-GB', {
-        hour:'2-digit', minute:'2-digit', second:'2-digit',
-        hour12:false, timeZone: tz,
-        }).format(new Date());
+    // ── Heure locale formatée ─────────────────────────────
+    // withSec=true → HH:MM:SS | withSec=false → HH:MM
+    function _getLocalTime(tz, withSec = true) {
+      return new Intl.DateTimeFormat('en-GB', {
+        hour:   '2-digit',
+        minute: '2-digit',
+        ...(withSec ? { second: '2-digit' } : {}),
+        hour12:  false,
+        timeZone: tz,
+      }).format(new Date());
     }
 
+    // ── Boucle de mise à jour (toutes les secondes) ───────
     const update = () => {
-        const n = new Date();
+      const n = new Date();
 
-        // ── UTC Clock ──────────────────────────────────────
-        _txt('clock', `${_pad(n.getUTCHours())}:${_pad(n.getUTCMinutes())}:${_pad(n.getUTCSeconds())} UTC`);
+      // ── Clock UTC ──────────────────────────────────────────
+      _txt('clock',
+        `${_pad(n.getUTCHours())}:${_pad(n.getUTCMinutes())}:${_pad(n.getUTCSeconds())} UTC`
+      );
 
-        // ── Paris Time ─────────────────────────────────────
-        const parisEl = document.getElementById('clock-paris');
-        if (parisEl) {
-        parisEl.textContent = `${_getLocalTime('Europe/Paris')} Paris`;
-        }
+      // ── Heure Paris ────────────────────────────────────────
+      const parisEl = document.getElementById('clock-paris');
+      if (parisEl) {
+        parisEl.textContent = `${_getLocalTime('Europe/Paris', true)} Paris`;
+      }
 
-        // ── Exchange Status Bar ────────────────────────────
-        const exchEl = document.getElementById('exchange-status-bar');
-        if (exchEl) {
+      // ── Exchange Status Bar ────────────────────────────────
+      // Chaque pill affiche : [dot] NOM HH:MM
+      // Tooltip complet au hover
+      const exchEl = document.getElementById('exchange-status-bar');
+      if (exchEl) {
         exchEl.innerHTML = EXCHANGES.map(ex => {
-            const open = _isOpen(ex);
-            return `<span class="exch-pill ${open ? 'exch-open' : 'exch-closed'}"
-                        title="${ex.name} — ${_getLocalTime(ex.tz)}">
-            <i class="fa-solid fa-circle" style="font-size:5px;vertical-align:middle"></i>
-            ${ex.name}
-            </span>`;
+          const open      = _isOpen(ex);
+          const localTime = _getLocalTime(ex.tz, false); // HH:MM
+          const openHHMM  = `${_pad(ex.open[0])}:${_pad(ex.open[1])}`;
+          const clsHHMM   = `${_pad(ex.close[0])}:${_pad(ex.close[1])}`;
+          const tooltip   = [
+            ex.label,
+            open ? '● OPEN' : '○ CLOSED',
+            `Local: ${localTime}`,
+            `Hours: ${openHHMM} – ${clsHHMM}`,
+          ].join('\n');
+
+          return `<span
+            class="exch-pill ${open ? 'exch-open' : 'exch-closed'}"
+            data-exch="${ex.id}"
+            title="${tooltip}">
+            <span class="exch-dot"></span>
+            <span class="exch-name">${ex.name}</span>
+            <span class="exch-time">${localTime}</span>
+          </span>`;
         }).join('');
-        }
+      }
     };
 
+    // ── Lancement ──────────────────────────────────────────
     update();
     setInterval(update, 1000);
-    }
+  }
 
   // ════════════════════════════════════════════════════════
   // AUTO-INIT

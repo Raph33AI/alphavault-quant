@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Favicon Generator — AlphaVault Quant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root {
+      --bg:     #0a0f1e;
+      --surf:   #0f172a;
+      --surf2:  #1e293b;
+      --surf3:  #334155;
+      --bord:   rgba(255,255,255,0.08);
+      --txt:    #f1f5f9;
+      --txt2:   #cbd5e1;
+      --txt3:   #94a3b8;
+      --txt4:   #64748b;
+      --b1:     #667eea;
+      --b2:     #764ba2;
+      --g:      #10b981;
+      --r:      #ef4444;
+      --y:      #f59e0b;
+      --grad:   linear-gradient(135deg, #667eea 0%, #764ba2 50%, #a78bfa 100%);
+      --mono:   'JetBrains Mono', monospace;
+      --sans:   'Inter', sans-serif;
+      --radius: 12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--txt);
+      font-family: var(--sans);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .page-header {
+      background: var(--surf);
+      border-bottom: 1px solid var(--bord);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+    }
+
+    .page-logo {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 8px rgba(102,126,234,0.4));
+    }
+
+    .page-logo-fallback {
+      width: 40px;
+      height: 40px;
+      background: var(--grad);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 16px;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 800;
+      background: var(--grad);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+
+    .page-subtitle {
+      font-size: 12px;
+      color: var(--txt4);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .page-header-right {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(102,126,234,0.12);
+      border: 1px solid rgba(102,126,234,0.25);
+      color: var(--b1);
+      font-family: var(--mono);
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    /* ── Alerts ─────────────────────────────────────────── */
+    .alert {
+      display: none;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .alert.visible {
+      display: flex;
+    }
+
+    .alert-success {
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.25);
+      color: var(--g);
+    }
+
+    .alert-error {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      color: var(--r);
+    }
+
+    .alert-warning {
+      background: rgba(245,158,11,0.08);
+      border: 1px solid rgba(245,158,11,0.25);
+      color: var(--y);
+    }
+
+    /* ── Loading ─────────────────────────────────────────── */
+    .loading-wrap {
+      text-align: center;
+      padding: 64px 24px;
+    }
+
+    .loading-spinner {
+      width: 48px;
+      height: 48px;
+      border: 3px solid rgba(102,126,234,0.15);
+      border-top-color: var(--b1);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .loading-text {
+      font-size: 14px;
+      color: var(--txt3);
+      font-weight: 500;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Section titles ──────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 40px 0 20px;
+    }
+
+    .section-header:first-child {
+      margin-top: 0;
+    }
+
+    .section-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--surf2);
+      border: 1px solid var(--bord);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      color: var(--b1);
+      flex-shrink: 0;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--txt);
+    }
+
+    .section-sub {
+      font-size: 12px;
+      color: var(--txt4);
+      margin-top: 2px;
+    }
+
+    /* ── Preview grid ────────────────────────────────────── */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* ── Preview card ────────────────────────────────────── */
+    .preview-card {
+      background: var(--surf);
+      border: 1px solid var(--bord);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+
+    .preview-card:hover {
+      border-color: rgba(102,126,234,0.3);
+      transform: translateY(-2px);
+    }
+
+    .preview-card h4 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--txt2);
+      margin-bottom: 16px;
+      line-height: 1.4;
+    }
+
+    .canvas-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      margin-bottom: 16px;
+      background: repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .canvas-wrapper canvas {
+      border-radius: 4px;
+      image-rendering: pixelated;
+      max-width: 100%;
+      max-height: 120px;
+    }
+
+    .preview-card code {
+      display: block;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--b1);
+      background: rgba(102,126,234,0.08);
+      border: 1px solid rgba(102,126,234,0.15);
+      padding: 3px 8px;
+      border-radius: 5px;
+      margin-bottom: 14px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── SVG section ─────────────────────────────────────── */
+    .svg-card {
+      background: var(--surf);
+      border: 1px solid var(--bord);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .svg-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--txt2);
+      margin-bottom: 16px;
+    }
+
+    .svg-preview-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: repeating-conic-gradient(rgba(255,255,255,0.04) 0% 25%, transparent 0% 50%) 0 0 / 12px 12px;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+      min-height: 120px;
+    }
+
+    .svg-preview-wrapper svg,
+    .svg-preview-wrapper img {
+      width: 96px;
+      height: 96px;
+      border-radius: 8px;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      opacity: 0.85;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: var(--grad);
+      color: white;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid rgba(102,126,234,0.3);
+      color: var(--b1);
+    }
+
+    .btn-outline:hover {
+      background: rgba(102,126,234,0.08);
+    }
+
+    /* Download all button */
+    .btn-download-all {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 16px 24px;
+      background: var(--grad);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 800;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      margin: 32px 0;
+      letter-spacing: 0.2px;
+      box-shadow: 0 4px 24px rgba(102,126,234,0.3);
+    }
+
+    .btn-download-all:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(102,126,234,0.4);
+    }
+
+    /* ── Progress bar ────────────────────────────────────── */
+    .progress-wrap {
+      display: none;
+      background: var(--surf2);
+      border: 1px solid var(--bord);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 16px 0;
+      height: 6px;
+    }
+
+    .progress-wrap.visible {
+      display: block;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--grad);
+      border-radius: 8px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* ── Code instructions ───────────────────────────────── */
+    .instructions-card {
+      background: var(--surf);
+      border: 1px solid var(--bord);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-top: 16px;
+    }
+
+    .instructions-card h3 {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--txt);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .instructions-card ol {
+      list-style: none;
+      counter-reset: steps;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .instructions-card ol li {
+      counter-increment: steps;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--txt2);
+      line-height: 1.6;
+    }
+
+    .instructions-card ol li::before {
+      content: counter(steps);
+      width: 24px;
+      height: 24px;
+      background: var(--grad);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      color: white;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .instructions-card strong {
+      color: var(--txt);
+      font-weight: 700;
+    }
+
+    .code-block {
+      background: var(--surf2);
+      border: 1px solid var(--bord);
+      border-radius: 10px;
+      padding: 20px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--txt2);
+      line-height: 1.8;
+      overflow-x: auto;
+      white-space: pre;
+      margin: 16px 0;
+      position: relative;
+    }
+
+    .code-block .comment { color: var(--txt4); }
+    .code-block .tag     { color: #f87171; }
+    .code-block .attr    { color: #fb923c; }
+    .code-block .val     { color: #a3e635; }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 5px 10px;
+      background: var(--surf3);
+      border: 1px solid var(--bord);
+      border-radius: 6px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--txt3);
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(102,126,234,0.15);
+      color: var(--b1);
+      border-color: rgba(102,126,234,0.3);
+    }
+
+    /* ── Note box ────────────────────────────────────────── */
+    .note-box {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: rgba(102,126,234,0.06);
+      border: 1px solid rgba(102,126,234,0.18);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-top: 20px;
+    }
+
+    .note-box-icon {
+      color: var(--b1);
+      font-size: 16px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .note-box-text {
+      font-size: 12px;
+      color: var(--txt2);
+      line-height: 1.7;
+    }
+
+    .note-box-text strong {
+      color: var(--txt);
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    .page-footer {
+      text-align: center;
+      padding: 24px;
+      border-top: 1px solid var(--bord);
+      font-size: 11px;
+      color: var(--txt4);
+      margin-top: 48px;
+    }
+
+    /* ── Responsive ─────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .page-header { padding: 16px; }
+      .container   { padding: 20px 16px 48px; }
+      .preview-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════ -->
+<header class="page-header">
+  <div class="page-logo-fallback" id="header-logo-wrap">
+    <img id="header-logo" src="assets/images/alpha-logo.png" alt="AV"
+         class="page-logo"
+         onerror="this.style.display='none';document.getElementById('header-logo-wrap').textContent='AV'">
+  </div>
+  <div>
+    <div class="page-title">AlphaVault Quant — Favicon Generator</div>
+    <div class="page-subtitle">
+      Generate all favicons from <code style="font-family:var(--mono);font-size:11px;color:var(--b1)">assets/images/alpha-logo.png</code>
+    </div>
+  </div>
+  <div class="page-header-right">
+    <span class="badge">7 files</span>
+    <span class="badge" style="color:var(--g);background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.2)">
+      PNG + ICO + SVG
+    </span>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════ -->
+<div class="container">
+
+  <!-- Loading -->
+  <div class="loading-wrap" id="loading-wrap">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Loading logo and generating all favicons...</div>
+  </div>
+
+  <!-- Alerts -->
+  <div class="alert alert-error"   id="alert-error"></div>
+  <div class="alert alert-success" id="alert-success"></div>
+  <div class="alert alert-warning" id="alert-warning"></div>
+
+  <!-- Progress -->
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+
+  <!-- Content (hidden until load) -->
+  <div id="main-content" style="display:none">
+
+    <!-- ── PNG Favicons ───────────────────────────────── -->
+    <div class="section-header">
+      <div class="section-icon"><i class="fa-solid fa-image"></i></div>
+      <div>
+        <div class="section-title">PNG & ICO Favicons</div>
+        <div class="section-sub">5 PNG sizes + 1 ICO · transparent background</div>
+      </div>
+    </div>
+    <div class="preview-grid" id="png-grid"></div>
+
+    <!-- ── Safari SVG ────────────────────────────────── -->
+    <div class="section-header">
+      <div class="section-icon"><i class="fa-brands fa-safari"></i></div>
+      <div>
+        <div class="section-title">Safari Pinned Tab — SVG</div>
+        <div class="section-sub">Embedded PNG · original colors preserved</div>
+      </div>
+    </div>
+    <div class="svg-card">
+      <h4>safari-pinned-tab.svg · 512 × 512 · Colours: exact AlphaVault gradient</h4>
+      <div class="svg-preview-wrapper" id="svg-preview"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <code style="flex:1;font-family:var(--mono);font-size:11px;color:var(--b1);background:rgba(102,126,234,0.08);border:1px solid rgba(102,126,234,0.15);padding:6px 12px;border-radius:6px;display:block">
+          safari-pinned-tab.svg
+        </code>
+        <button class="btn btn-outline" onclick="downloadSingleFile('safari-pinned-tab.svg')">
+          <i class="fa-solid fa-download"></i> Download
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Download All ──────────────────────────────── -->
+    <button class="btn-download-all" id="btn-download-all" onclick="downloadAllFiles()">
+      <i class="fa-solid fa-box-archive"></i>
+      Download ALL Favicons — 7 files
+    </button>
+
+    <!-- ── Instructions ──────────────────────────────── -->
+    <div class="section-header">
+      <div class="section-icon"><i class="fa-solid fa-book"></i></div>
+      <div>
+        <div class="section-title">Installation Instructions</div>
+        <div class="section-sub">Copy files to repo root + add HTML tags</div>
+      </div>
+    </div>
+
+    <div class="instructions-card">
+      <h3><i class="fa-solid fa-terminal" style="color:var(--b1)"></i> Setup Guide</h3>
+      <ol>
+        <li>
+          Click <strong>"Download ALL Favicons"</strong> above to get all 7 files at once.
+        </li>
+        <li>
+          Place <strong>all downloaded files at the root</strong> of your GitHub Pages repo
+          (same level as <code style="font-family:var(--mono);color:var(--b1)">index.html</code>).
+        </li>
+        <li>
+          Add the following code in the <code style="font-family:var(--mono);color:var(--b1)">&lt;head&gt;</code>
+          of <strong>all your HTML pages</strong>:
+        </li>
+      </ol>
+
+      <div class="code-block" id="code-block">
+<button class="copy-btn" onclick="copyCode()"><i class="fa-solid fa-copy"></i> Copy</button><span class="comment">&lt;!-- ═══════════════════ FAVICONS — AlphaVault Quant ═══════════════════ --&gt;</span>
+
+<span class="comment">&lt;!-- Standard browser tab --&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"icon"</span> <span class="attr">type</span>=<span class="val">"image/png"</span> <span class="attr">sizes</span>=<span class="val">"16x16"</span> <span class="attr">href</span>=<span class="val">"/favicon-16x16.png"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"icon"</span> <span class="attr">type</span>=<span class="val">"image/png"</span> <span class="attr">sizes</span>=<span class="val">"32x32"</span> <span class="attr">href</span>=<span class="val">"/favicon-32x32.png"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"shortcut icon"</span>                          <span class="attr">href</span>=<span class="val">"/favicon.ico"</span><span class="tag">&gt;</span>
+
+<span class="comment">&lt;!-- Apple devices --&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"apple-touch-icon"</span> <span class="attr">sizes</span>=<span class="val">"180x180"</span> <span class="attr">href</span>=<span class="val">"/apple-touch-icon.png"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"mask-icon"</span> <span class="attr">href</span>=<span class="val">"/safari-pinned-tab.svg"</span> <span class="attr">color</span>=<span class="val">"#667eea"</span><span class="tag">&gt;</span>
+
+<span class="comment">&lt;!-- Android / PWA --&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"icon"</span> <span class="attr">type</span>=<span class="val">"image/png"</span> <span class="attr">sizes</span>=<span class="val">"192x192"</span> <span class="attr">href</span>=<span class="val">"/android-chrome-192x192.png"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;link</span> <span class="attr">rel</span>=<span class="val">"icon"</span> <span class="attr">type</span>=<span class="val">"image/png"</span> <span class="attr">sizes</span>=<span class="val">"512x512"</span> <span class="attr">href</span>=<span class="val">"/android-chrome-512x512.png"</span><span class="tag">&gt;</span>
+
+<span class="comment">&lt;!-- Theme colors --&gt;</span>
+<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"theme-color"</span>                      <span class="attr">content</span>=<span class="val">"#667eea"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"msapplication-TileColor"</span>          <span class="attr">content</span>=<span class="val">"#764ba2"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"apple-mobile-web-app-capable"</span>     <span class="attr">content</span>=<span class="val">"yes"</span><span class="tag">&gt;</span>
+<span class="tag">&lt;meta</span> <span class="attr">name</span>=<span class="val">"apple-mobile-web-app-status-bar"</span>  <span class="attr">content</span>=<span class="val">"black-translucent"</span><span class="tag">&gt;</span>
+      </div>
+
+      <ol start="4">
+        <li>
+          Done! Your favicons will display on <strong>all browsers, devices and platforms</strong> including
+          iOS Safari, Chrome, Android, Edge, Firefox and macOS.
+        </li>
+      </ol>
+    </div>
+
+    <!-- ── Note ──────────────────────────────────────── -->
+    <div class="note-box">
+      <i class="fa-solid fa-circle-check note-box-icon"></i>
+      <div class="note-box-text">
+        <strong>Original colors preserved:</strong>
+        The <code style="font-family:var(--mono);font-size:10px;color:var(--b1)">safari-pinned-tab.svg</code>
+        embeds your PNG as base64 — Safari will display the exact AlphaVault Quant gradient instead of
+        a monochrome silhouette. All PNG favicons are generated with transparent backgrounds at the
+        highest quality using canvas <code style="font-family:var(--mono);font-size:10px;color:var(--b1)">imageSmoothingQuality: "high"</code>.
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /container -->
+
+<!-- ═══════════════════════════════════════════════════
+     FOOTER
+═══════════════════════════════════════════════════ -->
+<footer class="page-footer">
+  <span style="background:linear-gradient(135deg,#667eea,#764ba2);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700">
+    AlphaVault Quant
+  </span>
+  &nbsp;·&nbsp; Favicon Generator &nbsp;·&nbsp;
+  Source: <code style="font-family:var(--mono);font-size:10px;color:var(--txt4)">assets/images/alpha-logo.png</code>
+</footer>
+
+<!-- ═══════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ─── Configuration des tailles de favicon ─────────────────
+const FAVICON_SIZES = [
+  { size: 16,  name: 'favicon-16x16.png',        label: '16 × 16', desc: 'Browser tab (standard)' },
+  { size: 32,  name: 'favicon-32x32.png',        label: '32 × 32', desc: 'Browser tab (HD / retina)' },
+  { size: 180, name: 'apple-touch-icon.png',     label: '180 × 180', desc: 'Apple Touch Icon (iOS)' },
+  { size: 192, name: 'android-chrome-192x192.png', label: '192 × 192', desc: 'Android Chrome / PWA' },
+  { size: 512, name: 'android-chrome-512x512.png', label: '512 × 512', desc: 'Android Chrome HD / Splash' },
+];
+
+// ─── État global ────────────────────────────────────────────
+let _generator = null;
+let _canvases  = {};
+let _svgContent = '';
+
+// ════════════════════════════════════════════════════════════
+// CLASSE — FaviconGenerator
+// ════════════════════════════════════════════════════════════
+class FaviconGenerator {
+  constructor(path) {
+    this.path     = path;
+    this.image    = null;
+    this.isLoaded = false;
+  }
+
+  async load() {
+    return new Promise((resolve, reject) => {
+      const img       = new Image();
+      img.crossOrigin = 'anonymous';
+
+      img.onload = () => {
+        this.image    = img;
+        this.isLoaded = true;
+        resolve(img);
+      };
+
+      img.onerror = (err) => {
+        console.error('[FaviconGen] Failed to load:', this.path);
+        reject(new Error(`Cannot load image: ${this.path}`));
+      };
+
+      img.src = this.path;
+    });
+  }
+
+  // ── Render image at given size on a canvas ──────────────
+  render(size) {
+    if (!this.isLoaded) throw new Error('Image not loaded');
+    const canvas  = document.createElement('canvas');
+    canvas.width  = size;
+    canvas.height = size;
+    const ctx     = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.imageSmoothingEnabled  = true;
+    ctx.imageSmoothingQuality  = 'high';
+    ctx.drawImage(this.image, 0, 0, size, size);
+    return canvas;
+  }
+
+  // ── Build SVG with embedded base64 PNG (preserves colors) ──
+  buildSVG(size = 512) {
+    const canvas  = this.render(size);
+    const b64     = canvas.toDataURL('image/png');
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="${size}" height="${size}" version="1.1"
+     viewBox="0 0 ${size} ${size}"
+     xmlns="http://www.w3.org/2000/svg"
+     xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title>AlphaVault Quant</title>
+  <image width="${size}" height="${size}" xlink:href="${b64}"/>
+</svg>`;
+  }
+
+  // ── Download a canvas as PNG ────────────────────────────
+  downloadCanvas(canvas, filename) {
+    const a    = document.createElement('a');
+    a.download = filename;
+    a.href     = canvas.toDataURL('image/png');
+    a.click();
+  }
+
+  // ── Download SVG content as file ────────────────────────
+  downloadSVG(svgStr, filename) {
+    const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════════
+function showAlert(type, html) {
+  // Hide all alerts first
+  ['error','success','warning'].forEach(t => {
+    const el = document.getElementById(`alert-${t}`);
+    if (el) { el.classList.remove('visible'); el.innerHTML = ''; }
+  });
+
+  const el = document.getElementById(`alert-${type}`);
+  if (el) {
+    const icons = { error:'fa-circle-xmark', success:'fa-circle-check', warning:'fa-triangle-exclamation' };
+    el.innerHTML = `<i class="fa-solid ${icons[type] || 'fa-circle-info'}"></i><span>${html}</span>`;
+    el.classList.add('visible');
+  }
+}
+
+function setProgress(pct) {
+  const wrap = document.getElementById('progress-wrap');
+  const bar  = document.getElementById('progress-bar');
+  if (wrap) wrap.classList.toggle('visible', pct > 0 && pct < 100);
+  if (bar)  bar.style.width = `${pct}%`;
+}
+
+// ════════════════════════════════════════════════════════════
+// INIT — On page load
+// ════════════════════════════════════════════════════════════
+(async function init() {
+  const loadWrap   = document.getElementById('loading-wrap');
+  const mainContent = document.getElementById('main-content');
+  const pngGrid    = document.getElementById('png-grid');
+  const svgPreview = document.getElementById('svg-preview');
+
+  try {
+    // Load image
+    _generator = new FaviconGenerator('assets/images/alpha-logo.png');
+    await _generator.load();
+
+    // Hide loading, show content
+    if (loadWrap)    loadWrap.style.display    = 'none';
+    if (mainContent) mainContent.style.display = 'block';
+
+    // ── Generate PNG cards ──────────────────────────────────
+    FAVICON_SIZES.forEach(({ size, name, label, desc }) => {
+      const canvas    = _generator.render(size);
+      _canvases[name] = canvas;
+
+      const card = document.createElement('div');
+      card.className = 'preview-card';
+      card.innerHTML = `
+        <h4><strong>${label}</strong><br><span style="color:var(--txt4);font-weight:400">${desc}</span></h4>
+        <div class="canvas-wrapper" id="wrap-${name}"></div>
+        <code>${name}</code>
+        <button class="btn btn-outline" style="width:100%;justify-content:center"
+                onclick="downloadSingleFile('${name}')">
+          <i class="fa-solid fa-download"></i> Download
+        </button>`;
+
+      // Show canvas (use clone to keep original for download)
+      const displayed        = _generator.render(Math.min(size, 128));
+      card.querySelector('.canvas-wrapper').appendChild(displayed);
+
+      if (pngGrid) pngGrid.appendChild(card);
+    });
+
+    // ── Generate favicon.ico card ────────────────────────────
+    const icoCanvas    = _generator.render(32);
+    _canvases['favicon.ico'] = icoCanvas;
+
+    const icoCard = document.createElement('div');
+    icoCard.className = 'preview-card';
+    icoCard.innerHTML = `
+      <h4><strong>favicon.ico</strong><br><span style="color:var(--txt4);font-weight:400">Classic ICO (32px)</span></h4>
+      <div class="canvas-wrapper" id="wrap-favicon-ico"></div>
+      <code>favicon.ico</code>
+      <button class="btn btn-outline" style="width:100%;justify-content:center"
+              onclick="downloadSingleFile('favicon.ico')">
+        <i class="fa-solid fa-download"></i> Download
+      </button>`;
+
+    const icoDisplay = _generator.render(64);
+    icoCard.querySelector('.canvas-wrapper').appendChild(icoDisplay);
+    if (pngGrid) pngGrid.appendChild(icoCard);
+
+    // ── Generate SVG ─────────────────────────────────────────
+    _svgContent = _generator.buildSVG(512);
+
+    if (svgPreview) {
+      // Render as a visible img
+      const blob = new Blob([_svgContent], { type: 'image/svg+xml' });
+      const url  = URL.createObjectURL(blob);
+      const img  = document.createElement('img');
+      img.src    = url;
+      img.width  = 96;
+      img.height = 96;
+      img.style.borderRadius = '12px';
+      svgPreview.appendChild(img);
+    }
+
+    // ── Success message ──────────────────────────────────────
+    const total = Object.keys(_canvases).length + 1; // canvases + SVG
+    showAlert('success',
+      `<strong>${total} favicons generated successfully</strong> — ${Object.keys(_canvases).length} PNG/ICO + 1 SVG with original colors.`
+    );
+
+  } catch (err) {
+    if (loadWrap) loadWrap.style.display = 'none';
+
+    showAlert('error',
+      `<strong>Cannot load image</strong> — Make sure <code style="font-family:var(--mono);color:var(--r)">assets/images/alpha-logo.png</code>
+       exists and this file is opened from a web server (not via <code>file://</code>).
+       <br><small style="opacity:0.7;margin-top:4px;display:block">
+       Quick fix: <code>npx serve .</code> or open via GitHub Pages / Live Server.</small>`
+    );
+
+    console.error('[FaviconGen]', err);
+  }
+})();
+
+// ════════════════════════════════════════════════════════════
+// DOWNLOAD — Single file
+// ════════════════════════════════════════════════════════════
+window.downloadSingleFile = function(filename) {
+  if (!_generator) return;
+
+  if (filename === 'safari-pinned-tab.svg') {
+    _generator.downloadSVG(_svgContent, filename);
+  } else {
+    const canvas = _canvases[filename];
+    if (canvas) _generator.downloadCanvas(canvas, filename);
+  }
+
+  showAlert('success', `<strong>${filename}</strong> downloaded ✓`);
+};
+
+// ════════════════════════════════════════════════════════════
+// DOWNLOAD — All files
+// ════════════════════════════════════════════════════════════
+window.downloadAllFiles = function() {
+  if (!_generator) return;
+
+  const btn         = document.getElementById('btn-download-all');
+  const allFilenames = [...Object.keys(_canvases), 'safari-pinned-tab.svg'];
+  const total        = allFilenames.length;
+  let   done         = 0;
+
+  if (btn) {
+    btn.disabled   = true;
+    btn.innerHTML  = '<i class="fa-solid fa-circle-notch fa-spin"></i> Downloading...';
+  }
+
+  setProgress(5);
+
+  allFilenames.forEach((filename, idx) => {
+    setTimeout(() => {
+      if (filename === 'safari-pinned-tab.svg') {
+        _generator.downloadSVG(_svgContent, filename);
+      } else {
+        const canvas = _canvases[filename];
+        if (canvas) _generator.downloadCanvas(canvas, filename);
+      }
+
+      done++;
+      const pct = Math.round((done / total) * 100);
+      setProgress(pct);
+
+      if (done === total) {
+        setTimeout(() => {
+          setProgress(0);
+          showAlert('success',
+            `<strong>All ${total} favicons downloaded!</strong> ` +
+            `Place them at your repo root alongside <code style="font-family:var(--mono)">index.html</code>.`
+          );
+          if (btn) {
+            btn.disabled  = false;
+            btn.innerHTML = '<i class="fa-solid fa-box-archive"></i> Download ALL Favicons — 7 files';
+          }
+        }, 400);
+      }
+    }, idx * 350); // Stagger 350ms between downloads
+  });
+};
+
+// ════════════════════════════════════════════════════════════
+// COPY CODE
+// ════════════════════════════════════════════════════════════
+window.copyCode = function() {
+  const code = `<!-- ═══════════════════ FAVICONS — AlphaVault Quant ═══════════════════ -->
+
+<!-- Standard browser tab -->
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="shortcut icon"                        href="/favicon.ico">
+
+<!-- Apple devices -->
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#667eea">
+
+<!-- Android / PWA -->
+<link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+
+<!-- Theme colors -->
+<meta name="theme-color"                    content="#667eea">
+<meta name="msapplication-TileColor"        content="#764ba2">
+<meta name="apple-mobile-web-app-capable"   content="yes">
+<meta name="apple-mobile-web-app-status-bar" content="black-translucent">`;
+
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    if (btn) {
+      const orig     = btn.innerHTML;
+      btn.innerHTML  = '<i class="fa-solid fa-check"></i> Copied!';
+      btn.style.color = '#10b981';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    }
+  }).catch(() => {
+    // Fallback for browsers without clipboard API
+    const ta      = document.createElement('textarea');
+    ta.value       = code;
+    ta.style.position = 'fixed';
+    ta.style.opacity  = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+};
+</script>
+
+</body>
+</html>
