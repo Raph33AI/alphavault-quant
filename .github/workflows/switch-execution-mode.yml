@@ -1,10 +1,15 @@
 # ============================================================
 # switch-execution-mode.yml — AlphaVault Quant
-# Bascule AUTO (trading 100% auto) ↔ MANUAL (ordres bloqués)
-# Déclenché via Cloudflare Worker alphavault-gh-proxy
+# AUTO ↔ MANUAL — Sans SSH (GitHub Variable suffit)
+#
+# Pourquoi sans SSH ?
+#   - trading_loop.py lit vars.TRADE_AUTO_MODE directement
+#   - En MANUAL, le pipeline ne génère AUCUN ordre → pending_orders.json vide
+#   - ibkr_watcher.py poll_and_execute() ne trouve rien → rien à bloquer
+#   - Le switch est donc 100% effectif via GitHub Variable seule
 # ============================================================
 
-name: ⚙ Switch Execution Mode
+name: Switch Execution Mode
 
 on:
   workflow_dispatch:
@@ -22,55 +27,24 @@ permissions:
 
 jobs:
   switch-execution-mode:
-    name: ⚙ Switch → ${{ inputs.mode }}
+    name: Switch to ${{ inputs.mode }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 3
 
     steps:
 
       # ── 1. Validation ────────────────────────────────────
-      - name: ✅ Validate mode
+      - name: Validate mode
         run: |
           if [[ "${{ inputs.mode }}" != "auto" && "${{ inputs.mode }}" != "manual" ]]; then
-            echo "❌ Mode invalide: ${{ inputs.mode }}"
+            echo "Invalid mode: ${{ inputs.mode }}"
             exit 1
           fi
-          echo "✅ Mode validé: ${{ inputs.mode }}"
-          echo "📋 AUTO  = agents actifs, ordres transmis automatiquement"
-          echo "📋 MANUAL = agents désactivés, aucun ordre auto, terminal uniquement"
+          echo "Mode validated: ${{ inputs.mode }}"
 
-      # ── 2. SSH Oracle VM ─────────────────────────────────
-      - name: 🔌 SSH → Oracle VM → switch-execution-mode.sh
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host:            141.253.96.130
-          username:        ubuntu
-          key:             ${{ secrets.ORACLE_SSH_KEY }}
-          port:            22
-          timeout:         60s
-          command_timeout: 2m
-          script_stop:     false
-          request_pty:     true
-          script: |
-            echo "========================================"
-            echo "Switch execution mode → ${{ inputs.mode }}"
-            echo "========================================"
-
-            if [ ! -f /home/ubuntu/alphavault/switch-execution-mode.sh ]; then
-              echo "❌ ERREUR: switch-execution-mode.sh introuvable"
-              echo "ℹ  Créez-le via Oracle VM (voir documentation)"
-              exit 1
-            fi
-
-            cd /home/ubuntu/alphavault
-            bash switch-execution-mode.sh "${{ inputs.mode }}"
-
-            echo "========================================"
-            echo "Oracle VM — switch terminé"
-            echo "========================================"
-
-      # ── 3. Update GitHub Variable ─────────────────────────
-      - name: 🔧 Update GitHub Variable TRADE_AUTO_MODE
+      # ── 2. Update GitHub Variable TRADE_AUTO_MODE ─────────
+      # Source of truth for trading_loop.py (reads vars.TRADE_AUTO_MODE)
+      - name: Update GitHub Variable TRADE_AUTO_MODE
         env:
           GH_TOKEN:  ${{ secrets.GITHUB_TOKEN }}
           NEW_MODE:  ${{ inputs.mode }}
@@ -79,52 +53,44 @@ jobs:
           python3 << 'EOF'
           import os, json, urllib.request, urllib.error
 
-          mode     = os.environ.get('NEW_MODE', 'auto')
-          value    = 'enabled' if mode == 'auto' else 'disabled'
-          repo     = os.environ.get('GH_REPO', '')
-          token    = os.environ.get('GH_TOKEN', '')
+          mode  = os.environ.get('NEW_MODE', 'auto')
+          value = 'enabled' if mode == 'auto' else 'disabled'
+          repo  = os.environ.get('GH_REPO', '')
+          token = os.environ.get('GH_TOKEN', '')
 
           url  = f'https://api.github.com/repos/{repo}/actions/variables/TRADE_AUTO_MODE'
           data = json.dumps({'name': 'TRADE_AUTO_MODE', 'value': value}).encode()
 
-          req = urllib.request.Request(url, data=data, method='PATCH')
-          req.add_header('Authorization',        f'Bearer {token}')
-          req.add_header('Accept',               'application/vnd.github.v3+json')
-          req.add_header('Content-Type',         'application/json')
-          req.add_header('X-GitHub-Api-Version', '2022-11-28')
+          def make_req(method):
+              req = urllib.request.Request(url, data=data, method=method)
+              req.add_header('Authorization',        f'Bearer {token}')
+              req.add_header('Accept',               'application/vnd.github.v3+json')
+              req.add_header('Content-Type',         'application/json')
+              req.add_header('X-GitHub-Api-Version', '2022-11-28')
+              return req
 
           try:
-              with urllib.request.urlopen(req) as resp:
-                  print(f"✅ TRADE_AUTO_MODE = '{value}' | HTTP {resp.status}")
+              with urllib.request.urlopen(make_req('PATCH')) as r:
+                  print(f"TRADE_AUTO_MODE = '{value}' (updated) | HTTP {r.status}")
           except urllib.error.HTTPError as e:
-              body = e.read().decode()
               if e.code == 404:
-                  # Variable n'existe pas encore → CREATE
-                  req2 = urllib.request.Request(
-                      f'https://api.github.com/repos/{repo}/actions/variables',
-                      data=data, method='POST'
-                  )
-                  req2.add_header('Authorization',        f'Bearer {token}')
-                  req2.add_header('Accept',               'application/vnd.github.v3+json')
-                  req2.add_header('Content-Type',         'application/json')
-                  req2.add_header('X-GitHub-Api-Version', '2022-11-28')
                   try:
-                      with urllib.request.urlopen(req2) as r2:
-                          print(f"✅ TRADE_AUTO_MODE CRÉÉ = '{value}' | HTTP {r2.status}")
+                      with urllib.request.urlopen(make_req('POST')) as r:
+                          print(f"TRADE_AUTO_MODE = '{value}' (created) | HTTP {r.status}")
                   except Exception as e2:
-                      print(f"⚠  Création variable: {e2}")
+                      print(f"Could not create variable: {e2}")
+                      print("Create manually: Settings > Variables > TRADE_AUTO_MODE")
               else:
-                  print(f"⚠  HTTP {e.code}: {body[:200]}")
+                  print(f"HTTP {e.code}: {e.read().decode()[:200]}")
           except Exception as e:
-              print(f"⚠  Erreur réseau: {e}")
-
+              print(f"Network error: {e}")
           EOF
 
-      # ── 4. Checkout + push execution_mode.json ────────────
-      - name: 📥 Checkout
+      # ── 3. Checkout + push execution_mode.json ────────────
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: 💾 Push execution_mode.json → GitHub Pages
+      - name: Push execution_mode.json to GitHub Pages
         run: |
           NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           MODE="${{ inputs.mode }}"
@@ -133,10 +99,10 @@ jobs:
 
           if [ "$MODE" = "auto" ]; then
             TRADE_AUTO="true"
-            LABEL="AUTO — Automated trading active"
+            LABEL="AUTO — Full pipeline active, orders transmitted"
           else
             TRADE_AUTO="false"
-            LABEL="MANUAL — Orders blocked, analysis only"
+            LABEL="MANUAL — ML orders blocked, Trading Terminal active"
           fi
 
           cat > docs/signals/execution_mode.json << JSONEOF
@@ -146,41 +112,35 @@ jobs:
             "label":            "${LABEL}",
             "updated_at":       "${NOW}",
             "updated_by":       "dashboard_switch",
-            "run_number":       "${{ github.run_number }}",
-            "workflow":         "switch-execution-mode.yml"
+            "run_number":       "${{ github.run_number }}"
           }
           JSONEOF
 
           git config user.name  "AlphaVault Bot"
           git config user.email "bot@alphavault-ai.com"
           git add docs/signals/execution_mode.json
-          git commit -m "⚙ Execution mode → ${MODE} | ${NOW} [run #${{ github.run_number }}]" \
-            || echo "ℹ  Nothing to commit"
-          git push || echo "⚠  Push failed"
+          git commit -m "Execution mode → ${MODE} | ${NOW}" || echo "Nothing to commit"
+          git push || echo "Push failed"
 
-          echo "✅ execution_mode.json pushed → GitHub Pages"
-          echo "📡 URL: https://raph33ai.github.io/alphavault-quant/signals/execution_mode.json"
+          echo "execution_mode.json pushed"
+          echo "URL: https://raph33ai.github.io/alphavault-quant/signals/execution_mode.json"
 
-      # ── 5. Résumé ─────────────────────────────────────────
-      - name: 📋 Summary
+      # ── 4. Summary ────────────────────────────────────────
+      - name: Summary
         run: |
-          echo "========================================"
-          echo "  ⚙  EXECUTION MODE SWITCH COMPLETE"
-          echo "========================================"
-          echo "  Mode     : ${{ inputs.mode }}"
-          echo "  Run      : #${{ github.run_number }}"
-          echo "  Time     : $(date -u)"
+          echo "================================"
+          echo "  EXECUTION MODE: ${{ inputs.mode }}"
+          echo "  Run: #${{ github.run_number }}"
+          echo "================================"
           if [ "${{ inputs.mode }}" = "manual" ]; then
-            echo ""
-            echo "  ✋ MANUAL MODE ACTIVE"
-            echo "  → All 13 agents still run and analyze"
-            echo "  → Signals generated but ORDERS BLOCKED"
-            echo "  → Use Trading Terminal for manual orders"
-            echo "  → Switch back to AUTO when ready"
+            echo "  MANUAL MODE ACTIVE"
+            echo "  ML pipeline reads TRADE_AUTO_MODE=disabled"
+            echo "  trading_loop.py skips push_execute_orders"
+            echo "  No orders written to pending_orders.json"
+            echo "  Trading Terminal orders still active"
           else
-            echo ""
-            echo "  🤖 AUTO MODE ACTIVE"
-            echo "  → Full pipeline: 13 agents + order transmission"
-            echo "  → Orders transmitted every 5min (market hours)"
+            echo "  AUTO MODE ACTIVE"
+            echo "  TRADE_AUTO_MODE=enabled"
+            echo "  Full pipeline + order transmission active"
           fi
-          echo "========================================"
+          echo "================================"
