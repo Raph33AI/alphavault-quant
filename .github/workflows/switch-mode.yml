@@ -117,6 +117,87 @@ jobs:
             echo "Switch termine -> mode: ${{ inputs.mode }}"
             echo "========================================"
 
+    # ── 2b. Email notification ───────────────────────────
+      - name: Send Switch Notification Email
+        if: always()
+        env:
+          RESEND_API_KEY:    ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          NEW_MODE:          ${{ inputs.mode }}
+          GH_PAGES_BASE:     https://raph33ai.github.io/alphavault-quant/signals
+          RUN_URL:           ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python3 << 'PYEOF'
+          import json, os, urllib.request, urllib.error, datetime
+
+          BASE    = os.environ.get("GH_PAGES_BASE","")
+          API_KEY = os.environ.get("RESEND_API_KEY","")
+          FROM    = os.environ.get("RESEND_FROM_EMAIL","")
+          MODE    = os.environ.get("NEW_MODE","paper").upper()
+          RUN_URL = os.environ.get("RUN_URL","")
+          NOW     = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+
+          def fetch(path):
+              try:
+                  req = urllib.request.Request(f"{BASE}/{path}", headers={"Cache-Control":"no-cache"})
+                  with urllib.request.urlopen(req, timeout=8) as r:
+                      return json.loads(r.read().decode())
+              except: return {}
+
+          settings = fetch("notification_settings.json")
+          emails   = settings.get("emails", [])
+          if not settings.get("notify_switch_paper_live", True) or not emails:
+              print("Switch email disabled or no recipients"); exit(0)
+          if not API_KEY: print("No RESEND_API_KEY"); exit(0)
+
+          account = "U21160314 (raphnardone)" if MODE=="LIVE" else "DUM895161 (vtsdxs036)"
+          color   = "#ef4444" if MODE=="LIVE" else "#3b82f6"
+          bg      = "#fef2f2" if MODE=="LIVE" else "#eff6ff"
+          border  = "#fecaca" if MODE=="LIVE" else "#bfdbfe"
+          warning = "" if MODE=="PAPER" else """
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:#c2410c">
+            <strong>Live Trading Active</strong> — Real capital at risk. Verify IBEAM_KEY and DRY_RUN settings before proceeding.
+          </div>"""
+
+          html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+          <body style="margin:0;padding:32px 16px;font-family:'Inter',-apple-system,sans-serif;background:#f8fafc">
+          <div style="max-width:520px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08)">
+            <div style="background:{color};padding:28px;text-align:center">
+              <div style="font-size:10px;font-weight:800;letter-spacing:2px;color:rgba(255,255,255,0.7);text-transform:uppercase;margin-bottom:8px">AlphaVault Quant</div>
+              <div style="font-size:22px;font-weight:900;color:white">Trading Account Switched</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.8);margin-top:4px">{NOW}</div>
+            </div>
+            <div style="padding:28px">
+              {warning}
+              <div style="background:{bg};border:1px solid {border};border-radius:10px;padding:20px;text-align:center;margin-bottom:20px">
+                <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:{color};margin-bottom:6px">New Mode</div>
+                <div style="font-size:32px;font-weight:900;color:{color}">{MODE}</div>
+                <div style="font-size:13px;color:#64748b;margin-top:6px;font-family:monospace">{account}</div>
+              </div>
+              <div style="font-size:11px;color:#94a3b8;text-align:center">
+                <a href="{RUN_URL}" style="color:{color};text-decoration:none;font-weight:600">View GitHub Actions Run</a>
+                &nbsp;·&nbsp;
+                <a href="https://raph33ai.github.io/alphavault-quant/" style="color:{color};text-decoration:none;font-weight:600">Open Dashboard</a>
+              </div>
+            </div>
+          </div>
+          </body></html>"""
+
+          payload = json.dumps({"from":FROM,"to":emails,
+                                "subject":f"[AlphaVault Quant] Account Switched → {MODE} | {NOW}",
+                                "html":html}).encode()
+          req = urllib.request.Request("https://api.resend.com/emails", data=payload, method="POST",
+                                        headers={"Authorization":f"Bearer {API_KEY}","Content-Type":"application/json"})
+          try:
+              with urllib.request.urlopen(req, timeout=15) as r:
+                  d = json.loads(r.read().decode())
+                  print(f"Email sent: {d.get('id','ok')} to {len(emails)} recipients")
+          except urllib.error.HTTPError as e:
+              print(f"Resend {e.code}: {e.read().decode()[:200]}")
+          except Exception as e:
+              print(f"Error: {e}")
+          PYEOF
+
       # ── 3. Checkout repo ────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
