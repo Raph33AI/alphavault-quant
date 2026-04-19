@@ -119,6 +119,76 @@ const YahooFinance = (() => {
 window.YahooFinance = YahooFinance;
 
 // ════════════════════════════════════════════════════════════
+// FINANCE HUB CLIENT — FinnHub + Twelve Data via finance-hub-api
+// Source primaire quand Yahoo Finance bloque les Workers IPs
+// ════════════════════════════════════════════════════════════
+const FinanceHub = (() => {
+
+  const BASE = 'https://finance-hub-api.raphnardone.workers.dev';
+  const _mem  = new Map();
+  const TTL   = 300_000; // 5 min cache session
+
+  async function _get(path) {
+    const now = Date.now();
+    const hit = _mem.get(path);
+    if (hit && (now - hit.ts) < TTL) return hit.data;
+    try {
+      const resp = await fetch(`${BASE}${path}`, {
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+      if (data?.error) throw new Error(data.error);
+      _mem.set(path, { data, ts: now });
+      return data;
+    } catch(e) {
+      console.warn(`[FinanceHub] ${path}: ${e.message}`);
+      return null;
+    }
+  }
+
+  // Métriques fondamentales FinnHub (P/E, marges, ROE, etc.)
+  async function getBasicFinancials(sym) {
+    return await _get(`/api/finnhub/basic-financials?symbol=${sym}&metric=all`);
+  }
+
+  // Historique EPS (actual vs estimated, surprises)
+  async function getEarnings(sym) {
+    return await _get(`/api/finnhub/earnings?symbol=${sym}`);
+  }
+
+  // Prochain calendar d'earnings (date, estimate EPS/Rev)
+  async function getEarningsCalendar(sym) {
+    const from = new Date().toISOString().split('T')[0];
+    const to   = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    return await _get(`/api/finnhub/earnings-calendar?symbol=${sym}&from=${from}&to=${to}`);
+  }
+
+  // Profil entreprise (secteur, pays, site, logo)
+  async function getCompanyProfile(sym) {
+    return await _get(`/api/finnhub/company-profile?symbol=${sym}`);
+  }
+
+  // Statistiques Twelve Data (valorisation, P/S, P/B, EV/EBITDA, etc.)
+  async function getStatistics(sym) {
+    return await _get(`/api/statistics?symbol=${sym}`);
+  }
+
+  // Vide le cache pour un symbole (retry)
+  function clearCache(sym) {
+    const prefix = `/${sym}`;
+    for (const key of _mem.keys()) {
+      if (key.includes(sym)) _mem.delete(key);
+    }
+  }
+
+  return { getBasicFinancials, getEarnings, getEarningsCalendar, getCompanyProfile, getStatistics, clearCache };
+
+})();
+
+window.FinanceHub = FinanceHub;
+
+// ════════════════════════════════════════════════════════════
 // HELPER: Fix Chart Container Heights (empêche la croissance infinie)
 // ════════════════════════════════════════════════════════════
 function _fixChartHeights() {
@@ -346,22 +416,46 @@ const StockDetail = (() => {
   }
 
   // ────────────────────────────────────────────────────────
-  // DATA FETCH (Yahoo only)
+  // DATA FETCH — Yahoo chart/news + FinnHub + Twelve Data
   // ────────────────────────────────────────────────────────
   async function _fetchAll(sym) {
     if (!_data[sym]) _data[sym] = {};
 
-    const [quoteRes, summaryRes, newsRes] = await Promise.allSettled([
+    // Fetch toutes les sources en parallèle
+    const [
+      quoteRes, summaryRes, newsRes,
+      fhBasicRes, fhEarnRes, fhCalRes, fhProfileRes, fhStatsRes,
+    ] = await Promise.allSettled([
       YahooFinance.getQuote(sym),
       YahooFinance.getFinancials(sym),
       YahooFinance.getNews(sym, 50),
+      FinanceHub.getBasicFinancials(sym),
+      FinanceHub.getEarnings(sym),
+      FinanceHub.getEarningsCalendar(sym),
+      FinanceHub.getCompanyProfile(sym),
+      FinanceHub.getStatistics(sym),
     ]);
 
-    _data[sym].quote   = quoteRes.status   === 'fulfilled' ? quoteRes.value   : null;
-    _data[sym].summary = summaryRes.status === 'fulfilled' ? summaryRes.value : null;
-    _data[sym].news    = newsRes.status    === 'fulfilled' ? newsRes.value    : [];
+    _data[sym].quote      = quoteRes.status      === 'fulfilled' ? quoteRes.value      : null;
+    _data[sym].summary    = summaryRes.status     === 'fulfilled' ? summaryRes.value    : null;
+    _data[sym].news       = newsRes.status        === 'fulfilled' ? newsRes.value       : [];
+    _data[sym].fhBasic    = fhBasicRes.status     === 'fulfilled' ? fhBasicRes.value    : null;
+    _data[sym].fhEarnings = fhEarnRes.status      === 'fulfilled' ? fhEarnRes.value     : null;
+    _data[sym].fhCal      = fhCalRes.status       === 'fulfilled' ? fhCalRes.value      : null;
+    _data[sym].fhProfile  = fhProfileRes.status   === 'fulfilled' ? fhProfileRes.value  : null;
+    _data[sym].fhStats    = fhStatsRes.status     === 'fulfilled' ? fhStatsRes.value    : null;
 
-    // Update header price
+    console.log(`[StockDetail] Data fetched for ${sym}:`, {
+      yahoo_quote:   !!_data[sym].quote,
+      yahoo_summary: _data[sym].summary?._source || 'null',
+      fh_basic:      !!_data[sym].fhBasic?.metric,
+      fh_earnings:   Array.isArray(_data[sym].fhEarnings) ? _data[sym].fhEarnings.length + ' records' : 'null',
+      fh_cal:        !!_data[sym].fhCal?.earningsCalendar,
+      fh_profile:    !!_data[sym].fhProfile?.name,
+      td_stats:      !!_data[sym].fhStats?.valuations_metrics,
+    });
+
+    // Mise à jour header depuis Yahoo quote (toujours disponible)
     const q = _data[sym].quote;
     if (q && q.price > 0) {
       _t('sdp-fp-price', `$${q.price.toFixed(2)}`);
@@ -729,14 +823,24 @@ const StockDetail = (() => {
     }
   }
 
-  // ── Retry financials (KV might have cached the crumb now) ─
+  // ── Retry — vide Yahoo ET FinnHub cache ───────────────────
   async function _retryFinancials() {
-    // Clear memory cache for this sym
-    if (_data[_sym]) delete _data[_sym].summary;
-    // Refetch
-    const sum = await YahooFinance.getFinancials(_sym);
-    if (_data[_sym]) _data[_sym].summary = sum;
-    _renderFinancials();
+    if (!_sym) return;
+    // Clear Yahoo cache
+    if (_data[_sym]) {
+      delete _data[_sym].summary;
+      delete _data[_sym].fhBasic;
+      delete _data[_sym].fhEarnings;
+      delete _data[_sym].fhCal;
+      delete _data[_sym].fhProfile;
+      delete _data[_sym].fhStats;
+    }
+    // Clear FinanceHub session cache
+    FinanceHub.clearCache(_sym);
+
+    // Refetch tout
+    await _fetchAll(_sym);
+    _renderFinancialsEarnings();
   }
 
   // ════════════════════════════════════════════════════════
@@ -837,65 +941,186 @@ const StockDetail = (() => {
   }
 
   // ════════════════════════════════════════════════════════
-  // TAB: FINANCIALS & EARNINGS (fusionné)
+  // TAB: FINANCIALS & EARNINGS — Yahoo + FinnHub + Twelve Data
   // ════════════════════════════════════════════════════════
   function _renderFinancialsEarnings() {
-    const sum    = _data[_sym]?.summary || {};
-    const q      = _data[_sym]?.quote   || {};
-    const fin    = sum.financialData          || {};
-    const stats  = sum.defaultKeyStatistics   || {};
-    const detail = sum.summaryDetail          || {};
-    const price  = sum.price                  || {};
-    const profile= sum.assetProfile           || {};
-    const trend  = sum.earningsTrend?.trend   || sum.earnings?.earningsChart?.quarterly || [];
-    const calendar = sum.calendarEvents?.earnings || {};
-    const nextDates = (calendar.earningsDate || [])
-      .map(d => new Date((d.raw || d) * 1000))
-      .filter(d => d > new Date());
-    const nextEarnings = nextDates[0]?.toLocaleDateString('en-US', {
-      month:'long', day:'numeric', year:'numeric'
-    });
-    const epsFromStats = stats.trailingEps?.raw || stats.forwardEps?.raw;
+    const sym = _sym;
 
+    // ── Sources de données ────────────────────────────────
+    const sum     = _data[sym]?.summary  || {};
+    const q       = _data[sym]?.quote    || {};
+    const fin     = sum.financialData          || {};
+    const stats   = sum.defaultKeyStatistics   || {};
+    const detail  = sum.summaryDetail          || {};
+    const priceObj= sum.price                  || {};
+    const profile = sum.assetProfile           || {};
+    const yahooTrend = sum.earningsTrend?.trend || [];
+    const yahooCalendar = sum.calendarEvents?.earnings || {};
+    const isYahooFallback = sum._source === 'chart_fallback' || !sum._source;
+
+    // FinnHub
+    const fhM       = _data[sym]?.fhBasic?.metric || {};
+    const fhSeries  = _data[sym]?.fhBasic?.series  || {};
+    const fhEarnArr = Array.isArray(_data[sym]?.fhEarnings) ? _data[sym].fhEarnings : [];
+    const fhCalArr  = _data[sym]?.fhCal?.earningsCalendar || [];
+    const fhProf    = _data[sym]?.fhProfile || {};
+
+    // Twelve Data statistics
+    const tdVal    = _data[sym]?.fhStats?.valuations_metrics || {};
+    const tdIncome = _data[sym]?.fhStats?.financials?.income_statement
+                  || _data[sym]?.fhStats?.income_statement || {};
+    const tdBal    = _data[sym]?.fhStats?.financials?.balance_sheet
+                  || _data[sym]?.fhStats?.balance_sheet || {};
+    const tdStats  = _data[sym]?.fhStats?.statistics || {};
+
+    // ── Helpers merge Yahoo → FinnHub → Twelve Data ───────
+    const _rv = (yahooRaw, ...fallbacks) => {
+      const y = yahooRaw?.raw ?? yahooRaw;
+      if (y != null && !isNaN(parseFloat(y)) && y !== 0) return y;
+      for (const fb of fallbacks) {
+        if (fb != null && !isNaN(parseFloat(fb)) && fb !== 0) return fb;
+      }
+      return null;
+    };
+
+    const _fv = (yahooRaw, dec = 2, prefix = '', suffix = '', ...fallbacks) => {
+      const v = _rv(yahooRaw, ...fallbacks);
+      return v != null ? `${prefix}${parseFloat(v).toFixed(dec)}${suffix}` : '--';
+    };
+
+    const _fpv = (yahooRaw, ...fallbacks) => {
+      const v = _rv(yahooRaw, ...fallbacks);
+      if (v == null) return '--';
+      // FinnHub donne les marges en %, Yahoo en décimal
+      const isDecimal = Math.abs(parseFloat(v)) < 5;
+      return isDecimal
+        ? `${(parseFloat(v) * 100).toFixed(2)}%`
+        : `${parseFloat(v).toFixed(2)}%`;
+    };
+
+    const _fmv = (yahooRaw, ...fallbacks) => {
+      const v = _rv(yahooRaw, ...fallbacks);
+      return v != null ? _fmtMCap(v) : '--';
+    };
+
+    // Prix courant
+    const currentPrice = q.price || detail.regularMarketPrice?.raw || priceObj.regularMarketPrice?.raw || 0;
+
+    // Market Cap
+    const mktCapYahoo = priceObj.marketCap?.raw || q.market_cap;
+    const mktCapFH    = fhM.marketCapitalization ? fhM.marketCapitalization * 1_000_000 : null;
+    const mktCapTD    = tdVal.market_capitalization;
+
+    // EPS & P/E
+    const epsYahoo   = stats.trailingEps?.raw;
+    const epsFH      = fhM.epsNormalizedAnnual || fhM.epsBasicExclExtraAnnual;
+    const epsTD      = tdIncome.diluted_eps_ttm;
+    const epsUse     = _rv(epsYahoo, epsFH, epsTD);
+
+    const peYahoo    = detail.trailingPE?.raw;
+    const peFH       = fhM.peBasicExclExtraTTM || fhM.peTTM;
+    const peTD       = tdVal.trailing_pe;
+    const peCalc     = (currentPrice && epsUse && epsUse > 0) ? currentPrice / epsUse : null;
+    const peUse      = _rv(peYahoo, peFH, peTD, peCalc);
+
+    const fwdPE      = _rv(detail.forwardPE?.raw, fhM.forwardPE, tdVal.forward_pe);
+    const fwdEPS     = _rv(stats.forwardEps?.raw, null, tdIncome.diluted_eps_ttm);
+    const pegRatio   = _rv(stats.pegRatio?.raw, tdVal.peg_ratio);
+
+    // Ratios de valorisation
+    const psRatio   = _rv(stats.priceToSalesTrailing12Months?.raw, tdVal.price_to_sales_ttm);
+    const pbRatio   = _rv(stats.priceToBook?.raw, tdVal.price_to_book_mrq);
+    const evEbitda  = _rv(stats.enterpriseToEbitda?.raw, tdVal.enterprise_to_ebitda);
+    const ev        = _rv(stats.enterpriseValue?.raw, tdVal.enterprise_value);
+
+    // Fondamentaux
+    const revenueYahoo = fin.totalRevenue?.raw;
+    const revenueTD    = tdIncome.revenue_ttm;
+    const revenueUse   = _rv(revenueYahoo, revenueTD);
+
+    const grossMgn  = _rv(fin.grossMargins?.raw, fhM.grossMarginAnnual, tdIncome.gross_profit_ttm && revenueUse ? tdIncome.gross_profit_ttm / revenueUse : null);
+    const opMgn     = _rv(fin.operatingMargins?.raw, fhM.operatingMarginAnnual);
+    const netMgn    = _rv(fin.profitMargins?.raw, fhM.netMarginAnnual);
+    const ebitda    = _rv(fin.ebitda?.raw, null, tdIncome.ebitda);
+    const revGrowth = _rv(fin.revenueGrowth?.raw, fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y / 100 : null);
+    const earnGrowth= _rv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y ? fhM.epsGrowth3Y / 100 : null);
+
+    // Bilan
+    const totalCash = _rv(fin.totalCash?.raw);
+    const totalDebt = _rv(fin.totalDebt?.raw);
+    const d2e       = _rv(fin.debtToEquity?.raw, fhM['totalDebt/totalEquityAnnual']);
+    const currRatio = _rv(fin.currentRatio?.raw, fhM.currentRatioAnnual);
+    const fcf       = _rv(fin.freeCashflow?.raw, fhM.freeCashFlowAnnual ? fhM.freeCashFlowAnnual * 1_000_000 : null);
+
+    // Rendements
+    const roe       = _rv(fin.returnOnEquity?.raw, fhM.roeTTM ? fhM.roeTTM / 100 : null);
+    const roa       = _rv(fin.returnOnAssets?.raw, fhM.roaRfy  ? fhM.roaRfy  / 100 : null);
+
+    // Actions
+    const shortPct  = _rv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat / 100 : null);
+    const insiderPct= _rv(stats.heldPercentInsiders?.raw);
+    const instPct   = _rv(stats.heldPercentInstitutions?.raw);
+
+    // Beta
+    const betaUse   = _rv(detail.beta?.raw, fhM.beta);
+
+    // Dividende
+    const divYield  = _rv(detail.dividendYield?.raw, fhM.dividendYieldIndicatedAnnual ? fhM.dividendYieldIndicatedAnnual / 100 : null);
+
+    // ── Construction du tableau kstats ────────────────────
     const kstats = [
-      { l:'Market Cap',       v: _fmtMCap(price.marketCap?.raw || q.market_cap) },
-      { l:'Price',            v: _f(q.price || detail.regularMarketPrice?.raw, '$') },
-      { l:'52W High',         v: _f(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, '$') },
-      { l:'52W Low',          v: _f(q['52w_low']  || detail.fiftyTwoWeekLow?.raw, '$') },
-      { l:'P/E (TTM)',        v: _f(detail.trailingPE?.raw,  '', 2) },
-      { l:'Forward P/E',      v: _f(detail.forwardPE?.raw,   '', 2) },
-      { l:'EPS (TTM)',        v: _f(epsFromStats,             '$', 2) },
-      { l:'Beta',             v: _f(detail.beta?.raw,         '', 2) },
-      { l:'Div Yield',        v: _fPct(detail.dividendYield?.raw) },
-      { l:'P/S Ratio',        v: _f(stats.priceToSalesTrailing12Months?.raw, '', 2) },
-      { l:'P/B Ratio',        v: _f(stats.priceToBook?.raw, '', 2) },
-      { l:'EV/EBITDA',        v: _f(stats.enterpriseToEbitda?.raw, '', 2) },
-      { l:'PEG Ratio',        v: _f(stats.pegRatio?.raw, '', 2) },
-      { l:'Revenue (TTM)',    v: _fmtMCap(fin.totalRevenue?.raw) },
-      { l:'Gross Margin',     v: _fPct(fin.grossMargins?.raw) },
-      { l:'Operating Margin', v: _fPct(fin.operatingMargins?.raw) },
-      { l:'Profit Margin',    v: _fPct(fin.profitMargins?.raw) },
-      { l:'EBITDA',           v: _fmtMCap(fin.ebitda?.raw) },
-      { l:'Revenue Growth',   v: _fPct(fin.revenueGrowth?.raw) },
-      { l:'Earnings Growth',  v: _fPct(fin.earningsGrowth?.raw) },
-      { l:'Total Cash',       v: _fmtMCap(fin.totalCash?.raw) },
-      { l:'Total Debt',       v: _fmtMCap(fin.totalDebt?.raw) },
-      { l:'Debt/Equity',      v: _f(fin.debtToEquity?.raw, '', 2) },
-      { l:'Free Cash Flow',   v: _fmtMCap(fin.freeCashflow?.raw) },
-      { l:'Current Ratio',    v: _f(fin.currentRatio?.raw, '', 2) },
-      { l:'ROE',              v: _fPct(fin.returnOnEquity?.raw) },
-      { l:'ROA',              v: _fPct(fin.returnOnAssets?.raw) },
-      { l:'Short % Float',    v: _fPct(stats.shortPercentOfFloat?.raw) },
-      { l:'Insider Own.',     v: _fPct(stats.heldPercentInsiders?.raw) },
-      { l:'Institution Own.', v: _fPct(stats.heldPercentInstitutions?.raw) },
+      { l:'Market Cap',         v: _fmv(mktCapYahoo, mktCapFH, mktCapTD) },
+      { l:'Price',              v: currentPrice ? `$${parseFloat(currentPrice).toFixed(2)}` : '--' },
+      { l:'52W High',           v: _fv(q['52w_high'] || detail.fiftyTwoWeekHigh?.raw, 2, '$', '', fhM['52WeekHigh']) },
+      { l:'52W Low',            v: _fv(q['52w_low']  || detail.fiftyTwoWeekLow?.raw,  2, '$', '', fhM['52WeekLow']) },
+      { l:'P/E (TTM)',          v: peUse     != null ? parseFloat(peUse).toFixed(2) : '--' },
+      { l:'Forward P/E',        v: fwdPE     != null ? parseFloat(fwdPE).toFixed(2) : '--' },
+      { l:'EPS (TTM)',          v: epsUse    != null ? `$${parseFloat(epsUse).toFixed(2)}` : '--' },
+      { l:'Forward EPS',        v: fwdEPS    != null ? `$${parseFloat(fwdEPS).toFixed(2)}` : '--' },
+      { l:'PEG Ratio',          v: pegRatio  != null ? parseFloat(pegRatio).toFixed(2) : '--' },
+      { l:'P/S Ratio',          v: psRatio   != null ? parseFloat(psRatio).toFixed(2) : '--' },
+      { l:'P/B Ratio',          v: pbRatio   != null ? parseFloat(pbRatio).toFixed(2) : '--' },
+      { l:'EV/EBITDA',          v: evEbitda  != null ? parseFloat(evEbitda).toFixed(2) : '--' },
+      { l:'Enterprise Value',   v: _fmv(ev) },
+      { l:'Beta',               v: betaUse   != null ? parseFloat(betaUse).toFixed(2) : '--' },
+      { l:'Div Yield',          v: divYield  != null ? `${(parseFloat(divYield) < 1 ? parseFloat(divYield)*100 : parseFloat(divYield)).toFixed(2)}%` : '--' },
+      { l:'Revenue (TTM)',      v: _fmv(revenueUse) },
+      { l:'Gross Margin',       v: grossMgn  != null ? _fpv(fin.grossMargins?.raw, fhM.grossMarginAnnual)  : '--' },
+      { l:'Operating Margin',   v: opMgn     != null ? _fpv(fin.operatingMargins?.raw, fhM.operatingMarginAnnual) : '--' },
+      { l:'Profit Margin',      v: netMgn    != null ? _fpv(fin.profitMargins?.raw, fhM.netMarginAnnual)   : '--' },
+      { l:'EBITDA',             v: _fmv(ebitda) },
+      { l:'Revenue Growth',     v: revGrowth != null ? _fpv(fin.revenueGrowth?.raw, fhM.revenueGrowth3Y ? fhM.revenueGrowth3Y/100 : null) : '--' },
+      { l:'Earnings Growth',    v: earnGrowth!= null ? _fpv(fin.earningsGrowth?.raw, fhM.epsGrowth3Y ? fhM.epsGrowth3Y/100 : null) : '--' },
+      { l:'Total Cash',         v: _fmv(totalCash) },
+      { l:'Total Debt',         v: _fmv(totalDebt) },
+      { l:'Debt/Equity',        v: d2e      != null ? parseFloat(d2e).toFixed(2) : '--' },
+      { l:'Free Cash Flow',     v: _fmv(fcf) },
+      { l:'Current Ratio',      v: currRatio!= null ? parseFloat(currRatio).toFixed(2) : '--' },
+      { l:'ROE',                v: roe      != null ? _fpv(fin.returnOnEquity?.raw, fhM.roeTTM ? fhM.roeTTM/100 : null) : '--' },
+      { l:'ROA',                v: roa      != null ? _fpv(fin.returnOnAssets?.raw, fhM.roaRfy  ? fhM.roaRfy/100  : null) : '--' },
+      { l:'Short % Float',      v: shortPct != null ? _fpv(stats.shortPercentOfFloat?.raw, fhM.shortPercentOfFloat ? fhM.shortPercentOfFloat/100 : null) : '--' },
+      { l:'Insider Own.',       v: insiderPct!= null ? _fPct(insiderPct) : '--' },
+      { l:'Institution Own.',   v: instPct  != null ? _fPct(instPct) : '--' },
     ].filter(i => i.v && i.v !== '--');
 
-    const hasFull = fin.totalRevenue || stats.enterpriseValue;
-    const srcBadge = hasFull
-      ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)"><i class="fa-solid fa-circle-check"></i> Full Data</span>`
-      : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)"><i class="fa-solid fa-triangle-exclamation"></i> Quote Only</span>`;
+    // ── Badge source de données ────────────────────────────
+    const hasYahooFull = !!(fin.totalRevenue?.raw || stats.enterpriseValue?.raw);
+    const hasFHFull    = !!(fhM.marketCapitalization || fhM.peBasicExclExtraTTM);
+    const hasTDFull    = !!(tdVal.trailing_pe || tdVal.market_capitalization);
 
-    // ── Section 1 : Key Stats ─────────────────────────────────
+    const srcBadge = hasYahooFull
+      ? `<span style="font-size:10px;color:var(--g);background:rgba(16,185,129,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(16,185,129,0.25)">
+            <i class="fa-solid fa-circle-check"></i> Yahoo Finance
+         </span>`
+      : (hasFHFull || hasTDFull)
+        ? `<span style="font-size:10px;color:var(--b1);background:rgba(59,130,246,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(59,130,246,0.25)">
+              <i class="fa-solid fa-database"></i> FinnHub + Twelve Data
+           </span>`
+        : `<span style="font-size:10px;color:var(--y);background:rgba(245,158,11,0.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,0.25)">
+              <i class="fa-solid fa-triangle-exclamation"></i> Quote Only
+           </span>`;
+
+    // ── Section 1 : Key Statistics ────────────────────────
     const statsBlock = `
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
@@ -913,64 +1138,180 @@ const StockDetail = (() => {
           <div style="text-align:center;padding:24px;color:var(--txt4)">
             <i class="fa-solid fa-triangle-exclamation" style="font-size:22px;color:var(--y);margin-bottom:8px;display:block"></i>
             <strong style="color:var(--txt)">Financial data unavailable</strong><br>
-            <span style="font-size:11px;margin-top:4px;display:block">The Yahoo Finance proxy needs to return full quoteSummary modules.</span>
+            <span style="font-size:11px;margin-top:4px;display:block">Vérifiez que FINNHUB_API_KEY et TWELVE_DATA_API_KEY sont configurés dans le Worker.</span>
             <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:10px">
               <i class="fa-solid fa-rotate"></i> Retry
             </button>
           </div>`}
       </div>`;
 
-    // ── Section 2 : Next Earnings Date ───────────────────────
-    const calSection = nextEarnings ? `
+    // ── Section 2 : Next Earnings Date ────────────────────
+    const now = new Date();
+
+    // FinnHub calendar (priorité)
+    const nextFHCal = fhCalArr
+      .filter(e => e.symbol === sym && new Date(e.date) > now)
+      .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+
+    // Yahoo calendar (fallback)
+    const yahooDates = (yahooCalendar.earningsDate || [])
+      .map(d => new Date((d.raw || d) * 1000))
+      .filter(d => d > now);
+
+    const nextEarningsDate = nextFHCal?.date
+      ? new Date(nextFHCal.date).toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })
+      : yahooDates[0]?.toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+
+    const calSection = nextEarningsDate ? `
       <div class="sdp-fp-stat-section" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.04)">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-calendar-check"></i> Next Earnings Date</div>
-        <div style="font-size:24px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:4px">${nextEarnings}</div>
-        <div style="font-size:11px;color:var(--txt4)">Market will be watching closely</div>
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-calendar-check"></i> Next Earnings Date
+          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
+            <i class="fa-solid fa-database"></i> ${nextFHCal ? 'FinnHub' : 'Yahoo'}
+          </span>
+        </div>
+        <div style="font-size:24px;font-weight:900;color:var(--b1);font-family:var(--mono);margin-bottom:4px">${nextEarningsDate}</div>
+        ${nextFHCal ? `
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px">
+            ${nextFHCal.epsEstimate != null ? `
+              <div class="sdp-fp-stat-item" style="min-width:120px">
+                <div class="sdp-fp-stat-lbl">EPS Estimate</div>
+                <div class="sdp-fp-stat-val" style="color:var(--b1)">$${parseFloat(nextFHCal.epsEstimate).toFixed(2)}</div>
+              </div>` : ''}
+            ${nextFHCal.revenueEstimate != null ? `
+              <div class="sdp-fp-stat-item" style="min-width:120px">
+                <div class="sdp-fp-stat-lbl">Rev Estimate</div>
+                <div class="sdp-fp-stat-val">${_fmtMCap(nextFHCal.revenueEstimate)}</div>
+              </div>` : ''}
+            ${nextFHCal.hour ? `
+              <div class="sdp-fp-stat-item" style="min-width:120px">
+                <div class="sdp-fp-stat-lbl">Time</div>
+                <div class="sdp-fp-stat-val">${nextFHCal.hour === 'bmo' ? '🌅 Before Open' : nextFHCal.hour === 'amc' ? '🌙 After Close' : nextFHCal.hour.toUpperCase()}</div>
+              </div>` : ''}
+            ${nextFHCal.quarter ? `
+              <div class="sdp-fp-stat-item" style="min-width:120px">
+                <div class="sdp-fp-stat-lbl">Quarter</div>
+                <div class="sdp-fp-stat-val">Q${nextFHCal.quarter} ${nextFHCal.year}</div>
+              </div>` : ''}
+          </div>` : ''}
+        <div style="font-size:10px;color:var(--txt4);margin-top:8px">Market will be watching closely</div>
       </div>` : '';
 
-    // ── Section 3 : EPS Summary ───────────────────────────────
-    const epsCard = epsFromStats ? `
+    // ── Section 3 : EPS Summary ───────────────────────────
+    const epsCard = epsUse != null ? `
       <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-dollar-sign"></i> EPS Summary</div>
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-dollar-sign"></i> EPS Summary
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px">
           <div class="sdp-fp-stat-item">
             <div class="sdp-fp-stat-lbl">EPS (TTM)</div>
-            <div class="sdp-fp-stat-val" style="color:${epsFromStats>0?'var(--g)':'var(--r)'}">$${epsFromStats.toFixed(2)}</div>
+            <div class="sdp-fp-stat-val" style="color:${parseFloat(epsUse)>0?'var(--g)':'var(--r)'}">$${parseFloat(epsUse).toFixed(2)}</div>
           </div>
-          ${q.price && epsFromStats ? `
+          ${currentPrice && epsUse && parseFloat(epsUse) > 0 ? `
           <div class="sdp-fp-stat-item">
             <div class="sdp-fp-stat-lbl">P/E (TTM)</div>
-            <div class="sdp-fp-stat-val">${(q.price / epsFromStats).toFixed(2)}</div>
+            <div class="sdp-fp-stat-val">${peUse != null ? parseFloat(peUse).toFixed(2) : (currentPrice/parseFloat(epsUse)).toFixed(2)}</div>
           </div>` : ''}
-          ${stats.forwardEps?.raw ? `
+          ${fwdEPS != null ? `
           <div class="sdp-fp-stat-item">
             <div class="sdp-fp-stat-lbl">Fwd EPS</div>
-            <div class="sdp-fp-stat-val" style="color:var(--b1)">$${parseFloat(stats.forwardEps.raw).toFixed(2)}</div>
+            <div class="sdp-fp-stat-val" style="color:var(--b1)">$${parseFloat(fwdEPS).toFixed(2)}</div>
+          </div>` : ''}
+          ${fwdPE != null ? `
+          <div class="sdp-fp-stat-item">
+            <div class="sdp-fp-stat-lbl">Fwd P/E</div>
+            <div class="sdp-fp-stat-val">${parseFloat(fwdPE).toFixed(2)}</div>
           </div>` : ''}
         </div>
       </div>` : '';
 
-    // ── Section 4 : EPS & Revenue Estimates par période ───────
+    // ── Section 4 : Earnings History (FinnHub) — NOUVEAU ─
+    const earningsHistoryBlock = fhEarnArr.length > 0 ? `
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-chart-bar"></i> Earnings History
+          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
+            <i class="fa-solid fa-database"></i> FinnHub · Actual vs Estimated
+          </span>
+        </div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="border-bottom:2px solid var(--bord)">
+                <th style="padding:8px 10px;text-align:left;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Period</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Estimated</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Actual</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Surprise</th>
+                <th style="padding:8px 10px;text-align:right;color:var(--txt4);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px">Beat?</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fhEarnArr.slice(0, 8).map((e, idx) => {
+                const beat    = e.actual != null && e.estimate != null && e.actual > e.estimate;
+                const miss    = e.actual != null && e.estimate != null && e.actual < e.estimate;
+                const inline  = idx % 2 === 0 ? 'var(--surf2)' : 'transparent';
+                const surprise= e.surprisePercent;
+                return `
+                  <tr style="background:${inline};border-bottom:1px solid var(--bord)">
+                    <td style="padding:8px 10px;font-family:var(--mono);font-size:11px;color:var(--txt)">
+                      ${e.period} <span style="color:var(--txt4);font-size:10px">Q${e.quarter} ${e.year}</span>
+                    </td>
+                    <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:var(--txt3)">
+                      ${e.estimate != null ? `$${parseFloat(e.estimate).toFixed(2)}` : '--'}
+                    </td>
+                    <td style="padding:8px 10px;text-align:right;font-family:var(--mono);font-weight:700;color:${beat?'var(--g)':miss?'var(--r)':'var(--txt)'}">
+                      ${e.actual != null ? `$${parseFloat(e.actual).toFixed(2)}` : '--'}
+                    </td>
+                    <td style="padding:8px 10px;text-align:right;font-family:var(--mono);color:${surprise>0?'var(--g)':surprise<0?'var(--r)':'var(--txt4)'}">
+                      ${surprise != null ? `${surprise > 0 ? '+' : ''}${parseFloat(surprise).toFixed(2)}%` : '--'}
+                    </td>
+                    <td style="padding:8px 10px;text-align:right">
+                      ${e.actual == null ? '<span style="color:var(--txt4)">--</span>'
+                        : beat ? '<span style="color:var(--g);font-size:14px">✅</span>'
+                        : miss ? '<span style="color:var(--r);font-size:14px">❌</span>'
+                        : '<span style="color:var(--y);font-size:14px">➖</span>'}
+                    </td>
+                  </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="font-size:10px;color:var(--txt4);margin-top:8px;text-align:right">
+          ✅ Beat &nbsp; ❌ Miss &nbsp; ➖ In-line
+        </div>
+      </div>` : '';
+
+    // ── Section 5 : Estimates par période (Yahoo si dispo) ─
     const PERIOD_LABELS = {
       '0q':'Current Quarter', '+1q':'Next Quarter',
       '0y':'Current Year',    '+1y':'Next Year',
     };
 
-    const epsSection = trend.length ? `
+    const trendFiltered = yahooTrend.filter(t =>
+      t.earningsEstimate?.avg?.raw != null || t.revenueEstimate?.avg?.raw != null
+    );
+
+    const epsSection = trendFiltered.length ? `
       <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-chart-bar"></i> EPS &amp; Revenue Estimates</div>
-        ${trend.map(t => {
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-binoculars"></i> Analyst Estimates
+          <span style="font-size:10px;font-weight:400;color:var(--txt4);margin-left:8px">
+            <i class="fa-brands fa-yahoo"></i> Yahoo Finance
+          </span>
+        </div>
+        ${trendFiltered.map(t => {
           const epsEst  = t.earningsEstimate?.avg?.raw;
           const epsYago = t.earningsEstimate?.yearAgoEps?.raw;
           const revEst  = t.revenueEstimate?.avg?.raw;
           const revGrow = t.revenueEstimate?.growth?.raw;
           const period  = PERIOD_LABELS[t.period] || t.period;
-          if (!epsEst && !revEst) return '';
           return `
             <div style="margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--bord)">
               <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:8px;display:flex;align-items:center;gap:8px">
                 <span class="regime-chip">${period}</span>
-                ${revGrow != null ? `<span style="font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY</span>` : ''}
+                ${revGrow != null ? `<span style="font-size:11px;font-weight:600;color:${revGrow>0?'var(--g)':'var(--r)'}">
+                  Rev ${revGrow>0?'+':''}${(revGrow*100).toFixed(1)}% YoY</span>` : ''}
               </div>
               <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
                 ${epsEst  != null ? `<div class="sdp-fp-stat-item"><div class="sdp-fp-stat-lbl">EPS Estimate</div><div class="sdp-fp-stat-val" style="color:var(--b1)">$${epsEst.toFixed(2)}</div></div>` : ''}
@@ -981,41 +1322,59 @@ const StockDetail = (() => {
         }).join('')}
       </div>` : '';
 
-    // ── Section 5 : Company Profile ───────────────────────────
-    const profileBlock = profile.longBusinessSummary ? `
+    // ── Section 6 : Company Profile ──────────────────────
+    // Fusionne Yahoo + FinnHub
+    const profSector   = profile.sector   || fhProf.finnhubIndustry || '';
+    const profIndustry = profile.industry || fhProf.finnhubIndustry || '';
+    const profCountry  = profile.country  || fhProf.country || '';
+    const profEmployees= profile.fullTimeEmployees || null;
+    const profDesc     = profile.longBusinessSummary || '';
+    const profWebsite  = profile.website  || fhProf.weburl || '';
+    const profLogo     = fhProf.logo || '';
+
+    const profileBlock = (profSector || profDesc || profWebsite) ? `
       <div class="sdp-fp-stat-section">
-        <div class="sdp-fp-stat-title"><i class="fa-solid fa-building"></i> About ${_sym}</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
-          ${profile.sector   ? `<span class="regime-chip">${profile.sector}</span>` : ''}
-          ${profile.industry ? `<span class="regime-chip">${profile.industry}</span>` : ''}
-          ${profile.country  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profile.country}</span>` : ''}
-          ${profile.fullTimeEmployees ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profile.fullTimeEmployees)}</span>` : ''}
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-building"></i> About ${sym}
+          ${profLogo ? `<img src="${profLogo}" alt="" style="height:20px;width:auto;border-radius:4px;margin-left:8px;object-fit:contain" onerror="this.style.display='none'">` : ''}
         </div>
-        <p id="sdp-desc-p2" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
-          ${profile.longBusinessSummary}
-        </p>
-        <button class="sdp-desc-toggle" id="sdp-desc-toggle2">Show more</button>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+          ${profSector   ? `<span class="regime-chip">${profSector}</span>` : ''}
+          ${profIndustry && profIndustry !== profSector ? `<span class="regime-chip">${profIndustry}</span>` : ''}
+          ${profCountry  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profCountry}</span>` : ''}
+          ${profEmployees? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profEmployees)}</span>` : ''}
+          ${profWebsite  ? `<a href="${profWebsite}" target="_blank" rel="noopener noreferrer" class="regime-chip" style="color:var(--b1);text-decoration:none">
+              <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:8px"></i> Website</a>` : ''}
+        </div>
+        ${profDesc ? `
+          <p id="sdp-desc-p2" style="font-size:12px;color:var(--txt2);line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">
+            ${profDesc}
+          </p>
+          <button class="sdp-desc-toggle" id="sdp-desc-toggle2">Show more</button>` : ''}
+        <div style="font-size:10px;color:var(--txt4);margin-top:8px">
+          <i class="fa-solid fa-database"></i> ${profile.longBusinessSummary ? 'Yahoo Finance' : 'FinnHub'}
+        </div>
       </div>` : '';
 
-    // ── Fallback si rien n'est disponible ─────────────────────
-    const nothingAvailable = !kstats.length && !nextEarnings && !epsFromStats && !trend.length;
+    // ── Fallback total ────────────────────────────────────
+    const nothingAvailable = !kstats.length && !nextEarningsDate && !epsUse && !fhEarnArr.length;
     const fallback = nothingAvailable ? `
       <div style="text-align:center;padding:40px;color:var(--txt4)">
         <i class="fa-solid fa-circle-info" style="font-size:28px;color:var(--b1);margin-bottom:12px;display:block"></i>
-        <strong style="color:var(--txt)">Data not yet available for ${_sym}</strong><br>
+        <strong style="color:var(--txt)">Data not yet available for ${sym}</strong><br>
         <span style="font-size:12px;margin-top:6px;display:block">
-          ${_sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT)$/)
-            ? 'ETFs show limited financial data.'
-            : 'The Yahoo proxy may need the /summary endpoint with full modules.'}
+          ${sym.match(/^(SPY|QQQ|IWM|DIA|VTI|GLD|TLT|AGG|BND|XLK|XLF|XLE|XLV|XLI|ARKK)$/)
+            ? 'ETFs/Funds show limited fundamental data.'
+            : 'Verify FINNHUB_API_KEY and TWELVE_DATA_API_KEY are set in finance-hub-api Worker.'}
         </span>
         <button onclick="StockDetail._retryFinancials()" class="btn-sm" style="margin-top:12px">
           <i class="fa-solid fa-rotate"></i> Retry
         </button>
       </div>` : '';
 
-    // ── Layout mono-colonne (pas de creux) ────────────────────
+    // ── Assemblage final ──────────────────────────────────
     _bodyHtml(
-      calSection + epsCard + statsBlock + epsSection + profileBlock + fallback,
+      calSection + epsCard + statsBlock + earningsHistoryBlock + epsSection + profileBlock + fallback,
       'layout-overview-v2'
     );
 
