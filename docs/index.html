@@ -549,6 +549,79 @@
         <div class="sw-agents-grid" id="sw-agents-grid"></div>
       </div>
 
+      <!-- Notification Settings -->
+      <div class="sw-agents" id="sw-notif-section">
+        <div class="sw-arch-header">
+          <div class="sw-arch-title">Notification Settings</div>
+          <div class="sw-arch-sub">Email alerts for mode switches · Daily &amp; weekly recaps · Synced via GitHub</div>
+        </div>
+        <div style="padding:20px">
+
+          <!-- Email list -->
+          <div style="margin-bottom:20px">
+            <div style="font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--txt4);margin-bottom:10px">Recipient Addresses</div>
+            <div id="sw-email-list" style="display:flex;flex-direction:column;gap:7px;margin-bottom:10px"></div>
+            <div style="display:flex;gap:8px">
+              <input type="email" id="sw-email-input"
+                     placeholder="name@example.com"
+                     style="flex:1;padding:9px 12px;border:1px solid var(--bord);border-radius:8px;
+                            background:var(--surf2);color:var(--txt);font-size:12px;outline:none;
+                            font-family:var(--mono);transition:border-color 0.2s"
+                     onkeydown="if(event.key==='Enter')window._swAddEmail()">
+              <button onclick="window._swAddEmail()"
+                      style="padding:9px 16px;border:none;border-radius:8px;background:var(--b1);
+                             color:white;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+                Add
+              </button>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px">
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+                          border:1px solid var(--bord);border-radius:8px;background:var(--surf2);cursor:pointer">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">Paper/Live switch alerts</span>
+              <input type="checkbox" id="sw-notif-pl" checked
+                     style="width:16px;height:16px;accent-color:var(--b1);cursor:pointer">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+                          border:1px solid var(--bord);border-radius:8px;background:var(--surf2);cursor:pointer">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">AUTO/MANUAL switch alerts</span>
+              <input type="checkbox" id="sw-notif-em" checked
+                     style="width:16px;height:16px;accent-color:var(--b1);cursor:pointer">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+                          border:1px solid var(--bord);border-radius:8px;background:var(--surf2);cursor:pointer">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">Daily recap (21:30 UTC)</span>
+              <input type="checkbox" id="sw-notif-daily" checked
+                     style="width:16px;height:16px;accent-color:var(--b1);cursor:pointer">
+            </label>
+            <label style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;
+                          border:1px solid var(--bord);border-radius:8px;background:var(--surf2);cursor:pointer">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">Weekly recap (Saturday)</span>
+              <input type="checkbox" id="sw-notif-weekly" checked
+                     style="width:16px;height:16px;accent-color:var(--b1);cursor:pointer">
+            </label>
+          </div>
+
+          <!-- Save button -->
+          <div style="display:flex;align-items:center;gap:12px">
+            <button id="sw-notif-save-btn" onclick="window._swSaveNotifSettings()"
+                    style="padding:10px 24px;border:none;border-radius:8px;background:var(--b1);
+                           color:white;font-size:13px;font-weight:700;cursor:pointer;transition:opacity 0.2s">
+              Save Settings
+            </button>
+            <div id="sw-notif-status" style="font-size:11px;color:var(--txt4)"></div>
+          </div>
+
+          <div style="margin-top:14px;font-size:10px;color:var(--txt4);line-height:1.6">
+            Settings saved to <span class="sw-code">docs/signals/notification_settings.json</span> on GitHub.
+            Synced automatically across all devices.
+            Requires <span class="sw-code">RESEND_API_KEY</span> and <span class="sw-code">RESEND_FROM_EMAIL</span> in GitHub Secrets.
+          </div>
+        </div>
+      </div>
+
     </section>
 
     <!-- ══════════════════════════════════════════════════════

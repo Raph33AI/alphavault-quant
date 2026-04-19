@@ -3266,6 +3266,7 @@ const Terminal = (() => {
       _bindExecutionModeToggle();
       _bindPaperLiveToggle();
       _renderAgentGrid();
+      await _loadNotifSettings();   // ← AJOUTER cette ligne
     }
 
     // ── Load current execution mode — localStorage + GitHub Pages ──
@@ -3890,6 +3891,152 @@ const Terminal = (() => {
       const isLive = ibkr.trading_mode === 'live' || cachedTradingMode === 'live';
       _updatePaperLiveUI(isLive ? 'live' : 'paper');
     }
+
+  // ════════════════════════════════════════════════════════
+  // NOTIFICATION SETTINGS
+  // ════════════════════════════════════════════════════════
+
+  let _notifSettings = {
+    emails: [],
+    notify_switch_paper_live: true,
+    notify_switch_exec_mode:  true,
+    notify_daily_recap:       true,
+    notify_weekly_recap:      true,
+  };
+
+  async function _loadNotifSettings() {
+    try {
+      const resp = await fetch(`${WORKER_URL}/notification-settings`, {
+        signal: AbortSignal.timeout(6000),
+      });
+      if (resp.ok) {
+        const d = await resp.json();
+        _notifSettings = { ..._notifSettings, ...d };
+        _renderNotifSettings();
+      }
+    } catch(e) {
+      console.warn('[Notif] Load failed:', e.message);
+    }
+  }
+
+  function _renderNotifSettings() {
+    const s = _notifSettings;
+
+    // Checkboxes
+    const pl    = document.getElementById('sw-notif-pl');
+    const em    = document.getElementById('sw-notif-em');
+    const daily = document.getElementById('sw-notif-daily');
+    const week  = document.getElementById('sw-notif-weekly');
+    if (pl)    pl.checked    = s.notify_switch_paper_live !== false;
+    if (em)    em.checked    = s.notify_switch_exec_mode  !== false;
+    if (daily) daily.checked = s.notify_daily_recap       !== false;
+    if (week)  week.checked  = s.notify_weekly_recap      !== false;
+
+    // Email list
+    _renderEmailList(s.emails || []);
+  }
+
+  function _renderEmailList(emails) {
+    const list = document.getElementById('sw-email-list');
+    if (!list) return;
+
+    if (!emails.length) {
+      list.innerHTML = `<div style="font-size:11px;color:var(--txt4);padding:8px 0">
+        No addresses configured. Add one above.
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = emails.map((email, i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;
+                  border:1px solid var(--bord);border-radius:8px;background:var(--surf)">
+        <i class="fa-solid fa-envelope" style="color:var(--b1);font-size:11px;flex-shrink:0"></i>
+        <span style="flex:1;font-size:12px;font-family:var(--mono);color:var(--txt)">${email}</span>
+        <button onclick="window._swRemoveEmail(${i})"
+                style="border:none;background:none;cursor:pointer;color:var(--txt4);
+                       padding:2px 6px;border-radius:4px;font-size:11px;transition:color 0.15s"
+                title="Remove">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>`
+    ).join('');
+  }
+
+  window._swAddEmail = function() {
+    const input = document.getElementById('sw-email-input');
+    if (!input) return;
+    const val = input.value.trim().toLowerCase();
+    if (!val || !val.includes('@') || !val.includes('.')) {
+      input.style.borderColor = '#ef4444';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+      return;
+    }
+    if (!_notifSettings.emails) _notifSettings.emails = [];
+    if (_notifSettings.emails.includes(val)) {
+      _showToast('Address already in list', 'warn', 2000);
+      return;
+    }
+    _notifSettings.emails.push(val);
+    _renderEmailList(_notifSettings.emails);
+    input.value = '';
+    input.focus();
+  };
+
+  window._swRemoveEmail = function(index) {
+    if (!_notifSettings.emails) return;
+    _notifSettings.emails.splice(index, 1);
+    _renderEmailList(_notifSettings.emails);
+  };
+
+  window._swSaveNotifSettings = async function() {
+    const btn    = document.getElementById('sw-notif-save-btn');
+    const status = document.getElementById('sw-notif-status');
+    if (!btn || !status) return;
+
+    // Read current toggle values
+    const pl    = document.getElementById('sw-notif-pl')?.checked    ?? true;
+    const em    = document.getElementById('sw-notif-em')?.checked    ?? true;
+    const daily = document.getElementById('sw-notif-daily')?.checked ?? true;
+    const week  = document.getElementById('sw-notif-weekly')?.checked ?? true;
+
+    const payload = {
+      emails:                   _notifSettings.emails || [],
+      notify_switch_paper_live: pl,
+      notify_switch_exec_mode:  em,
+      notify_daily_recap:       daily,
+      notify_weekly_recap:      week,
+    };
+
+    btn.disabled  = true;
+    btn.textContent = 'Saving...';
+    status.textContent = '';
+
+    try {
+      const resp = await fetch(`${WORKER_URL}/notification-settings`, {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(15000),
+      });
+      const result = await resp.json().catch(() => ({}));
+
+      if (resp.ok && result.success) {
+        _notifSettings = { ...payload };
+        status.innerHTML = `<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Saved — ${payload.emails.length} addresses`;
+        _showToast(`Notification settings saved · ${payload.emails.length} recipients`, 'success', 4000);
+      } else {
+        const msg = result.error || `HTTP ${resp.status}`;
+        status.innerHTML = `<i class="fa-solid fa-circle-xmark" style="color:var(--r)"></i> ${msg}`;
+        _showToast(`Save failed: ${msg}`, 'error');
+      }
+    } catch(err) {
+      status.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i> Network error`;
+      _showToast(`Network error: ${err.message}`, 'error');
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Save Settings';
+    }
+  };
 
   // ════════════════════════════════════════════════════════
   // SIDEBAR TOGGLE
