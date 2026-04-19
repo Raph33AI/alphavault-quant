@@ -1139,15 +1139,23 @@
               <label class="form-label">Note / Reason</label>
               <input type="text" class="form-input" id="order-reason" value="Manual order from dashboard">
             </div>
+            <!-- Badge sécurité Cloudflare Worker (remplace le champ PAT) -->
             <div class="form-group">
-              <label class="form-label">
-                GitHub PAT
-                <a href="https://github.com/settings/tokens" target="_blank" class="link-sm">
-                  <i class="fa-solid fa-external-link-alt"></i> Generate
-                </a>
-              </label>
-              <input type="password" class="form-input mono" id="gh-pat" placeholder="ghp_xxxxxxxxxxxx">
-              <div class="form-hint">Needs <code>workflow</code> scope — stored in localStorage only.</div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+                          background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);
+                          border-radius:10px">
+                <i class="fa-solid fa-shield-halved" style="color:var(--g);font-size:18px;flex-shrink:0"></i>
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:var(--g)">
+                    Secured via Cloudflare Worker
+                  </div>
+                  <div style="font-size:11px;color:var(--txt4);margin-top:2px">
+                    Authentication handled server-side — no credentials required.
+                    Orders dispatched through
+                    <code style="font-size:10px">alphavault-gh-proxy</code>.
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="form-actions">
               <label class="dry-run-toggle">

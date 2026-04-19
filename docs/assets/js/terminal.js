@@ -12,6 +12,7 @@ const Terminal = (() => {
 
   // ── Constants ────────────────────────────────────────────
   const FINANCE_HUB  = 'https://finance-hub-api.raphnardone.workers.dev';
+  const WORKER_URL   = 'https://alphavault-gh-proxy.raphnardone.workers.dev';
   const GH_OWNER     = 'Raph33AI';
   const GH_REPO      = 'alphavault-quant';
   const GH_WORKFLOW  = 'manual-trade.yml';
@@ -842,7 +843,6 @@ const Terminal = (() => {
   // ════════════════════════════════════════════════════════
   async function init() {
     _restoreTheme();
-    _restorePAT();
     _startClock();
     _bindEvents();
     _togglePriceFields();
@@ -1306,7 +1306,6 @@ const Terminal = (() => {
     _on('order-type','change', _togglePriceFields);
     _on('order-form','submit', _handleOrderSubmit);
     _on('btn-refresh-exec','click', _refreshExecLog);
-    _on('gh-pat','input', e => _savePAT(e.target.value));
   }
 
   // ── One-liner event helper ───────────────────────────────
@@ -2484,94 +2483,103 @@ const Terminal = (() => {
   async function _handleOrderSubmit(e) {
     e.preventDefault();
 
-    const sym     = document.getElementById('order-symbol')?.value?.toUpperCase() || 'SPY';
-    const qty     = parseInt(document.getElementById('order-qty')?.value || 10);
-    const type    = document.getElementById('order-type')?.value || 'MKT';
-    const limit   = parseFloat(document.getElementById('order-limit')?.value || 0);
-    const stop    = parseFloat(document.getElementById('order-stop')?.value  || 0);
-    const reason  = document.getElementById('order-reason')?.value || 'Manual order from dashboard';
-    const dryRun  = document.getElementById('order-dry-run')?.checked ?? true;
-    const pat     = document.getElementById('gh-pat')?.value?.trim() || '';
+    const sym    = document.getElementById('order-symbol')?.value?.toUpperCase() || 'SPY';
+    const qty    = parseInt(document.getElementById('order-qty')?.value    || 10);
+    const type   = document.getElementById('order-type')?.value            || 'MKT';
+    const limit  = parseFloat(document.getElementById('order-limit')?.value || 0);
+    const stop   = parseFloat(document.getElementById('order-stop')?.value  || 0);
+    const reason = document.getElementById('order-reason')?.value
+                || 'Manual order from dashboard';
+    const dryRun = document.getElementById('order-dry-run')?.checked ?? true;
 
-    // Save PAT
-    if (pat) _savePAT(pat);
-
-    // Show preview
-    const preview = document.getElementById('order-preview');
+    // ── Order Preview ─────────────────────────────────────────
+    const preview        = document.getElementById('order-preview');
     const previewContent = document.getElementById('order-preview-content');
     if (preview && previewContent) {
       preview.style.display = 'block';
       previewContent.innerHTML = `
-        <div class="preview-row"><span>Symbol</span><strong>${sym}</strong></div>
-        <div class="preview-row"><span>Side</span><strong class="${_currentSide.toLowerCase()}">${_currentSide}</strong></div>
-        <div class="preview-row"><span>Quantity</span><strong>${qty}</strong></div>
-        <div class="preview-row"><span>Type</span><strong>${type}</strong></div>
-        ${limit > 0 ? `<div class="preview-row"><span>Limit</span><strong class="mono">$${limit}</strong></div>` : ''}
-        ${stop  > 0 ? `<div class="preview-row"><span>Stop</span><strong class="mono">$${stop}</strong></div>` : ''}
-        <div class="preview-row"><span>Mode</span><strong style="color:${dryRun?'var(--y)':'var(--g)'}">
-          ${dryRun ? 'PAPER TRADE' : 'PAPER LIVE'}
-        </strong></div>`;
-    }
-
-    if (!pat || !pat.startsWith('ghp_')) {
-      _showOrderStatus('error', 'GitHub PAT required. Generate a token with "workflow" scope at github.com/settings/tokens');
-      return;
+        <div class="preview-row">
+          <span>Symbol</span><strong>${sym}</strong>
+        </div>
+        <div class="preview-row">
+          <span>Side</span>
+          <strong class="${_currentSide.toLowerCase()}">${_currentSide}</strong>
+        </div>
+        <div class="preview-row">
+          <span>Quantity</span><strong>${qty}</strong>
+        </div>
+        <div class="preview-row">
+          <span>Type</span><strong>${type}</strong>
+        </div>
+        ${limit > 0 ? `
+          <div class="preview-row">
+            <span>Limit</span><strong class="mono">$${limit}</strong>
+          </div>` : ''}
+        ${stop > 0 ? `
+          <div class="preview-row">
+            <span>Stop</span><strong class="mono">$${stop}</strong>
+          </div>` : ''}
+        <div class="preview-row">
+          <span>Mode</span>
+          <strong style="color:${dryRun ? 'var(--y)' : 'var(--g)'}">
+            ${dryRun ? 'PAPER TRADE' : 'LIVE TRADE'}
+          </strong>
+        </div>
+        <div class="preview-row">
+          <span>Auth</span>
+          <strong style="color:var(--g)">
+            <i class="fa-solid fa-shield-halved"></i> Cloudflare Worker (secured)
+          </strong>
+        </div>`;
     }
 
     const btn = document.getElementById('btn-submit-order');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...'; }
+    if (btn) {
+      btn.disabled  = true;
+      btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Submitting...';
+    }
 
     try {
-      const resp = await fetch(
-        `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/actions/workflows/${GH_WORKFLOW}/dispatches`,
-        {
-          method:  'POST',
-          headers: {
-            'Authorization':        `Bearer ${pat}`,
-            'Accept':               'application/vnd.github.v3+json',
-            'Content-Type':         'application/json',
-            'X-GitHub-Api-Version': '2022-11-28',
-          },
-          body: JSON.stringify({
-            ref: 'main',
-            inputs: {
-              symbol:      sym,
-              action:      _currentSide,
-              quantity:    String(qty),
-              order_type:  type,
-              limit_price: String(limit || ''),
-              stop_price:  String(stop  || ''),
-              dry_run:     String(dryRun),
-              reason,
-            },
-          }),
-        }
-      );
+      // ── Dispatch via Worker (PAT stocké côté Cloudflare) ──────
+      const resp = await fetch(`${WORKER_URL}/dispatch-order`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({
+          symbol:      sym,
+          action:      _currentSide,
+          quantity:    qty,
+          order_type:  type,
+          limit_price: limit || '',
+          stop_price:  stop  || '',
+          dry_run:     dryRun,
+          reason,
+        }),
+        signal: AbortSignal.timeout(15000),
+      });
 
-      if (resp.status === 204) {
+      const result = await resp.json().catch(() => ({}));
+
+      if (resp.ok && result.success) {
         _showOrderStatus('success',
-          `✅ Workflow dispatched: ${_currentSide} ${qty}x ${sym} @ ${type} — ` +
-          `<a href="https://github.com/${GH_OWNER}/${GH_REPO}/actions" target="_blank" style="color:var(--g)">` +
+          `✅ Order dispatched: ${_currentSide} ${qty}x ${sym} @ ${type} — ` +
+          `<a href="https://github.com/${GH_OWNER}/${GH_REPO}/actions" target="_blank"
+              style="color:var(--g)">` +
           `View on GitHub <i class="fa-solid fa-external-link-alt"></i></a>`
         );
         _showToast(`Order dispatched: ${_currentSide} ${qty}x ${sym}`, 'success');
-        // Refresh exec log after 30s
         setTimeout(_refreshExecLog, 30000);
         setTimeout(() => _refresh(true), 35000);
 
-      } else if (resp.status === 401) {
-        _showOrderStatus('error', '❌ PAT invalid or expired. Check it has "workflow" scope.');
-      } else if (resp.status === 404) {
-        _showOrderStatus('error', `❌ Workflow not found. Ensure "${GH_WORKFLOW}" exists in .github/workflows/`);
-      } else if (resp.status === 422) {
-        const body = await resp.json().catch(() => ({}));
-        _showOrderStatus('error', `❌ Invalid parameters (422): ${body.message || 'Check workflow inputs'}`);
       } else {
-        const body = await resp.text();
-        _showOrderStatus('error', `❌ GitHub API error ${resp.status}: ${body.slice(0, 200)}`);
+        // Erreurs Worker ou GitHub
+        const msg = result.error || `HTTP ${resp.status}`;
+        _showOrderStatus('error', `❌ ${msg}`);
+        _showToast(`Order failed: ${msg}`, 'error');
       }
+
     } catch(err) {
       _showOrderStatus('error', `❌ Network error: ${err.message}`);
+      _showToast('Network error — check your connection', 'error');
     } finally {
       if (btn) {
         btn.disabled  = false;
@@ -3323,17 +3331,6 @@ const Terminal = (() => {
     update();
     setInterval(update, 1000);
     }
-
-  function _savePAT(val) {
-    const clean = (val || '').trim();
-    if (clean) localStorage.setItem('av_gh_pat', clean);
-  }
-
-  function _restorePAT() {
-    const saved = localStorage.getItem('av_gh_pat');
-    const el    = document.getElementById('gh-pat');
-    if (saved && el) el.value = saved;
-  }
 
   // ════════════════════════════════════════════════════════
   // AUTO-INIT
