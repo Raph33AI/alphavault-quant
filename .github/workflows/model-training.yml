@@ -1,14 +1,15 @@
 # ============================================================
-# ALPHAVAULT QUANT — DAILY MODEL TRAINING
-# Re-training quotidien des modèles ML (XGBoost, LightGBM...)
-# Exécution : Chaque jour à 07:00 UTC (avant ouverture marché)
+# ALPHAVAULT QUANT — DAILY MODEL TRAINING v2.0
+# Re-training quotidien via SSH → Oracle A1 ARM64
+# Training sur 384 symboles (ml_venv + train.py v3.1)
+# Modèles pullés depuis Oracle puis committés sur GitHub
 # ============================================================
 
 name: 🧠 Daily Model Training — AlphaVault Quant
 
 on:
   schedule:
-    - cron: '0 7 * * 1-5'  # 07:00 UTC, Lundi-Vendredi
+    - cron: '0 7 * * 1-5'
   workflow_dispatch:
     inputs:
       force_full_retrain:
@@ -16,65 +17,233 @@ on:
         required: false
         default: 'false'
         type: boolean
-      symbols:
-        description: 'Symbols à entraîner (ex: SPY,QQQ,AAPL)'
+      mode:
+        description: 'Mode training'
         required: false
-        default: 'SPY,QQQ,IWM,AAPL,NVDA,MSFT,GOOGL,AMZN,META,TSLA'
+        default: 'train'
+        type: choice
+        options:
+          - train
+          - eval
+          - full
 
 concurrency:
   group: model-training
   cancel-in-progress: false
 
 jobs:
+
   train-models:
-    name: 🧠 Model Training Pipeline
+    name: 🧠 Model Training Pipeline — Oracle A1
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 45
+
     permissions:
       contents: write
-    
+
     steps:
+
       - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 1
 
-      - name: 🐍 Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-          cache-dependency-path: 'requirements.txt'
-
-      - name: 📦 Install Dependencies
+      # ── Setup SSH ──────────────────────────────────────────
+      - name: 🔑 Setup SSH Key
         run: |
-          pip install --upgrade pip --quiet
-          pip install -r requirements.txt --quiet
+          mkdir -p ~/.ssh
+          echo "${{ secrets.ORACLE_SSH_KEY }}" > ~/.ssh/oracle_key
+          chmod 600 ~/.ssh/oracle_key
+          ssh-keyscan -H ${{ secrets.ORACLE_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "✅ Clé SSH configurée pour ${{ secrets.ORACLE_HOST }}"
 
-      - name: 🧠 Run Model Training
-        env:
-          FINANCE_HUB_URL:   ${{ secrets.FINANCE_HUB_URL }}
-          ECONOMIC_DATA_URL: ${{ secrets.ECONOMIC_DATA_URL }}
-          AI_PROXY_URL:      ${{ secrets.AI_PROXY_URL }}
-          FORCE_RETRAIN:     ${{ github.event.inputs.force_full_retrain || 'false' }}
-          TRAINING_SYMBOLS:  ${{ github.event.inputs.symbols || 'SPY,QQQ,IWM,AAPL,NVDA,MSFT,GOOGL,AMZN,META,TSLA' }}
+      # ── Health Check Oracle ────────────────────────────────
+      - name: 🏥 Health Check Oracle A1
         run: |
-          cd backend
-          python -m core.signal_model --mode=train
-        timeout-minutes: 30
+          ssh -i ~/.ssh/oracle_key \
+            -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.ORACLE_HOST }} \
+            "echo '✅ Oracle A1 connecté' && \
+             echo '─── RAM ───' && free -h | head -2 && \
+             echo '─── Disk ──' && df -h / | tail -1 && \
+             echo '─── Services ───' && \
+             for svc in postgresql@16-main rag-server ml-scheduler ollama; do \
+               st=\$(systemctl is-active \$svc 2>/dev/null); \
+               [ \"\$st\" = 'active' ] && echo \"  ✅ \$svc\" || echo \"  ⚠ \$svc (\$st)\"; \
+             done"
 
-      - name: 💾 Commit Trained Models
+      # ── ML venv Check ──────────────────────────────────────
+      - name: 🐍 Verify ML venv on Oracle
+        run: |
+          ssh -i ~/.ssh/oracle_key \
+            -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.ORACLE_HOST }} \
+            "source /home/ubuntu/alphavault/ml_venv/bin/activate && \
+             echo '✅ ml_venv activé' && \
+             python3 --version && \
+             pip show xgboost lightgbm scikit-learn 2>/dev/null | grep -E 'Name|Version' && \
+             deactivate && \
+             echo '✅ venv OK'"
+
+      # ── Trigger Training sur Oracle ────────────────────────
+      - name: 🧠 Run Model Training on Oracle A1
+        run: |
+          TRAINING_MODE="${{ github.event.inputs.mode || 'train' }}"
+          FORCE_RETRAIN="${{ github.event.inputs.force_full_retrain || 'false' }}"
+          TRAINING_DATE=$(date -u '+%Y-%m-%d')
+
+          echo "🚀 Démarrage training Oracle A1..."
+          echo "   Mode          : ${TRAINING_MODE}"
+          echo "   Force retrain : ${FORCE_RETRAIN}"
+          echo "   Date          : ${TRAINING_DATE}"
+
+          ssh -i ~/.ssh/oracle_key \
+            -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=no \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=60 \
+            ubuntu@${{ secrets.ORACLE_HOST }} \
+            "set -e
+             echo '=== AlphaVault Model Training — $(date -u \"+%Y-%m-%d %H:%M UTC\") ==='
+             cd /home/ubuntu/alphavault
+             source ./ml_venv/bin/activate
+
+             LOG_FILE=\"/home/ubuntu/alphavault/logs/training_$(date +%Y-%m-%d).log\"
+             echo \"📝 Log: \${LOG_FILE}\"
+
+             echo '🔄 Démarrage train.py v3.1 — 384 symboles...' | tee -a \"\${LOG_FILE}\"
+
+             PG_PASSWORD=AlphaVault_PG_8125aa19f7c3739c \
+               python3 -m backend.ml.train \
+               --mode ${TRAINING_MODE} \
+               2>&1 | tee -a \"\${LOG_FILE}\"
+
+             EXIT_CODE=\${PIPESTATUS[0]}
+             echo \"Training exit code: \${EXIT_CODE}\" | tee -a \"\${LOG_FILE}\"
+
+             deactivate
+
+             echo ''
+             echo '📦 Modèles générés:'
+             ls -lh /home/ubuntu/alphavault/models/ 2>/dev/null || echo 'Dossier models/ non trouvé'
+
+             exit \${EXIT_CODE}"
+        timeout-minutes: 35
+
+      # ── Pull Modèles depuis Oracle ─────────────────────────
+      - name: 📥 Pull Models from Oracle A1
+        run: |
+          mkdir -p models/
+          echo "📥 Récupération des modèles depuis Oracle A1..."
+
+          MODELS=(
+            "xgboost_model.json"
+            "lightgbm_model.txt"
+            "logistic_model.pkl.b64"
+            "meta_model.json"
+          )
+
+          SUCCESS=0
+          FAILED=0
+
+          for model in "${MODELS[@]}"; do
+            scp -i ~/.ssh/oracle_key \
+              -o ConnectTimeout=15 \
+              -o StrictHostKeyChecking=no \
+              "ubuntu@${{ secrets.ORACLE_HOST }}:/home/ubuntu/alphavault/models/${model}" \
+              "models/${model}" 2>/dev/null
+            if [ $? -eq 0 ]; then
+              SIZE=$(wc -c < "models/${model}" 2>/dev/null || echo 0)
+              echo "  ✅ ${model} (${SIZE} bytes)"
+              SUCCESS=$((SUCCESS + 1))
+            else
+              echo "  ⚠ ${model} non trouvé ou erreur SCP"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+
+          echo ""
+          echo "📦 Résumé pull: ${SUCCESS} OK | ${FAILED} manquants"
+          echo ""
+          echo "📂 Modèles locaux après pull:"
+          ls -lh models/ 2>/dev/null || echo "Dossier models/ vide"
+
+      # ── Pull Métriques de Performance ─────────────────────
+      - name: 📊 Pull Performance Metrics from Oracle
+        run: |
+          mkdir -p signals/ docs/signals/
+
+          echo "📊 Récupération performance_metrics.json..."
+
+          scp -i ~/.ssh/oracle_key \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=no \
+            "ubuntu@${{ secrets.ORACLE_HOST }}:/home/ubuntu/alphavault/signals/performance_metrics.json" \
+            signals/performance_metrics.json 2>/dev/null
+
+          if [ $? -eq 0 ]; then
+            echo "✅ performance_metrics.json récupéré"
+            cp signals/performance_metrics.json docs/signals/performance_metrics.json
+            echo "✅ Copié dans docs/signals/ (GitHub Pages)"
+          else
+            echo "⚠ performance_metrics.json non disponible sur Oracle"
+          fi
+
+      # ── Commit Modèles → GitHub ────────────────────────────
+      - name: 💾 Commit Trained Models to GitHub
         run: |
           git config --global user.name  "AlphaVault Quant Bot"
           git config --global user.email "bot@alphavault-ai.com"
-          git add models/
-          git add signals/performance_metrics.json
-          git diff --staged --quiet || git commit -m "🧠 Model retrain — $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push
+
+          git pull origin HEAD --rebase --autostash || true
+
+          git add models/                              2>/dev/null || true
+          git add signals/performance_metrics.json     2>/dev/null || true
+          git add docs/signals/performance_metrics.json 2>/dev/null || true
+
+          if git diff --staged --quiet; then
+            echo "ℹ Aucun changement de modèle détecté — pas de commit"
+          else
+            TRAINING_DATE=$(date -u '+%Y-%m-%d %H:%M UTC')
+            git commit -m "🧠 Model retrain — ${TRAINING_DATE} [run #${{ github.run_number }}]"
+            git push origin HEAD
+            echo "✅ Modèles committés et pushés sur GitHub"
+            echo "📋 Commit visible sur : https://github.com/${{ github.repository }}/commits/main"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── Résumé Training ────────────────────────────────────
+      - name: 📋 Training Summary (tail log Oracle)
+        if: always()
+        run: |
+          echo "📋 Dernières lignes du log de training Oracle A1:"
+          echo "─────────────────────────────────────────────────"
+
+          ssh -i ~/.ssh/oracle_key \
+            -o ConnectTimeout=15 \
+            -o StrictHostKeyChecking=no \
+            ubuntu@${{ secrets.ORACLE_HOST }} \
+            "tail -40 /home/ubuntu/alphavault/logs/training_$(date +%Y-%m-%d).log 2>/dev/null \
+             || echo 'Log non disponible (training peut encore être en cours)'" \
+          || echo "⚠ Impossible de se connecter à Oracle pour récupérer le log"
+
+          echo "─────────────────────────────────────────────────"
+          echo ""
+          echo "📦 Modèles dans le repo GitHub après training:"
+          ls -lh models/ 2>/dev/null || echo "Aucun modèle local"
+
+      # ── Cleanup SSH ────────────────────────────────────────
+      - name: 🧹 Cleanup SSH Key
+        if: always()
+        run: |
+          rm -f ~/.ssh/oracle_key
+          echo "✅ Clé SSH supprimée"
+
+      # ── Upload Artifacts ───────────────────────────────────
       - name: 📊 Upload Training Artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -82,5 +251,23 @@ jobs:
           name: training-results-${{ github.run_number }}
           path: |
             models/
-            backend/logs/training_*.log
+            signals/performance_metrics.json
+            docs/signals/performance_metrics.json
           retention-days: 14
+
+      # ── Notify on Failure ──────────────────────────────────
+      - name: 🚨 Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Model Training FAILED — Run #${{ github.run_number }}"
+          echo "📋 URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          echo "🔍 Causes possibles:"
+          echo "   1. Oracle A1 inaccessible (SSH timeout)"
+          echo "   2. ml_venv corrompu (source activate_ml.sh)"
+          echo "   3. PostgreSQL KO (pg_isready -h localhost)"
+          echo "   4. Erreur dans train.py (voir logs Oracle)"
+          echo ""
+          echo "🛠 Diagnostic rapide:"
+          echo "   ssh -i ~/ssh-key-2026-04-18.key ubuntu@141.253.101.68"
+          echo "   tail -50 ~/alphavault/logs/training_$(date +%Y-%m-%d).log"

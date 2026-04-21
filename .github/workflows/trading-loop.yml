@@ -1,3 +1,9 @@
+# ============================================================
+# ALPHAVAULT QUANT — TRADING LOOP
+# Boucle de trading principale — GitHub Actions
+# Fix : IBKR Status Check en lecture seule (watcher gère le fichier)
+# ============================================================
+
 name: 🤖 Trading Loop — AlphaVault Quant
 
 on:
@@ -27,6 +33,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+
   # ── Job 1 : Vérification horaires ──────────────────────────
   market-hours-check:
     name: 🕐 Vérification Heures de Marché
@@ -40,19 +47,27 @@ jobs:
         run: |
           python3 << 'EOF'
           import datetime, os
-          now_utc   = datetime.datetime.utcnow()
-          weekday   = now_utc.weekday()
-          time_dec  = now_utc.hour + now_utc.minute / 60
-          is_weekday= weekday < 5
-          is_pre    = is_weekday and 13.0  <= time_dec < 14.5
-          is_regular= is_weekday and 14.5  <= time_dec < 21.0
-          is_post   = is_weekday and 21.0  <= time_dec < 24.0
-          is_open   = is_pre or is_regular or is_post
-          session   = "regular" if is_regular else "premarket" if is_pre else "postmarket" if is_post else "closed"
+          now_utc    = datetime.datetime.utcnow()
+          weekday    = now_utc.weekday()
+          time_dec   = now_utc.hour + now_utc.minute / 60
+          is_weekday = weekday < 5
+          is_pre     = is_weekday and 13.0 <= time_dec < 14.5
+          is_regular = is_weekday and 14.5 <= time_dec < 21.0
+          is_post    = is_weekday and 21.0 <= time_dec < 24.0
+          is_open    = is_pre or is_regular or is_post
+          session    = (
+              "regular"     if is_regular else
+              "premarket"   if is_pre     else
+              "postmarket"  if is_post    else
+              "closed"
+          )
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"is_open={'true' if is_open else 'false'}\n")
               f.write(f"session={session}\n")
-          print(f"🕐 {now_utc.strftime('%H:%M')} UTC | weekday={weekday} | session={session} | open={is_open}")
+          print(
+              f"🕐 {now_utc.strftime('%H:%M')} UTC | "
+              f"weekday={weekday} | session={session} | open={is_open}"
+          )
           EOF
 
   # ── Job 2 : Boucle de trading ──────────────────────────────
@@ -96,68 +111,63 @@ jobs:
           python3 << 'EOF'
           import sys
           print(f"Python {sys.version}")
-          try:
-              import numpy as np
-              print(f"✅ numpy {np.__version__}")
-          except Exception as e:
-              print(f"❌ numpy: {e}"); sys.exit(1)
-          try:
-              import pandas as pd
-              print(f"✅ pandas {pd.__version__}")
-          except Exception as e:
-              print(f"❌ pandas: {e}"); sys.exit(1)
-          try:
-              import xgboost as xgb
-              print(f"✅ xgboost {xgb.__version__}")
-          except Exception as e:
-              print(f"❌ xgboost: {e}"); sys.exit(1)
-          try:
-              import lightgbm as lgb
-              print(f"✅ lightgbm {lgb.__version__}")
-          except Exception as e:
-              print(f"❌ lightgbm: {e}"); sys.exit(1)
-          try:
-              import sklearn
-              print(f"✅ scikit-learn {sklearn.__version__}")
-          except Exception as e:
-              print(f"❌ sklearn: {e}"); sys.exit(1)
-          try:
-              from loguru import logger
-              print("✅ loguru OK")
-          except Exception as e:
-              print(f"❌ loguru: {e}"); sys.exit(1)
+          checks = [
+              ("numpy",        "np.__version__"),
+              ("pandas",       "pd.__version__"),
+              ("xgboost",      "xgb.__version__"),
+              ("lightgbm",     "lgb.__version__"),
+              ("sklearn",      "sklearn.__version__"),
+          ]
+          failed = False
+          import numpy as np
+          import pandas as pd
+          import xgboost as xgb
+          import lightgbm as lgb
+          import sklearn
+          from loguru import logger
+          for pkg, ver_expr in checks:
+              try:
+                  mod = __import__(pkg)
+                  ver = getattr(mod, "__version__", "?")
+                  print(f"✅ {pkg} {ver}")
+              except ImportError as e:
+                  print(f"❌ {pkg}: {e}")
+                  failed = True
+          print("✅ loguru OK")
+          if failed:
+              sys.exit(1)
           print("\n🚀 Tous les imports critiques OK !")
           EOF
 
       # ── Exécution principale ─────────────────────────────────
       - name: 🚀 Run Trading Loop
         env:
-          FINANCE_HUB_URL:      ${{ secrets.FINANCE_HUB_URL }}
-          AI_PROXY_URL:         ${{ secrets.AI_PROXY_URL }}
-          ECONOMIC_DATA_URL:    ${{ secrets.ECONOMIC_DATA_URL }}
-          IBKR_HOST:            ${{ secrets.IBKR_HOST }}
-          IBKR_PORT:            ${{ secrets.IBKR_PORT }}
-          IBKR_CLIENT_ID:       ${{ secrets.IBKR_CLIENT_ID }}
-          IBKR_ACCOUNT:         ${{ secrets.IBKR_ACCOUNT }}
-          EXECUTION_MODE:       ${{ github.event.inputs.mode || 'signal_only' }}
-          DRY_RUN:              ${{ github.event.inputs.dry_run || 'false' }}
-          MARKET_SESSION:       ${{ needs.market-hours-check.outputs.market_session }}
-          GITHUB_REPOSITORY:    ${{ github.repository }}
-          GITHUB_RUN_NUMBER:    ${{ github.run_number }}
-          GITHUB_RUN_ID:        ${{ github.run_id }}
-          GITHUB_SERVER_URL:    ${{ github.server_url }}
-          GH_TOKEN:             ${{ secrets.GITHUB_TOKEN }}
-          FIREBASE_PROJECT_ID:  ${{ secrets.FIREBASE_PROJECT_ID }}
-          FIREBASE_API_KEY:     ${{ secrets.FIREBASE_API_KEY }}
-          RESEND_ALERT_EMAIL:   ${{ secrets.RESEND_ALERT_EMAIL }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-          TRADE_AUTO_MODE: ${{ vars.TRADE_AUTO_MODE || 'enabled' }}
+          FINANCE_HUB_URL:     ${{ secrets.FINANCE_HUB_URL }}
+          AI_PROXY_URL:        ${{ secrets.AI_PROXY_URL }}
+          ECONOMIC_DATA_URL:   ${{ secrets.ECONOMIC_DATA_URL }}
+          IBKR_HOST:           ${{ secrets.IBKR_HOST }}
+          IBKR_PORT:           ${{ secrets.IBKR_PORT }}
+          IBKR_CLIENT_ID:      ${{ secrets.IBKR_CLIENT_ID }}
+          IBKR_ACCOUNT:        ${{ secrets.IBKR_ACCOUNT }}
+          EXECUTION_MODE:      ${{ github.event.inputs.mode || 'signal_only' }}
+          DRY_RUN:             ${{ github.event.inputs.dry_run || 'false' }}
+          MARKET_SESSION:      ${{ needs.market-hours-check.outputs.market_session }}
+          GITHUB_REPOSITORY:   ${{ github.repository }}
+          GITHUB_RUN_NUMBER:   ${{ github.run_number }}
+          GITHUB_RUN_ID:       ${{ github.run_id }}
+          GITHUB_SERVER_URL:   ${{ github.server_url }}
+          GH_TOKEN:            ${{ secrets.GITHUB_TOKEN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_API_KEY:    ${{ secrets.FIREBASE_API_KEY }}
+          RESEND_ALERT_EMAIL:  ${{ secrets.RESEND_ALERT_EMAIL }}
+          GROQ_API_KEY:        ${{ secrets.GROQ_API_KEY }}
+          TRADE_AUTO_MODE:     ${{ vars.TRADE_AUTO_MODE || 'enabled' }}
         run: |
           python -m backend.orchestrator.trading_loop
         timeout-minutes: 8
 
       # ════════════════════════════════════════════════════════
-      # ✅ NOUVEAU — Génération debug log JSON depuis les signals
+      # Génération debug log JSON depuis les signals
       # ════════════════════════════════════════════════════════
       - name: 🐛 Generate Debug Snapshot
         if: always()
@@ -186,7 +196,7 @@ jobs:
                   files_data[f.name] = {'error': str(e)}
 
           # Charge debug_log existant
-          debug_path = out_dir / 'debug_log.json'
+          debug_path    = out_dir / 'debug_log.json'
           existing_logs = []
           if debug_path.exists():
               try:
@@ -222,7 +232,7 @@ jobs:
                   'symbol':  sym,
                   'message': (
                       f"{sig.get('direction','?').upper()} | "
-                      f"score={float(sig.get('final_score',0)):.3f} | "
+                      f"score={float(sig.get('final_score', 0)):.3f} | "
                       f"council={sig.get('council','?')}"
                   ),
                   'details': sig,
@@ -239,8 +249,8 @@ jobs:
                   'symbol':  'GLOBAL',
                   'message': (
                       f"Régime: {regime.get('regime_label','?')} | "
-                      f"score={float(regime.get('regime_score',0)):+.2f} | "
-                      f"conf={float(regime.get('confidence',0)):.1%}"
+                      f"score={float(regime.get('regime_score', 0)):+.2f} | "
+                      f"conf={float(regime.get('confidence', 0)):.1%}"
                   ),
                   'details': regime,
                   'run_id':  f'run_{run}'
@@ -248,8 +258,8 @@ jobs:
 
           # Risk metrics
           risk = files_data.get('risk_metrics.json', {})
-          dd = risk.get('drawdown', {})
-          lv = risk.get('leverage', {})
+          dd   = risk.get('drawdown', {})
+          lv   = risk.get('leverage', {})
           if dd or lv:
               new_entries.append({
                   'ts':      ts,
@@ -257,18 +267,16 @@ jobs:
                   'module':  'risk_manager',
                   'symbol':  'GLOBAL',
                   'message': (
-                      f"DD={float(dd.get('current_drawdown',0))*100:.2f}% | "
-                      f"Lever={float(lv.get('current_leverage',0)):.2f}x | "
-                      f"Halt={dd.get('halt_active',False)}"
+                      f"DD={float(dd.get('current_drawdown', 0))*100:.2f}% | "
+                      f"Lever={float(lv.get('current_leverage', 0)):.2f}x | "
+                      f"Halt={dd.get('halt_active', False)}"
                   ),
                   'details': risk,
                   'run_id':  f'run_{run}'
               })
 
-          # Merge et sauvegarde
-          all_logs = existing_logs + new_entries
-          all_logs = all_logs[-500:]   # Garde 500 max
-
+          # Merge et sauvegarde (500 entrées max)
+          all_logs = (existing_logs + new_entries)[-500:]
           debug_path.write_text(json.dumps({
               'timestamp': ts,
               'run_id':    f'run_{run}',
@@ -276,65 +284,64 @@ jobs:
               'logs':      all_logs
           }, indent=2, default=str))
 
-          print(f"✅ debug_log.json mis à jour | {len(new_entries)} nouvelles entrées | {len(all_logs)} total")
+          print(
+              f"✅ debug_log.json mis à jour | "
+              f"{len(new_entries)} nouvelles entrées | {len(all_logs)} total"
+          )
           EOF
 
       # ════════════════════════════════════════════════════════
-      # ✅ NOUVEAU — Status IBKR (ping uniquement, pas d'ordre)
+      # IBKR Status Check — LECTURE SEULE
+      # ⚠ Ne surécrit PAS ibkr_status.json
+      # Ce fichier est géré exclusivement par ibkr_watcher.py
+      # sur Oracle A1 (push_ibkr_status toutes les 30s)
       # ════════════════════════════════════════════════════════
-      - name: 🔌 IBKR Status Check
+      - name: 🔌 IBKR Status Check (lecture seule)
         if: always()
-        env:
-          IBKR_HOST:      ${{ secrets.IBKR_HOST }}
-          IBKR_PORT:      ${{ secrets.IBKR_PORT }}
-          IBKR_CLIENT_ID: ${{ secrets.IBKR_CLIENT_ID }}
-          IBKR_ACCOUNT:   ${{ secrets.IBKR_ACCOUNT }}
         run: |
           python3 << 'EOF'
-          import json, os, socket, datetime
+          import json, datetime
           from pathlib import Path
 
-          host     = os.environ.get('IBKR_HOST', '')
-          port     = int(os.environ.get('IBKR_PORT', '4002'))
-          account  = os.environ.get('IBKR_ACCOUNT', '')
-          ts       = datetime.datetime.utcnow().isoformat()
+          # ── IMPORTANT : Ce step NE modifie PAS ibkr_status.json ──────────
+          # ibkr_status.json est géré par ibkr_watcher.py (Oracle A1)
+          # push_ibkr_status() tourne toutes les 30s avec authenticated=True
+          # Écraser ce fichier ici introduirait des données fausses
+          # (port 4002 / 5055 inaccessible depuis GitHub Actions runner)
+          # ─────────────────────────────────────────────────────────────────
 
-          status = {
-              'timestamp': ts,
-              'host':      host,
-              'port':      port,
-              'account':   account,
-              'reachable': False,
-              'latency_ms': None,
-              'mode':      'paper' if port in (4002, 7497) else 'live',
-          }
+          status_path = Path('docs/signals/ibkr_status.json')
+          ts          = datetime.datetime.utcnow().isoformat()
 
-          if host:
+          if status_path.exists():
               try:
-                  import time
-                  t0 = time.time()
-                  with socket.create_connection((host, port), timeout=5):
-                      latency = round((time.time() - t0) * 1000, 1)
-                      status['reachable']  = True
-                      status['latency_ms'] = latency
-                  print(f"✅ IBKR Gateway reachable | {host}:{port} | {latency}ms")
+                  status    = json.loads(status_path.read_text())
+                  connected = status.get('ibkr_connected', False)
+                  account   = status.get('account', 'N/A')
+                  mode      = status.get('trading_mode', 'N/A')
+                  version   = status.get('watcher_version', 'N/A')
+                  last_chk  = status.get('last_check', 'N/A')
+                  icon      = '✅' if connected else '⚠'
+                  print(f"{icon} IBKR Status (watcher Oracle A1):")
+                  print(f"   connected      = {connected}")
+                  print(f"   account        = {account}")
+                  print(f"   trading_mode   = {mode}")
+                  print(f"   watcher_version= {version}")
+                  print(f"   last_check     = {last_chk}")
               except Exception as e:
-                  print(f"⚠ IBKR Gateway not reachable: {host}:{port} | {e}")
-                  status['error'] = str(e)
+                  print(f"⚠ Lecture ibkr_status.json: {e}")
           else:
-              print("ℹ IBKR_HOST non configuré — skip")
-              status['error'] = 'IBKR_HOST not set'
+              print("ℹ ibkr_status.json non présent dans docs/signals/")
+              print("  → Le watcher Oracle A1 va le créer au prochain poll (30s)")
 
-          out = Path('docs/signals/ibkr_status.json')
-          out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_text(json.dumps(status, indent=2))
-          print(f"💾 ibkr_status.json sauvegardé")
+          print("")
+          print("✅ IBKR Status Check terminé")
+          print("   ibkr_status.json NON modifié — géré par ibkr_watcher.py v3.3")
+          print(f"   Timestamp vérification : {ts}")
           EOF
 
       # ════════════════════════════════════════════════════════
-      # ✅ NOUVEAU — Copie des signaux vers docs/signals/
-      # GitHub Pages sert depuis docs/ donc les JSON doivent
-      # être dans docs/signals/ pour être accessibles via URL
+      # Copie des signaux vers docs/signals/ (GitHub Pages)
       # ════════════════════════════════════════════════════════
       - name: 📂 Copy signals → docs/signals/ (GitHub Pages)
         if: always()
@@ -346,7 +353,17 @@ jobs:
             echo "📋 Fichiers JSON trouvés dans signals/ :"
             ls -la signals/*.json
 
-            cp signals/*.json docs/signals/
+            # Copie tous les JSON sauf ibkr_status.json
+            # (géré par le watcher Oracle, on ne l'écrase pas)
+            for f in signals/*.json; do
+              fname=$(basename "$f")
+              if [ "$fname" != "ibkr_status.json" ]; then
+                cp "$f" "docs/signals/$fname"
+                echo "  ✅ $fname copié"
+              else
+                echo "  ⏭ $fname ignoré (géré par watcher Oracle)"
+              fi
+            done
 
             echo ""
             echo "✅ Signaux copiés dans docs/signals/ :"
@@ -354,7 +371,6 @@ jobs:
           else
             echo "⚠ Aucun JSON dans signals/ — création des fichiers par défaut..."
 
-            # Fichiers par défaut pour éviter les 404 sur le dashboard
             echo '{"signals":{},"timestamp":null,"session":"closed","llm_mode":"deterministic","dry_run":true}' \
               > docs/signals/current_signals.json
 
@@ -382,28 +398,31 @@ jobs:
             echo "✅ Fichiers par défaut créés dans docs/signals/"
           fi
 
-          # ✅ Ajoute .nojekyll pour que GitHub Pages serve les JSON sans processing Jekyll
+          # .nojekyll pour servir les JSON sans traitement Jekyll
           touch docs/.nojekyll
-          echo "✅ .nojekyll créé (JSON servis sans traitement Jekyll)"
+          echo "✅ .nojekyll présent"
 
       # ════════════════════════════════════════════════════════
-      # ✅ NOUVEAU — Commit et push docs/signals/ vers GitHub
+      # Commit et push docs/signals/ vers GitHub Pages
       # ════════════════════════════════════════════════════════
       - name: 💾 Commit & Push docs/signals/ vers GitHub Pages
         if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name  "AlphaVault Bot"
           git config user.email "bot@alphavault-ai.com"
 
-          # Récupère les éventuels commits faits par le Python
-          # (git_commit_signals dans trading_loop.py)
           git pull origin HEAD --rebase --autostash || true
 
-          # Stage uniquement docs/signals/
+          # Stage docs/signals/ mais PAS ibkr_status.json
+          # (le watcher Oracle fait son propre push séparé)
           git add docs/signals/
           git add docs/.nojekyll 2>/dev/null || true
 
-          # Vérifie s'il y a des changements à committer
+          # Dé-stage ibkr_status.json s'il a été ajouté par accident
+          git reset HEAD docs/signals/ibkr_status.json 2>/dev/null || true
+
           if git diff --cached --quiet; then
             echo "ℹ Aucun changement dans docs/signals/ — pas de commit nécessaire"
           else
@@ -411,10 +430,8 @@ jobs:
             git commit -m "📊 Dashboard signals update — ${TIMESTAMP} [run #${{ github.run_number }}]"
             git push origin HEAD
             echo "✅ docs/signals/ mis à jour sur GitHub Pages"
-            echo "🌐 Accessible sur : https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/signals/"
+            echo "🌐 Dashboard : https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"
           fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # ── Upload logs ──────────────────────────────────────────
       - name: 📊 Upload Logs
