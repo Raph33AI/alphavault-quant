@@ -46,7 +46,12 @@ class IBKRExecutor:
     """
 
     def __init__(self):
-        self.ibeam_url  = os.environ.get("IBEAM_BASE_URL", "https://localhost:5055")
+        _host = os.environ.get("IBKR_HOST", "localhost")
+        _port = os.environ.get("IBKR_PORT", "5055")
+        self.ibeam_url = os.environ.get(
+            "IBEAM_BASE_URL",
+            f"https://{_host}:{_port}"
+        )
         self.account    = os.environ.get("IBKR_ACCOUNT",   "DUM895161")
         self.dry_run    = os.environ.get("DRY_RUN", "true").lower() == "true"
 
