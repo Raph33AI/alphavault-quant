@@ -1,32 +1,79 @@
 {
-  "timestamp": "2026-04-17T23:57:14.906754Z",
-  "portfolio_value": 100000.0,
-  "session": "postmarket",
-  "n_signals": 401,
-  "n_universe": 409,
-  "n_execute": 2,
-  "n_executions": 0,
-  "llm_mode": "llm",
-  "strategy_perf": {
-    "trend": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+  "generated_at": "2026-04-21T21:04:03.818393+00:00",
+  "version": "3.1",
+  "lookback_days": 252,
+  "wf_window": 63,
+  "label_horizon": 5,
+  "n_symbols": 384,
+  "models": [
+    {
+      "name": "XGB_WalkFwd",
+      "auc": NaN,
+      "accuracy": 0.9881,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 252,
+      "pos_rate": 0.0
     },
-    "mean_reversion": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+    {
+      "name": "LGB_WalkFwd",
+      "auc": NaN,
+      "accuracy": 0.6786,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 252,
+      "pos_rate": 0.0
     },
-    "vol_carry": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+    {
+      "name": "LR_WalkFwd",
+      "auc": NaN,
+      "accuracy": 0.6627,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 252,
+      "pos_rate": 0.0
     },
-    "options_convexity": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+    {
+      "name": "XGB_Final",
+      "auc": NaN,
+      "accuracy": 1.0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 63,
+      "pos_rate": 0.0
+    },
+    {
+      "name": "LGB_Final",
+      "auc": NaN,
+      "accuracy": 0.873,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 63,
+      "pos_rate": 0.0
+    },
+    {
+      "name": "LR_Final",
+      "auc": NaN,
+      "accuracy": 0.5556,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "n_samples": 63,
+      "pos_rate": 0.0
     }
+  ],
+  "ensemble": {
+    "weights": {
+      "xgb": 0.5,
+      "lgb": 0.4,
+      "lr": 0.1
+    },
+    "ensemble_auc": 0.0,
+    "walk_forward_auc": 0.0
   }
 }
