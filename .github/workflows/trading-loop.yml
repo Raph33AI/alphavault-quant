@@ -25,7 +25,7 @@ on:
       dry_run:
         description: 'Dry run'
         required: false
-        default: 'true'
+        default: 'false'
         type: boolean
 
 concurrency:
@@ -371,10 +371,10 @@ jobs:
           else
             echo "⚠ Aucun JSON dans signals/ — création des fichiers par défaut..."
 
-            echo '{"signals":{},"timestamp":null,"session":"closed","llm_mode":"deterministic","dry_run":true}' \
+            echo '{"signals":{},"timestamp":null,"session":"closed","llm_mode":"deterministic","dry_run":false}' \
               > docs/signals/current_signals.json
 
-            echo '{"overall":"initializing","llm_available":false,"workers":{},"mode":"deterministic","session":"closed","dry_run":true}' \
+            echo '{"overall":"initializing","llm_available":false,"workers":{},"mode":"deterministic","session":"closed","dry_run":false}' \
               > docs/signals/system_status.json
 
             echo '{"global":{"regime_label":"initializing","regime_score":0,"confidence":0,"allow_long":false,"allow_short":false,"reduce_exposure":true,"probabilities":{}},"macro":{},"per_symbol":{}}' \
