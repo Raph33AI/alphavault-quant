@@ -1152,13 +1152,26 @@ const Charts = (() => {
     if (!c || typeof Chart === 'undefined') return;
     _destroyCJ(canvasId);
 
-    // If no real data, generate placeholder
-    const n    = 30;
-    const data = historyData.length ? historyData : Array.from({ length: n }, (_, i) => ({
-      label:  `T-${n - i}`,
-      sharpe: parseFloat((Math.random() * 2 - 0.2).toFixed(3)),
-      winrate: parseFloat((0.45 + Math.random() * 0.2).toFixed(3)),
-    }));
+    // ✅ FIX — Utilise les vraies données rolling_history.json
+    // Pas de random — si vide, affiche "En attente de données..."
+    if (!historyData.length) {
+        _destroyCJ(canvasId);
+        const parent = document.getElementById(canvasId)?.parentElement;
+        if (parent && !parent.querySelector('.no-data-msg')) {
+            const msg = document.createElement('div');
+            msg.className = 'no-data-msg';
+            msg.style.cssText = 'text-align:center;padding:40px;color:#64748b;font-size:13px;';
+            msg.textContent = '⏳ En attente de données (premier cycle en cours...)';
+            parent.appendChild(msg);
+        }
+        return;
+    }
+
+    // Supprimer message "en attente" si présent
+    document.getElementById(canvasId)
+        ?.parentElement
+        ?.querySelector('.no-data-msg')
+        ?.remove();
 
     _cj[canvasId] = new Chart(c, {
       type: 'line',
