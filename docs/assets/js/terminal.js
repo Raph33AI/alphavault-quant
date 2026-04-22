@@ -1361,21 +1361,35 @@ const Terminal = (() => {
     // ── Normalisation défensive ────────────────────────────────
     const status = {
       ...rawStatus,
-      workers: rawStatus.workers  ?? rawStatus.checks ?? {},
-      mode:    rawStatus.mode     ?? 'deterministic',
+      // ✅ FIX — checks (JSON v2) prioritaire sur workers (v1) et sur DEFAULTS {}
+      // ?? ne bypass pas {} car {} n'est PAS null/undefined → on force checks en priorité 1
+      workers: rawStatus.checks   !== undefined ? rawStatus.checks
+             : rawStatus.workers  !== undefined ? rawStatus.workers
+             : {},
+      mode:    rawStatus.mode     ?? rawStatus.llm_mode ?? 'deterministic',
       session: rawStatus.session  ?? 'closed',
       dry_run: rawStatus.dry_run  ?? false,
     };
 
-    // ── Override overall : ignore les workers non utilisés + états incomplets ──
-    const _criticalOk = ['finance_hub', 'ai_proxy'].every(key => {
-      const w = status.workers?.[key];
-      return w === true || w?.ok === true;
-    });
-    // ✅ FIX SYS DOT — 'initializing'/'unknown'/undefined → 'healthy' si workers OK
-    if (_criticalOk && (
-      !status.overall ||
-      ['degraded', 'initializing', 'unknown', 'warning'].includes(status.overall)
+    // ── Détermine si les workers critiques sont OK ─────────────────
+    const _workersObj = status.workers;
+    const _hasWorkers = Object.keys(_workersObj).length > 0;
+
+    // Méthode 1 : objet workers/checks présent dans le JSON
+    // Méthode 2 : required_ok (fallback si JSON sans clé workers)
+    const _criticalOk = _hasWorkers
+      ? ['finance_hub', 'ai_proxy'].every(key => {
+          const w = _workersObj[key];
+          return w === true || w?.ok === true;
+        })
+      : rawStatus.required_ok === true;
+
+    // ── Override overall ──────────────────────────────────────────
+    // "closed"  = marché fermé        → pas une erreur
+    // "warning" = signaux stale        → pas une erreur (hors heures de trading)
+    // "degraded"/"initializing"        → override si workers critiques OK
+    if (_criticalOk && (!status.overall ||
+        ['degraded', 'initializing', 'unknown', 'warning', 'closed'].includes(status.overall)
     )) {
       status.overall = 'healthy';
     }
@@ -1437,11 +1451,18 @@ const Terminal = (() => {
       console.groupEnd();
     }
 
-    // ── Variables DOM (déclarées ici car utilisées après le bloc throttle) ──
-    const llmAvail = status.llm_available;
-    const hubOk    = status.workers?.finance_hub === true
-                  || status.workers?.finance_hub?.ok === true;
-    const overall  = status.overall;
+    // ── Variables DOM — multi-source (compatibilité JSON v1 et v2) ────────
+    // llm_available : top-level (v2) → llm.gemini_proxy (v2 nested) → false
+    const llmAvail = rawStatus.llm_available !== undefined
+                   ? rawStatus.llm_available
+                   : rawStatus.llm?.gemini_proxy === true;
+
+    // hubOk : workers présents → check direct | absent → required_ok fallback
+    const hubOk = _hasWorkers
+      ? (_workersObj.finance_hub === true || _workersObj.finance_hub?.ok === true)
+      : rawStatus.required_ok === true;
+
+    const overall = status.overall;
 
     // ════════════════════════════════════════════════════
     // DOM UPDATES
@@ -1456,7 +1477,9 @@ const Terminal = (() => {
     }
 
     // Status dots
-    _setDot('llm',  llmAvail ? 'ok' : 'error');
+    // ✅ LLM : WARN (jamais RED) — Gemini quota ≠ erreur système
+    // Le ML déterministe (XGBoost+LightGBM+LogReg) fonctionne sans LLM
+    _setDot('llm',  llmAvail ? 'ok' : 'warn');
     _setDot('hub',  hubOk    ? 'ok' : 'warn');
     _setDot('ibkr', 'warn');   // Always paper/unreachable in cloud — expected
     _setDot('sys',
