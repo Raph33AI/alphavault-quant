@@ -133,11 +133,12 @@ const Terminal = (() => {
   let _currentIv   = '1day';
   let _panelIv     = Array(10).fill('1day');
   const _termCJ = {}; // Chart.js instances dans le TA Panel
-  let _sidebarOpen = true;
-  let _mainInited  = false;
-  let _panelsInited= false;
-  let _activeSection = 'overview';
+  let _sidebarOpen     = true;
+  let _mainInited      = false;
+  let _panelsInited    = false;
+  let _activeSection   = 'overview';
   let _currentChartSym = 'SPY';
+  let _lastStatusLog   = 0;           // ✅ FIX — Throttle Status Debug (1x/5min)
 
   // ════════════════════════════════════════════════════════
   // TECHNICAL ANALYSIS ENGINE — Wall Street Indicators
@@ -1366,12 +1367,16 @@ const Terminal = (() => {
       dry_run: rawStatus.dry_run  ?? false,
     };
 
-    // ── Override overall : ignore les workers non utilisés ────
+    // ── Override overall : ignore les workers non utilisés + états incomplets ──
     const _criticalOk = ['finance_hub', 'ai_proxy'].every(key => {
       const w = status.workers?.[key];
       return w === true || w?.ok === true;
     });
-    if (status.overall === 'degraded' && _criticalOk) {
+    // ✅ FIX SYS DOT — 'initializing'/'unknown'/undefined → 'healthy' si workers OK
+    if (_criticalOk && (
+      !status.overall ||
+      ['degraded', 'initializing', 'unknown', 'warning'].includes(status.overall)
+    )) {
       status.overall = 'healthy';
     }
 
@@ -1379,54 +1384,64 @@ const Terminal = (() => {
     const rl     = regime.regime_label || 'initializing';
 
     // ════════════════════════════════════════════════════
-    // DEBUG LOGS — #4 Status indicators explanation
+    // DEBUG LOGS — Throttled : 1x par 5 minutes max
     // ════════════════════════════════════════════════════
-    console.groupCollapsed('%c[AlphaVault] Status Debug', 'color:#3b82f6;font-weight:bold;font-size:11px');
+    const _nowLog = Date.now();
+    if ((_nowLog - _lastStatusLog) > 300_000) {
+      _lastStatusLog = _nowLog;
 
-    // LLM
+      // LLM
+      const llmAvail = status.llm_available;
+      console.groupCollapsed('%c[AlphaVault] Status Debug', 'color:#3b82f6;font-weight:bold;font-size:11px');
+      console.log(
+          `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
+          `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
+      );
+      if (!llmAvail) {
+          console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
+          console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
+          console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
+      }
+
+      // Hub
+      const hubOk = status.workers?.finance_hub === true
+             || status.workers?.finance_hub?.ok === true;
+      console.log(
+          `%c HUB: ${hubOk ? 'ONLINE' : 'OFFLINE'} → dot ${hubOk ? 'GREEN' : 'ORANGE'}`,
+          `color:${hubOk ? '#10b981' : '#f59e0b'};font-weight:bold`
+      );
+      if (!hubOk) {
+          console.warn(' → Worker finance-hub-api non joignable depuis GitHub Actions');
+          console.log(' → URL configurée:', status.workers?.finance_hub_url || 'N/A');
+      }
+
+      // IBKR
+      console.log('%c IBKR: ALWAYS ORANGE in cloud (expected)', 'color:#f59e0b;font-weight:bold');
+      console.log('%c → GitHub Actions ne peut pas atteindre TWS Gateway (firewall). Normal en paper mode cloud.', 'color:#94a3b8');
+      console.log(`%c → L'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=${status.dry_run}`, 'color:#94a3b8');
+
+      // SYS
+      const _overallLog = status.overall;
+      console.log(
+          `%c SYS: ${_overallLog || 'unknown'} → dot ${_overallLog === 'healthy' ? 'GREEN' : _overallLog === 'degraded' ? 'ORANGE' : 'RED'}`,
+          `color:${_overallLog === 'healthy' ? '#10b981' : _overallLog === 'degraded' ? '#f59e0b' : '#ef4444'};font-weight:bold`
+      );
+      if (_overallLog !== 'healthy') {
+          console.warn(' → Vérifier: docs/signals/system_status.json');
+          console.log(' Workers:', JSON.stringify(status.workers, null, 2));
+      }
+
+      console.log(`%c Mode: ${status.mode || 'deterministic'}`, 'color:#8b5cf6');
+      console.log(`%c Session: ${status.session || 'closed'} | DryRun: ${status.dry_run}`, 'color:#64748b');
+      console.log(' Full status:', status);
+      console.groupEnd();
+    }
+
+    // ── Variables DOM (déclarées ici car utilisées après le bloc throttle) ──
     const llmAvail = status.llm_available;
-    console.log(
-        `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
-        `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
-    );
-    if (!llmAvail) {
-        console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
-        console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
-        console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
-    }
-
-    // Hub
-    const hubOk = status.workers?.finance_hub === true
-           || status.workers?.finance_hub?.ok === true;
-    console.log(
-        `%c HUB: ${hubOk ? 'ONLINE' : 'OFFLINE'} → dot ${hubOk ? 'GREEN' : 'ORANGE'}`,
-        `color:${hubOk ? '#10b981' : '#f59e0b'};font-weight:bold`
-    );
-    if (!hubOk) {
-        console.warn(' → Worker finance-hub-api non joignable depuis GitHub Actions');
-        console.log(' → URL configurée:', status.workers?.finance_hub_url || 'N/A');
-    }
-
-    // IBKR
-    console.log('%c IBKR: ALWAYS ORANGE in cloud (expected)', 'color:#f59e0b;font-weight:bold');
-    console.log('%c → GitHub Actions ne peut pas atteindre TWS Gateway (firewall). Normal en paper mode cloud.', 'color:#94a3b8');
-    console.log(`%c → L'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=${status.dry_run}`, 'color:#94a3b8');
-
-    // SYS
-    const overall = status.overall;
-    console.log(
-        `%c SYS: ${overall || 'unknown'} → dot ${overall === 'healthy' ? 'GREEN' : overall === 'degraded' ? 'ORANGE' : 'RED'}`,
-        `color:${overall === 'healthy' ? '#10b981' : overall === 'degraded' ? '#f59e0b' : '#ef4444'};font-weight:bold`
-    );
-    if (overall !== 'healthy') {
-        console.warn(' → Vérifier: docs/signals/system_status.json');
-        console.log(' Workers:', JSON.stringify(status.workers, null, 2));
-    }
-
-    console.log(`%c Mode: ${status.mode || 'deterministic'}`, 'color:#8b5cf6');
-    console.log(`%c Session: ${status.session || 'closed'} | DryRun: ${status.dry_run}`, 'color:#64748b');
-    console.log(' Full status:', status);
-    console.groupEnd();
+    const hubOk    = status.workers?.finance_hub === true
+                  || status.workers?.finance_hub?.ok === true;
+    const overall  = status.overall;
 
     // ════════════════════════════════════════════════════
     // DOM UPDATES

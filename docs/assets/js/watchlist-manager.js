@@ -1076,8 +1076,7 @@ const WatchlistManager = (() => {
       if (resp.ok) {
         const data = await resp.json();
         if (data && (Array.isArray(data.watchlist) || Array.isArray(data.starred))) {
-          console.log('[WatchlistManager] Source: GitHub Pages CDN');
-          return data;
+          return data;  // ✅ FIX — Log retiré (verbeux à chaque auto-sync)
         }
       }
     } catch(e) {}
@@ -1091,8 +1090,7 @@ const WatchlistManager = (() => {
       if (resp.ok) {
         const data = await resp.json();
         if (data && !data.error) {
-          console.log('[WatchlistManager] Source: Cloudflare Worker');
-          return data;
+          return data;  // ✅ FIX — Log retiré (verbeux à chaque auto-sync)
         }
       }
     } catch(e) {}
