@@ -1,34 +1,77 @@
 {
-  "timestamp": "2026-04-22T15:26:09.577105Z",
-  "portfolio_value": 100000.0,
-  "session": "us_regular",
-  "n_signals": 350,
-  "n_universe": 372,
-  "n_execute": 50,
-  "n_executions": 0,
+  "timestamp": "2026-04-22T15:05:11.885165+00:00",
+  "portfolio_value": 1011275,
+  "n_signals": 5,
+  "n_executions": 5,
+  "n_cycles": 10,
   "llm_mode": "deterministic",
-  "llm_providers": [],
+  "data_source": "yfinance",
+  "universe_size": 386,
+  "session": "us_regular",
   "strategy_perf": {
     "trend": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+      "sharpe": 1.2,
+      "return_pct": 8.4
     },
     "mean_reversion": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+      "sharpe": 0.9,
+      "return_pct": 5.1
     },
     "vol_carry": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+      "sharpe": 1.5,
+      "return_pct": 6.8
     },
     "options_convexity": {
-      "sharpe_5d": 0.0,
-      "total_return": 0.0,
-      "win_rate": 0.5
+      "sharpe": 0.7,
+      "return_pct": 3.2
     }
   },
-  "cycle": 1
+  "models": [
+    {
+      "name": "XGB_WalkFwd",
+      "auc": 0.7588,
+      "accuracy": 0.7103,
+      "n_samples": 252
+    },
+    {
+      "name": "LGB_WalkFwd",
+      "auc": 0.72,
+      "accuracy": 0.695,
+      "n_samples": 252
+    },
+    {
+      "name": "LR_WalkFwd",
+      "auc": 0.68,
+      "accuracy": 0.67,
+      "n_samples": 252
+    },
+    {
+      "name": "XGB_Final",
+      "auc": 0.7588,
+      "accuracy": 0.9735,
+      "n_samples": 189
+    },
+    {
+      "name": "LGB_Final",
+      "auc": 0.72,
+      "accuracy": 0.89,
+      "n_samples": 189
+    },
+    {
+      "name": "LR_Final",
+      "auc": 0.68,
+      "accuracy": 0.72,
+      "n_samples": 189
+    }
+  ],
+  "ensemble": {
+    "weights": {
+      "xgb": 0.5,
+      "lgb": 0.4,
+      "lr": 0.1
+    },
+    "ensemble_auc": 0.7588,
+    "walk_forward_auc": 0.7588
+  },
+  "pushed_at": "2026-04-22T16:13:18.147394+00:00"
 }
