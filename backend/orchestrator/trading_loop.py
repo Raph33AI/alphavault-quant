@@ -278,6 +278,10 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
     return len(new_orders)
 
 def git_commit_signals() -> bool:
+    """
+    FIX v2.3 : Remplace git pull --rebase (conflits) par fetch + reset --soft.
+    Pousse vers HEAD:refs/heads/main (évite le detached HEAD).
+    """
     try:
         now = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
 
@@ -289,7 +293,17 @@ def git_commit_signals() -> bool:
 
         run_git(["config", "--global", "user.name",  "AlphaVault Quant Bot"])
         run_git(["config", "--global", "user.email", "bot@alphavault-ai.com"])
+
+        # ✅ FIX : fetch + reset --soft au lieu de pull --rebase
+        # Évite les conflits avec les fichiers pushés par le watcher Oracle
+        run_git(["fetch", "origin"])
+        run_git(["reset", "--soft", "origin/main"])
+
+        # Ajouter signals + docs/signals mais PAS ibkr_status (géré par Oracle)
         run_git(["add", "signals/", "docs/signals/"])
+        run_git(["reset", "HEAD", "docs/signals/ibkr_status.json"],  check=False)
+        run_git(["reset", "HEAD", "docs/signals/portfolio.json"],    check=False)
+        run_git(["reset", "HEAD", "docs/signals/system_status.json"],check=False)
 
         diff = run_git(["diff", "--staged", "--quiet"], check=False)
         if diff.returncode == 0:
@@ -297,7 +311,10 @@ def git_commit_signals() -> bool:
             return False
 
         run_git(["commit", "-m", f"🤖 Signals update — {now}"])
-        run_git(["push"])
+
+        # ✅ FIX : push explicite vers refs/heads/main (évite detached HEAD)
+        run_git(["push", "origin", "HEAD:refs/heads/main"])
+
         logger.info(f"✅ Git push réussi — {now}")
         return True
 
