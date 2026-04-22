@@ -1,6 +1,10 @@
 # ============================================================
-# ALPHAVAULT QUANT — HEALTH CHECK & MONITORING
-# Vérification du système toutes les heures
+# ALPHAVAULT QUANT — HEALTH CHECK & MONITORING v2.0
+# ✅ Fix : economic_data optionnel (ne casse plus l'overall)
+# ✅ Fix : Groq supprimé (LLM géré sur Oracle)
+# ✅ Fix : git pull --rebase avant push (race condition)
+# ✅ Ajout : vérification signaux Oracle (IBKR, trading loop)
+# ✅ Ajout : freshness check (signals périmés = alerte)
 # ============================================================
 
 name: 🏥 Health Check — AlphaVault Quant
@@ -16,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
@@ -47,52 +51,258 @@ jobs:
           python3 << 'EOF'
           import sys
           sys.path.insert(0, '.')
+
           from core.worker_client import WorkerClient
-          from config.settings import Settings
+          from config.settings    import Settings
           import json, os, datetime
-          
-          print("🏥 AlphaVault Quant — Health Check")
-          print("=" * 50)
-          
+
+          print("🏥 AlphaVault Quant — Health Check v2.0")
+          print("=" * 55)
+
+          now = datetime.datetime.utcnow()
           status = {
-              "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-              "checks": {}
+              "timestamp":  now.isoformat() + "Z",
+              "version":    "2.0",
+              "checks":     {},
+              "signals":    {},
+              "warnings":   [],
           }
-          
+
           settings = Settings()
-          client = WorkerClient(settings)
-          
-          # Test chaque worker
-          workers = {
-              "finance_hub":    settings.FINANCE_HUB_URL,
-              "ai_proxy":       settings.AI_PROXY_URL,
-              "economic_data":  settings.ECONOMIC_DATA_URL,
+          client   = WorkerClient(settings)
+
+          # ════════════════════════════════════════════════
+          # 1. WORKERS CLOUDFLARE
+          #    - REQUIS    : finance_hub, ai_proxy
+          #    - OPTIONNEL : economic_data (peut être vide)
+          # ════════════════════════════════════════════════
+          print("\n  📡 Cloudflare Workers :")
+
+          REQUIRED_WORKERS = {
+              "finance_hub": settings.FINANCE_HUB_URL,
+              "ai_proxy":    settings.AI_PROXY_URL,
           }
-          
-          overall_ok = True
-          for name, url in workers.items():
+          OPTIONAL_WORKERS = {
+              "economic_data": settings.ECONOMIC_DATA_URL,
+          }
+
+          # Workers requis — affectent overall
+          required_ok = True
+          for name, url in REQUIRED_WORKERS.items():
               if not url:
-                  status["checks"][name] = {"status": "not_configured", "ok": False}
-                  overall_ok = False
+                  status["checks"][name] = {
+                      "status": "not_configured",
+                      "ok":     False,
+                      "required": True,
+                  }
+                  print(f"    ❌ {name}: non configuré (secret manquant)")
+                  required_ok = False
                   continue
               try:
                   result = client.health_check(url)
-                  status["checks"][name] = {"status": "ok", "ok": True, "response": result}
-                  print(f"  ✅ {name}: OK")
+                  status["checks"][name] = {
+                      "status":   "ok",
+                      "ok":       True,
+                      "required": True,
+                      "response": str(result)[:100],
+                  }
+                  print(f"    ✅ {name}: OK")
               except Exception as e:
-                  status["checks"][name] = {"status": "error", "ok": False, "error": str(e)}
-                  print(f"  ❌ {name}: {e}")
-                  overall_ok = False
-          
-          status["overall"] = "healthy" if overall_ok else "degraded"
-          status["llm_available"] = status["checks"].get("ai_proxy", {}).get("ok", False)
-          
-          # Sauvegarde du status
+                  status["checks"][name] = {
+                      "status":   "error",
+                      "ok":       False,
+                      "required": True,
+                      "error":    str(e)[:200],
+                  }
+                  print(f"    ❌ {name}: {str(e)[:80]}")
+                  required_ok = False
+
+          # Workers optionnels — NE cassent PAS l'overall
+          for name, url in OPTIONAL_WORKERS.items():
+              if not url:
+                  status["checks"][name] = {
+                      "status":   "not_configured",
+                      "ok":       False,
+                      "required": False,
+                      "note":     "Optionnel — n'affecte pas l'overall",
+                  }
+                  print(f"    ⚠  {name}: non configuré (optionnel — ignoré)")
+                  status["warnings"].append(f"{name} not configured (optional)")
+                  continue
+              try:
+                  result = client.health_check(url)
+                  status["checks"][name] = {
+                      "status":   "ok",
+                      "ok":       True,
+                      "required": False,
+                      "response": str(result)[:100],
+                  }
+                  print(f"    ✅ {name}: OK (optionnel)")
+              except Exception as e:
+                  status["checks"][name] = {
+                      "status":   "error",
+                      "ok":       False,
+                      "required": False,
+                      "error":    str(e)[:200],
+                      "note":     "Optionnel — n'affecte pas l'overall",
+                  }
+                  print(f"    ⚠  {name}: {str(e)[:60]} (optionnel — ignoré)")
+                  status["warnings"].append(f"{name} error: {str(e)[:60]}")
+
+          # ════════════════════════════════════════════════
+          # 2. SIGNAUX ORACLE (lecture JSON depuis repo)
+          #    Vérification freshness + état IBKR + mode
+          # ════════════════════════════════════════════════
+          print("\n  📊 Signaux Oracle (GitHub signals/) :")
+
+          SIGNAL_FILES = {
+              "ibkr_status":      "../signals/ibkr_status.json",
+              "execution_mode":   "../signals/execution_mode.json",
+              "system_status":    "../signals/system_status.json",
+              "pending_orders":   "../signals/pending_orders.json",
+          }
+
+          MAX_STALE_HOURS = {
+              "ibkr_status":    2,   # IBKR status doit être < 2h
+              "execution_mode": 24,  # Mode peut rester 24h inchangé
+              "system_status":  2,   # System status doit être < 2h
+              "pending_orders": 1,   # Pending orders < 1h
+          }
+
+          for sig_name, sig_path in SIGNAL_FILES.items():
+              try:
+                  with open(sig_path, "r") as f:
+                      sig_data = json.load(f)
+
+                  # Freshness check
+                  ts_str   = (
+                      sig_data.get("timestamp")
+                      or sig_data.get("updated_at")
+                      or sig_data.get("last_check")
+                      or sig_data.get("last_update")
+                  )
+                  is_stale = False
+                  age_h    = None
+
+                  if ts_str:
+                      try:
+                          ts_str_clean = ts_str.replace("Z", "").split(".")[0]
+                          sig_time = datetime.datetime.fromisoformat(ts_str_clean)
+                          age      = now - sig_time
+                          age_h    = round(age.total_seconds() / 3600, 1)
+                          max_h    = MAX_STALE_HOURS.get(sig_name, 24)
+                          is_stale = age_h > max_h
+                      except Exception:
+                          pass
+
+                  # Infos spécifiques par fichier
+                  extra = {}
+                  if sig_name == "ibkr_status":
+                      extra = {
+                          "connected":  sig_data.get("ibkr_connected"),
+                          "paper":      sig_data.get("paper_trading"),
+                          "account":    sig_data.get("account"),
+                      }
+                  elif sig_name == "execution_mode":
+                      extra = {
+                          "mode":       sig_data.get("execution_mode"),
+                          "auto":       sig_data.get("trade_auto"),
+                          "blocked":    sig_data.get("orders_blocked"),
+                      }
+                  elif sig_name == "system_status":
+                      extra = {
+                          "overall":    sig_data.get("overall"),
+                          "llm":        sig_data.get("llm_available"),
+                          "dry_run":    sig_data.get("dry_run"),
+                      }
+
+                  stale_warn = f" ⚠ STALE ({age_h}h)" if is_stale else ""
+                  age_str    = f"{age_h}h" if age_h is not None else "?"
+                  print(f"    ✅ {sig_name}: OK (age: {age_str}){stale_warn}")
+
+                  if extra:
+                      extra_str = " | ".join(f"{k}={v}" for k, v in extra.items() if v is not None)
+                      if extra_str:
+                          print(f"       → {extra_str}")
+
+                  status["signals"][sig_name] = {
+                      "ok":      True,
+                      "age_h":   age_h,
+                      "stale":   is_stale,
+                      **extra,
+                  }
+
+                  if is_stale:
+                      status["warnings"].append(
+                          f"{sig_name} stale ({age_h}h > {MAX_STALE_HOURS.get(sig_name)}h)"
+                      )
+
+              except FileNotFoundError:
+                  print(f"    ⚠  {sig_name}: fichier absent (premier run ?)")
+                  status["signals"][sig_name] = {"ok": False, "error": "file not found"}
+              except Exception as e:
+                  print(f"    ⚠  {sig_name}: {str(e)[:60]}")
+                  status["signals"][sig_name] = {"ok": False, "error": str(e)[:100]}
+
+          # ════════════════════════════════════════════════
+          # 3. LLM — Oracle uniquement (pas Groq)
+          # ════════════════════════════════════════════════
+          print("\n  🤖 LLM (Oracle) :")
+          ai_proxy_ok = status["checks"].get("ai_proxy", {}).get("ok", False)
+          llm_info = {
+              "gemini_proxy":    ai_proxy_ok,
+              "groq":            "not_checked (managed by Oracle)",
+              "ollama":          "not_checked (managed by Oracle)",
+              "oracle_llm_chain":"Gemini→Groq→Ollama→Deterministic (Oracle-side)",
+          }
+          status["llm"] = llm_info
+          print(f"    ✅ gemini_proxy: {'OK' if ai_proxy_ok else 'KO'}")
+          print(f"    ℹ  groq/ollama: géré par Oracle (non vérifié ici)")
+
+          # ════════════════════════════════════════════════
+          # 4. OVERALL STATUS
+          #    Basé UNIQUEMENT sur les workers requis
+          # ════════════════════════════════════════════════
+          stale_signals = [
+              k for k, v in status["signals"].items()
+              if v.get("stale")
+          ]
+
+          if not required_ok:
+              overall = "degraded"
+          elif stale_signals:
+              overall = "warning"
+          else:
+              overall = "healthy"
+
+          status["overall"]      = overall
+          status["required_ok"]  = required_ok
+          status["llm_available"] = ai_proxy_ok
+          status["stale_signals"] = stale_signals
+          status["n_warnings"]    = len(status["warnings"])
+
+          # ════════════════════════════════════════════════
+          # 5. RÉSUMÉ FINAL
+          # ════════════════════════════════════════════════
+          icon = {"healthy": "✅", "warning": "⚠", "degraded": "❌"}.get(overall, "❓")
+          print(f"\n  {'='*53}")
+          print(f"  {icon} Overall: {overall.upper()}")
+          if status["warnings"]:
+              print(f"  ⚠  Warnings ({len(status['warnings'])}):")
+              for w in status["warnings"]:
+                  print(f"     - {w}")
+          if stale_signals:
+              print(f"  🕒 Stale signals: {', '.join(stale_signals)}")
+          print(f"  {'='*53}\n")
+
+          # Sauvegarde
           os.makedirs("../signals", exist_ok=True)
           with open("../signals/system_status.json", "w") as f:
               json.dump(status, f, indent=2)
-          
-          print(f"\n📊 Overall: {status['overall'].upper()}")
+
+          # Exit code 0 même si warning (seulement degraded = exit 1)
+          if overall == "degraded":
+              sys.exit(1)
           EOF
 
       - name: 💾 Push System Status
@@ -100,7 +310,22 @@ jobs:
           git config --global user.name  "AlphaVault Health Bot"
           git config --global user.email "bot@alphavault-ai.com"
           git add signals/system_status.json
-          git diff --staged --quiet || git commit -m "🏥 Health check — $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push
+
+          # ✅ Fix race condition : pull --rebase avant push
+          git diff --staged --quiet && echo "Aucun changement à committer" && exit 0
+
+          git commit -m "🏥 Health check — $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+          # Retry loop : jusqu'à 3 tentatives si push rejeté
+          for attempt in 1 2 3; do
+            echo "→ Push attempt ${attempt}/3"
+            git pull --rebase origin main || true
+            git push && echo "✅ Push réussi (attempt ${attempt})" && exit 0
+            echo "⚠  Push échoué, retry dans 5s..."
+            sleep 5
+          done
+
+          echo "❌ Push échoué après 3 tentatives"
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
