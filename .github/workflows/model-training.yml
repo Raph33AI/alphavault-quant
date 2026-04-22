@@ -116,9 +116,14 @@ jobs:
 
              echo '🔄 Démarrage train.py v3.1 — 384 symboles...' | tee -a \"\${LOG_FILE}\"
 
-             PG_PASSWORD=AlphaVault_PG_8125aa19f7c3739c \
-               python3 -m backend.ml.train \
-               --mode ${TRAINING_MODE} \
+             TRAINING_LOOKBACK_DAYS=756 \
+                WALK_FORWARD_WINDOW=189 \
+                N_OPTUNA_TRIALS=30 \
+                LABEL_HORIZON=5 \
+                MIN_TRAIN_SAMPLES=500 \
+                PG_PASSWORD=AlphaVault_PG_8125aa19f7c3739c \
+                  python3 -m backend.ml.train \
+                  --mode ${TRAINING_MODE} \
                2>&1 | tee -a \"\${LOG_FILE}\"
 
              EXIT_CODE=\${PIPESTATUS[0]}
