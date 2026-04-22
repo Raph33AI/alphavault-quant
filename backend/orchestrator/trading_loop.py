@@ -1,5 +1,6 @@
 # ============================================================
-# ALPHAVAULT QUANT — Trading Loop v2.1
+# ALPHAVAULT QUANT — Trading Loop v2.2
+# ✅ Couverture Marchés Mondiaux : Océanie · Asie · ME · Afrique · EU · Amériques
 # ✅ Fix: Bridge ML → ibkr_watcher (pending_orders.json)
 # ✅ Optimisé AMD Micro (1GB RAM + 3GB swap)
 # ============================================================
@@ -40,6 +41,30 @@ logger.add(
 
 SIGNALS_DIR = _ROOT_DIR / "signals"
 SIGNALS_DIR.mkdir(exist_ok=True)
+
+# ════════════════════════════════════════════════════════════
+# SESSIONS ACTIVES — Toutes les sessions de marché mondiales
+# ════════════════════════════════════════════════════════════
+ACTIVE_SESSIONS = frozenset({
+    # USA
+    "us_regular",
+    "us_premarket",
+    "us_postmarket",
+    # Europe
+    "eu_regular",
+    # Asie / Océanie
+    "asia_regular",
+    "oceania_regular",
+    # Moyen-Orient
+    "me_regular",
+    # Afrique
+    "africa_regular",
+    # Rétrocompatibilité (anciens noms)
+    "regular",
+    "premarket",
+    "postmarket",
+    "eu_premarket",
+})
 
 # ════════════════════════════════════════════════════════════
 # UTILITAIRES
@@ -89,9 +114,6 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
     Extrait les décisions EXECUTE du pipeline ML et les écrit
     dans signals/pending_orders.json pour que ibkr_watcher.py
     sur Oracle VM les lise et les transmette à IBeam → IBKR.
-
-    Sans cette fonction, le ML génère des signaux mais AUCUN
-    ordre réel n'est jamais transmis au watcher Oracle.
     ═══════════════════════════════════════════════════════════
     """
     signals   = output.get("current_signals", {}).get("signals", {})
@@ -101,7 +123,6 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
 
     portfolio_value = float(portfolio.get("total_value", 100_000))
 
-    # Vérification risque global — ne pas envoyer si DD > limite
     current_dd = abs(float(
         risk.get("drawdown", {}).get("current_drawdown", 0)
     ))
@@ -112,14 +133,12 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
         )
         return 0
 
-    # Vérification levier
-    lever_data    = risk.get("leverage", {})
+    lever_data     = risk.get("leverage", {})
     over_leveraged = lever_data.get("is_over_leveraged", False)
     if over_leveraged:
         logger.warning("[Bridge] Skip — portefeuille sur-levérisé")
         return 0
 
-    # ── Construction des ordres ───────────────────────────────
     orders = []
     ts     = datetime.datetime.utcnow().isoformat() + "Z"
 
@@ -134,16 +153,11 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
 
         action = "BUY" if direction == "buy" else "SELL"
 
-        # Prix
         price = float(sig.get("price", 0))
         if price <= 0:
             logger.debug(f"[Bridge] Skip {sym} — prix nul")
             continue
 
-        # ── Sizing basé sur le score ML ───────────────────────
-        # execute_strong → 8% du portefeuille max
-        # execute        → 5% du portefeuille max
-        # Capé par MAX_SINGLE_POSITION_PCT des settings
         score    = float(sig.get("final_score",  0))
         conf     = float(sig.get("confidence",   0))
 
@@ -154,7 +168,6 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
         else:
             base_pct = 0.03
 
-        # Modulé par la confiance du signal
         position_pct = base_pct * min(conf / 0.60, 1.0)
         position_pct = min(position_pct, settings.MAX_SINGLE_POSITION_PCT)
 
@@ -173,28 +186,26 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
         )
 
         orders.append({
-            "id":           order_id,
-            "symbol":       sym,
-            "action":       action,
-            "quantity":     quantity,
-            "order_type":   "MARKET",
-            "dry_run":      dry_run,
-            "source":       "ml_pipeline",
-            "council":      council,
-            "score":        round(score, 4),
-            "confidence":   round(conf, 4),
-            "position_pct": round(position_pct, 4),
-            "position_usd": round(portfolio_value * position_pct, 2),
+            "id":              order_id,
+            "symbol":          sym,
+            "action":          action,
+            "quantity":        quantity,
+            "order_type":      "MARKET",
+            "dry_run":         dry_run,
+            "source":          "ml_pipeline",
+            "council":         council,
+            "score":           round(score, 4),
+            "confidence":      round(conf, 4),
+            "position_pct":    round(position_pct, 4),
+            "position_usd":    round(portfolio_value * position_pct, 2),
             "price_at_signal": round(price, 4),
-            "timestamp":    ts,
+            "timestamp":       ts,
         })
 
     if not orders:
         logger.info("[Bridge] Aucune décision EXECUTE ce cycle")
         return 0
 
-    # ── Anti-doublon : ne pas remettre un ordre en file si
-    #    le même symbole y est déjà depuis moins de 5 minutes ───
     pending_path = _ROOT_DIR / "signals" / "pending_orders.json"
     docs_path    = _ROOT_DIR / "docs" / "signals" / "pending_orders.json"
 
@@ -209,10 +220,9 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
         except Exception as e:
             logger.warning(f"[Bridge] Lecture pending_orders: {e}")
 
-    # Symboles déjà en file d'attente
-    now_ts         = time.time()
-    recent_syms    = set()
-    COOLDOWN_SECS  = 300  # 5 minutes entre deux ordres sur le même symbole
+    now_ts        = time.time()
+    recent_syms   = set()
+    COOLDOWN_SECS = 300
 
     for o in existing_orders:
         o_sym = o.get("symbol")
@@ -224,7 +234,7 @@ def push_execute_orders_to_watcher(output: dict, settings: Settings) -> int:
             if o_age < COOLDOWN_SECS:
                 recent_syms.add(o_sym)
         except Exception:
-            recent_syms.add(o_sym)  # Par sécurité
+            recent_syms.add(o_sym)
 
     new_orders = [o for o in orders if o["symbol"] not in recent_syms]
 
@@ -279,7 +289,6 @@ def git_commit_signals() -> bool:
 
         run_git(["config", "--global", "user.name",  "AlphaVault Quant Bot"])
         run_git(["config", "--global", "user.email", "bot@alphavault-ai.com"])
-
         run_git(["add", "signals/", "docs/signals/"])
 
         diff = run_git(["diff", "--staged", "--quiet"], check=False)
@@ -318,14 +327,52 @@ def write_error_status(error: Exception):
         pass
 
 def check_market_session() -> str:
+    """
+    Détecte la session de marché globale actuelle (UTC).
+
+    Couverture complète :
+      🌏 Océanie   : ASX Sydney (00:00-06:00 + dim 23:00)
+      🌏 Asie      : TSE/KRX (00:00) | HKEX/SSE (01:30) | SGX (01:00) | BSE/NSE (03:45)
+      🕌 Moyen-Est : DFM/ADX/Tadawul/TASE/QSE (06:00-15:30 UTC, Dim-Jeu)
+      🌍 Afrique   : JSE (07:00-15:00) | EGX (08:30-14:30) | NGX (09:30-14:30)
+      🌍 Europe    : XETRA (07:00) | LSE (08:00) | Euronext (08:00-17:30)
+      🌎 Amériques : B3 (13:00) | NYSE/NASDAQ (14:30-21:00) | Post-market (21:00-24:00)
+
+    Retourne la session active selon la priorité :
+      us_regular > us_premarket > us_postmarket > eu_regular >
+      asia_regular > me_regular > africa_regular > oceania_regular > closed
+    """
     now      = datetime.datetime.utcnow()
-    weekday  = now.weekday()
+    weekday  = now.weekday()   # Python : 0=Lun ... 6=Dim
     time_dec = now.hour + now.minute / 60
 
-    if weekday >= 5:               return "closed"
-    if 14.5  <= time_dec < 21.0:   return "regular"
-    if 13.0  <= time_dec < 14.5:   return "premarket"
-    if 21.0  <= time_dec < 24.0:   return "postmarket"
+    WEEKDAYS = frozenset({0, 1, 2, 3, 4})   # Lundi-Vendredi
+    ME_DAYS  = frozenset({0, 1, 2, 3, 6})   # Lun-Jeu + Dim (semaine Moyen-Orient)
+
+    def _open(t: float, o: float, c: float, days=WEEKDAYS) -> bool:
+        return (weekday in days) and (o <= t < c)
+
+    # ── 🌎 US — priorité maximale ──────────────────────────────────
+    if _open(time_dec, 14.5, 21.0):           return "us_regular"
+    if _open(time_dec, 13.0, 14.5):           return "us_premarket"
+    if _open(time_dec, 21.0, 24.0):           return "us_postmarket"
+
+    # ── 🌍 Europe (XETRA 07:00, Euronext ferme 17:30) ──────────────
+    if _open(time_dec,  7.0, 17.5):           return "eu_regular"
+
+    # ── 🌏 Asie (SGX 01:00, TSE/KRX 00:00, BSE 03:45, HKEX 01:30) ─
+    if _open(time_dec,  0.0,  9.0):           return "asia_regular"
+
+    # ── 🕌 Moyen-Orient (Dim-Jeu, DFM 06:00, TASE close 15:25) ────
+    if _open(time_dec,  5.75, 15.5, ME_DAYS): return "me_regular"
+
+    # ── 🌍 Afrique (JSE 07:00-15:00, NSE_KE 06:00-12:00) ──────────
+    if _open(time_dec,  6.0,  15.0):          return "africa_regular"
+
+    # ── 🌏 Océanie (ASX 00:00-06:00 + Dim 23:00 pré-ouverture) ────
+    if _open(time_dec,  0.0,  6.0):           return "oceania_regular"
+    if weekday == 6 and time_dec >= 23.0:      return "oceania_regular"
+
     return "closed"
 
 def run_with_retry(agent: TradingAgent, max_retries: int = 2) -> dict:
@@ -351,7 +398,7 @@ def main():
     start_time = time.time()
 
     logger.info("\n" + "═" * 60)
-    logger.info("  🚀 ALPHAVAULT QUANT — Trading Loop v2.1")
+    logger.info("  🚀 ALPHAVAULT QUANT — Trading Loop v2.2")
     logger.info(f"  {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     logger.info(f"  Root: {_ROOT_DIR}")
     logger.info("═" * 60)
@@ -365,13 +412,21 @@ def main():
         write_error_status(e)
         sys.exit(1)
 
-    # ── 2. Session de marché ──────────────────────────────
+    # ── 2. Session de marché mondiale ─────────────────────
     session = os.environ.get("MARKET_SESSION") or check_market_session()
     settings.MARKET_SESSION = session
     logger.info(f"📅 Session: {session.upper()}")
 
-    if session == "closed" and os.environ.get("EXECUTION_MODE") != "force":
-        logger.info("🌙 Marché fermé — exit propre")
+    # ── 3. Vérification si tous les marchés sont fermés ───
+    if session not in ACTIVE_SESSIONS and os.environ.get("EXECUTION_MODE") != "force":
+        logger.info("🌙 Tous marchés fermés — exit propre")
+        logger.info("   Prochaine ouverture :")
+        logger.info("     🌏 ASX    : 00:00 UTC (Lun-Ven)")
+        logger.info("     🌏 TSE    : 00:00 UTC (Lun-Ven)")
+        logger.info("     🕌 Dubai  : 06:00 UTC (Dim-Jeu)")
+        logger.info("     🌍 Europe : 07:00 UTC (Lun-Ven)")
+        logger.info("     🌎 NYSE   : 14:30 UTC (Lun-Ven)")
+
         closed_status = {
             "timestamp":     datetime.datetime.utcnow().isoformat() + "Z",
             "overall":       "closed",
@@ -380,14 +435,19 @@ def main():
             "workers":       {},
             "mode":          "deterministic",
             "dry_run":       True,
-            "message":       "Marché fermé — prochain cycle 14:30 UTC",
+            "message":       (
+                "Tous marchés fermés — "
+                "ASX 00:00 UTC | EU 07:00 UTC | US 13:00 UTC | ME dim 06:00 UTC"
+            ),
         }
         with open(SIGNALS_DIR / "system_status.json", "w") as f:
             json.dump(closed_status, f, indent=2)
         git_commit_signals()
         sys.exit(0)
 
-    # ── 3. Init Agent ─────────────────────────────────────
+    logger.info(f"✅ Marché actif — session: {session}")
+
+    # ── 4. Init Agent ─────────────────────────────────────
     try:
         logger.info("🔧 Initialisation TradingAgent...")
         agent = TradingAgent(settings)
@@ -397,7 +457,7 @@ def main():
         git_commit_signals()
         sys.exit(1)
 
-    # ── 4. Pipeline ───────────────────────────────────────
+    # ── 5. Pipeline ───────────────────────────────────────
     try:
         output = run_with_retry(agent, max_retries=2)
     except Exception as e:
@@ -406,13 +466,13 @@ def main():
         git_commit_signals()
         sys.exit(1)
 
-    # ── 5. Sauvegarde signals ─────────────────────────────
+    # ── 6. Sauvegarde signals ─────────────────────────────
     saved = save_signals(output)
     if not saved:
         logger.error("No signals saved")
         sys.exit(1)
 
-    # ── 6. Bridge ML → ibkr_watcher ✅ FIX CRITIQUE ──────
+    # ── 7. Bridge ML → ibkr_watcher ✅ FIX CRITIQUE ──────
     trade_auto_mode = os.environ.get("TRADE_AUTO_MODE", "enabled").lower().strip()
 
     if trade_auto_mode == "disabled":
@@ -423,14 +483,13 @@ def main():
         logger.info(f"  → TRADE_AUTO_MODE={trade_auto_mode} (from GitHub Variable)")
         n_orders = 0
 
-        # Écrit un fichier de status pour le dashboard
         manual_status = {
-            "timestamp":      datetime.datetime.utcnow().isoformat() + "Z",
-            "execution_mode": "manual",
-            "trade_auto":     False,
-            "message":        "Manual mode — orders blocked this cycle",
+            "timestamp":         datetime.datetime.utcnow().isoformat() + "Z",
+            "execution_mode":    "manual",
+            "trade_auto":        False,
+            "message":           "Manual mode — orders blocked this cycle",
             "signals_generated": len(output.get("current_signals", {}).get("signals", {})),
-            "run_id":         os.environ.get("GITHUB_RUN_NUMBER", "local"),
+            "run_id":            os.environ.get("GITHUB_RUN_NUMBER", "local"),
         }
         try:
             manual_path = _ROOT_DIR / "docs" / "signals" / "execution_mode.json"
@@ -454,10 +513,9 @@ def main():
                 logger.info("📭 Aucun ordre à transmettre ce cycle")
         except Exception as e:
             logger.error(f"[Bridge] Erreur transmission ordres: {e}")
-            # Non bloquant — le pipeline continue
             n_orders = 0
 
-    # ── 7. Performance Tracker ────────────────────────────
+    # ── 8. Performance Tracker ────────────────────────────
     perf_metrics = {}
     try:
         tracker      = PerformanceTracker(root_dir=_ROOT_DIR)
@@ -470,8 +528,8 @@ def main():
         tracker.save()
         perf_metrics = tracker.compute_metrics()
 
-        perf_path    = _ROOT_DIR / "docs" / "signals" / "performance_metrics.json"
-        existing_perf= json.loads(perf_path.read_text()) if perf_path.exists() else {}
+        perf_path     = _ROOT_DIR / "docs" / "signals" / "performance_metrics.json"
+        existing_perf = json.loads(perf_path.read_text()) if perf_path.exists() else {}
         existing_perf.update({
             "tracker_metrics": perf_metrics,
             "best_symbols":    tracker.get_best_symbols(10),
@@ -482,13 +540,13 @@ def main():
     except Exception as e:
         logger.warning(f"[Loop] Performance tracker error: {e}")
 
-    # ── 8. Alert Engine ───────────────────────────────────
+    # ── 9. Alert Engine ───────────────────────────────────
     try:
         alert_engine = AlertEngine(settings=settings, root_dir=_ROOT_DIR)
         alert_engine.check_all(output=output, perf_metrics=perf_metrics)
 
         now_h = datetime.datetime.utcnow().hour
-        if now_h >= 20 and settings.MARKET_SESSION in ("regular", "postmarket"):
+        if now_h >= 20 and settings.MARKET_SESSION in ("us_regular", "regular", "postmarket", "us_postmarket"):
             alert_engine.send_daily_summary(
                 output=output, perf_metrics=perf_metrics
             )
@@ -496,10 +554,10 @@ def main():
     except Exception as e:
         logger.warning(f"[Loop] Alert engine error: {e}")
 
-    # ── 9. Git push ───────────────────────────────────────
+    # ── 10. Git push ──────────────────────────────────────
     pushed = git_commit_signals()
 
-    # ── 10. Bilan ─────────────────────────────────────────
+    # ── 11. Bilan ─────────────────────────────────────────
     elapsed = time.time() - start_time
     n_sigs  = len(output.get("current_signals", {}).get("signals", {}))
     n_exec  = len(output.get("agent_decisions", {}).get("executions", []))
@@ -508,6 +566,7 @@ def main():
 
     logger.info("\n" + "═" * 60)
     logger.info(f"  ✅ Terminé en {elapsed:.1f}s")
+    logger.info(f"  📅 Session   : {session.upper()}")
     logger.info(f"  📊 Signaux   : {n_sigs}")
     logger.info(f"  💼 Exécutés  : {n_exec}")
     logger.info(f"  🎯 Régime    : {regime.upper()}")

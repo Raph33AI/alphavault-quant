@@ -1,6 +1,6 @@
 # ============================================================
 # ALPHAVAULT QUANT — TRADING LOOP
-# Boucle de trading principale — GitHub Actions
+# 🌍 Couverture Mondiale : Océanie · Asie · ME · Afrique · EU · Amériques
 # Fix : IBKR Status Check en lecture seule (watcher gère le fichier)
 # ============================================================
 
@@ -8,9 +8,28 @@ name: 🤖 Trading Loop — AlphaVault Quant
 
 on:
   schedule:
-    - cron: '*/5 14-21 * * 1-5'
-    - cron: '*/15 13-14 * * 1-5'
+    # ════════════════════════════════════════════════════════════════
+    # 🌍 COUVERTURE MARCHÉS MONDIAUX COMPLÈTE — UTC
+    # ════════════════════════════════════════════════════════════════
+
+    # ── 🌏 DIMANCHE ─────────────────────────────────────────────────
+    # ASX Sydney ouvre dim 23:00 UTC (= lundi 09:00 AEST)
+    - cron: '0,15,30,45 23 * * 0'
+    # Moyen-Orient dim 06:00-15:30 UTC (DFM/ADX, Tadawul, TASE, QSE)
+    # Note : semaine ME = Dim-Jeu (en cron : 0=Dim, 4=Jeu)
+    - cron: '*/5 6-15 * * 0'
+
+    # ── 🌍 LUNDI - VENDREDI : Couverture totale 00:00-21:00 UTC ─────
+    # 🌏 Asie     : TSE/KRX 00:00 | SSE/HKEX 01:30 | SGX 01:00 | BSE 03:45
+    # 🕌 ME       : Dubai/ADX 06:00 | Tadawul 07:00 | TASE 07:00-15:25
+    # 🌍 Afrique  : JSE 07:00-15:00 | EGX 08:30-14:30 | NGX 09:30-14:30
+    # 🌍 Europe   : XETRA 07:00 | LSE 08:00 | Euronext 08:00-17:30
+    # 🌎 Amériques: B3 13:00 | NYSE/NASDAQ 14:30-21:00 | TSX 14:30-21:00
+    - cron: '*/5 0-20 * * 1-5'
+
+    # ── 🌎 US POST-MARKET : 21:00-24:00 UTC ─────────────────────────
     - cron: '*/15 21-23 * * 1-5'
+
   workflow_dispatch:
     inputs:
       mode:
@@ -34,40 +53,151 @@ concurrency:
 
 jobs:
 
-  # ── Job 1 : Vérification horaires ──────────────────────────
+  # ── Job 1 : Vérification horaires mondiaux ─────────────────
   market-hours-check:
-    name: 🕐 Vérification Heures de Marché
+    name: 🌍 Vérification Horaires Mondiaux
     runs-on: ubuntu-latest
     outputs:
       is_market_open: ${{ steps.check.outputs.is_open }}
       market_session: ${{ steps.check.outputs.session }}
     steps:
-      - name: Check Market Hours
+      - name: Check Global Market Hours
         id: check
         run: |
           python3 << 'EOF'
           import datetime, os
-          now_utc    = datetime.datetime.utcnow()
-          weekday    = now_utc.weekday()
-          time_dec   = now_utc.hour + now_utc.minute / 60
-          is_weekday = weekday < 5
-          is_pre     = is_weekday and 13.0 <= time_dec < 14.5
-          is_regular = is_weekday and 14.5 <= time_dec < 21.0
-          is_post    = is_weekday and 21.0 <= time_dec < 24.0
-          is_open    = is_pre or is_regular or is_post
-          session    = (
-              "regular"     if is_regular else
-              "premarket"   if is_pre     else
-              "postmarket"  if is_post    else
-              "closed"
-          )
+
+          now_utc  = datetime.datetime.utcnow()
+          weekday  = now_utc.weekday()   # Python : 0=Lun ... 6=Dim
+          time_dec = now_utc.hour + now_utc.minute / 60
+
+          # ── Jours ouvrés ──────────────────────────────────────────
+          WEEKDAYS = frozenset({0,1,2,3,4})   # Lundi-Vendredi
+          ME_DAYS  = frozenset({0,1,2,3,6})   # Lun-Jeu + Dim (semaine ME)
+
+          def _open(t, o, c, days=WEEKDAYS):
+              return (weekday in days) and (o <= t < c)
+
+          # ── Sessions de marché (UTC) ───────────────────────────────
+
+          # 🌏 OCÉANIE
+          # ASX : Lun-Ven 00:00-06:00 + Dim soir 23:00 (pré-ouverture lundi)
+          asx      = _open(time_dec, 0.0,  6.0) or (weekday == 6 and time_dec >= 23.0)
+
+          # 🌏 ASIE
+          tse      = _open(time_dec, 0.0,  6.0)    # Tokyo Stock Exchange
+          krx      = _open(time_dec, 0.0,  6.5)    # Korea Exchange Séoul
+          sse      = _open(time_dec, 1.5,  7.0)    # Shanghai / Shenzhen
+          hkex     = _open(time_dec, 1.5,  8.0)    # Hong Kong Exchange
+          sgx      = _open(time_dec, 1.0,  9.0)    # Singapore Exchange
+          bse_nse  = _open(time_dec, 3.75, 10.0)   # Bombay/National (09:15-15:30 IST)
+
+          # 🕌 MOYEN-ORIENT (semaine Dim-Jeu en Python : {6,0,1,2,3})
+          dfm_adx  = _open(time_dec, 6.0,  10.0, ME_DAYS)   # Dubai + Abu Dhabi
+          tadawul  = _open(time_dec, 7.0,  10.0, ME_DAYS)   # Arabie Saoudite
+          tase     = _open(time_dec, 7.0,  15.42,ME_DAYS)   # Israël (close 15:25 UTC)
+          qse      = _open(time_dec, 7.0,  10.0, ME_DAYS)   # Qatar Stock Exchange
+          msm      = _open(time_dec, 5.75, 9.0,  ME_DAYS)   # Muscat Securities Market Oman
+
+          # 🌍 AFRIQUE
+          jse      = _open(time_dec, 7.0,  15.0)    # Johannesburg Stock Exchange
+          egx      = _open(time_dec, 8.5,  14.5)    # Egyptian Exchange Le Caire
+          ngx      = _open(time_dec, 9.5,  14.5)    # Nigerian Exchange Lagos
+          nse_ke   = _open(time_dec, 6.0,  12.0)    # Nairobi Securities Exchange Kenya
+          gse      = _open(time_dec, 9.0,  14.0)    # Ghana Stock Exchange
+          bvmac    = _open(time_dec, 9.0,  13.5)    # Casablanca + BRVM Afrique de l'Ouest
+
+          # 🌍 EUROPE
+          xetra    = _open(time_dec, 7.0,  15.5)    # Deutsche Börse XETRA Francfort
+          lse      = _open(time_dec, 8.0,  16.5)    # London Stock Exchange
+          euronext = _open(time_dec, 8.0,  17.5)    # Euronext Paris/Amsterdam/Bruxelles
+          bme      = _open(time_dec, 8.0,  17.5)    # Bolsa Madrid
+          borsa_it = _open(time_dec, 8.0,  17.5)    # Borsa Italiana Milan
+          six      = _open(time_dec, 8.0,  16.5)    # SIX Swiss Exchange Zurich
+          omx      = _open(time_dec, 7.0,  15.5)    # OMX Nasdaq Nordic (Helsinki/Stockholm/Copenhagen)
+          gpw      = _open(time_dec, 8.0,  16.0)    # Warsaw Stock Exchange GPW
+
+          # 🌎 AMÉRIQUES
+          nyse_pre = _open(time_dec, 13.0, 14.5)    # NYSE / NASDAQ pré-marché
+          nyse     = _open(time_dec, 14.5, 21.0)    # NYSE + NASDAQ (session principale)
+          tsx      = _open(time_dec, 14.5, 21.0)    # Toronto Stock Exchange Canada
+          b3       = _open(time_dec, 13.0, 21.0)    # B3 Bolsa São Paulo Brésil
+          bmv      = _open(time_dec, 14.5, 21.0)    # Bolsa Mexicana de Valores
+          bvc      = _open(time_dec, 14.5, 21.5)    # Bolsa de Valores de Colombia
+          bvl      = _open(time_dec, 14.0, 21.0)    # Bolsa de Valores de Lima Pérou
+          nyse_post= _open(time_dec, 21.0, 24.0)    # NYSE / NASDAQ après-clôture
+
+          # ── Synthèse ────────────────────────────────────────────────
+          markets = {
+              # Océanie
+              'ASX':       asx,
+              # Asie
+              'TSE':       tse,
+              'KRX':       krx,
+              'SSE':       sse,
+              'HKEX':      hkex,
+              'SGX':       sgx,
+              'BSE_NSE':   bse_nse,
+              # Moyen-Orient
+              'DFM_ADX':   dfm_adx,
+              'TADAWUL':   tadawul,
+              'TASE':      tase,
+              'QSE':       qse,
+              'MSM':       msm,
+              # Afrique
+              'JSE':       jse,
+              'EGX':       egx,
+              'NGX':       ngx,
+              'NSE_KE':    nse_ke,
+              'GSE':       gse,
+              'BVMAC':     bvmac,
+              # Europe
+              'XETRA':     xetra,
+              'LSE':       lse,
+              'EURONEXT':  euronext,
+              'BME':       bme,
+              'BORSA_IT':  borsa_it,
+              'SIX':       six,
+              'OMX':       omx,
+              'GPW':       gpw,
+              # Amériques
+              'NYSE_PRE':  nyse_pre,
+              'NYSE':      nyse,
+              'TSX':       tsx,
+              'B3':        b3,
+              'BMV':       bmv,
+              'BVC':       bvc,
+              'BVL':       bvl,
+              'NYSE_POST': nyse_post,
+          }
+
+          open_mkts = [k for k, v in markets.items() if v]
+          is_open   = bool(open_mkts)
+
+          # ── Session (priorité décroissante) ──────────────────────────
+          if   nyse:                                      session = 'us_regular'
+          elif nyse_pre or b3 or bvl:                     session = 'us_premarket'
+          elif nyse_post:                                  session = 'us_postmarket'
+          elif euronext or lse or xetra or bme:           session = 'eu_regular'
+          elif hkex or sgx or bse_nse or sse:             session = 'asia_regular'
+          elif tse or krx:                                session = 'asia_regular'
+          elif dfm_adx or tadawul or tase or qse:         session = 'me_regular'
+          elif jse or egx or ngx or nse_ke:               session = 'africa_regular'
+          elif asx:                                        session = 'oceania_regular'
+          else:                                           session = 'closed'
+
+          # ── Écriture outputs GitHub Actions ──────────────────────────
           with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
               f.write(f"is_open={'true' if is_open else 'false'}\n")
               f.write(f"session={session}\n")
-          print(
-              f"🕐 {now_utc.strftime('%H:%M')} UTC | "
-              f"weekday={weekday} | session={session} | open={is_open}"
-          )
+
+          # ── Affichage console ─────────────────────────────────────────
+          now_str = now_utc.strftime('%A %d/%m %H:%M')
+          print(f"🌍 {now_str} UTC  |  session={session}  |  open={is_open}")
+          if open_mkts:
+              print(f"   📈 Marchés ouverts ({len(open_mkts)}) : {', '.join(open_mkts)}")
+          else:
+              print("   🌙 Tous marchés fermés — pas de cycle ce tour")
           EOF
 
   # ── Job 2 : Boucle de trading ──────────────────────────────
@@ -186,7 +316,6 @@ jobs:
           srv = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
           rep = os.environ.get('GITHUB_REPOSITORY', '')
 
-          # Charge tous les JSON signals
           files_data = {}
           for f in signals_dir.glob('*.json'):
               try:
@@ -195,7 +324,6 @@ jobs:
               except Exception as e:
                   files_data[f.name] = {'error': str(e)}
 
-          # Charge debug_log existant
           debug_path    = out_dir / 'debug_log.json'
           existing_logs = []
           if debug_path.exists():
@@ -204,10 +332,8 @@ jobs:
               except Exception:
                   pass
 
-          # Génère entrées debug pour ce cycle
           new_entries = []
 
-          # Entrée globale du cycle
           new_entries.append({
               'ts':      ts,
               'level':   'INFO',
@@ -222,7 +348,6 @@ jobs:
               'run_id': f'run_{run}'
           })
 
-          # Entrée par signal
           signals = files_data.get('current_signals.json', {}).get('signals', {})
           for sym, sig in signals.items():
               new_entries.append({
@@ -239,7 +364,6 @@ jobs:
                   'run_id':  f'run_{run}'
               })
 
-          # Régime global
           regime = files_data.get('regime.json', {}).get('global', {})
           if regime:
               new_entries.append({
@@ -256,7 +380,6 @@ jobs:
                   'run_id':  f'run_{run}'
               })
 
-          # Risk metrics
           risk = files_data.get('risk_metrics.json', {})
           dd   = risk.get('drawdown', {})
           lv   = risk.get('leverage', {})
@@ -275,7 +398,6 @@ jobs:
                   'run_id':  f'run_{run}'
               })
 
-          # Merge et sauvegarde (500 entrées max)
           all_logs = (existing_logs + new_entries)[-500:]
           debug_path.write_text(json.dumps({
               'timestamp': ts,
@@ -302,13 +424,6 @@ jobs:
           python3 << 'EOF'
           import json, datetime
           from pathlib import Path
-
-          # ── IMPORTANT : Ce step NE modifie PAS ibkr_status.json ──────────
-          # ibkr_status.json est géré par ibkr_watcher.py (Oracle A1)
-          # push_ibkr_status() tourne toutes les 30s avec authenticated=True
-          # Écraser ce fichier ici introduirait des données fausses
-          # (port 4002 / 5055 inaccessible depuis GitHub Actions runner)
-          # ─────────────────────────────────────────────────────────────────
 
           status_path = Path('docs/signals/ibkr_status.json')
           ts          = datetime.datetime.utcnow().isoformat()
@@ -353,8 +468,6 @@ jobs:
             echo "📋 Fichiers JSON trouvés dans signals/ :"
             ls -la signals/*.json
 
-            # Copie tous les JSON sauf ibkr_status.json
-            # (géré par le watcher Oracle, on ne l'écrase pas)
             for f in signals/*.json; do
               fname=$(basename "$f")
               if [ "$fname" != "ibkr_status.json" ]; then
@@ -398,7 +511,6 @@ jobs:
             echo "✅ Fichiers par défaut créés dans docs/signals/"
           fi
 
-          # .nojekyll pour servir les JSON sans traitement Jekyll
           touch docs/.nojekyll
           echo "✅ .nojekyll présent"
 
@@ -415,12 +527,9 @@ jobs:
 
           git pull origin HEAD --rebase --autostash || true
 
-          # Stage docs/signals/ mais PAS ibkr_status.json
-          # (le watcher Oracle fait son propre push séparé)
           git add docs/signals/
           git add docs/.nojekyll 2>/dev/null || true
 
-          # Dé-stage ibkr_status.json s'il a été ajouté par accident
           git reset HEAD docs/signals/ibkr_status.json 2>/dev/null || true
 
           if git diff --cached --quiet; then
