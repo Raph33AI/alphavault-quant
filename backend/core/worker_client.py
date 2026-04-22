@@ -221,27 +221,33 @@ class WorkerClient:
 
     # ── Ordre des providers ────────────────────────────────
     def _get_provider_order(self, preferred: str = "auto") -> List[str]:
-        """Construit la liste ordonnée des providers disponibles."""
+        """
+        FIX v2.1 : Ollama-only mode.
+        
+        Avant : Gemini (429) → Groq (400) → Ollama → Déterministe
+                = 4s timeout × 350 symboles = 23 min perdues
+        
+        Après : Ollama (Oracle local si accessible) → Déterministe
+                = 1.1s si disponible, sinon immédiat déterministe
+        
+        Depuis GitHub Actions : Ollama = localhost:11434 non accessible
+        → retourne [] → mode déterministe immédiat (rapide + fiable)
+        
+        Sur Oracle (standalone trader) : Ollama accessible ✅
+        """
         order = []
 
-        # 1. Gemini (si proxy disponible)
-        gemini_ok = self._workers["ai_proxy"].available
-        if gemini_ok is None:
-            self.check_all_workers()
-            gemini_ok = self._workers["ai_proxy"].available
-        if gemini_ok:
-            order.append("gemini")
-
-        # 2. Groq (si clé API configurée)
-        if self._groq_key:
-            order.append("groq")
-
-        # 3. Ollama (local Oracle)
+        # ── Ollama UNIQUEMENT (pas de Gemini, pas de Groq) ────────
+        # Sur GitHub Actions : _check_ollama_available() → False (timeout 3s)
+        # Sur Oracle         : _check_ollama_available() → True ✅
         if self._check_ollama_available():
             order.append("ollama")
+            logger.debug("✅ Provider: Ollama local Oracle")
+        else:
+            logger.debug("ℹ Ollama non accessible → mode déterministe")
 
-        # Si preferred spécifié → mettre en tête
-        if preferred != "auto" and preferred in order:
+        # Si preferred spécifié et disponible → priorité
+        if preferred not in ("auto", "ollama") and preferred in order:
             order.remove(preferred)
             order.insert(0, preferred)
 
@@ -372,29 +378,30 @@ class WorkerClient:
         max_tokens: int,
     ) -> Optional[str]:
         """
-        Appel Ollama local sur Oracle VM.
-
-        Installation sur Oracle VM (AMD Micro) :
-          curl -fsSL https://ollama.com/install.sh | sh
-          ollama pull phi3:mini   # 3.8B Q4 ≈ 2.3GB, adapté 4GB total
-          ollama serve            # démarre sur :11434
-
-        Performance : ~5-15 tok/s sur OCPU → ~15-30s pour 150 tokens
-        Suffisant pour 1 décision toutes les 30s.
+        Appel Ollama local Oracle A1.
+        Modèles disponibles : llama3.2:3b (primary) | qwen2.5:7b | mistral:7b
+        Latence mesurée : 1141ms ✅
         """
-        if not self._ollama_url:
+        ollama_url = getattr(self, '_ollama_url',
+                     getattr(self.settings, 'ollama_host', 'http://localhost:11434'))
+
+        if not ollama_url:
             return None
 
-        url = f"{self._ollama_url}/api/generate"
+        url = f"{ollama_url}/api/generate"
+
+        # Modèle primaire Oracle (llama3.2:3b — 1141ms)
+        model = getattr(self.settings, 'OLLAMA_MODEL',
+                getattr(self.settings, 'ollama_model', 'llama3.2:3b-instruct-q4_K_M'))
 
         full_prompt = f"{system}\n\n{prompt}" if system else prompt
         payload = {
-            "model":  self.OLLAMA_MODELS["default"],
+            "model":  model,
             "prompt": full_prompt,
             "stream": False,
             "options": {
-                "temperature":  0.3,
-                "num_predict":  min(max_tokens, 512),  # Limité pour rapidité
+                "temperature":  float(getattr(self.settings, 'ollama_temperature', 0.3)),
+                "num_predict":  min(max_tokens, 512),
                 "num_ctx":      2048,
             },
         }
@@ -403,12 +410,9 @@ class WorkerClient:
         resp.raise_for_status()
         data = resp.json()
 
-        response = data.get("response", "")
+        response = data.get("response", "").strip()
         if response:
-            logger.info(
-                f"✅ Ollama [{self.OLLAMA_MODELS['default']}] local | "
-                f"{len(response)} chars"
-            )
+            logger.info(f"✅ Ollama [{model}] Oracle | {len(response)} chars")
             return response
         return None
 
