@@ -1,9 +1,10 @@
 // ============================================================
-// api_client.js — AlphaVault Quant v3.0
+// api_client.js — AlphaVault Quant v3.1
 // ✅ Auto-détection GitHub Pages / local / custom domain
+// ✅ NaN-safe JSON parsing (NaN/Infinity → null avant parse)
 // ✅ Cache intelligent 45s avec stale fallback
-// ✅ fetchJSON exposé publiquement pour exec log
-// ✅ Parallel fetch optimisé
+// ✅ portfolio.json — vraies positions IBKR Paper/Live
+// ✅ ibkr_status.json — champs enrichis v3.4 (trading_mode, aliases)
 // ============================================================
 
 const ApiClient = (() => {
@@ -11,8 +12,6 @@ const ApiClient = (() => {
   // ── Base URL Auto-Detect ─────────────────────────────────
   const BASE = (() => {
     const { hostname, pathname } = window.location;
-
-    // GitHub Pages: https://raph33ai.github.io/alphavault-quant/
     if (hostname.includes('github.io')) {
       const parts    = pathname.split('/').filter(Boolean);
       const repoName = parts[0] || '';
@@ -20,21 +19,34 @@ const ApiClient = (() => {
       console.log(`📡 GitHub Pages mode | BASE: ${base}`);
       return base;
     }
-
-    // Local dev
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
       console.log('📡 Local dev mode | BASE: ../signals');
       return '../signals';
     }
-
-    // Custom domain (alphavault-ai.com etc.)
     console.log('📡 Custom domain mode | BASE: /signals');
     return '/signals';
   })();
 
   // ── Cache ────────────────────────────────────────────────
   const CACHE     = new Map();
-  const CACHE_TTL = 45_000; // 45 secondes
+  const CACHE_TTL = 45_000;
+
+  // ── NaN-safe JSON parser ─────────────────────────────────
+  // Python json.dumps écrit NaN/Infinity qui sont invalides en JSON standard.
+  // Cette fonction nettoie le texte brut avant JSON.parse().
+  function _parseJSON(text) {
+    try {
+      // Remplace NaN, Infinity, -Infinity par null (valide en JSON)
+      const cleaned = text
+        .replace(/:\s*NaN/g,       ': null')
+        .replace(/:\s*Infinity/g,  ': null')
+        .replace(/:\s*-Infinity/g, ': null');
+      return JSON.parse(cleaned);
+    } catch (e) {
+      // Si le nettoyage ne suffit pas → erreur claire sans boucle
+      throw new Error(`JSON parse failed: ${e.message}`);
+    }
+  }
 
   // ── Default Data ─────────────────────────────────────────
   const DEFAULTS = {
@@ -56,25 +68,34 @@ const ApiClient = (() => {
     },
     'regime.json': {
       global: {
-        regime_label:      'initializing',
-        regime_score:      0,
-        confidence:        0,
-        allow_long:        false,
-        allow_short:       false,
-        reduce_exposure:   true,
-        leverage_allowed:  false,
-        favor_options:     false,
-        probabilities:     {},
+        regime_label:     'initializing',
+        regime_score:     0,
+        confidence:       0,
+        allow_long:       false,
+        allow_short:      false,
+        reduce_exposure:  true,
+        leverage_allowed: false,
+        favor_options:    false,
+        probabilities:    {},
       },
       macro:      {},
       per_symbol: {},
     },
     'portfolio.json': {
-      total_value: 100000,
-      weights:     {},
-      positions:   {},
-      cash_pct:    1.0,
-      timestamp:   null,
+      // Valeurs par défaut — remplacées par les vraies positions IBKR (ibkr_watcher v3.4)
+      account:        'DUM895161',
+      trading_mode:   'paper',
+      total_value:    100000,
+      cash_value:     100000,
+      cash_pct:       1.0,
+      buying_power:   100000,
+      unrealized_pnl: 0,
+      realized_pnl:   0,
+      n_positions:    0,
+      weights:        {},
+      positions:      {},
+      timestamp:      null,
+      source:         'default',
     },
     'risk_metrics.json': {
       drawdown: {
@@ -84,9 +105,9 @@ const ApiClient = (() => {
         hit_daily_limit:  false,
       },
       leverage: {
-        current_leverage:   0,
-        allowed_leverage:   1.5,
-        is_over_leveraged:  false,
+        current_leverage:  0,
+        allowed_leverage:  1.5,
+        is_over_leveraged: false,
       },
       var_metrics: {},
       timestamp:   null,
@@ -107,11 +128,14 @@ const ApiClient = (() => {
       timestamp: null,
     },
     'performance_metrics.json': {
+      // NaN remplacé par null au parse — valeurs null affichées comme "--" dans l'UI
       portfolio_value: 100000,
       n_signals:       0,
       n_executions:    0,
       llm_mode:        'deterministic',
       strategy_perf:   {},
+      models:          [],
+      ensemble:        { weights: {}, ensemble_auc: null, walk_forward_auc: null },
       timestamp:       null,
     },
     'manual_order_result.json': {
@@ -121,11 +145,24 @@ const ApiClient = (() => {
       history:      [],
     },
     'ibkr_status.json': {
-      reachable:   false,
-      mode:        'paper',
-      latency_ms:  null,
-      timestamp:   null,
-      error:       'Not yet checked',
+      // Champs normalisés — watcher v3.4 écrit tous ces champs
+      ibkr_connected:  false,
+      authenticated:   false,
+      account:         'DUM895161',
+      trading_mode:    'paper',   // clé principale
+      mode:            'paper',   // alias rétro-compat
+      paper_trading:   true,
+      paper_account:   'DUM895161',
+      live_account:    'U21160314',
+      net_liquidation: 0,
+      available_funds: 0,
+      unrealized_pnl:  0,
+      buying_power:    0,
+      orders_executed: 0,
+      orders_failed:   0,
+      timestamp:       null,
+      watcher_version: '3.4',
+      error:           null,
     },
     'debug_log.json': {
       timestamp: null,
@@ -133,10 +170,11 @@ const ApiClient = (() => {
       logs:      [],
     },
     'performance_history.json': {
-      cycles: [], n_cycles: 0,
-      metrics: { avg_accuracy:0, win_rate:0, rolling_sharpe:0, n_cycles:0 },
+      cycles:   [],
+      n_cycles: 0,
+      metrics:  { avg_accuracy: 0, win_rate: 0, rolling_sharpe: 0, n_cycles: 0 },
     },
-    'alerts.json': { total:0, alerts:[] },
+    'alerts.json': { total: 0, alerts: [] },
   };
 
   // ── Core Fetch ───────────────────────────────────────────
@@ -145,7 +183,7 @@ const ApiClient = (() => {
     const now = Date.now();
     const hit = CACHE.get(key);
 
-    // Retourne le cache s'il est frais
+    // Cache frais
     if (!bustCache && hit && (now - hit.ts) < CACHE_TTL) {
       return hit.data;
     }
@@ -162,21 +200,21 @@ const ApiClient = (() => {
 
       if (!resp.ok) throw new Error(`HTTP ${resp.status} — ${url}`);
 
-      const data = await resp.json();
+      // ✅ NaN-safe : text() → clean → JSON.parse (jamais resp.json() direct)
+      const text = await resp.text();
+      const data = _parseJSON(text);
+
       CACHE.set(key, { data, ts: now });
       return data;
 
     } catch (err) {
-      // Log discret (pas de spam console)
       if (err.name !== 'AbortError') {
         console.warn(`⚠ ApiClient: ${filename} → ${err.message}`);
       }
-      // Retourne le cache périmé si disponible (stale-while-revalidate)
+      // Stale cache si disponible
       if (hit?.data) {
-        console.log(`📦 Stale cache returned for: ${filename}`);
         return hit.data;
       }
-      // Sinon valeur par défaut
       return DEFAULTS[filename] ?? {};
     }
   }
@@ -221,11 +259,8 @@ const ApiClient = (() => {
 
   // ── Cache Management ─────────────────────────────────────
   function clearCache(filename = null) {
-    if (filename) {
-      CACHE.delete(filename);
-    } else {
-      CACHE.clear();
-    }
+    if (filename) CACHE.delete(filename);
+    else          CACHE.clear();
   }
 
   function getCacheAge(filename) {
@@ -245,13 +280,12 @@ const ApiClient = (() => {
     return stats;
   }
 
-  // ── Getters ──────────────────────────────────────────────
+  // ── Public API ───────────────────────────────────────────
   return {
-    // Main fetch methods
     fetchAll,
     fetchJSON,
 
-    // Individual endpoints
+    // Endpoints individuels
     getSignals:      (b) => fetchJSON('current_signals.json',     b),
     getPortfolio:    (b) => fetchJSON('portfolio.json',           b),
     getRisk:         (b) => fetchJSON('risk_metrics.json',        b),
@@ -261,12 +295,12 @@ const ApiClient = (() => {
     getPerformance:  (b) => fetchJSON('performance_metrics.json', b),
     getSystemStatus: (b) => fetchJSON('system_status.json',       b),
 
-    // Extra endpoints
-    getManualOrders: (b) => fetchJSON('manual_order_result.json', b),
-    getIBKRStatus:   (b) => fetchJSON('ibkr_status.json',         b),
-    getDebugLog:     (b) => fetchJSON('debug_log.json',           b),
-    getPerformanceHistory: (b) => fetchJSON('performance_history.json', b),
-    getAlerts:            (b) => fetchJSON('alerts.json',              b),
+    // Endpoints extra
+    getManualOrders:      (b) => fetchJSON('manual_order_result.json',  b),
+    getIBKRStatus:        (b) => fetchJSON('ibkr_status.json',          b),
+    getDebugLog:          (b) => fetchJSON('debug_log.json',            b),
+    getPerformanceHistory:(b) => fetchJSON('performance_history.json',  b),
+    getAlerts:            (b) => fetchJSON('alerts.json',               b),
 
     // Cache utils
     clearCache,
