@@ -1,23 +1,35 @@
 {
-  "overall": "standalone_active",
+  "overall": "healthy",
   "llm_available": false,
-  "workers": {},
+  "workers": {
+    "finance_hub": {
+      "ok": false,
+      "note": "Not reachable from standalone mode"
+    },
+    "ai_proxy": {
+      "ok": false,
+      "note": "Gemini quota exceeded"
+    }
+  },
   "agents_active": 0,
   "dd_halt": false,
-  "dry_run": true,
-  "updated_at": "2026-04-20T05:04:59Z",
-  "fixed_at": "2026-04-22T09:31:21.983190Z",
+  "dry_run": false,
+  "mode": "deterministic",
+  "session": "us_regular",
+  "required_ok": true,
+  "updated_at": "2026-04-22T15:05:11+00:00",
+  "fixed_at": "2026-04-22T15:05:11.885165+00:00",
   "standalone_trader": {
     "active": true,
-    "last_cycle": "2026-04-22T15:20:11.958156+00:00",
+    "last_cycle": "2026-04-22T15:05:11.885165+00:00",
     "universe_size": 386,
     "signals_count": 5,
     "orders_emitted": 5,
     "session": "us_regular",
-    "cycle_total": 11,
+    "cycle_total": 10,
     "dry_run": false,
     "data_source": "yfinance",
     "version": "4.1"
   },
-  "pushed_at": "2026-04-22T15:28:53.115685+00:00"
+  "pushed_at": "2026-04-22T15:29:27.176227+00:00"
 }
