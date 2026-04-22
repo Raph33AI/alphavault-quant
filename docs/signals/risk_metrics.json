@@ -1,55 +1,31 @@
 {
-  "timestamp": "2026-04-22T15:26:09.577105Z",
+  "var_metrics": {
+    "var_95": -0.0605,
+    "cvar_95": -0.0817,
+    "sharpe_ratio": 0.4,
+    "sortino_ratio": 0.48,
+    "calmar_ratio": 0.28,
+    "hurst_exponent": 0.52,
+    "information_ratio": 0.32
+  },
   "drawdown": {
     "current_drawdown": 0.0,
-    "halt_active": false,
-    "daily_pnl_pct": 0.0,
-    "halt_reason": "",
-    "exposure_mult": 1.0
+    "max_drawdown": 0.0,
+    "drawdown_duration": 0
   },
   "leverage": {
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
     "current_leverage": 0.0,
-    "is_over_leveraged": false,
-    "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+    "over_leveraged": false
   },
-  "correlation": {
-    "avg_correlation": 0.549,
-    "diversification": 0.451,
-    "corr_spike": false,
-    "n_clusters": 1,
-    "best_diversifiers": [
-      "TLT",
-      "GLD",
-      "EEM"
-    ]
+  "volatility": {
+    "daily_vol": 0.0368,
+    "annualized_vol": 0.5841,
+    "realized_vol_30d": 0.035
   },
-  "greeks": {
-    "portfolio_greeks": {
-      "delta": 0.0,
-      "gamma": 0.0,
-      "vega": 0.0,
-      "theta": 0.0
-    },
-    "greeks_by_symbol": {},
-    "breaches": {
-      "delta": false,
-      "vega": false,
-      "gamma": false
-    },
-    "recommendations": [],
-    "portfolio_balanced": true
-  },
-  "feature_drift": {
-    "features_analyzed": 0,
-    "drifted_features": [],
-    "psi_scores": {},
-    "ks_scores": {},
-    "retrain_recommended": false,
-    "overall_drift": "stable",
-    "status": "baseline_set"
-  },
-  "var_metrics": {}
+  "portfolio_value": 100000.0,
+  "universe_size": 386,
+  "n_signals": 5,
+  "source": "standalone_momentum_v4.1",
+  "updated_at": "2026-04-22T16:25:11.969103+00:00",
+  "pushed_at": "2026-04-22T16:25:28.327350+00:00"
 }
