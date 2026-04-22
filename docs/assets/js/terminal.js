@@ -1358,38 +1358,47 @@ const Terminal = (() => {
   function _updateTopbar(data) {
     const rawStatus = data.status || {};
 
+    // ✅ FIX #1 — dry_run depuis standalone_trader (source of truth)
+    // Le top-level dry_run peut être stale depuis le dernier run GitHub Actions
+    const dryRun = rawStatus.standalone_trader?.dry_run
+                ?? rawStatus.dry_run
+                ?? true;
+
+    // ✅ FIX #2 — Session depuis standalone_trader si disponible
+    const sess = rawStatus.standalone_trader?.session
+              || rawStatus.session
+              || 'closed';
+
+    // ✅ FIX #3 — Standalone actif = système OK même si workers:{} stale
+    const standaloneOk = rawStatus.standalone_trader?.active === true;
+
     // ── Normalisation défensive ────────────────────────────────
     const status = {
       ...rawStatus,
-      // ✅ FIX — checks (JSON v2) prioritaire sur workers (v1) et sur DEFAULTS {}
-      // ?? ne bypass pas {} car {} n'est PAS null/undefined → on force checks en priorité 1
       workers: rawStatus.checks   !== undefined ? rawStatus.checks
-             : rawStatus.workers  !== undefined ? rawStatus.workers
-             : {},
+            : rawStatus.workers  !== undefined ? rawStatus.workers
+            : {},
       mode:    rawStatus.mode     ?? rawStatus.llm_mode ?? 'deterministic',
-      session: rawStatus.session  ?? 'closed',
-      dry_run: rawStatus.dry_run  ?? false,
+      session: sess,    // ← session corrigée
+      dry_run: dryRun,  // ← dry_run corrigé
     };
 
     // ── Détermine si les workers critiques sont OK ─────────────────
     const _workersObj = status.workers;
     const _hasWorkers = Object.keys(_workersObj).length > 0;
 
-    // Méthode 1 : objet workers/checks présent dans le JSON
-    // Méthode 2 : required_ok (fallback si JSON sans clé workers)
+    // ✅ FIX — Standalone actif = criticalOk même si workers:{} stale
     const _criticalOk = _hasWorkers
       ? ['finance_hub', 'ai_proxy'].every(key => {
           const w = _workersObj[key];
           return w === true || w?.ok === true;
         })
-      : rawStatus.required_ok === true;
+      : standaloneOk || rawStatus.required_ok === true;
 
     // ── Override overall ──────────────────────────────────────────
-    // "closed"  = marché fermé        → pas une erreur
-    // "warning" = signaux stale        → pas une erreur (hors heures de trading)
-    // "degraded"/"initializing"        → override si workers critiques OK
+    // ✅ FIX — Inclut 'standalone_active' dans la liste des états overridables
     if (_criticalOk && (!status.overall ||
-        ['degraded', 'initializing', 'unknown', 'warning', 'closed'].includes(status.overall)
+        ['degraded','initializing','unknown','warning','closed','standalone_active'].includes(status.overall)
     )) {
       status.overall = 'healthy';
     }
@@ -1404,63 +1413,65 @@ const Terminal = (() => {
     if ((_nowLog - _lastStatusLog) > 300_000) {
       _lastStatusLog = _nowLog;
 
-      // LLM
-      const llmAvail = status.llm_available;
+      const llmAvail = rawStatus.llm_available;
       console.groupCollapsed('%c[AlphaVault] Status Debug', 'color:#3b82f6;font-weight:bold;font-size:11px');
+
+      // LLM
       console.log(
-          `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
-          `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
+        `%c LLM: ${llmAvail ? 'AVAILABLE' : 'UNAVAILABLE'} → dot ${llmAvail ? 'GREEN' : 'RED'}`,
+        `color:${llmAvail ? '#10b981' : '#ef4444'};font-weight:bold`
       );
       if (!llmAvail) {
-          console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
-          console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
-          console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
+        console.warn(' → Cause probable: Gemini 429 quota dépassé (voir logs GitHub Actions)');
+        console.log('%c → Le système fonctionne en mode déterministe ML (XGBoost + LightGBM + LogReg)', 'color:#10b981');
+        console.log('%c → Les signaux ML sont générés normalement — LLM est optionnel et additif seulement', 'color:#10b981');
       }
 
-      // Hub
-      const hubOk = status.workers?.finance_hub === true
-             || status.workers?.finance_hub?.ok === true;
+      // HUB — ✅ FIX : fallback sur standaloneOk
+      const hubOkLog = _hasWorkers
+        ? (_workersObj.finance_hub === true || _workersObj.finance_hub?.ok === true)
+        : standaloneOk;
       console.log(
-          `%c HUB: ${hubOk ? 'ONLINE' : 'OFFLINE'} → dot ${hubOk ? 'GREEN' : 'ORANGE'}`,
-          `color:${hubOk ? '#10b981' : '#f59e0b'};font-weight:bold`
+        `%c HUB: ${hubOkLog ? 'ONLINE' : 'OFFLINE'} → dot ${hubOkLog ? 'GREEN' : 'ORANGE'}`,
+        `color:${hubOkLog ? '#10b981' : '#f59e0b'};font-weight:bold`
       );
-      if (!hubOk) {
-          console.warn(' → Worker finance-hub-api non joignable depuis GitHub Actions');
-          console.log(' → URL configurée:', status.workers?.finance_hub_url || 'N/A');
+      if (!hubOkLog) {
+        console.warn(' → Worker finance-hub-api non joignable depuis GitHub Actions');
+        if (standaloneOk) console.log('%c → Standalone Oracle actif — ordres exécutés via yfinance + IBKR', 'color:#10b981');
       }
 
-      // IBKR
+      // IBKR — ✅ FIX : affiche le vrai dry_run
       console.log('%c IBKR: ALWAYS ORANGE in cloud (expected)', 'color:#f59e0b;font-weight:bold');
-      console.log('%c → GitHub Actions ne peut pas atteindre TWS Gateway (firewall). Normal en paper mode cloud.', 'color:#94a3b8');
-      console.log(`%c → L'exécution auto se fait via IBKRExecutor Python côté runner. DRY_RUN=${status.dry_run}`, 'color:#94a3b8');
+      console.log(
+        `%c → DRY_RUN=${dryRun} | Source: standalone_trader.dry_run=${rawStatus.standalone_trader?.dry_run ?? 'N/A'} | top-level=${rawStatus.dry_run ?? 'N/A'}`,
+        'color:#94a3b8'
+      );
 
       // SYS
       const _overallLog = status.overall;
       console.log(
-          `%c SYS: ${_overallLog || 'unknown'} → dot ${_overallLog === 'healthy' ? 'GREEN' : _overallLog === 'degraded' ? 'ORANGE' : 'RED'}`,
-          `color:${_overallLog === 'healthy' ? '#10b981' : _overallLog === 'degraded' ? '#f59e0b' : '#ef4444'};font-weight:bold`
+        `%c SYS: ${_overallLog || 'unknown'} → dot ${_overallLog === 'healthy' ? 'GREEN' : _overallLog === 'degraded' ? 'ORANGE' : 'RED'}`,
+        `color:${_overallLog === 'healthy' ? '#10b981' : _overallLog === 'degraded' ? '#f59e0b' : '#ef4444'};font-weight:bold`
       );
-      if (_overallLog !== 'healthy') {
-          console.warn(' → Vérifier: docs/signals/system_status.json');
-          console.log(' Workers:', JSON.stringify(status.workers, null, 2));
-      }
 
-      console.log(`%c Mode: ${status.mode || 'deterministic'}`, 'color:#8b5cf6');
-      console.log(`%c Session: ${status.session || 'closed'} | DryRun: ${status.dry_run}`, 'color:#64748b');
-      console.log(' Full status:', status);
+      // Standalone
+      console.log(
+        `%c Standalone: active=${standaloneOk} | cycle=#${rawStatus.standalone_trader?.cycle_total ?? '?'} | session=${sess} | signals=${rawStatus.standalone_trader?.signals_count ?? '?'}`,
+        'color:#8b5cf6;font-weight:bold'
+      );
+      console.log(`%c Mode: ${status.mode || 'deterministic'} | DryRun: ${dryRun}`, 'color:#64748b');
       console.groupEnd();
     }
 
-    // ── Variables DOM — multi-source (compatibilité JSON v1 et v2) ────────
-    // llm_available : top-level (v2) → llm.gemini_proxy (v2 nested) → false
+    // ── Variables DOM — multi-source ─────────────────────────────
     const llmAvail = rawStatus.llm_available !== undefined
-                   ? rawStatus.llm_available
-                   : rawStatus.llm?.gemini_proxy === true;
+                  ? rawStatus.llm_available
+                  : rawStatus.llm?.gemini_proxy === true;
 
-    // hubOk : workers présents → check direct | absent → required_ok fallback
+    // ✅ FIX — hubOk fallback sur standaloneOk
     const hubOk = _hasWorkers
       ? (_workersObj.finance_hub === true || _workersObj.finance_hub?.ok === true)
-      : rawStatus.required_ok === true;
+      : standaloneOk;
 
     const overall = status.overall;
 
@@ -1471,20 +1482,19 @@ const Terminal = (() => {
     // Regime pill
     const badge = document.getElementById('regime-badge');
     if (badge) {
-        badge.innerHTML = `<i class="fa-solid ${REGIME_ICON[rl] || 'fa-question'}" style="margin-right:5px"></i>${REGIME_MAP[rl] || rl.replace(/_/g,' ').toUpperCase()}`;
-        badge.style.borderColor = REGIME_COLOR[rl] || '#64748b';
-        badge.style.color       = REGIME_COLOR[rl] || '#64748b';
+      badge.innerHTML = `<i class="fa-solid ${REGIME_ICON[rl] || 'fa-question'}" style="margin-right:5px"></i>${REGIME_MAP[rl] || rl.replace(/_/g,' ').toUpperCase()}`;
+      badge.style.borderColor = REGIME_COLOR[rl] || '#64748b';
+      badge.style.color       = REGIME_COLOR[rl] || '#64748b';
     }
 
     // Status dots
     // ✅ LLM : WARN (jamais RED) — Gemini quota ≠ erreur système
-    // Le ML déterministe (XGBoost+LightGBM+LogReg) fonctionne sans LLM
     _setDot('llm',  llmAvail ? 'ok' : 'warn');
     _setDot('hub',  hubOk    ? 'ok' : 'warn');
     _setDot('ibkr', 'warn');   // Always paper/unreachable in cloud — expected
     _setDot('sys',
-        overall === 'healthy'  ? 'ok'   :
-        overall === 'degraded' ? 'warn' : 'error'
+      overall === 'healthy'  ? 'ok'   :
+      overall === 'degraded' ? 'warn' : 'error'
     );
 
     // Tooltips dynamiques
@@ -1493,33 +1503,32 @@ const Terminal = (() => {
     const pillSys  = document.getElementById('pill-sys');
 
     if (pillLLM)  pillLLM.title  = llmAvail
-        ? 'LLM Online — Gemini active'
-        : 'LLM Offline — Deterministic ML mode active (see console for details)';
-    if (pillIBKR) pillIBKR.title = 'IBKR Paper Mode — TWS unreachable from GitHub Actions (expected in cloud)';
-    if (pillSys)  pillSys.title  = `System: ${overall || 'unknown'} | Mode: ${status.mode || 'deterministic'}`;
+      ? 'LLM Online — Gemini active'
+      : 'LLM Offline — Deterministic ML mode active (see console for details)';
+    if (pillIBKR) pillIBKR.title = `IBKR Paper Mode — DRY_RUN=${dryRun} | TWS unreachable from GitHub Actions (expected in cloud)`;
+    if (pillSys)  pillSys.title  = `System: ${overall || 'unknown'} | Mode: ${status.mode || 'deterministic'} | Standalone: ${standaloneOk ? 'active ✓' : 'idle'}`;
 
-    // Session badge
-    const sess   = status.session || 'closed';
+    // ✅ FIX — Session badge depuis standalone_trader
     const sessEl = document.getElementById('session-badge');
     if (sessEl) {
-        sessEl.textContent = sess.toUpperCase();
-        sessEl.className   = `market-session ${sess}`;
+      sessEl.textContent = sess.toUpperCase();
+      sessEl.className   = `market-session ${sess}`;
     }
 
-    // Dry run badge
+    // ✅ FIX — Dry run badge depuis standalone_trader
     const drEl = document.getElementById('dry-run-badge');
     if (drEl) {
-        drEl.textContent = status.dry_run === false ? 'LIVE' : 'PAPER';
-        drEl.className   = status.dry_run === false ? 'dry-run-badge live' : 'dry-run-badge';
+      drEl.textContent = dryRun === false ? 'LIVE' : 'PAPER';
+      drEl.className   = dryRun === false ? 'dry-run-badge live' : 'dry-run-badge';
     }
 
-    // Sidebar session
+    // ✅ FIX — Sidebar session depuis standalone_trader
     const swSess = document.getElementById('sw-session');
     if (swSess) {
-        swSess.textContent = sess.toUpperCase();
-        swSess.className   = `sw-session ${sess}`;
+      swSess.textContent = sess.toUpperCase();
+      swSess.className   = `sw-session ${sess}`;
     }
-    }
+  }
 
   function _setDot(key, state) {
     const dot  = document.getElementById(`dot-${key}`);
@@ -1529,27 +1538,51 @@ const Terminal = (() => {
   }
 
   // ── Auto-Trading Badge ───────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  // _updateAutoTradingBadge — FIX dry_run stale
+  // Lit depuis standalone_trader.dry_run (source of truth)
+  // car le top-level dry_run peut être stale (April 20)
+  // ════════════════════════════════════════════════════════
   function _updateAutoTradingBadge(data) {
     const status  = data.status || {};
-    const regime  = data.regime?.global || {};
     const badge   = document.getElementById('auto-trading-badge');
     if (!badge) return;
 
-    const isMarketOpen = ['regular','premarket','postmarket']
-      .includes(status.session || '');
-    const isActive     = isMarketOpen && !status.dry_run;
+    // ✅ FIX — Priorité : standalone_trader.dry_run > top-level dry_run
+    // Le top-level peut être stale depuis le dernier run GitHub Actions
+    const dryRun = status.standalone_trader?.dry_run
+                ?? status.dry_run
+                ?? true;
 
-    badge.className   = `auto-trading-badge ${isActive ? 'active' : 'inactive'}`;
-    badge.title       = isActive
-      ? `Auto-trading ACTIVE — ${status.session} session`
-      : status.dry_run
-        ? 'Paper mode (DRY_RUN=true) — enable in workflow to auto-trade'
-        : 'Market closed — auto-trading paused';
+    // ✅ FIX — Session depuis standalone_trader si disponible
+    const session = status.standalone_trader?.session
+                || status.session
+                || 'closed';
 
-    // Last cycle timestamp
+    const isMarketOpen = ['us_regular','us_premarket','us_postmarket',
+                          'eu_regular','asia_regular','me_regular',
+                          'regular','premarket','postmarket']
+                          .includes(session);
+
+    // ✅ Standalone actif = trading actif même sans session formelle
+    const standaloneActive = status.standalone_trader?.active === true;
+    const isActive = (isMarketOpen || standaloneActive) && !dryRun;
+
+    badge.className = `auto-trading-badge ${isActive ? 'active' : 'inactive'}`;
+    badge.title = isActive
+      ? `Auto-trading ACTIVE — ${session} | Standalone v${status.standalone_trader?.version || '4.1'}`
+      : dryRun
+        ? `DRY_RUN actif — vérifier system_status.json (dry_run stale depuis April 20)`
+        : `Market closed — session: ${session}`;
+
+    // Last cycle depuis standalone_trader (plus précis)
     const lastCycleEl = document.getElementById('auto-last-cycle');
-    if (lastCycleEl && status.timestamp) {
-      lastCycleEl.textContent = `Last cycle: ${_fmtTime(status.timestamp)}`;
+    if (lastCycleEl) {
+      const lastCycle = status.standalone_trader?.last_cycle || status.timestamp;
+      const cycleN    = status.standalone_trader?.cycle_total || '';
+      lastCycleEl.textContent = lastCycle
+        ? `Last cycle: ${_fmtTime(lastCycle)}${cycleN ? ` (#${cycleN})` : ''}`
+        : 'Last cycle: --';
     }
   }
 
@@ -1744,7 +1777,13 @@ const Terminal = (() => {
     const status = data.status            || {};
     const sw     = data.strategy?.weights || {};
 
-    // Index cards
+    // ✅ FIX — Lire dry_run, session, cycle depuis standalone_trader
+    const dryRun        = status.standalone_trader?.dry_run ?? status.dry_run ?? true;
+    const session       = status.standalone_trader?.session  || status.session || 'closed';
+    const cycleN        = status.standalone_trader?.cycle_total;
+    const standaloneActive = status.standalone_trader?.active === true;
+
+    // ── Index Cards ──────────────────────────────────────────────
     ['SPY','QQQ','IWM'].forEach(sym => {
       const s     = sigs[sym] || {};
       const price = parseFloat(s.price || 0);
@@ -1759,13 +1798,11 @@ const Terminal = (() => {
         chgEl.className   = `ic-change ${cls}`;
       }
 
-      // Sparkline — generate synthetic prices from current price
       if (price > 0) {
         const sparkData = _generateSparkData(price, 20);
         Charts.renderSparkline(`spark-${sym.toLowerCase()}`, sparkData, chg >= 0);
       }
 
-      // Click to load chart
       const card = document.getElementById(`card-${sym.toLowerCase()}`);
       if (card && !card.dataset.bound) {
         card.dataset.bound = '1';
@@ -1773,7 +1810,7 @@ const Terminal = (() => {
       }
     });
 
-    // Regime card
+    // ── Regime Card ──────────────────────────────────────────────
     const rl = regime.regime_label || 'initializing';
     _txt('ic-regime-label', REGIME_MAP[rl] || rl);
     _txt('ic-regime-score', parseFloat(regime.regime_score || 0).toFixed(2));
@@ -1788,7 +1825,7 @@ const Terminal = (() => {
       ].map(f => `<span class="ir-flag ${f.ok ? 'ok' : 'no'}">${f.l}</span>`).join('');
     }
 
-    // Signal KPIs
+    // ── Signal KPIs ──────────────────────────────────────────────
     let buy=0, sell=0, neutral=0, exec=0;
     Object.values(sigs).forEach(s => {
       if (s.direction === 'buy')  buy++;
@@ -1801,9 +1838,10 @@ const Terminal = (() => {
     _txt('ov-neutral', neutral);
     _txt('ov-exec',    exec);
 
-    // Portfolio snapshot
-    const val  = parseFloat(port.total_value || 100000);
-    const cash = parseFloat(port.cash_pct || 1);
+    // ── Portfolio Snapshot ───────────────────────────────────────
+    // ✅ FIX — total_value || net_liquidation (champ IBKR watcher)
+    const val  = parseFloat(port.total_value || port.net_liquidation || 100000);
+    const cash = parseFloat(port.cash_pct   || 1);
     const dd   = parseFloat(risk.drawdown?.current_drawdown || 0);
     const lever= parseFloat(risk.leverage?.current_leverage || 0);
 
@@ -1817,31 +1855,43 @@ const Terminal = (() => {
       ddEl.className   = `ps-val mono ${dd < -0.02 ? 'down' : ''}`;
     }
 
-    // Health grid
-    _txt('hg-llm',  status.llm_available
-    ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Available'
-    : '<i class="fa-solid fa-gears"></i> Deterministic ML', true);
-    _txt('hg-ibkr', status.dry_run === false
-    ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Live Paper'
-    : '<i class="fa-solid fa-flask"></i> Paper Simulation', true);
-    const _hubOnline = status.workers?.finance_hub === true
-                || status.workers?.finance_hub?.ok === true;
+    // ── Health Grid ──────────────────────────────────────────────
+    // LLM
+    _txt('hg-llm', status.llm_available
+      ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Available'
+      : '<i class="fa-solid fa-gears"></i> Deterministic ML', true);
+
+    // ✅ FIX — IBKR basé sur dryRun réel (standalone_trader)
+    _txt('hg-ibkr', dryRun === false
+      ? '<i class="fa-solid fa-plug" style="color:var(--g)"></i> Live Paper (auto-exec)'
+      : '<i class="fa-solid fa-flask"></i> Paper Simulation', true);
+
+    // ✅ FIX — Hub fallback sur standaloneActive si workers:{}
+    const _workersObj = status.workers || {};
+    const _hasWorkers = Object.keys(_workersObj).length > 0;
+    const _hubOnline  = _hasWorkers
+      ? (_workersObj.finance_hub === true || _workersObj.finance_hub?.ok === true)
+      : standaloneActive;
     _txt('hg-hub', _hubOnline
       ? '<i class="fa-solid fa-circle-check" style="color:var(--g)"></i> Online'
       : '<i class="fa-solid fa-triangle-exclamation" style="color:var(--y)"></i> Offline', true);
 
-    const ts = data.signals?.timestamp;
-    _txt('hg-last', ts ? _fmtTime(ts) : '--');
+    // ✅ FIX — Last cycle depuis standalone_trader (plus précis + numéro de cycle)
+    const lastCycleTs = status.standalone_trader?.last_cycle
+                    || data.signals?.timestamp;
+    const cycleLabel  = cycleN != null ? ` · cycle #${cycleN}` : '';
+    _txt('hg-last', lastCycleTs ? `${_fmtTime(lastCycleTs)}${cycleLabel}` : '--');
 
-    // Strategy donut (mini)
+    // ── Strategy Donut (mini) ────────────────────────────────────
     Charts.renderStrategyDonutMini('ov-strategy-donut', sw);
 
-    // Top signals table (max 8)
+    // ── Top Signals Table (max 8) ────────────────────────────────
     _renderSignalsTable('ov-signals-tbody', sigs, 8, false);
 
+    // ── Overview Charts (lazy init) ──────────────────────────────
     if (!_ovChartsInited) {
-    setTimeout(_buildOvCharts, 300);
-}
+      setTimeout(_buildOvCharts, 300);
+    }
   }
 
   // Generate synthetic sparkline prices around a base price
