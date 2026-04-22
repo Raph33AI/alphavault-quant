@@ -34,20 +34,35 @@ from backend.core.strategy_allocator      import StrategyAllocator
 from backend.config.settings              import Settings
 
 # ── Agents spécialisés ──────────────────────────────────────
+# from backend.agents.multi_agent_council       import MultiAgentCouncil
+# from backend.agents.capital_rotation          import CapitalRotationAgent
+# from backend.agents.confidence_calibrator     import ConfidenceCalibrator
+# from backend.agents.correlation_surface       import CorrelationSurfaceAgent
+# from backend.agents.drawdown_guardian         import DrawdownGuardian
+# from backend.agents.execution_timing          import ExecutionTimingAgent
+# from backend.agents.feature_drift             import FeatureDriftAgent
+# from backend.agents.greeks_balancer           import GreeksBalancer
+# from backend.agents.hyperparameter_evolution  import HyperparameterEvolutionAgent
+# from backend.agents.market_impact             import MarketImpactModel
+# from backend.agents.self_evaluation           import SelfEvaluationAgent
+# from backend.agents.strategy_discovery        import StrategyDiscoveryAgent
+# from backend.agents.strategy_switching        import StrategySwitchingAgent
+# from backend.agents.strategy_weighting        import StrategyWeightingAgent
+
 from backend.agents.multi_agent_council       import MultiAgentCouncil
-from backend.agents.capital_rotation          import CapitalRotationAgent
+from backend.agents.capital_rotation_agent        import CapitalRotationAgent
 from backend.agents.confidence_calibrator     import ConfidenceCalibrator
-from backend.agents.correlation_surface       import CorrelationSurfaceAgent
+from backend.agents.correlation_surface_agent     import CorrelationSurfaceAgent
 from backend.agents.drawdown_guardian         import DrawdownGuardian
-from backend.agents.execution_timing          import ExecutionTimingAgent
-from backend.agents.feature_drift             import FeatureDriftAgent
+from backend.agents.execution_timing_agent        import ExecutionTimingAgent
+from backend.agents.feature_drift_agent           import FeatureDriftAgent
 from backend.agents.greeks_balancer           import GreeksBalancer
-from backend.agents.hyperparameter_evolution  import HyperparameterEvolutionAgent
-from backend.agents.market_impact             import MarketImpactModel
-from backend.agents.self_evaluation           import SelfEvaluationAgent
-from backend.agents.strategy_discovery        import StrategyDiscoveryAgent
-from backend.agents.strategy_switching        import StrategySwitchingAgent
-from backend.agents.strategy_weighting        import StrategyWeightingAgent
+from backend.agents.hyperparameter_evolution_agent import HyperparameterEvolutionAgent
+from backend.agents.market_impact_model           import MarketImpactModel
+from backend.agents.self_evaluation_agent         import SelfEvaluationAgent
+from backend.agents.strategy_discovery_agent      import StrategyDiscoveryAgent
+from backend.agents.strategy_switching_agent      import StrategySwitchingAgent
+from backend.agents.strategy_weighting_agent      import StrategyWeightingAgent
 
 # ── Universe ────────────────────────────────────────────────
 try:
