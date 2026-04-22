@@ -116,7 +116,7 @@ jobs:
 
              echo '🔄 Démarrage train.py v3.1 — 384 symboles...' | tee -a \"\${LOG_FILE}\"
 
-             TRAINING_LOOKBACK_DAYS=756 \
+             TRAINING_LOOKBACK_DAYS=252 \
                 WALK_FORWARD_WINDOW=189 \
                 N_OPTUNA_TRIALS=30 \
                 LABEL_HORIZON=5 \
