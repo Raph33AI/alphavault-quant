@@ -2435,22 +2435,27 @@ const Terminal = (() => {
   }
 
   function _setChartLayout(layout) {
-    const grid = document.getElementById('charts-grid');
-    if (!grid) return;
+      const grid = document.getElementById('charts-grid');
+      if (!grid) return;
 
-    const n = _getChartSymbols().length;
+      const n = _getChartSymbols().length;
 
-    if (layout === '1') {
-        grid.className = 'charts-grid layout-1';
-    } else if (layout === '2x3') {
-        grid.className = 'charts-grid layout-2-3';
-    } else {
-        // Auto : choisit selon le nombre de panels
-        grid.className = `charts-grid ${n <= 4 ? 'layout-2-2' : n <= 6 ? 'layout-2-3' : 'layout-2-5'}`;
-    }
+      if (layout === '1') {
+          grid.className = 'charts-grid layout-1';
+      } else if (layout === '2x3') {
+          grid.className = 'charts-grid layout-2-3';
+      } else {
+          // Auto : choisit selon le nombre de symboles
+          grid.className = `charts-grid ${
+              n <= 2 ? 'layout-1'   :
+              n <= 4 ? 'layout-2-2' :
+              n <= 6 ? 'layout-2-3' : 'layout-2-5'
+          }`;
+      }
 
-    setTimeout(() => _initAllPanelCharts(), 100);
-    }
+      // ✅ FIX : utilise _getChartSymbols() au lieu de cp-sym-N inexistants
+      setTimeout(() => _initAllPanelCharts(), 100);
+  }
 
   // ════════════════════════════════════════════════════════
   // CHART DATA FETCHING
@@ -2758,103 +2763,94 @@ const Terminal = (() => {
     }
 
     function _buildChartPanels() {
-    const grid = document.getElementById('charts-grid');
-    if (!grid) return;
+        const grid = document.getElementById('charts-grid');
+        if (!grid) return;
 
-    const symbols = _getChartSymbols();
-    const n       = symbols.length;
-    const fromWL  = window.WatchlistManager && WatchlistManager.getWatchlist().length > 0;
+        const symbols = _getChartSymbols();
+        const n       = symbols.length;
+        const fromWL  = window.WatchlistManager && WatchlistManager.getWatchlist().length > 0;
 
-    // Détermine le layout en fonction du nombre de symboles
-    const layoutClass = n <= 2  ? 'layout-1'
-                        : n <= 6  ? 'layout-2-2'
-                        :           'layout-2-5';
-    grid.className = `charts-grid ${layoutClass}`;
+        const layoutClass = n <= 2  ? 'layout-1'
+                          : n <= 6  ? 'layout-2-2'
+                          :           'layout-2-5';
+        grid.className = `charts-grid ${layoutClass}`;
 
-    // Banner info watchlist
-    const existingBanner = document.getElementById('charts-wl-banner');
-    if (existingBanner) existingBanner.remove();
-    const banner = document.createElement('div');
-    banner.id = 'charts-wl-banner';
-    banner.className = 'charts-wl-banner';
-    banner.innerHTML = fromWL
-    ? `<i class="fa-solid fa-list-ul"></i>
-        <span>Displaying <strong>${n} symbols</strong> from your watchlist</span>
-        <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
-        <i class="fa-solid fa-rotate"></i> Refresh
-        </button>`
-    : `<i class="fa-solid fa-info-circle"></i>
-        <span>Empty watchlist — <strong>10 default symbols</strong> displayed.
-        Add symbols in the <em>Watchlist</em> tab.</span>
-        <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
-        <i class="fa-solid fa-rotate"></i> Refresh
-        </button>`;
-    grid.parentElement.insertBefore(banner, grid);
+        const existingBanner = document.getElementById('charts-wl-banner');
+        if (existingBanner) existingBanner.remove();
+        const banner = document.createElement('div');
+        banner.id = 'charts-wl-banner';
+        banner.className = 'charts-wl-banner';
+        banner.innerHTML = fromWL
+            ? `<i class="fa-solid fa-list-ul"></i>
+              <span>Displaying <strong>${n} symbols</strong> from your watchlist</span>
+              <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
+                <i class="fa-solid fa-rotate"></i> Refresh
+              </button>`
+            : `<i class="fa-solid fa-info-circle"></i>
+              <span>Empty watchlist — <strong>10 default symbols</strong> displayed.
+              Add symbols in the <em>Watchlist</em> tab.</span>
+              <button class="btn-sm" id="btn-refresh-chart-panels" style="margin-left:auto;font-size:11px">
+                <i class="fa-solid fa-rotate"></i> Refresh
+              </button>`;
+        grid.parentElement.insertBefore(banner, grid);
 
-    // Génère les panels dynamiquement
-    grid.innerHTML = symbols.map((sym, i) => {
-        const logoHtml = _getLogoHtml(sym, 18);
-
-        return `
-        <div class="chart-panel" id="chart-panel-${i}">
-            <div class="cp-header">
-            <div class="cp-logo-sym">
-                ${logoHtml}
-                <span>${sym}</span>
-            </div>
-            <div class="cp-header-right">
-                <div class="cp-itabs" data-panel="${i}">
-                <button class="cp-itab" data-iv="1h">1H</button>
-                <button class="cp-itab active" data-iv="1day">1D</button>
-                <button class="cp-itab" data-iv="1week">1W</button>
+        grid.innerHTML = symbols.map((sym, i) => {
+            const logoHtml = _getLogoHtml(sym, 18);
+            return `
+            <div class="chart-panel" id="chart-panel-${i}">
+                <div class="cp-header">
+                    <div class="cp-logo-sym">
+                        ${logoHtml}
+                        <span>${sym}</span>
+                    </div>
+                    <div class="cp-header-right">
+                        <div class="cp-itabs" data-panel="${i}">
+                            <button class="cp-itab" data-iv="1h">1H</button>
+                            <button class="cp-itab active" data-iv="1day">1D</button>
+                            <button class="cp-itab" data-iv="1week">1W</button>
+                        </div>
+                        <button class="btn-quant-modal" data-qmsym="${sym}" title="Analyse quantitative">
+                            <i class="fa-solid fa-flask"></i>
+                        </button>
+                    </div>
                 </div>
-                <button class="btn-quant-modal" data-qmsym="${sym}"
-                        title="Analyse quantitative">
-                <i class="fa-solid fa-flask"></i>
-                </button>
-            </div>
-            </div>
-            <div class="cp-chart" id="chart-container-${i}"></div>
-        </div>`;
-    }).join('');
+                <div class="cp-chart" id="chart-container-${i}"></div>
+            </div>`;
+        }).join('');
 
-    // ── Bind interval tabs ──────────────────────────────
-    document.querySelectorAll('.cp-itabs').forEach(container => {
-        const panelIdx = parseInt(container.dataset.panel ?? '0');
-        container.querySelectorAll('.cp-itab').forEach(btn => {
-        btn.addEventListener('click', () => {
-            container.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            _panelIv[panelIdx] = btn.dataset.iv;
-            const sym = symbols[panelIdx] || CHART_SYMBOLS_DEFAULTS_10[0];
-            _loadPanelChart(panelIdx, sym);
+        // ── Bind interval tabs ──────────────────────────────────
+        document.querySelectorAll('.cp-itabs').forEach(container => {
+            const panelIdx = parseInt(container.dataset.panel ?? '0');
+            container.querySelectorAll('.cp-itab').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.cp-itab').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    _panelIv[panelIdx] = btn.dataset.iv;
+                    const sym = symbols[panelIdx] || CHART_SYMBOLS_DEFAULTS_10[0];
+                    _loadPanelChart(panelIdx, sym);
+                });
+            });
         });
+
+        // ── Bind quant modal buttons ────────────────────────────
+        document.querySelectorAll('.btn-quant-modal').forEach(btn => {
+            btn.addEventListener('click', () => openQuantModal(btn.dataset.qmsym));
         });
-    });
 
-    // ── Bind quant modal buttons ────────────────────────
-    document.querySelectorAll('.btn-quant-modal').forEach(btn => {
-        btn.addEventListener('click', () => openQuantModal(btn.dataset.qmsym));
-    });
+        // ── Bind sync all ───────────────────────────────────────
+        const syncBtn = document.getElementById('btn-sync-all');
+        if (syncBtn) syncBtn.onclick = () => _initAllPanelCharts();
 
-    // ── Bind layout selector ────────────────────────────
-    const layoutSel = document.getElementById('chart-layout');
-    if (layoutSel) layoutSel.addEventListener('change', e => _setChartLayout(e.target.value));
+        // ── Bind refresh banner ─────────────────────────────────
+        const refreshBtn = document.getElementById('btn-refresh-chart-panels');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                _buildChartPanels();
+                setTimeout(() => _initAllPanelCharts(), 100);
+            });
+        }
 
-    // ── Bind sync all ───────────────────────────────────
-    const syncBtn = document.getElementById('btn-sync-all');
-    if (syncBtn) {
-        syncBtn.onclick = () => _initAllPanelCharts();
-    }
-
-    // ── Bind refresh watchlist ──────────────────────────
-    const refreshBtn = document.getElementById('btn-refresh-chart-panels');
-    if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-        _buildChartPanels();
-        setTimeout(() => _initAllPanelCharts(), 100);
-        });
-    }
+        // ✅ FIX Bug #5 — PAS de binding chart-layout ici (déjà dans _bindEvents)
     }
 
     function _setChartLayout(layout) {
@@ -3300,11 +3296,12 @@ const Terminal = (() => {
 
     // ── Init software section ──────────────────────────────
     async function _initSoftwareSection() {
-      await _loadExecutionModeStatus();
-      _bindExecutionModeToggle();
-      _bindPaperLiveToggle();
-      _renderAgentGrid();
-      await _loadNotifSettings();   // ← AJOUTER cette ligne
+        await _loadExecutionModeStatus();
+        _bindExecutionModeToggle();
+        _bindPaperLiveToggle();
+        _renderAgentGrid();
+        _renderChecklist();          // ✅ FIX — était manquant
+        await _loadNotifSettings();
     }
 
     // ── Load current execution mode — localStorage + GitHub Pages ──
@@ -3909,26 +3906,43 @@ const Terminal = (() => {
     // ── Main render for software section ──────────────────
     function _renderSoftware(data) {
       const status = data.status || {};
-      const ibkr   = data.ibkr   || {};
+      const hubOk  = status.workers?.finance_hub === true
+                  || status.workers?.finance_hub?.ok === true;
 
-      // Status dots
-      const hubOk = status.workers?.finance_hub === true || status.workers?.finance_hub?.ok === true;
       const setDotSW = (id, cls) => {
-        const el = document.getElementById(id);
-        if (el) el.className = `sw-stat-dot ${cls}`;
+          const el = document.getElementById(id);
+          if (el) el.className = `sw-stat-dot ${cls}`;
       };
+
       setDotSW('sw-dot-oracle',  'sw-stat-dot sw-dot-ok');
-      setDotSW('sw-dot-ibeam',   ibkr.ibkr_connected ? 'sw-stat-dot sw-dot-ok' : 'sw-stat-dot sw-dot-warn');
+      setDotSW('sw-dot-ibeam',   'sw-stat-dot sw-dot-warn'); // ← mis à jour async ci-dessous
       setDotSW('sw-dot-watcher', 'sw-stat-dot sw-dot-ok');
       setDotSW('sw-dot-worker',  hubOk ? 'sw-stat-dot sw-dot-ok' : 'sw-stat-dot sw-dot-warn');
 
       _txt('sw-val-lastcycle', status.timestamp ? _fmtTime(status.timestamp) : '--');
 
-      // Sync trading mode
-      const cachedTradingMode = localStorage.getItem('av_trading_mode') || 'paper';
-      const isLive = ibkr.trading_mode === 'live' || cachedTradingMode === 'live';
-      _updatePaperLiveUI(isLive ? 'live' : 'paper');
-    }
+      // ✅ FIX : charger ibkr_status.json directement depuis GitHub Pages
+      fetch(
+          `https://raph33ai.github.io/alphavault-quant/signals/ibkr_status.json?t=${Date.now()}`,
+          { signal: AbortSignal.timeout(5000) }
+      )
+      .then(r => r.ok ? r.json() : {})
+      .then(d => {
+          // Dot IBEAM basé sur le vrai statut Oracle watcher
+          const ibkrOk = d.ibkr_connected === true;
+          setDotSW('sw-dot-ibeam', ibkrOk ? 'sw-stat-dot sw-dot-ok' : 'sw-stat-dot sw-dot-warn');
+
+          // ✅ Sync mode Paper/Live depuis ibkr_status.json (source of truth)
+          const mode = d.trading_mode || localStorage.getItem('av_trading_mode') || 'paper';
+          localStorage.setItem('av_trading_mode', mode);
+          _updatePaperLiveUI(mode);
+      })
+      .catch(() => {
+          // Fallback localStorage si fetch échoue
+          const cachedMode = localStorage.getItem('av_trading_mode') || 'paper';
+          _updatePaperLiveUI(cachedMode);
+      });
+  }
 
   // ════════════════════════════════════════════════════════
   // NOTIFICATION SETTINGS
