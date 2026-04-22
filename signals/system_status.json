@@ -1,64 +1,24 @@
 {
-  "timestamp": "2026-04-22T14:51:09.282859Z",
-  "version": "2.0",
-  "checks": {
-    "finance_hub": {
-      "status": "ok",
-      "ok": true,
-      "required": true,
-      "response": "{'ok': True, 'latency_ms': 110.2, 'data': {'status': 'ok', 'message': 'Finance Hub API - Twelve Data"
-    },
-    "ai_proxy": {
-      "status": "ok",
-      "ok": true,
-      "required": true,
-      "response": "{'ok': True, 'latency_ms': 98.9, 'data': {'status': 'ok', 'service': 'AI Multi-Provider Proxy', 'ver"
-    },
-    "economic_data": {
-      "status": "not_configured",
-      "ok": false,
-      "required": false,
-      "note": "Optionnel \u2014 n'affecte pas l'overall"
-    }
-  },
-  "signals": {
-    "ibkr_status": {
-      "ok": false,
-      "error": "file not found"
-    },
-    "execution_mode": {
-      "ok": false,
-      "error": "file not found"
-    },
-    "system_status": {
-      "ok": true,
-      "age_h": 1.8,
-      "stale": false,
-      "overall": "error",
-      "llm": false,
-      "dry_run": true
-    },
-    "pending_orders": {
-      "ok": true,
-      "age_h": 96.9,
-      "stale": true
-    }
-  },
-  "warnings": [
-    "economic_data not configured (optional)",
-    "pending_orders stale (96.9h > 1h)"
-  ],
-  "llm": {
-    "gemini_proxy": true,
-    "groq": "not_checked (managed by Oracle)",
-    "ollama": "not_checked (managed by Oracle)",
-    "oracle_llm_chain": "Gemini\u2192Groq\u2192Ollama\u2192Deterministic (Oracle-side)"
-  },
-  "overall": "warning",
-  "required_ok": true,
+  "timestamp": "2026-04-22T15:26:09.577105Z",
+  "overall": "degraded",
   "llm_available": true,
-  "stale_signals": [
-    "pending_orders"
-  ],
-  "n_warnings": 2
+  "llm_providers": {
+    "available_providers": [],
+    "primary": "none",
+    "gemini_ok": true,
+    "groq_ok": true,
+    "ollama_ok": false,
+    "deterministic_always": true
+  },
+  "workers": {
+    "finance_hub": true,
+    "ai_proxy": true,
+    "economic_data": false
+  },
+  "mode": "deterministic",
+  "dry_run": false,
+  "session": "us_regular",
+  "n_universe": 372,
+  "agents_active": 13,
+  "dd_halt": false
 }
