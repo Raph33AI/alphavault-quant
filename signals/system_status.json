@@ -1,24 +1,65 @@
 {
-  "timestamp": "2026-04-23T20:43:19.720430Z",
-  "overall": "degraded",
+  "timestamp": "2026-04-23T20:59:53.222486Z",
+  "version": "2.0",
+  "checks": {
+    "finance_hub": {
+      "status": "ok",
+      "ok": true,
+      "required": true,
+      "response": "{'ok': True, 'latency_ms': 91.4, 'data': {'status': 'ok', 'message': 'Finance Hub API - Twelve Data "
+    },
+    "ai_proxy": {
+      "status": "ok",
+      "ok": true,
+      "required": true,
+      "response": "{'ok': True, 'latency_ms': 122.0, 'data': {'status': 'ok', 'service': 'AI Multi-Provider Proxy', 've"
+    },
+    "economic_data": {
+      "status": "not_configured",
+      "ok": false,
+      "required": false,
+      "note": "Optionnel \u2014 n'affecte pas l'overall"
+    }
+  },
+  "signals": {
+    "ibkr_status": {
+      "ok": false,
+      "error": "file not found"
+    },
+    "execution_mode": {
+      "ok": true,
+      "age_h": 14.5,
+      "stale": false,
+      "mode": "auto",
+      "auto": true,
+      "blocked": false
+    },
+    "system_status": {
+      "ok": true,
+      "age_h": 0.3,
+      "stale": false,
+      "overall": "degraded",
+      "llm": true,
+      "dry_run": false
+    },
+    "pending_orders": {
+      "ok": true,
+      "age_h": 0.3,
+      "stale": false
+    }
+  },
+  "warnings": [
+    "economic_data not configured (optional)"
+  ],
+  "llm": {
+    "gemini_proxy": true,
+    "groq": "not_checked (managed by Oracle)",
+    "ollama": "not_checked (managed by Oracle)",
+    "oracle_llm_chain": "Gemini\u2192Groq\u2192Ollama\u2192Deterministic (Oracle-side)"
+  },
+  "overall": "healthy",
+  "required_ok": true,
   "llm_available": true,
-  "llm_providers": {
-    "available_providers": [],
-    "primary": "none",
-    "gemini_ok": true,
-    "groq_ok": true,
-    "ollama_ok": false,
-    "deterministic_always": true
-  },
-  "workers": {
-    "finance_hub": true,
-    "ai_proxy": true,
-    "economic_data": false
-  },
-  "mode": "deterministic",
-  "dry_run": false,
-  "session": "us_regular",
-  "n_universe": 372,
-  "agents_active": 13,
-  "dd_halt": false
+  "stale_signals": [],
+  "n_warnings": 1
 }
