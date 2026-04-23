@@ -1,6 +1,6 @@
 {
-  "timestamp": "2026-04-23T21:30:03.576383Z",
-  "overall": "degraded",
+  "timestamp": "2026-04-23T21:16:03.691588Z",
+  "overall": "standalone_active",
   "llm_available": true,
   "llm_providers": {
     "available_providers": [],
@@ -13,12 +13,27 @@
   "workers": {
     "finance_hub": true,
     "ai_proxy": true,
-    "economic_data": false
+    "economic_data": true
   },
   "mode": "deterministic",
   "dry_run": false,
   "session": "us_postmarket",
   "n_universe": 372,
   "agents_active": 13,
-  "dd_halt": false
+  "dd_halt": false,
+  "oracle_cycle": 63,
+  "pushed_from": "oracle_a1_full_pipeline",
+  "standalone_trader": {
+    "active": true,
+    "last_cycle": "2026-04-23T21:30:11.431078+00:00",
+    "universe_size": 386,
+    "signals_count": 5,
+    "orders_emitted": 5,
+    "session": "us_postmarket",
+    "cycle_total": 8,
+    "dry_run": false,
+    "data_source": "yfinance",
+    "version": "4.1"
+  },
+  "pushed_at": "2026-04-23T21:30:30.530326+00:00"
 }
