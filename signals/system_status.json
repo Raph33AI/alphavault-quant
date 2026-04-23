@@ -1,18 +1,18 @@
 {
-  "timestamp": "2026-04-23T21:57:17.779033Z",
+  "timestamp": "2026-04-23T22:58:23.693881Z",
   "version": "2.0",
   "checks": {
     "finance_hub": {
       "status": "ok",
       "ok": true,
       "required": true,
-      "response": "{'ok': True, 'latency_ms': 56.0, 'data': {'status': 'ok', 'message': 'Finance Hub API - Twelve Data "
+      "response": "{'ok': True, 'latency_ms': 110.8, 'data': {'status': 'ok', 'message': 'Finance Hub API - Twelve Data"
     },
     "ai_proxy": {
       "status": "ok",
       "ok": true,
       "required": true,
-      "response": "{'ok': True, 'latency_ms': 121.4, 'data': {'status': 'ok', 'service': 'AI Multi-Provider Proxy', 've"
+      "response": "{'ok': True, 'latency_ms': 88.8, 'data': {'status': 'ok', 'service': 'AI Multi-Provider Proxy', 'ver"
     },
     "economic_data": {
       "status": "not_configured",
@@ -28,7 +28,7 @@
     },
     "execution_mode": {
       "ok": true,
-      "age_h": 15.4,
+      "age_h": 16.4,
       "stale": false,
       "mode": "auto",
       "auto": true,
@@ -36,20 +36,21 @@
     },
     "system_status": {
       "ok": true,
-      "age_h": 0.3,
+      "age_h": 1.0,
       "stale": false,
-      "overall": "degraded",
+      "overall": "healthy",
       "llm": true,
-      "dry_run": false
+      "dry_run": null
     },
     "pending_orders": {
       "ok": true,
-      "age_h": 0.3,
-      "stale": false
+      "age_h": 1.3,
+      "stale": true
     }
   },
   "warnings": [
-    "economic_data not configured (optional)"
+    "economic_data not configured (optional)",
+    "pending_orders stale (1.3h > 1h)"
   ],
   "llm": {
     "gemini_proxy": true,
@@ -57,9 +58,11 @@
     "ollama": "not_checked (managed by Oracle)",
     "oracle_llm_chain": "Gemini\u2192Groq\u2192Ollama\u2192Deterministic (Oracle-side)"
   },
-  "overall": "healthy",
+  "overall": "warning",
   "required_ok": true,
   "llm_available": true,
-  "stale_signals": [],
-  "n_warnings": 1
+  "stale_signals": [
+    "pending_orders"
+  ],
+  "n_warnings": 2
 }
