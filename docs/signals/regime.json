@@ -1,19 +1,3570 @@
 {
-  "current_regime": "trend_down",
-  "probabilities": {
-    "trend_up": 0.0,
-    "trend_down": 0.6,
-    "range_bound": 0.0,
-    "low_volatility": 0.0,
-    "high_volatility": 0.25,
-    "crash": 0.1,
-    "macro_tightening": 0.05,
-    "macro_easing": 0.0
+  "timestamp": "2026-04-23T19:46:05.004949Z",
+  "global": {
+    "regime": "trend_up",
+    "regime_label": "trend_up",
+    "probabilities": {
+      "trend_up": 0.538,
+      "trend_down": 0.0,
+      "range_bound": 0.154,
+      "low_volatility": 0.231,
+      "high_volatility": 0.0,
+      "crash": 0.0,
+      "macro_tightening": 0.077,
+      "macro_easing": 0.0
+    },
+    "confidence": 0.538,
+    "regime_score": 0.615,
+    "next_regime": "trend_up",
+    "signals": {
+      "technical": {
+        "trend_up_score": 1.0,
+        "trend_down_score": 0.0,
+        "range_score": 0.0,
+        "adx": 33.2,
+        "strong_trend": true,
+        "above_ema200": "True"
+      },
+      "volatility": {
+        "rvol_21d": 0.1796,
+        "rvol_pct_rank": 0.5,
+        "crash_score": 0.0,
+        "high_vol": 0.0,
+        "low_vol": 0.0
+      },
+      "macro": {
+        "tight_score": 0.0,
+        "ease_score": 0.0,
+        "risk_off_score": 0.0,
+        "yield_curve": 0.7279999256134033,
+        "fed_rate": null,
+        "vix": 19.350000381469727
+      },
+      "momentum": {
+        "mom_20d": 0.07682473342768963,
+        "mom_60d": 0.019729453153867524,
+        "mom_120d": 0.0347943292785402,
+        "momentum_aligned_up": true,
+        "momentum_aligned_down": false,
+        "momentum_divergent": false
+      }
+    },
+    "allow_long": true,
+    "allow_short": false,
+    "reduce_exposure": false,
+    "favor_options": false,
+    "leverage_allowed": false
   },
-  "session": "us_regular",
-  "confidence": 0.6,
-  "bull_bear_ratio": -1.0,
-  "source": "standalone_session_v4.1",
-  "updated_at": "2026-04-23T19:45:12.480989+00:00",
-  "pushed_at": "2026-04-23T19:46:06.634379+00:00"
+  "macro": {
+    "VIXCLS": 19.350000381469727,
+    "T10Y": 4.322999954223633,
+    "T3M": 3.5950000286102295,
+    "DTWEXBGS": 98.82599639892578,
+    "T10Y2Y": 0.7279999256134033,
+    "yield_curve_inverted": false
+  },
+  "per_symbol": {
+    "SPY": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "QQQ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "IWM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "DIA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MDY": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VTI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VOO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VTV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.728,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VUG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VNQ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "XLF": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLE": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLY": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.493,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.326,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLRE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XLC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GDX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "GLD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.692,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SLV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "USO": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "UNG": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "TLT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "IEF": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SHY": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HYG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.334,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LQD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BND": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AGG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AAPL": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MSFT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NVDA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GOOGL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GOOG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "META": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AMZN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TSLA": {
+      "regime_label": "trend_down",
+      "regime_score": -0.677,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "BRK-B": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AMD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AVGO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ORCL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "INTC": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "QCOM": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "TXN": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ADI": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AMAT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LRCX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "KLAC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ASML": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TSM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MCHP": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MPWR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ENPH": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "FSLR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SEDG": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "RUN": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PLUG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CRM": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ADBE": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NOW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "INTU": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CDNS": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SNPS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CTSH": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EPAM": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "PLTR": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "CRWD": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NET": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SNOW": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "DDOG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.641,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PANW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ZS": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "FTNT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "OKTA": {
+      "regime_label": "trend_down",
+      "regime_score": -0.655,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TWLO": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MDB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.745,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "HUBS": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "VEEV": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "WDAY": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "ZM": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DOCU": {
+      "regime_label": "trend_down",
+      "regime_score": -0.554,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "DT": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.493,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "JPM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BAC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "GS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "V": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "MA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "C": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "WFC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AXP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BLK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SCHW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CB": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AON": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TRV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PGR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ALL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MET": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PRU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HIG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SOFI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AFRM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "UPST": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "NU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "COIN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "HOOD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PYPL": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "JNJ": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "UNH": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LLY": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ABBV": {
+      "regime_label": "trend_down",
+      "regime_score": -0.418,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "PFE": {
+      "regime_label": "trend_down",
+      "regime_score": -0.561,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "MRK": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TMO": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DHR": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ABT": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "AMGN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GILD": {
+      "regime_label": "trend_down",
+      "regime_score": -0.614,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "BIIB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "REGN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.418,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VRTX": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "ISRG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.413,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SYK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BSX": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "MDT": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "MRNA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BNTX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "NVAX": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "CVS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HUM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ELV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CNC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.702,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "XOM": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CVX": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "COP": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SLB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EOG": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MPC": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VLO": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PSX": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "OXY": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HAL": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BKR": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DVN": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "FANG": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "APA": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BP": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SHEL": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TTE": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ENB": {
+      "regime_label": "trend_down",
+      "regime_score": -0.701,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.406,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "WMT": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "COST": {
+      "regime_label": "trend_up",
+      "regime_score": 0.749,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MCD": {
+      "regime_label": "trend_down",
+      "regime_score": -0.511,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "NKE": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SBUX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "TGT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LOW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BKNG": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ABNB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TJX": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ROST": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DLTR": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.369,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "YUM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CMG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "DPZ": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "QSR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.414,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "F": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "RIVN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "LCID": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "NIO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "XPEV": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "LI": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "KO": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PEP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.551,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.613,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CHD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CLX": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "GIS": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GE": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CAT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.565,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "HON": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "UNP": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "UPS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "FDX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LMT": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "RTX": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NOC": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "GD": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "BA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MMM": {
+      "regime_label": "trend_down",
+      "regime_score": -0.426,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EMR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ETN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PH": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ROK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ITW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "IR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DOV": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "WM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.687,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "LIN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.589,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "APD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SHW": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "FCX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NEM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "NUE": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VMC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MLM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ALB": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "MOS": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "NEE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DUK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "D": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AEP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EXC": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "XEL": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "WEC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.445,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ES": {
+      "regime_label": "trend_up",
+      "regime_score": 0.466,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ETR": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AWK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "O": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SPG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PLD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AMT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CCI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EQIX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DLR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PSA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EQR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "AVB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "NFLX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DIS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CMCSA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "T": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VZ": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TMUS": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CHTR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "WBD": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EWJ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.506,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWQ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.712,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWL": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.789,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "FXI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "KWEB": {
+      "regime_label": "trend_down",
+      "regime_score": -0.509,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "EWT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWY": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWH": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.62,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EPI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "INDA": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWZ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWC": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EWW": {
+      "regime_label": "trend_up",
+      "regime_score": 0.651,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EZA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EEM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VEA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "VWO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "IEFA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "IEMG": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ACWI": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "KSA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "UAE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.352,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "AFK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "EWM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BABA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "JD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PDD": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "NTES": {
+      "regime_label": "trend_down",
+      "regime_score": -0.602,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "TCEHY": {
+      "regime_label": "trend_down",
+      "regime_score": -0.713,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "BIDU": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BILI": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "TME": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "IQ": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "HUYA": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "DOYU": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VNET": {
+      "regime_label": "trend_down",
+      "regime_score": -0.695,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "GDS": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "BEKE": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GRAB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SEA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.609,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "SHOP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "MELI": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VALE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "PBR": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "ITUB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BBD": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "GLOB": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "VTEX": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ARCO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "TS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "LOMA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.521,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "MARA": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "RIOT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "IBIT": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "GBTC": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "FBTC": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BTCO": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ARKB": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "HUT": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BITF": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CLSK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CIFR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "IREN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CORZ": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "RXRX": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BEAM": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EDIT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CRSP": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "FATE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ACAD": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ALNY": {
+      "regime_label": "trend_down",
+      "regime_score": -0.8,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": false
+    },
+    "IONS": {
+      "regime_label": "trend_up",
+      "regime_score": 0.419,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EXEL": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "FOLD": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "RARE": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ARWR": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "CLOV": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "HERO": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "OPEN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.43,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "SKLZ": {
+      "regime_label": "high_volatility",
+      "regime_score": -0.5,
+      "confidence": 0.6,
+      "allow_long": false,
+      "allow_short": true,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "DKNG": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "PENN": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": true,
+      "leverage_allowed": false,
+      "favor_options": true
+    },
+    "BYND": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "ACHR": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "JOBY": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "WKHS": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "EVGO": {
+      "regime_label": "low_volatility",
+      "regime_score": 0.3,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "CHPT": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    },
+    "BLNK": {
+      "regime_label": "trend_up",
+      "regime_score": 0.8,
+      "confidence": 0.6,
+      "allow_long": true,
+      "allow_short": false,
+      "reduce_exposure": false,
+      "leverage_allowed": true,
+      "favor_options": false
+    }
+  },
+  "oracle_cycle": 57,
+  "pushed_from": "oracle_a1_full_pipeline"
 }
