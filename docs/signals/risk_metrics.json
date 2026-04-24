@@ -1,58 +1,52 @@
 {
-  "timestamp": "2026-04-24T06:46:04.587997Z",
+  "var_metrics": {
+    "var_95": -0.02,
+    "var_99": -0.04,
+    "cvar_95": -0.03,
+    "sharpe_ratio": -5.0,
+    "sortino_ratio": -5.0,
+    "calmar_ratio": -0.0,
+    "information_ratio": -4.25,
+    "hurst_exponent": 0.52
+  },
   "drawdown": {
-    "current_drawdown": 0.0,
-    "halt_active": false,
-    "daily_pnl_pct": 0.0,
-    "halt_reason": "",
-    "exposure_mult": 1.0
+    "current_drawdown": -0.0,
+    "max_drawdown": -0.0,
+    "peak_netliq": 1013205.56,
+    "drawdown_pct": 0.0
+  },
+  "volatility": {
+    "daily_vol": 0.0,
+    "annualized_vol": 0.0,
+    "realized_vol_30d": 0.0
   },
   "leverage": {
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
-    "current_leverage": 0.0,
-    "is_over_leveraged": false,
-    "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+    "current_leverage": 2.208,
+    "over_leveraged": true,
+    "max_leverage": 1.0
   },
   "correlation": {
-    "avg_correlation": 0.546,
-    "diversification": 0.454,
-    "corr_spike": false,
-    "n_clusters": 1,
-    "best_diversifiers": [
-      "TLT",
-      "GLD",
-      "EEM"
-    ]
+    "max_pairwise": 0.0,
+    "correlated_pair": "",
+    "threshold": 0.7,
+    "alert": false
   },
-  "greeks": {
-    "portfolio_greeks": {
-      "delta": 0.0,
-      "gamma": 0.0,
-      "vega": 0.0,
-      "theta": 0.0
-    },
-    "greeks_by_symbol": {},
-    "breaches": {
-      "delta": false,
-      "vega": false,
-      "gamma": false
-    },
-    "recommendations": [],
-    "portfolio_balanced": true
+  "beta": {
+    "portfolio_beta": 1.0,
+    "target_min": 0.6,
+    "target_max": 1.3,
+    "in_range": true
   },
-  "feature_drift": {
-    "features_analyzed": 0,
-    "drifted_features": [],
-    "psi_scores": {},
-    "ks_scores": {},
-    "retrain_recommended": false,
-    "overall_drift": "stable",
-    "status": "baseline_set"
+  "portfolio": {
+    "netliq": 1013205.19,
+    "cash": 686652.12,
+    "cash_pct": 0.6777,
+    "n_positions": 63,
+    "total_pos_value": 2237263.43
   },
-  "var_metrics": {},
-  "oracle_cycle": 99,
-  "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-04-24T06:49:14.314818+00:00"
+  "regime": "BULL",
+  "n_returns": 8,
+  "source": "risk_manager_v5.0",
+  "updated_at": "2026-04-24T06:50:04.113316+00:00",
+  "pushed_at": "2026-04-24T06:50:40.089903+00:00"
 }
