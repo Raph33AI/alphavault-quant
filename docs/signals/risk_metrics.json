@@ -1,17 +1,17 @@
 {
   "leverage": {
     "current_leverage": 0.0,
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
+    "max_leverage": 1.0,
+    "allowed_leverage": 1.0,
     "is_over_leveraged": false,
     "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+    "regime_mult": 1.16
   },
   "drawdown": {
     "current_drawdown": 0.0,
     "max_drawdown": 0.0,
-    "portfolio_peak": 0.0,
-    "current_nav": 0.0,
+    "portfolio_peak": 1010262.5,
+    "current_nav": 1010262.5,
     "threshold": 0.15,
     "is_breached": false
   },
@@ -20,36 +20,45 @@
     "var_99": 0.0,
     "sharpe_ratio": 0.0,
     "volatility": 0.0,
-    "mean_return": 0.0,
-    "n_observations": 0
+    "leverage": 0.0,
+    "note": "Historique insuffisant (4 points)",
+    "source": "risk_manager_v5.0"
   },
   "correlation": {
     "max_correlation": 0.0,
     "avg_correlation": 0.0,
     "n_positions": 0,
-    "threshold": 0.8,
-    "is_high": false
+    "corr_matrix": {},
+    "source": "risk_manager_v5.0"
   },
   "alerts": [],
   "risk_score": 0,
   "portfolio": {
-    "net_liquidation": 0.0,
-    "cash_value": 0.0,
+    "net_liquidation": 1010262.5,
+    "cash_value": 685800.19,
     "n_positions": 0,
-    "cash_pct": 0.0
+    "cash_pct": 0.6788
   },
   "thresholds": {
-    "max_leverage": 1.5,
+    "max_leverage": 1.0,
     "max_drawdown": 0.15,
-    "max_corr": 0.8,
+    "max_corr": 0.7,
     "var_confidence": 0.95
   },
-  "nav_history_n": 0,
-  "note": "Initialis\u00e9 par seed_signals_v5.py \u2014 sera mis \u00e0 jour par RiskManagerAgent",
-  "updated_at": "2026-04-24T09:18:16.792896+00:00",
-  "timestamp": "2026-04-24T09:18:16.792896+00:00",
+  "stats": {
+    "total_cycles": 4,
+    "alerts_emitted": 0,
+    "over_leveraged_cnt": 0,
+    "high_corr_cnt": 0,
+    "drawdown_warn_cnt": 0,
+    "last_netliq": 1010262.5
+  },
+  "nav_history_n": 4,
+  "updated_at": "2026-04-24T09:20:03.753596+00:00",
+  "timestamp": "2026-04-24T09:20:03.753596+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0",
-  "cycle": 0,
-  "pushed_at": "2026-04-24T09:19:37.640076+00:00"
+  "cycle": 4,
+  "duration_s": 0.6,
+  "pushed_at": "2026-04-24T09:20:16.296807+00:00"
 }
