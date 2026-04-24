@@ -1,42 +1,27 @@
 {
-  "timestamp": "2026-04-24T08:46:04.107826Z",
   "overall": "v5.0_active",
-  "llm_available": true,
-  "llm_providers": {
-    "available_providers": [],
-    "primary": "none",
-    "gemini_ok": true,
-    "groq_ok": true,
-    "ollama_ok": false,
-    "deterministic_always": true
+  "services": {
+    "alphavault_core": "running",
+    "dashboard_api": "running",
+    "ibkr_watcher": "running",
+    "rag_server": "running",
+    "postgresql": "running",
+    "ollama": "running",
+    "ibeam_docker": "running"
   },
-  "workers": {
-    "finance_hub": true,
-    "ai_proxy": true,
-    "economic_data": true
-  },
-  "mode": "deterministic",
-  "dry_run": false,
-  "session": "eu_regular",
-  "n_universe": 372,
   "agents_active": 13,
-  "dd_halt": false,
-  "oracle_cycle": 107,
-  "pushed_from": "oracle_a1_full_pipeline",
+  "agents_total": 13,
+  "regime": "UNKNOWN",
   "dashboard_sync": {
     "active": true,
-    "sync_stats": {
-      "total_syncs": 114,
-      "files_pushed": 369,
-      "files_failed": 300,
-      "files_skipped": 699,
-      "last_sync": "2026-04-24T08:46:40.844939+00:00"
-    },
     "watcher_managed_files": 10,
     "sync_exclusive_files": 11,
-    "version": "5.0",
-    "last_cycle": "2026-04-24T08:47:38.547717+00:00"
+    "version": "5.0"
   },
-  "updated_at": "2026-04-24T08:47:38.547729+00:00",
-  "pushed_at": "2026-04-24T08:48:29.472422+00:00"
+  "note": "Initialis\u00e9 par seed_signals_v5.py \u2014 sera enrichi par DashboardSyncAgent",
+  "updated_at": "2026-04-24T08:48:42.264192+00:00",
+  "timestamp": "2026-04-24T08:48:42.264192+00:00",
+  "source": "dashboard_sync_v5.0",
+  "version": "5.0",
+  "pushed_at": "2026-04-24T08:49:08.151589+00:00"
 }
