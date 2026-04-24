@@ -1,56 +1,26 @@
 {
-  "overall": "v5.0_active",
-  "services": {
-    "alphavault_core": "running",
-    "dashboard_api": "running",
-    "ibkr_watcher": "running",
-    "rag_server": "running",
-    "postgresql": "running",
-    "ollama": "running",
-    "ibeam_docker": "running"
+  "timestamp": "2026-04-24T09:01:08.590084Z",
+  "overall": "healthy",
+  "llm_available": true,
+  "llm_providers": {
+    "available_providers": [],
+    "primary": "none",
+    "gemini_ok": true,
+    "groq_ok": true,
+    "ollama_ok": false,
+    "deterministic_always": true
   },
+  "workers": {
+    "finance_hub": true,
+    "ai_proxy": true,
+    "economic_data": true
+  },
+  "mode": "deterministic",
+  "dry_run": false,
+  "session": "eu_regular",
+  "n_universe": 372,
   "agents_active": 13,
-  "agents_total": 13,
-  "regime": "UNKNOWN",
-  "dashboard_sync": {
-    "active": true,
-    "sync_stats": {
-      "total_syncs": 127,
-      "files_pushed": 425,
-      "files_failed": 377,
-      "files_skipped": 722,
-      "last_sync": "2026-04-24T08:59:42.232555+00:00"
-    },
-    "watcher_managed_files": 10,
-    "sync_exclusive_files": 11,
-    "version": "5.0",
-    "last_cycle": "2026-04-24T09:00:38.547196+00:00"
-  },
-  "note": "Initialis\u00e9 par seed_signals_v5.py \u2014 sera enrichi par DashboardSyncAgent",
-  "updated_at": "2026-04-24T09:00:38.547206+00:00",
-  "timestamp": "2026-04-24T08:48:42.264192+00:00",
-  "source": "dashboard_sync_v5.0",
-  "version": "5.0",
-  "orchestrator": {
-    "running": true,
-    "trading_paused": false,
-    "agent_statuses": {
-      "market_scanner": "idle",
-      "signal": "idle",
-      "regime_detector": "idle",
-      "sentiment": "idle",
-      "capital_allocator": "idle",
-      "risk_manager": "idle",
-      "pnl_monitor": "idle",
-      "llm_council": "idle",
-      "execution": "idle",
-      "portfolio_rebalancer": "idle",
-      "history_learner": "idle",
-      "model_trainer": "idle",
-      "dashboard_sync": "idle"
-    },
-    "uptime_h": 2.16,
-    "version": "5.0"
-  },
-  "pushed_at": "2026-04-24T09:01:01.733018+00:00"
+  "dd_halt": false,
+  "oracle_cycle": 108,
+  "pushed_from": "oracle_a1_full_pipeline"
 }
