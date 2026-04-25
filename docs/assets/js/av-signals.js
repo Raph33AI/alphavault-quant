@@ -488,96 +488,159 @@
     const body = document.getElementById('sig-alloc-body');
     if (!body) return;
 
-    const allocs   = _allocation?.allocations    || {};
-    const nPos     = parseInt(_allocation?.n_positions     || 0);
-    const total    = parseFloat(_allocation?.total_allocated || 0);
-    const method   = _allocation?.method          || 'kelly_risk_parity';
-    const hcGate   = parseFloat(_allocation?.high_conf_threshold || 0.75);
-    const cashRes  = parseFloat(_allocation?.cash_reserve_pct    || 5);
-    const regime   = _allocation?.regime          || '—';
-
-    const isEmpty  = !allocs || Object.keys(allocs).length === 0;
+    const allocs  = _allocation?.allocations    || {};
+    const nPos    = parseInt(_allocation?.n_positions       || 0);
+    const total   = parseFloat(_allocation?.total_allocated || 0);
+    const method  = _allocation?.method          || 'kelly_risk_parity';
+    const hcGate  = parseFloat(_allocation?.high_conf_threshold || 0.75);
+    const cashRes = parseFloat(_allocation?.cash_reserve_pct    || 5);
+    const regime  = _allocation?.regime          || '—';
+    const isEmpty = !allocs || Object.keys(allocs).length === 0;
 
     if (isEmpty) {
-      body.innerHTML = `
+        body.innerHTML = `
         <div class="sig-alloc-empty">
-          <div class="sig-alloc-empty-icon">
+            <div class="sig-alloc-empty-icon">
             <i class="fa-solid fa-clock" style="color:var(--accent-blue);font-size:20px"></i>
-          </div>
-          <div>
+            </div>
+            <div>
             <div class="sig-alloc-empty-title">Awaiting High Confidence Signals</div>
             <div class="sig-alloc-empty-sub">
-              Capital allocator activates when signal confidence &gt;
-              <strong>${(hcGate * 100).toFixed(0)}%</strong>
+                Capital allocator activates when confidence &gt;
+                <strong>${(hcGate * 100).toFixed(0)}%</strong>
             </div>
-          </div>
+            </div>
         </div>
         <div class="sig-alloc-footer">
-          <span class="badge badge-blue" style="font-size:9px">
+            <span class="badge badge-blue" style="font-size:9px">
             <i class="fa-solid fa-gear"></i> ${method.replace(/_/g, ' ')}
-          </span>
-          <span class="badge badge-gray" style="font-size:9px">
+            </span>
+            <span class="badge badge-gray" style="font-size:9px">
             <i class="fa-solid fa-piggy-bank"></i> Cash reserve: ${cashRes}%
-          </span>
-          <span class="badge badge-gray" style="font-size:9px">${regime}</span>
+            </span>
+            <span class="badge badge-gray" style="font-size:9px">${regime}</span>
         </div>`;
-      return;
+        return;
     }
 
-    const entries = Object.entries(allocs)
-      .map(([sym, pct]) => ({ sym, pct: parseFloat(pct) }))
-      .sort((a, b) => b.pct - a.pct)
-      .slice(0, 10);
+    // ── Parser robuste — gère number | string | object ──────
+    const _parseVal = (raw) => {
+        if (raw === null || raw === undefined) return NaN;
+        if (typeof raw === 'number') return raw;
+        if (typeof raw === 'string') return parseFloat(raw);
+        if (typeof raw === 'object') {
+        // Cherche les champs connus dans l'ordre de priorité
+        const keys = [
+            'weight', 'fraction', 'pct', 'kelly_fraction',
+            'position_size', 'size', 'allocation', 'amount',
+        ];
+        for (const k of keys) {
+            const v = parseFloat(raw[k]);
+            if (!isNaN(v) && v > 0) return v;
+        }
+        // Fallback : premier nombre positif trouvé dans l'objet
+        for (const v of Object.values(raw)) {
+            if (typeof v === 'number' && !isNaN(v) && v > 0) return v;
+        }
+        }
+        return NaN;
+    };
 
-    const maxPct = entries[0]?.pct || 1;
+    // Construit + trie les entrées
+    const entries = Object.entries(allocs)
+        .map(([sym, raw]) => ({ sym, val: _parseVal(raw) }))
+        .filter(e => !isNaN(e.val) && e.val > 0)
+        .sort((a, b) => b.val - a.val)
+        .slice(0, 10);
+
+    if (entries.length === 0) {
+        body.innerHTML = `
+        <div style="text-align:center;padding:20px;color:var(--text-faint);font-size:12px">
+            <i class="fa-solid fa-circle-info" style="font-size:16px;display:block;margin-bottom:8px"></i>
+            No allocation data available
+        </div>`;
+        return;
+    }
+
+    const maxVal   = entries[0].val;
+    // Auto-détection : fraction (0-1) ou dollar ($) ou déjà en %
+    const isDollar   = maxVal > 100;   // Montant dollar → afficher en $
+    const isFraction = maxVal <= 1.5;  // Fraction Kelly → afficher en %
+
+    const fmtVal = (v) => {
+        if (isDollar)   return AVUtils.formatCurrency(v);
+        if (isFraction) return `${(v * 100).toFixed(2)}%`;
+        return `${v.toFixed(2)}%`;       // Déjà en %
+    };
+
+    // Total
+    const totalDisplay = (() => {
+        if (!total || total === 0) return '—';
+        if (total > 100)  return AVUtils.formatCurrency(total);
+        if (total <= 1.5) return `${(total * 100).toFixed(1)}%`;
+        return `${total.toFixed(1)}%`;
+    })();
 
     body.innerHTML = `
-      <div class="sig-alloc-header-row">
+        <div class="sig-alloc-header-row">
         <span class="badge badge-green" style="font-size:10px">
-          <i class="fa-solid fa-circle-check"></i> ${nPos} allocated
+            <i class="fa-solid fa-circle-check"></i> ${nPos || entries.length} allocated
         </span>
         <span class="badge badge-blue" style="font-size:10px">
-          Total: ${(total * 100).toFixed(1)}%
+            Total: ${totalDisplay}
         </span>
         <span class="badge badge-gray" style="font-size:9px;margin-left:auto">
-          ${method.replace(/_/g, ' ')}
+            ${method.replace(/_/g, ' ')}
         </span>
-      </div>
-      <div class="sig-alloc-list">
-        ${entries.map(({ sym, pct }) => {
-          const logoH = typeof window._getLogoHtml === 'function'
+        </div>
+
+        <div class="sig-alloc-list">
+        ${entries.map(({ sym, val }) => {
+            const logoH = typeof window._getLogoHtml === 'function'
             ? window._getLogoHtml(sym, 18)
             : `<span style="display:inline-flex;align-items:center;justify-content:center;
                             width:18px;height:18px;border-radius:4px;
                             background:var(--gradient-brand);color:#fff;
-                            font-size:8px;font-weight:800">${sym.charAt(0)}</span>`;
-          const barW = Math.min((pct / maxPct) * 100, 100).toFixed(0);
-          return `
+                            font-size:8px;font-weight:800;flex-shrink:0">
+                ${sym.charAt(0)}
+                </span>`;
+
+            const barW = maxVal > 0
+            ? Math.min((val / maxVal) * 100, 100).toFixed(1)
+            : '0';
+
+            return `
             <div class="sig-alloc-row">
-              <div style="display:flex;align-items:center;gap:6px;width:70px;flex-shrink:0">
+                <div style="display:flex;align-items:center;gap:6px;
+                            width:72px;flex-shrink:0">
                 ${logoH}
-                <span style="font-size:12px;font-weight:700;color:var(--text-primary)">${sym}</span>
-              </div>
-              <div style="flex:1;margin:0 10px">
-                <div class="av-progress-track" style="height:5px">
-                  <div class="av-progress-fill"
-                       style="width:${barW}%;background:var(--gradient-brand)"></div>
+                <span style="font-size:12px;font-weight:700;
+                            color:var(--text-primary)">${sym}</span>
                 </div>
-              </div>
-              <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);
-                           color:var(--accent-blue);min-width:42px;text-align:right">
-                ${(pct * 100).toFixed(1)}%
-              </span>
+                <div style="flex:1;margin:0 10px">
+                <div class="av-progress-track" style="height:5px">
+                    <div class="av-progress-fill"
+                        style="width:${barW}%;background:var(--gradient-brand)">
+                    </div>
+                </div>
+                </div>
+                <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);
+                            color:var(--accent-blue);min-width:56px;text-align:right">
+                ${fmtVal(val)}
+                </span>
             </div>`;
         }).join('')}
-      </div>
-      <div class="sig-alloc-footer">
+        </div>
+
+        <div class="sig-alloc-footer">
         <span class="badge badge-gray" style="font-size:9px">
-          <i class="fa-solid fa-piggy-bank"></i> Cash reserve: ${cashRes}%
+            <i class="fa-solid fa-piggy-bank"></i> Cash reserve: ${cashRes}%
         </span>
-        <span class="badge badge-gray" style="font-size:9px">${regime}</span>
-      </div>`;
-  }
+        <span class="badge badge-gray" style="font-size:9px">
+            <i class="fa-solid fa-globe"></i> ${regime}
+        </span>
+        </div>`;
+    }
 
   // ══════════════════════════════════════════════════════════
   // CSV EXPORT
