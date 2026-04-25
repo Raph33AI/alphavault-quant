@@ -83,22 +83,32 @@
       netliq !== null ? null : 'var(--accent-orange)'
     );
 
-    // ── Unrealized PnL ──────────────────────────────────────
-    const pnl     = parseFloat(portfolio?.unrealized_pnl ?? 0);
+    // ── Unrealized PnL ──────────────────────────────────────────
+    // portfolio.json en priorité, fallback pnl_monitor.json (R1)
+    const pnlMon  = data.pnl;
+    const pnlRaw  = (portfolio?.unrealized_pnl !== undefined && portfolio?.unrealized_pnl !== null)
+    ? portfolio.unrealized_pnl
+    : (pnlMon?.total_pnl_usd ?? null);
+
+    const pnl     = parseFloat(pnlRaw ?? 0);
     const pnlFmt  = isNaN(pnl) ? '—' : (pnl >= 0 ? '+' : '') + AVUtils.formatCurrencyFull(pnl);
     const pnlClr  = pnl > 0 ? 'var(--accent-green)' : pnl < 0 ? 'var(--accent-red)' : 'var(--text-primary)';
     const winRate = parseFloat(pnlMon?.win_rate ?? 0);
-    const winning = parseInt(pnlMon?.winning ?? 0);
-    const losing  = parseInt(pnlMon?.losing  ?? 0);
+    const winning = parseInt(pnlMon?.winning    ?? 0);
+    const losing  = parseInt(pnlMon?.losing     ?? 0);
+
+    const pnlSrc  = pnlRaw === portfolio?.unrealized_pnl
+    ? 'portfolio.json'
+    : 'pnl_monitor.json';
 
     _setKpi(
-      'pnl',
-      pnlFmt,
-      isNaN(pnl)
-        ? '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...'
-        : `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}%`,
-      null,
-      pnlClr
+    'pnl',
+    pnlFmt,
+    pnlRaw !== null
+        ? `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}%`
+        : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
+    null,
+    pnlClr
     );
 
     const pnlValEl = document.getElementById('kpi-pnl-val');
@@ -142,49 +152,55 @@
       }
     }
 
-    // ── Positions ───────────────────────────────────────────
-    const posCount = parseInt(portfolio?.positions_count ?? 0);
-    const longCt   = parseInt(portfolio?.long_count  ?? portfolio?.long_positions  ?? 0);
-    const shortCt  = parseInt(portfolio?.short_count ?? portfolio?.short_positions ?? 0);
+    // ── Positions ───────────────────────────────────────────────
+    // Compte depuis le dict positions{} si positions_count absent
+    const positionsDict  = portfolio?.positions || {};
+    const posArr         = Object.values(positionsDict);
+    const portfolioLoaded = portfolio !== null && portfolio !== undefined;
 
-    _setKpi(
-      'positions',
-      posCount > 0 ? String(posCount) : '—',
-      posCount > 0
-        ? `<span style="color:var(--accent-green)"><i class="fa-solid fa-arrow-up"></i> ${longCt} LONG</span>
-           &nbsp;·&nbsp;
-           <span style="color:var(--accent-red)"><i class="fa-solid fa-arrow-down"></i> ${shortCt} SHORT</span>`
-        : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
-      null,
-      'var(--accent-violet)'
+    const posCount = parseInt(
+    portfolio?.positions_count
+    ?? (posArr.length > 0 ? posArr.length : 0)
     );
 
-    // Signal stats badges
-    const sigs = data.signals;
-    if (sigs) {
-      const sbBadge = document.getElementById('sidebar-signals-badge');
-      if (sbBadge) sbBadge.textContent = sigs.n_signals || sigs.signals?.length || 0;
-      const buysEl = document.getElementById('dash-buys-count');
-      const hcEl   = document.getElementById('dash-hc-count');
-      if (buysEl) buysEl.textContent = `${sigs.n_buy || 0} BUY`;
-      if (hcEl)   hcEl.textContent   = `${sigs.n_high_conf || 0} High Conf`;
-    }
-  }
+    const longCt = parseInt(
+    portfolio?.long_count
+    ?? portfolio?.long_positions
+    ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) > 0).length
+    ?? 0
+    );
 
-  function _setKpi(key, val, sub, color = null, valColor = null) {
-    const valEl = document.getElementById(`kpi-${key}-val`);
-    const subEl = document.getElementById(`kpi-${key}-sub`);
-    if (valEl) {
-      valEl.innerHTML = val;
-      if (valColor) valEl.style.color = valColor;
-    }
-    if (subEl) subEl.innerHTML = sub || '';
-  }
+    const shortCt = parseInt(
+    portfolio?.short_count
+    ?? portfolio?.short_positions
+    ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) < 0).length
+    ?? 0
+    );
 
-  // ══════════════════════════════════════════════════════════
-  // REGIME CARD
-  // ══════════════════════════════════════════════════════════
-  function renderRegime(data) {
+    _setKpi(
+    'positions',
+    posCount > 0
+        ? String(posCount)
+        : portfolioLoaded ? '0' : '—',
+    posCount > 0
+        ? `<span style="color:var(--accent-green)">
+            <i class="fa-solid fa-arrow-up"></i> ${longCt} LONG
+        </span>
+        &nbsp;·&nbsp;
+        <span style="color:var(--accent-red)">
+            <i class="fa-solid fa-arrow-down"></i> ${shortCt} SHORT
+        </span>`
+        : portfolioLoaded
+        ? `<i class="fa-regular fa-folder-open" style="font-size:9px"></i> No open positions`
+        : `<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...`,
+    null,
+    'var(--accent-violet)'
+    );
+
+  // ══════════════════════════════════════════════════════════════
+    // REGIME CARD — source : regime.json
+    // ══════════════════════════════════════════════════════════════
+    function renderRegime(data) {
     const body = document.getElementById('dash-regime-body');
     if (!body) return;
     if (!data) { body.innerHTML = `<div class="dash-skeleton-block"></div>`; return; }
@@ -192,48 +208,133 @@
     const regime = data.regime || data.signal || data.current_regime || 'NEUTRAL';
     const conf   = parseFloat(data.confidence || 0);
     const prev   = data.previous_regime || '—';
-    const dur    = data.regime_duration  || 0;
-    const probas = data.probabilities   || {};
+    const dur    = parseInt(data.regime_duration || 0);
+    const probas = data.probabilities || {};
+    const indic  = data.indicators   || {};
     const colors = AVUtils.regimeColor(regime);
 
     const regimeIcons = {
-      BULL:    'fa-solid fa-arrow-trend-up',
-      BEAR:    'fa-solid fa-arrow-trend-down',
-      NEUTRAL: 'fa-solid fa-minus',
-      CRISIS:  'fa-solid fa-triangle-exclamation',
+        BULL:       'fa-solid fa-arrow-trend-up',
+        trend_up:   'fa-solid fa-arrow-trend-up',
+        BEAR:       'fa-solid fa-arrow-trend-down',
+        trend_down: 'fa-solid fa-arrow-trend-down',
+        NEUTRAL:    'fa-solid fa-minus',
+        CRISIS:     'fa-solid fa-triangle-exclamation',
     };
 
-    const probaRows = ['BULL','BEAR','NEUTRAL','CRISIS'].map(r => {
-      const pct  = Math.round((probas[r] || 0) * 100);
-      const rClr = AVUtils.regimeColor(r);
-      return `
+    // ── Probabilités ───────────────────────────────────────────
+    const probaRows = ['BULL', 'BEAR', 'NEUTRAL', 'CRISIS'].map(r => {
+        const pct  = Math.round((probas[r] || 0) * 100);
+        const rClr = AVUtils.regimeColor(r);
+        return `
         <div class="dash-proba-row">
-          <span class="dash-proba-label">${r}</span>
-          <div class="dash-proba-bar">
-            <div class="dash-proba-fill" style="width:${pct}%;background:${rClr.bg}"></div>
-          </div>
-          <span class="dash-proba-val">${pct}%</span>
+            <span class="dash-proba-label">${r}</span>
+            <div class="dash-proba-bar">
+            <div class="dash-proba-fill"
+                style="width:${pct}%;background:${rClr.bg}"></div>
+            </div>
+            <span class="dash-proba-val">${pct}%</span>
         </div>`;
     }).join('');
 
+    // ── Indicateurs SPY (depuis regime.json.indicators) ────────
+    const spyPrice = parseFloat(indic.spy_price || 0);
+    const spyMa5   = parseFloat(indic.spy_ma5   || 0);
+    const spyMa20  = parseFloat(indic.spy_ma20  || 0);
+    const spyMa50  = parseFloat(indic.spy_ma50  || 0);
+
+    const indicHTML = spyPrice > 0 ? `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0;
+                    padding:10px 12px;border-radius:10px;
+                    background:var(--bg-secondary);border:1px solid var(--border)">
+
+        <div style="display:flex;flex-direction:column;align-items:center;
+                    flex:1;min-width:54px">
+            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">SPY</span>
+            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                        color:var(--text-primary)">
+            $${spyPrice.toFixed(2)}
+            </span>
+        </div>
+
+        ${spyMa5 > 0 ? `
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
+            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">MA5</span>
+            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                        color:${spyPrice >= spyMa5
+                        ? 'var(--accent-green)'
+                        : 'var(--accent-red)'}">
+            $${spyMa5.toFixed(2)}
+            </span>
+        </div>` : ''}
+
+        ${spyMa20 > 0 ? `
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
+            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">MA20</span>
+            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                        color:${spyPrice >= spyMa20
+                        ? 'var(--accent-green)'
+                        : 'var(--accent-red)'}">
+            $${spyMa20.toFixed(2)}
+            </span>
+        </div>` : ''}
+
+        ${spyMa50 > 0 ? `
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
+            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">MA50</span>
+            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                        color:${spyPrice >= spyMa50
+                        ? 'var(--accent-green)'
+                        : 'var(--accent-red)'}">
+            $${spyMa50.toFixed(2)}
+            </span>
+        </div>` : ''}
+
+        </div>` : '';
+
     body.innerHTML = `
-      <div class="dash-regime-main">
-        <div class="dash-regime-badge" style="background:${colors.soft};border:2px solid ${colors.bg}">
-          <i class="${regimeIcons[regime] || 'fa-solid fa-circle'}"
-             style="color:${colors.bg};font-size:20px"></i>
+        <div class="dash-regime-main">
+        <div class="dash-regime-badge"
+            style="background:${colors.soft};border:2px solid ${colors.bg}">
+            <i class="${regimeIcons[regime] || 'fa-solid fa-circle'}"
+            style="color:${colors.bg};font-size:20px"></i>
         </div>
         <div class="dash-regime-info">
-          <div class="dash-regime-name" style="color:${colors.bg}">${regime}</div>
-          <div class="dash-regime-conf">${(conf * 100).toFixed(0)}% confidence</div>
-          ${prev !== '—' ? `
+            <div class="dash-regime-name" style="color:${colors.bg}">${regime}</div>
+            <div class="dash-regime-conf">${(conf * 100).toFixed(0)}% confidence</div>
+            ${prev !== '—' ? `
             <div style="font-size:10px;color:var(--text-faint);margin-top:2px">
-              <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
-              Was ${prev} &middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago
+                <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
+                Was ${prev} &middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago
             </div>` : ''}
         </div>
-      </div>
-      <div class="dash-regime-probas">${probaRows}</div>`;
-  }
+        </div>
+
+        ${indicHTML}
+
+        <div class="dash-regime-probas" style="margin-top:14px">
+        ${probaRows}
+        </div>
+
+        <!-- ✅ Lien vers signals.html -->
+        <a href="signals.html"
+        style="display:flex;align-items:center;gap:6px;margin-top:14px;
+                padding:8px 12px;border-radius:9px;text-decoration:none;
+                background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);
+                font-size:11px;font-weight:600;color:var(--accent-blue);
+                transition:background 0.15s ease"
+        onmouseover="this.style.background='rgba(59,130,246,0.12)'"
+        onmouseout="this.style.background='rgba(59,130,246,0.06)'">
+        <i class="fa-solid fa-satellite-dish" style="font-size:11px"></i>
+        View ML Signals
+        <i class="fa-solid fa-arrow-right"
+            style="font-size:9px;margin-left:auto;opacity:0.7"></i>
+        </a>`;
+    }
 
   // ══════════════════════════════════════════════════════════
   // AGENT HEALTH (R2)
