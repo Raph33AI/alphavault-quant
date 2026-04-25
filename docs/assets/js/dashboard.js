@@ -4,6 +4,7 @@
 //               ID mismatches × 9
 //               formatCompact alias
 //               null guards partout
+//               _setKpi restaurée (was missing)
 // ============================================================
 
 (function () {
@@ -83,45 +84,40 @@
       netliq !== null ? null : 'var(--accent-orange)'
     );
 
-    // ── Unrealized PnL ──────────────────────────────────────────
-    // portfolio.json en priorité, fallback pnl_monitor.json (R1)
-    const pnlRaw  = (portfolio?.unrealized_pnl !== undefined && portfolio?.unrealized_pnl !== null)
-    ? portfolio.unrealized_pnl
-    : (pnlMon?.total_pnl_usd ?? null);
+    // ── Unrealized PnL — portfolio.json priorité, fallback pnl_monitor.json ──
+    const pnlRaw = (portfolio?.unrealized_pnl !== undefined && portfolio?.unrealized_pnl !== null)
+      ? portfolio.unrealized_pnl
+      : (pnlMon?.total_pnl_usd ?? null);
 
-    const pnl     = parseFloat(pnlRaw ?? 0);
-    const pnlFmt  = isNaN(pnl) ? '—' : (pnl >= 0 ? '+' : '') + AVUtils.formatCurrencyFull(pnl);
-    const pnlClr  = pnl > 0 ? 'var(--accent-green)' : pnl < 0 ? 'var(--accent-red)' : 'var(--text-primary)';
+    const pnl    = parseFloat(pnlRaw ?? 0);
+    const pnlFmt = isNaN(pnl) ? '—' : (pnl >= 0 ? '+' : '') + AVUtils.formatCurrencyFull(pnl);
+    const pnlClr = pnl > 0 ? 'var(--accent-green)' : pnl < 0 ? 'var(--accent-red)' : 'var(--text-primary)';
     const winRate = parseFloat(pnlMon?.win_rate ?? 0);
     const winning = parseInt(pnlMon?.winning    ?? 0);
     const losing  = parseInt(pnlMon?.losing     ?? 0);
 
-    const pnlSrc  = pnlRaw === portfolio?.unrealized_pnl
-    ? 'portfolio.json'
-    : 'pnl_monitor.json';
-
     _setKpi(
-    'pnl',
-    pnlFmt,
-    pnlRaw !== null
+      'pnl',
+      pnlFmt,
+      pnlRaw !== null
         ? `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}%`
         : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
-    null,
-    pnlClr
+      null,
+      pnlClr
     );
 
     const pnlValEl = document.getElementById('kpi-pnl-val');
     if (pnlValEl && !isNaN(pnl)) pnlValEl.style.color = pnlClr;
 
     // ── Leverage (R7) ───────────────────────────────────────
-    const lev    = parseFloat(AVUtils.safeGet(risk, 'leverage.current_leverage', 0));
-    const overLev= AVUtils.safeGet(risk, 'leverage.is_over_leveraged', false);
-    const maxLev = parseFloat(AVUtils.safeGet(risk, 'leverage.max_leverage', 1.0));
-    const redBy  = parseFloat(AVUtils.safeGet(risk, 'leverage.reduce_by_pct', 0));
+    const lev     = parseFloat(AVUtils.safeGet(risk, 'leverage.current_leverage', 0));
+    const overLev = AVUtils.safeGet(risk, 'leverage.is_over_leveraged', false);
+    const maxLev  = parseFloat(AVUtils.safeGet(risk, 'leverage.max_leverage', 1.0));
+    const redBy   = parseFloat(AVUtils.safeGet(risk, 'leverage.reduce_by_pct', 0));
 
     const levSub = overLev
       ? `<span class="badge badge-orange" style="font-size:9px">
-           <i class="fa-solid fa-triangle-exclamation"></i> Over-leveraged — reduce ${(redBy*100).toFixed(0)}%
+           <i class="fa-solid fa-triangle-exclamation"></i> Over-leveraged — reduce ${(redBy * 100).toFixed(0)}%
          </span>`
       : `<i class="fa-solid fa-circle-check" style="color:var(--accent-green)"></i> Within limit (max ${maxLev.toFixed(1)}x)`;
 
@@ -151,56 +147,76 @@
       }
     }
 
-    // ── Positions ───────────────────────────────────────────────
-    // Compte depuis le dict positions{} si positions_count absent
-    const positionsDict  = portfolio?.positions || {};
-    const posArr         = Object.values(positionsDict);
+    // ── Positions — compte depuis dict positions{} si positions_count absent ──
+    const positionsDict   = portfolio?.positions || {};
+    const posArr          = Object.values(positionsDict);
     const portfolioLoaded = portfolio !== null && portfolio !== undefined;
 
     const posCount = parseInt(
-    portfolio?.positions_count
-    ?? (posArr.length > 0 ? posArr.length : 0)
+      portfolio?.positions_count ?? (posArr.length > 0 ? posArr.length : 0)
     );
 
     const longCt = parseInt(
-    portfolio?.long_count
-    ?? portfolio?.long_positions
-    ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) > 0).length
-    ?? 0
+      portfolio?.long_count
+      ?? portfolio?.long_positions
+      ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) > 0).length
+      ?? 0
     );
 
     const shortCt = parseInt(
-    portfolio?.short_count
-    ?? portfolio?.short_positions
-    ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) < 0).length
-    ?? 0
+      portfolio?.short_count
+      ?? portfolio?.short_positions
+      ?? posArr.filter(p => parseFloat(p.quantity ?? p.qty ?? p.pos ?? 0) < 0).length
+      ?? 0
     );
 
     _setKpi(
-    'positions',
-    posCount > 0
-        ? String(posCount)
-        : portfolioLoaded ? '0' : '—',
-    posCount > 0
+      'positions',
+      posCount > 0 ? String(posCount) : portfolioLoaded ? '0' : '—',
+      posCount > 0
         ? `<span style="color:var(--accent-green)">
-            <i class="fa-solid fa-arrow-up"></i> ${longCt} LONG
-        </span>
-        &nbsp;·&nbsp;
-        <span style="color:var(--accent-red)">
-            <i class="fa-solid fa-arrow-down"></i> ${shortCt} SHORT
-        </span>`
+             <i class="fa-solid fa-arrow-up"></i> ${longCt} LONG
+           </span>
+           &nbsp;·&nbsp;
+           <span style="color:var(--accent-red)">
+             <i class="fa-solid fa-arrow-down"></i> ${shortCt} SHORT
+           </span>`
         : portfolioLoaded
-        ? `<i class="fa-regular fa-folder-open" style="font-size:9px"></i> No open positions`
-        : `<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...`,
-    null,
-    'var(--accent-violet)'
+          ? `<i class="fa-regular fa-folder-open" style="font-size:9px"></i> No open positions`
+          : `<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...`,
+      null,
+      'var(--accent-violet)'
     );
-  } 
 
-  // ══════════════════════════════════════════════════════════════
-    // REGIME CARD — source : regime.json
-    // ══════════════════════════════════════════════════════════════
-    function renderRegime(data) {
+    // Signal stats badges
+    const sigs = data.signals;
+    if (sigs) {
+      const sbBadge = document.getElementById('sidebar-signals-badge');
+      if (sbBadge) sbBadge.textContent = sigs.n_signals || sigs.signals?.length || 0;
+      const buysEl = document.getElementById('dash-buys-count');
+      const hcEl   = document.getElementById('dash-hc-count');
+      if (buysEl) buysEl.textContent = `${sigs.n_buy || 0} BUY`;
+      if (hcEl)   hcEl.textContent   = `${sigs.n_high_conf || 0} High Conf`;
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // _setKpi — helper interne KPI cards
+  // ══════════════════════════════════════════════════════════
+  function _setKpi(key, val, sub, color = null, valColor = null) {
+    const valEl = document.getElementById(`kpi-${key}-val`);
+    const subEl = document.getElementById(`kpi-${key}-sub`);
+    if (valEl) {
+      valEl.innerHTML = val;
+      if (valColor) valEl.style.color = valColor;
+    }
+    if (subEl) subEl.innerHTML = sub || '';
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // REGIME CARD — source : regime.json
+  // ══════════════════════════════════════════════════════════
+  function renderRegime(data) {
     const body = document.getElementById('dash-regime-body');
     if (!body) return;
     if (!data) { body.innerHTML = `<div class="dash-skeleton-block"></div>`; return; }
@@ -214,127 +230,117 @@
     const colors = AVUtils.regimeColor(regime);
 
     const regimeIcons = {
-        BULL:       'fa-solid fa-arrow-trend-up',
-        trend_up:   'fa-solid fa-arrow-trend-up',
-        BEAR:       'fa-solid fa-arrow-trend-down',
-        trend_down: 'fa-solid fa-arrow-trend-down',
-        NEUTRAL:    'fa-solid fa-minus',
-        CRISIS:     'fa-solid fa-triangle-exclamation',
+      BULL:       'fa-solid fa-arrow-trend-up',
+      trend_up:   'fa-solid fa-arrow-trend-up',
+      BEAR:       'fa-solid fa-arrow-trend-down',
+      trend_down: 'fa-solid fa-arrow-trend-down',
+      NEUTRAL:    'fa-solid fa-minus',
+      CRISIS:     'fa-solid fa-triangle-exclamation',
     };
 
-    // ── Probabilités ───────────────────────────────────────────
+    // ── Probabilités ───────────────────────────────────────
     const probaRows = ['BULL', 'BEAR', 'NEUTRAL', 'CRISIS'].map(r => {
-        const pct  = Math.round((probas[r] || 0) * 100);
-        const rClr = AVUtils.regimeColor(r);
-        return `
+      const pct  = Math.round((probas[r] || 0) * 100);
+      const rClr = AVUtils.regimeColor(r);
+      return `
         <div class="dash-proba-row">
-            <span class="dash-proba-label">${r}</span>
-            <div class="dash-proba-bar">
+          <span class="dash-proba-label">${r}</span>
+          <div class="dash-proba-bar">
             <div class="dash-proba-fill"
-                style="width:${pct}%;background:${rClr.bg}"></div>
-            </div>
-            <span class="dash-proba-val">${pct}%</span>
+                 style="width:${pct}%;background:${rClr.bg}"></div>
+          </div>
+          <span class="dash-proba-val">${pct}%</span>
         </div>`;
     }).join('');
 
-    // ── Indicateurs SPY (depuis regime.json.indicators) ────────
+    // ── Indicateurs SPY ────────────────────────────────────
     const spyPrice = parseFloat(indic.spy_price || 0);
     const spyMa5   = parseFloat(indic.spy_ma5   || 0);
     const spyMa20  = parseFloat(indic.spy_ma20  || 0);
     const spyMa50  = parseFloat(indic.spy_ma50  || 0);
 
     const indicHTML = spyPrice > 0 ? `
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0;
-                    padding:10px 12px;border-radius:10px;
-                    background:var(--bg-secondary);border:1px solid var(--border)">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0;
+                  padding:10px 12px;border-radius:10px;
+                  background:var(--bg-secondary);border:1px solid var(--border)">
 
-        <div style="display:flex;flex-direction:column;align-items:center;
-                    flex:1;min-width:54px">
-            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px">SPY</span>
-            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                        color:var(--text-primary)">
-            $${spyPrice.toFixed(2)}
-            </span>
+        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
+          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                       text-transform:uppercase;letter-spacing:0.4px">SPY</span>
+          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                       color:var(--text-primary)">$${spyPrice.toFixed(2)}</span>
         </div>
 
         ${spyMa5 > 0 ? `
         <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px">MA5</span>
-            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                        color:${spyPrice >= spyMa5
-                        ? 'var(--accent-green)'
-                        : 'var(--accent-red)'}">
+          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                       text-transform:uppercase;letter-spacing:0.4px">MA5</span>
+          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                       color:${spyPrice >= spyMa5 ? 'var(--accent-green)' : 'var(--accent-red)'}">
             $${spyMa5.toFixed(2)}
-            </span>
+          </span>
         </div>` : ''}
 
         ${spyMa20 > 0 ? `
         <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px">MA20</span>
-            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                        color:${spyPrice >= spyMa20
-                        ? 'var(--accent-green)'
-                        : 'var(--accent-red)'}">
+          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                       text-transform:uppercase;letter-spacing:0.4px">MA20</span>
+          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                       color:${spyPrice >= spyMa20 ? 'var(--accent-green)' : 'var(--accent-red)'}">
             $${spyMa20.toFixed(2)}
-            </span>
+          </span>
         </div>` : ''}
 
         ${spyMa50 > 0 ? `
         <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-            <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px">MA50</span>
-            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                        color:${spyPrice >= spyMa50
-                        ? 'var(--accent-green)'
-                        : 'var(--accent-red)'}">
+          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
+                       text-transform:uppercase;letter-spacing:0.4px">MA50</span>
+          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                       color:${spyPrice >= spyMa50 ? 'var(--accent-green)' : 'var(--accent-red)'}">
             $${spyMa50.toFixed(2)}
-            </span>
+          </span>
         </div>` : ''}
 
-        </div>` : '';
+      </div>` : '';
 
     body.innerHTML = `
-        <div class="dash-regime-main">
+      <div class="dash-regime-main">
         <div class="dash-regime-badge"
-            style="background:${colors.soft};border:2px solid ${colors.bg}">
-            <i class="${regimeIcons[regime] || 'fa-solid fa-circle'}"
-            style="color:${colors.bg};font-size:20px"></i>
+             style="background:${colors.soft};border:2px solid ${colors.bg}">
+          <i class="${regimeIcons[regime] || 'fa-solid fa-circle'}"
+             style="color:${colors.bg};font-size:20px"></i>
         </div>
         <div class="dash-regime-info">
-            <div class="dash-regime-name" style="color:${colors.bg}">${regime}</div>
-            <div class="dash-regime-conf">${(conf * 100).toFixed(0)}% confidence</div>
-            ${prev !== '—' ? `
+          <div class="dash-regime-name" style="color:${colors.bg}">${regime}</div>
+          <div class="dash-regime-conf">${(conf * 100).toFixed(0)}% confidence</div>
+          ${prev !== '—' ? `
             <div style="font-size:10px;color:var(--text-faint);margin-top:2px">
-                <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
-                Was ${prev} &middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago
+              <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
+              Was ${prev} &middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago
             </div>` : ''}
         </div>
-        </div>
+      </div>
 
-        ${indicHTML}
+      ${indicHTML}
 
-        <div class="dash-regime-probas" style="margin-top:14px">
+      <div class="dash-regime-probas" style="margin-top:14px">
         ${probaRows}
-        </div>
+      </div>
 
-        <!-- ✅ Lien vers signals.html -->
-        <a href="signals.html"
-        style="display:flex;align-items:center;gap:6px;margin-top:14px;
+      <a href="signals.html"
+         style="display:flex;align-items:center;gap:6px;margin-top:14px;
                 padding:8px 12px;border-radius:9px;text-decoration:none;
                 background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);
                 font-size:11px;font-weight:600;color:var(--accent-blue);
                 transition:background 0.15s ease"
-        onmouseover="this.style.background='rgba(59,130,246,0.12)'"
-        onmouseout="this.style.background='rgba(59,130,246,0.06)'">
+         onmouseover="this.style.background='rgba(59,130,246,0.12)'"
+         onmouseout="this.style.background='rgba(59,130,246,0.06)'">
         <i class="fa-solid fa-satellite-dish" style="font-size:11px"></i>
         View ML Signals
         <i class="fa-solid fa-arrow-right"
-            style="font-size:9px;margin-left:auto;opacity:0.7"></i>
-        </a>`;
-    }
+           style="font-size:9px;margin-left:auto;opacity:0.7"></i>
+      </a>`;
+  }
 
   // ══════════════════════════════════════════════════════════
   // AGENT HEALTH (R2)
@@ -374,7 +380,7 @@
            <i class="fa-solid fa-circle-notch fa-spin"></i> Loading agents...
          </div>`
       : agentEntries.map(([name, ag]) => {
-          const isOk    = AVUtils.isAgentOk(ag);         // R2
+          const isOk    = AVUtils.isAgentOk(ag);
           const cycles  = parseInt(ag.cycles  || 0);
           const errors  = parseInt(ag.errors  || 0);
           const lastRun = ag.last_run || null;
@@ -405,7 +411,6 @@
   // EXECUTION STATUS
   // ══════════════════════════════════════════════════════════
   function renderExecution(execData, modeData, ibkrData) {
-    // FIX : ID corrigé dash-exec-body (était dash-execution-body)
     const body = document.getElementById('dash-exec-body');
     if (!body) return;
 
@@ -428,7 +433,7 @@
     body.innerHTML = `
       <div class="dash-exec-badges">
         <span class="badge" style="background:${modeColor}20;color:${modeColor};
-              border:1px solid ${modeColor}40;${mode==='live'?'animation:pulse-badge 1.5s infinite':''}">
+              border:1px solid ${modeColor}40;${mode === 'live' ? 'animation:pulse-badge 1.5s infinite' : ''}">
           <i class="fa-solid fa-circle" style="font-size:7px"></i> ${modeLabel}
         </span>
         <span class="badge badge-blue">
@@ -443,7 +448,7 @@
 
       <div class="dash-exec-conn">
         <span class="dash-agent-dot"
-              style="background:${connColor};animation:${(ibkrConn&&ibkrAuth)?'pulse-dot 2s infinite':'none'}">
+              style="background:${connColor};animation:${(ibkrConn && ibkrAuth) ? 'pulse-dot 2s infinite' : 'none'}">
         </span>
         <span style="font-size:12px;color:var(--text-secondary);font-weight:600">
           IBeam ${connLabel}
@@ -491,16 +496,16 @@
     if (!tbody) return;
 
     if (!data && !allocationData) {
-        tbody.innerHTML = `
+      tbody.innerHTML = `
         <tr>
-            <td colspan="6" style="text-align:center;padding:24px;color:var(--text-faint)">
+          <td colspan="6" style="text-align:center;padding:24px;color:var(--text-faint)">
             <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
-            </td>
+          </td>
         </tr>`;
-        return;
+      return;
     }
 
-    // ── Stats bar ─────────────────────────────────────────────
+    // ── Stats bar ─────────────────────────────────────────
     const nSignals  = data?.n_signals   || data?.signals?.length || 0;
     const nBuy      = data?.n_buy       || 0;
     const nSell     = data?.n_sell      || 0;
@@ -510,35 +515,35 @@
 
     const statsBar = document.getElementById('dash-signals-stats');
     if (statsBar) {
-        statsBar.innerHTML = `
+      statsBar.innerHTML = `
         <span class="badge badge-blue" style="font-size:10px">
-            <i class="fa-solid fa-satellite-dish" style="font-size:9px"></i> ${nSignals} signals
+          <i class="fa-solid fa-satellite-dish" style="font-size:9px"></i> ${nSignals} signals
         </span>
         <span class="badge badge-green" style="font-size:10px">
-            <i class="fa-solid fa-arrow-up" style="font-size:9px"></i> ${nBuy} BUY
+          <i class="fa-solid fa-arrow-up" style="font-size:9px"></i> ${nBuy} BUY
         </span>
         <span class="badge badge-red" style="font-size:10px">
-            <i class="fa-solid fa-arrow-down" style="font-size:9px"></i> ${nSell} SELL
+          <i class="fa-solid fa-arrow-down" style="font-size:9px"></i> ${nSell} SELL
         </span>
         <span class="badge badge-gold" style="font-size:10px">
-            <i class="fa-solid fa-star" style="font-size:9px"></i> ${nHighConf} HC
+          <i class="fa-solid fa-star" style="font-size:9px"></i> ${nHighConf} HC
         </span>
         ${updatedAt ? `
-            <span style="font-size:10px;color:var(--text-faint);margin-left:auto">
+          <span style="font-size:10px;color:var(--text-faint);margin-left:auto">
             <i class="fa-regular fa-clock" style="font-size:9px"></i>
             ${AVUtils.formatAge(updatedAt)}
-            </span>` : ''}`;
+          </span>` : ''}`;
     }
 
     const modelsBar = document.getElementById('dash-models-bar');
     if (modelsBar) {
-        modelsBar.innerHTML = Object.entries(modelsAct).map(([model, active]) => `
+      modelsBar.innerHTML = Object.entries(modelsAct).map(([model, active]) => `
         <span class="badge" style="font-size:9px;padding:2px 7px;
                 background:${active ? 'rgba(59,130,246,0.1)' : 'rgba(100,116,139,0.1)'};
                 color:${active ? 'var(--accent-blue)' : 'var(--text-faint)'};
                 border:1px solid ${active ? 'rgba(59,130,246,0.25)' : 'rgba(100,116,139,0.2)'}">
-            <i class="fa-solid fa-${active ? 'check' : 'xmark'}" style="font-size:8px"></i>
-            ${model}
+          <i class="fa-solid fa-${active ? 'check' : 'xmark'}" style="font-size:8px"></i>
+          ${model}
         </span>`).join('');
     }
 
@@ -547,13 +552,13 @@
     if (buysEl) buysEl.textContent = `${nBuy} BUY`;
     if (hcEl)   hcEl.textContent   = `${nHighConf} High Conf`;
 
-    // ── Source 1 : BUY depuis current_signals (filtre insensible à la casse) ──
+    // ── Source 1 : BUY depuis current_signals ─────────────
     const sigsArr = Array.isArray(data?.signals) ? data.signals : [];
     let buySigs = sigsArr
-        .filter(s => (s.action || '').toUpperCase() === 'BUY')
-        .sort((a, b) => parseFloat(b.confidence || 0) - parseFloat(a.confidence || 0))
-        .slice(0, 10)
-        .map(s => ({
+      .filter(s => (s.action || '').toUpperCase() === 'BUY')
+      .sort((a, b) => parseFloat(b.confidence || 0) - parseFloat(a.confidence || 0))
+      .slice(0, 10)
+      .map(s => ({
         symbol:        s.symbol,
         action:        s.action || 'BUY',
         confidence:    parseFloat(s.confidence || 0),
@@ -563,14 +568,14 @@
         quantity:      0,
         rp_weight:     0,
         _src:          'signal',
-        }));
+      }));
 
-    // ── Source 2 : capital_allocation si aucun BUY dans signals ───────────
+    // ── Source 2 : capital_allocation si aucun BUY ────────
     if (buySigs.length === 0 && allocationData?.allocations) {
-        buySigs = Object.entries(allocationData.allocations)
+      buySigs = Object.entries(allocationData.allocations)
         .map(([sym, obj]) => {
-            if (!obj || typeof obj !== 'object') return null;
-            return {
+          if (!obj || typeof obj !== 'object') return null;
+          return {
             symbol:        sym,
             action:        obj.action        || 'BUY',
             confidence:    parseFloat(obj.confidence    || 0),
@@ -580,201 +585,172 @@
             quantity:      parseInt(obj.quantity        || 0),
             rp_weight:     parseFloat(obj.rp_weight     || 0),
             _src:          'allocation',
-            };
+          };
         })
         .filter(e => e && e.confidence > 0)
         .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 10);
     }
 
-    // ── Mise à jour dynamique du thead selon la source ────────────────────
+    // ── Mise à jour thead selon source ────────────────────
     const useAlloc = buySigs.length > 0 && buySigs[0]._src === 'allocation';
     const tHead = tbody.closest('table')?.querySelector('thead tr');
     if (tHead) {
-        tHead.innerHTML = useAlloc
+      tHead.innerHTML = useAlloc
         ? `<th style="padding-left:14px">Symbol</th>
-            <th style="min-width:130px">Confidence</th>
-            <th style="text-align:right">Allocated</th>
-            <th style="text-align:right">Qty / Price</th>
-            <th style="text-align:right">RP Weight</th>
-            <th style="text-align:center">Status</th>`
+           <th style="min-width:130px">Confidence</th>
+           <th style="text-align:right">Allocated</th>
+           <th style="text-align:right">Qty / Price</th>
+           <th style="text-align:right">RP Weight</th>
+           <th style="text-align:center">Status</th>`
         : `<th style="padding-left:14px">Symbol</th>
-            <th style="text-align:center">Action</th>
-            <th style="min-width:110px">Confidence</th>
-            <th style="text-align:right">Price</th>
-            <th style="text-align:right">Score</th>
-            <th style="text-align:center">Status</th>`;
+           <th style="text-align:center">Action</th>
+           <th style="min-width:110px">Confidence</th>
+           <th style="text-align:right">Price</th>
+           <th style="text-align:right">Score</th>
+           <th style="text-align:center">Status</th>`;
     }
 
-    // ── État vide ─────────────────────────────────────────────────────────
+    // ── État vide ─────────────────────────────────────────
     if (buySigs.length === 0) {
-        tbody.innerHTML = `
+      tbody.innerHTML = `
         <tr>
-            <td colspan="6" style="text-align:center;padding:28px;color:var(--text-faint)">
+          <td colspan="6" style="text-align:center;padding:28px;color:var(--text-faint)">
             <i class="fa-solid fa-magnifying-glass"
-                style="display:block;font-size:20px;margin-bottom:8px;opacity:0.3"></i>
+               style="display:block;font-size:20px;margin-bottom:8px;opacity:0.3"></i>
             No BUY signals at the moment
-            </td>
+          </td>
         </tr>`;
-        return;
+      return;
     }
 
-    // ── Rendu des lignes ──────────────────────────────────────────────────
+    // ── Rendu des lignes ──────────────────────────────────
     tbody.innerHTML = buySigs.map(sig => {
-        const { symbol, action, confidence, price, score,
-                allocated_usd, quantity, rp_weight, _src } = sig;
+      const { symbol, action, confidence, price, score,
+              allocated_usd, quantity, rp_weight, _src } = sig;
 
-        const sym       = symbol || '—';
-        const conf      = parseFloat(confidence || 0);
-        const isHC      = conf >= AV_CONFIG.THRESHOLDS.highConf;
-        const confPct   = (conf * 100).toFixed(1);
-        const confColor = conf >= 0.75 ? 'var(--accent-green)'
-                        : conf >= 0.55 ? 'var(--accent-blue)'
-                        : 'var(--accent-orange)';
-        const isBuy     = (action || '').toUpperCase() === 'BUY';
+      const sym       = symbol || '—';
+      const conf      = parseFloat(confidence || 0);
+      const isHC      = conf >= AV_CONFIG.THRESHOLDS.highConf;
+      const confPct   = (conf * 100).toFixed(1);
+      const confColor = conf >= 0.75 ? 'var(--accent-green)'
+                      : conf >= 0.55 ? 'var(--accent-blue)'
+                      : 'var(--accent-orange)';
+      const isBuy     = (action || '').toUpperCase() === 'BUY';
 
-        const logoHtml = typeof window._getLogoHtml === 'function'
+      const logoHtml = typeof window._getLogoHtml === 'function'
         ? window._getLogoHtml(sym, 20)
         : `<span style="display:inline-flex;align-items:center;justify-content:center;
                         width:20px;height:20px;border-radius:5px;
                         background:var(--gradient-brand);color:#fff;
                         font-size:10px;font-weight:800;flex-shrink:0">
-            ${sym.charAt(0)}
-            </span>`;
+             ${sym.charAt(0)}
+           </span>`;
 
-        // Barre de confiance (commune aux deux sources)
-        const confBar = `
+      const confBar = `
         <div style="display:flex;align-items:center;gap:6px">
-            <div style="flex:1;height:4px;border-radius:2px;
-                        background:rgba(148,163,184,0.15);overflow:hidden">
+          <div style="flex:1;height:4px;border-radius:2px;
+                      background:rgba(148,163,184,0.15);overflow:hidden">
             <div style="width:${confPct}%;height:100%;background:${confColor};
                         border-radius:2px;transition:width 0.5s ease"></div>
-            </div>
-            <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);
-                        color:${confColor};min-width:36px">${confPct}%</span>
+          </div>
+          <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);
+                      color:${confColor};min-width:36px">${confPct}%</span>
         </div>`;
 
-        // Badge status (commun)
-        const statusBadge = isHC
+      const statusBadge = isHC
         ? `<span class="badge badge-gold" style="font-size:9px;white-space:nowrap">
-            <i class="fa-solid fa-star" style="font-size:8px"></i> HIGH
-            </span>`
+             <i class="fa-solid fa-star" style="font-size:8px"></i> HIGH
+           </span>`
         : `<span style="color:var(--text-faint);font-size:11px">—</span>`;
 
-        // ── Ligne allocation (données riches) ─────────────────────
-        if (_src === 'allocation') {
+      if (_src === 'allocation') {
         return `
-            <tr class="dash-sig-row${isHC ? ' dash-sig-hc' : ''}"
-                style="cursor:pointer"
-                onclick="if(window.StockDetail) StockDetail.open('${sym}')"
-                title="${sym} · ${AVUtils.formatCurrency(allocated_usd)} allocated">
-
-            <!-- Symbol + Logo + Action badge -->
+          <tr class="dash-sig-row${isHC ? ' dash-sig-hc' : ''}"
+              style="cursor:pointer"
+              onclick="if(window.StockDetail) StockDetail.open('${sym}')"
+              title="${sym} · ${AVUtils.formatCurrency(allocated_usd)} allocated">
             <td style="padding:9px 14px">
-                <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px">
                 ${logoHtml}
                 <div>
-                    <div style="font-weight:700;font-size:13px;
-                                color:var(--text-primary);line-height:1.2">${sym}</div>
-                    <span style="display:inline-flex;align-items:center;gap:3px;
-                                margin-top:2px;padding:1px 6px;font-size:9px;font-weight:700;
-                                border-radius:var(--radius-full);
-                                background:${isBuy ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};
-                                color:${isBuy ? 'var(--accent-green)' : 'var(--accent-red)'};
-                                border:1px solid ${isBuy ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}">
+                  <div style="font-weight:700;font-size:13px;
+                              color:var(--text-primary);line-height:1.2">${sym}</div>
+                  <span style="display:inline-flex;align-items:center;gap:3px;
+                              margin-top:2px;padding:1px 6px;font-size:9px;font-weight:700;
+                              border-radius:var(--radius-full);
+                              background:${isBuy ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};
+                              color:${isBuy ? 'var(--accent-green)' : 'var(--accent-red)'};
+                              border:1px solid ${isBuy ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}">
                     <i class="fa-solid fa-arrow-${isBuy ? 'up' : 'down'}"
-                        style="font-size:7px"></i> ${action}
-                    </span>
+                       style="font-size:7px"></i> ${action}
+                  </span>
                 </div>
-                </div>
+              </div>
             </td>
-
-            <!-- Confidence -->
             <td style="padding:9px 10px">${confBar}</td>
-
-            <!-- Allocated USD -->
             <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;
                         font-weight:700;color:var(--text-primary);text-align:right">
-                ${allocated_usd > 0 ? AVUtils.formatCurrency(allocated_usd) : '—'}
+              ${allocated_usd > 0 ? AVUtils.formatCurrency(allocated_usd) : '—'}
             </td>
-
-            <!-- Qty / Price -->
             <td style="padding:9px 12px;text-align:right;line-height:1.4">
-                <div style="font-size:11px;font-weight:600;font-family:var(--font-mono);
-                            color:var(--text-primary)">
+              <div style="font-size:11px;font-weight:600;font-family:var(--font-mono);
+                          color:var(--text-primary)">
                 ${quantity > 0 ? quantity.toLocaleString('en-US') + ' sh.' : '—'}
-                </div>
-                <div style="font-size:9px;color:var(--text-faint)">
+              </div>
+              <div style="font-size:9px;color:var(--text-faint)">
                 ${price > 0 ? '@ $' + price.toFixed(2) : ''}
-                </div>
+              </div>
             </td>
-
-            <!-- RP Weight -->
             <td style="padding:9px 12px;font-family:var(--font-mono);font-size:11px;
                         font-weight:700;color:var(--accent-violet);text-align:right">
-                ${rp_weight > 0 ? (rp_weight * 100).toFixed(2) + '%' : '—'}
+              ${rp_weight > 0 ? (rp_weight * 100).toFixed(2) + '%' : '—'}
             </td>
-
-            <!-- Status -->
             <td style="padding:9px 8px;text-align:center">${statusBadge}</td>
-            </tr>`;
-        }
+          </tr>`;
+      }
 
-        // ── Ligne signal standard ─────────────────────────────────
-        return `
+      return `
         <tr class="dash-sig-row${isHC ? ' dash-sig-hc' : ''}"
             style="cursor:pointer"
             onclick="if(window.StockDetail) StockDetail.open('${sym}')"
             title="View ${sym}">
-
-            <!-- Symbol + Logo -->
-            <td style="padding:9px 14px">
+          <td style="padding:9px 14px">
             <div style="display:flex;align-items:center;gap:7px">
-                ${logoHtml}
-                <div>
+              ${logoHtml}
+              <div>
                 <div style="font-weight:700;font-size:13px;
                             color:var(--text-primary);line-height:1.2">${sym}</div>
                 ${isHC ? `
-                    <div style="font-size:9px;color:#eab308;font-weight:700">
+                  <div style="font-size:9px;color:#eab308;font-weight:700">
                     <i class="fa-solid fa-star" style="font-size:8px"></i> HIGH CONF
-                    </div>` : ''}
-                </div>
+                  </div>` : ''}
+              </div>
             </div>
-            </td>
-
-            <!-- Action -->
-            <td style="padding:9px 6px;text-align:center">
+          </td>
+          <td style="padding:9px 6px;text-align:center">
             <span class="badge badge-green" style="font-size:10px;padding:2px 8px">
-                <i class="fa-solid fa-arrow-up" style="font-size:8px"></i> BUY
+              <i class="fa-solid fa-arrow-up" style="font-size:8px"></i> BUY
             </span>
-            </td>
-
-            <!-- Confidence -->
-            <td style="padding:9px 10px">${confBar}</td>
-
-            <!-- Price -->
-            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;
-                    font-weight:600;color:var(--text-primary);text-align:right">
+          </td>
+          <td style="padding:9px 10px">${confBar}</td>
+          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;
+                  font-weight:600;color:var(--text-primary);text-align:right">
             ${price > 0 ? '$' + price.toFixed(2) : '—'}
-            </td>
-
-            <!-- Score -->
-            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:11px;
-                    color:${confColor};font-weight:700;text-align:right">
+          </td>
+          <td style="padding:9px 12px;font-family:var(--font-mono);font-size:11px;
+                  color:${confColor};font-weight:700;text-align:right">
             ${score > 0 ? parseFloat(score).toFixed(4) : '—'}
-            </td>
-
-            <!-- Status -->
-            <td style="padding:9px 8px;text-align:center">${statusBadge}</td>
+          </td>
+          <td style="padding:9px 8px;text-align:center">${statusBadge}</td>
         </tr>`;
     }).join('');
-    }
+  }
 
   // ══════════════════════════════════════════════════════════
   // NAV CHART — Lightweight Charts
   // ══════════════════════════════════════════════════════════
   function renderNavChart(historyData, portfolioData) {
-    // FIX : ID corrigé 'dash-nav-chart' (était 'nav-chart')
     const container = document.getElementById('dash-nav-chart');
     if (!container) return;
 
@@ -783,8 +759,8 @@
       return;
     }
 
-    const history    = historyData?.history || [];
-    const netliqNow  = AVUtils.netliqFromPortfolio(portfolioData);
+    const history   = historyData?.history || [];
+    const netliqNow = AVUtils.netliqFromPortfolio(portfolioData);
 
     _navAllData = [];
     history.forEach(pt => {
@@ -796,16 +772,15 @@
       _navAllData.push({
         time:      t,
         value:     nl,
-        leverage:  parseFloat(pt.leverage   || 0),
-        pnl:       parseFloat(pt.total_pnl  || 0),
-        positions: parseInt(pt.n_positions  || 0),
-        regime:    pt.regime  || 'NEUTRAL',
-        drawdown:  parseFloat(pt.drawdown   || 0),
-        win_rate:  parseFloat(pt.win_rate   || 0),
+        leverage:  parseFloat(pt.leverage  || 0),
+        pnl:       parseFloat(pt.total_pnl || 0),
+        positions: parseInt(pt.n_positions || 0),
+        regime:    pt.regime || 'NEUTRAL',
+        drawdown:  parseFloat(pt.drawdown  || 0),
+        win_rate:  parseFloat(pt.win_rate  || 0),
       });
     });
 
-    // Point actuel depuis portfolio.json (R1)
     if (netliqNow && netliqNow > 0) {
       const nowTs = Math.floor(Date.now() / 1000);
       const existingNow = _navAllData.find(p => Math.abs(p.time - nowTs) < 120);
@@ -821,7 +796,6 @@
       }
     }
 
-    // Trier + dédupliquer
     _navAllData.sort((a, b) => a.time - b.time);
     const seen = new Set();
     _navAllData = _navAllData.filter(p => {
@@ -849,10 +823,7 @@
           horzLines: { color: 'rgba(148,163,184,0.08)' },
         },
         crosshair: { mode: LightweightCharts.CrosshairMode?.Normal ?? 1 },
-        rightPriceScale: {
-          borderColor: 'rgba(148,163,184,0.15)',
-          visible: true,
-        },
+        rightPriceScale: { borderColor: 'rgba(148,163,184,0.15)', visible: true },
         timeScale: {
           borderColor:    'rgba(148,163,184,0.15)',
           timeVisible:    true,
@@ -867,11 +838,10 @@
         height:       container.clientHeight || 280,
       });
 
-      // FIX : formatCompact → formatCurrency (était AVUtils.formatCompact inexistant)
       const fmtPrice = v => {
         const n = Math.abs(v);
-        if (n >= 1e6) return `$${(v/1e6).toFixed(2)}M`;
-        if (n >= 1e3) return `$${(v/1e3).toFixed(1)}K`;
+        if (n >= 1e6) return `$${(v / 1e6).toFixed(2)}M`;
+        if (n >= 1e3) return `$${(v / 1e3).toFixed(1)}K`;
         return `$${v.toFixed(0)}`;
       };
 
@@ -896,7 +866,7 @@
                 container.clientWidth  || 600,
                 container.clientHeight || 280
               );
-            } catch(e) {}
+            } catch (e) {}
           }
         }).observe(container);
       }
@@ -905,7 +875,6 @@
     _navChart.applyOptions({ layout: { textColor: _chartTextColor() } });
     _applyNavTimeframe(_currentTf);
 
-    // Info chart
     const chartInfo = document.getElementById('dash-chart-info');
     if (chartInfo) {
       chartInfo.textContent = `${_navAllData.length} data points · Last: ${
@@ -950,7 +919,7 @@
 
     let filtered = _navAllData;
     const now    = Math.floor(Date.now() / 1000);
-    if (tf === '1D') filtered = _navAllData.filter(p => p.time >= now - 86400);
+    if (tf === '1D')      filtered = _navAllData.filter(p => p.time >= now - 86400);
     else if (tf === '1W') filtered = _navAllData.filter(p => p.time >= now - 604800);
     else if (tf === '1M') filtered = _navAllData.filter(p => p.time >= now - 2592000);
 
@@ -971,14 +940,12 @@
           priceLineColor: isPos ? '#10b981' : '#ef4444',
         });
       }
-    } catch(e) {
+    } catch (e) {
       console.warn('[Dashboard] Chart setData error:', e.message);
     }
 
-    // Update timeframe buttons
     document.querySelectorAll('.av-timeframe-btn').forEach(btn => {
-      const active = btn.dataset.tf === tf;
-      btn.classList.toggle('active', active);
+      btn.classList.toggle('active', btn.dataset.tf === tf);
     });
   }
 
@@ -1015,8 +982,8 @@
           ${raw ? `
             <div style="margin-top:4px;border-top:1px solid var(--border);padding-top:4px">
               ${raw.leverage > 0 ? `<div>Leverage: <strong>${raw.leverage.toFixed(2)}x</strong></div>` : ''}
-              ${raw.pnl !== 0 ? `<div>PnL: <strong style="color:${raw.pnl>=0?'var(--accent-green)':'var(--accent-red)'}">
-                ${raw.pnl>=0?'+':''}${AVUtils.formatCurrencyFull(raw.pnl)}</strong></div>` : ''}
+              ${raw.pnl !== 0 ? `<div>PnL: <strong style="color:${raw.pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+                ${raw.pnl >= 0 ? '+' : ''}${AVUtils.formatCurrencyFull(raw.pnl)}</strong></div>` : ''}
               ${raw.positions > 0 ? `<div>Positions: <strong>${raw.positions}</strong></div>` : ''}
               ${raw.regime ? `<div>Regime: <strong style="color:${AVUtils.regimeColor(raw.regime).bg}">${raw.regime}</strong></div>` : ''}
             </div>` : ''}`;
@@ -1040,11 +1007,11 @@
     const cycle    = AVUtils.safeGet(sysData, 'oracle_cycle',  '—');
     const agActive = AVUtils.safeGet(sysData, 'agents_active', 13);
     const ddHalt   = AVUtils.safeGet(sysData, 'dd_halt',       false);
-    const wFH      = AVUtils.safeGet(sysData, 'workers.finance_hub',   true);
-    const wAI      = AVUtils.safeGet(sysData, 'workers.ai_proxy',      true);
-    const wED      = AVUtils.safeGet(sysData, 'workers.economic_data', true);
-    const ibkrConn = AVUtils.safeGet(ibkrData,'ibkr_connected', false);
-    const ibkrMode = AVUtils.safeGet(ibkrData,'mode',           'paper');
+    const wFH      = AVUtils.safeGet(sysData, 'workers.finance_hub',    true);
+    const wAI      = AVUtils.safeGet(sysData, 'workers.ai_proxy',       true);
+    const wED      = AVUtils.safeGet(sysData, 'workers.economic_data',  true);
+    const ibkrConn = AVUtils.safeGet(ibkrData, 'ibkr_connected', false);
+    const ibkrMode = AVUtils.safeGet(ibkrData, 'mode',           'paper');
 
     const sessionMap = {
       us_regular:    { color: 'var(--accent-green)',  label: 'US Regular'    },
@@ -1055,7 +1022,7 @@
     const sess = sessionMap[session] || sessionMap.closed;
 
     const wDot = ok => `<span style="width:6px;height:6px;border-radius:50%;display:inline-block;
-                               margin-right:3px;background:${ok?'var(--accent-green)':'var(--accent-red)'}"></span>`;
+                               margin-right:3px;background:${ok ? 'var(--accent-green)' : 'var(--accent-red)'}"></span>`;
 
     bar.innerHTML = `
       <div class="dash-status-item">
@@ -1075,7 +1042,7 @@
       <div class="dash-status-sep"></div>
       <div class="dash-status-item">
         <i class="fa-solid fa-plug"
-           style="font-size:10px;color:${ibkrConn?'var(--accent-green)':'var(--accent-red)'}"></i>
+           style="font-size:10px;color:${ibkrConn ? 'var(--accent-green)' : 'var(--accent-red)'}"></i>
         <span style="font-size:11px;color:var(--text-secondary)">
           IBKR ${ibkrConn ? 'ON' : 'OFF'} &middot; ${ibkrMode.toUpperCase()}
         </span>
@@ -1097,10 +1064,9 @@
   }
 
   // ══════════════════════════════════════════════════════════
-  // SIDEBAR STATUS (R2)
+  // SIDEBAR STATUS
   // ══════════════════════════════════════════════════════════
   function renderSidebarStatus(modeData, ibkrData, signalData) {
-    // FIX : IDs corrigés (sb-ibkr-dot, sb-mode-label, sb-last-sync)
     const dot   = document.getElementById('sb-ibkr-dot');
     const label = document.getElementById('sb-mode-label');
     const sync  = document.getElementById('sb-last-sync');
@@ -1132,7 +1098,7 @@
     el.innerHTML = `
       <span style="background:${color}20;color:${color};border:1px solid ${color}40;
                    font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;
-                   ${mode==='live'?'animation:pulse-badge 1.5s infinite':''}">
+                   ${mode === 'live' ? 'animation:pulse-badge 1.5s infinite' : ''}">
         <i class="fa-solid fa-circle" style="font-size:7px"></i>
         ${mode.toUpperCase()} &middot; ${auto ? 'AUTO' : 'MANUAL'}
       </span>`;
@@ -1151,13 +1117,11 @@
       <span style="background:${colors.soft};color:${colors.bg};
                    border:1px solid ${colors.bg}40;font-size:10px;font-weight:700;
                    padding:2px 9px;border-radius:20px">
-        ${regime}${conf > 0 ? ' ' + (conf*100).toFixed(0) + '%' : ''}
+        ${regime}${conf > 0 ? ' ' + (conf * 100).toFixed(0) + '%' : ''}
       </span>`;
   }
 
   function _updateRefreshTime() {
-    // FIX : ID corrigé 'topbar-refresh-time' (était 'topbar-last-refresh')
-    // + update du <span> interne pour ne pas écraser l'icône
     const el = document.getElementById('topbar-refresh-time');
     if (!el || !_lastRefreshTs) return;
     const secs = Math.floor((Date.now() - _lastRefreshTs) / 1000);
@@ -1168,13 +1132,12 @@
   }
 
   // ══════════════════════════════════════════════════════════
-  // AUTO-REFRESH — CORRIGÉ (AVApi.URLS → AV_CONFIG.SIGNAL_URLS)
+  // AUTO-REFRESH
   // ══════════════════════════════════════════════════════════
   function _startRefresh() {
-    // ── Référence locale aux URLs (le vrai fix) ─────────────
     const URLS = AV_CONFIG.SIGNAL_URLS;
 
-    // ── Timer 1 : Portfolio + Risk (30s) ─────────────────────
+    // Timer 1 : Portfolio + Risk (30s)
     _refreshTimers.push(setInterval(async () => {
       try {
         const [portfolio, risk, pnl, ibkr, exec, mode] = await Promise.allSettled([
@@ -1197,27 +1160,27 @@
       }
     }, AV_CONFIG.REFRESH.portfolio));
 
-    // ── Timer 2 : Signals + Regime (60s) ─────────────────────
+    // Timer 2 : Signals + Regime (60s)
     _refreshTimers.push(setInterval(async () => {
-    try {
+      try {
         const [signals, regime, history, portfolio, allocation] = await Promise.allSettled([
-        AVApi.fetchJSON(URLS.signals,    0),
-        AVApi.fetchJSON(URLS.regime,     0),
-        AVApi.fetchJSON(URLS.history,    0),
-        AVApi.fetchJSON(URLS.portfolio,  0),
-        AVApi.fetchJSON(URLS.allocation, 0),  // ← AJOUT
+          AVApi.fetchJSON(URLS.signals,    0),
+          AVApi.fetchJSON(URLS.regime,     0),
+          AVApi.fetchJSON(URLS.history,    0),
+          AVApi.fetchJSON(URLS.portfolio,  0),
+          AVApi.fetchJSON(URLS.allocation, 0),
         ]);
         const p = d => d.status === 'fulfilled' ? d.value : null;
-        renderSignals(p(signals), p(allocation));  // ← AJOUT p(allocation)
+        renderSignals(p(signals), p(allocation));
         renderRegime(p(regime));
         renderNavChart(p(history), p(portfolio));
         _updateTopbarRegime(p(regime));
-    } catch (err) {
+      } catch (err) {
         console.warn('[Dashboard] Refresh (signals) error:', err.message);
-    }
+      }
     }, AV_CONFIG.REFRESH.signals));
 
-    // ── Timer 3 : Agents (30s) ───────────────────────────────
+    // Timer 3 : Agents (30s)
     _refreshTimers.push(setInterval(async () => {
       try {
         const health = await AVApi.fetchJSON(URLS.health, 0);
@@ -1227,7 +1190,7 @@
       }
     }, AV_CONFIG.REFRESH.agents));
 
-    // ── Timer 4 : System Status (60s) ────────────────────────
+    // Timer 4 : System Status (60s)
     _refreshTimers.push(setInterval(async () => {
       try {
         const [sys, ibkr] = await Promise.allSettled([
@@ -1241,20 +1204,18 @@
       }
     }, AV_CONFIG.REFRESH.regime));
 
-    // ── Timer 5 : Timestamp display (10s) ────────────────────
+    // Timer 5 : Timestamp (10s)
     _refreshTimers.push(setInterval(_updateRefreshTime, 10_000));
   }
 
   // ══════════════════════════════════════════════════════════
-  // BINDINGS — IDs CORRIGÉS
+  // BINDINGS
   // ══════════════════════════════════════════════════════════
   function _bindThemeToggle() {
-    // FIX : 'av-theme-toggle' (était 'theme-toggle')
     const btn = document.getElementById('av-theme-toggle');
     if (!btn) return;
     btn.addEventListener('click', () => {
       AVUtils.ThemeManager.toggle();
-      // Redessine le chart avec les nouvelles couleurs
       if (_navChart) {
         _navChart.applyOptions({ layout: { textColor: _chartTextColor() } });
       }
@@ -1262,7 +1223,6 @@
   }
 
   function _bindSidebar() {
-    // FIX : 'av-hamburger' et 'av-sidebar' (étaient 'sidebar-toggle' et 'sidebar')
     const toggler = document.getElementById('av-hamburger');
     const sidebar = document.getElementById('av-sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
@@ -1288,7 +1248,7 @@
   }
 
   // ══════════════════════════════════════════════════════════
-  // PUBLIC (debug + HTML onclick)
+  // PUBLIC
   // ══════════════════════════════════════════════════════════
   window.setNavTf = tf => _applyNavTimeframe(tf);
 
@@ -1296,12 +1256,13 @@
     _refreshTimers.forEach(clearInterval);
     _refreshTimers = [];
     if (_navChart) {
-      try { _navChart.remove(); } catch(e) {}
-      _navChart = null; _navSeries = null;
+      try { _navChart.remove(); } catch (e) {}
+      _navChart  = null;
+      _navSeries = null;
     }
   }
 
-  // ── Boot ──────────────────────────────────────────────────
+  // ── Boot ─────────────────────────────────────────────────
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
