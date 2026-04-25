@@ -194,8 +194,8 @@
         : `<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...`,
     null,
     'var(--accent-violet)'
-    )
-  }
+    );
+  } 
 
   // ══════════════════════════════════════════════════════════════
     // REGIME CARD — source : regime.json
