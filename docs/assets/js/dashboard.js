@@ -85,7 +85,6 @@
 
     // ── Unrealized PnL ──────────────────────────────────────────
     // portfolio.json en priorité, fallback pnl_monitor.json (R1)
-    const pnlMon  = data.pnl;
     const pnlRaw  = (portfolio?.unrealized_pnl !== undefined && portfolio?.unrealized_pnl !== null)
     ? portfolio.unrealized_pnl
     : (pnlMon?.total_pnl_usd ?? null);
