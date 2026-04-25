@@ -46,7 +46,7 @@
     renderRegime(data.regime);
     renderAgentHealth(data.health);
     renderExecution(data.execution, data.mode, data.ibkr);
-    renderSignals(data.signals);
+    renderSignals(data.signals, data.allocation);
     renderNavChart(data.history, data.portfolio);
     renderSystemStatus(data.system, data.ibkr, data.mode);
     renderSidebarStatus(data.mode, data.ibkr, data.signals);
@@ -385,153 +385,289 @@
   // ══════════════════════════════════════════════════════════
   // TOP SIGNALS TABLE
   // ══════════════════════════════════════════════════════════
-  function renderSignals(data) {
+  function renderSignals(data, allocationData) {
     const tbody = document.getElementById('dash-signals-tbody');
     if (!tbody) return;
 
-    if (!data) {
-      tbody.innerHTML = `
+    if (!data && !allocationData) {
+        tbody.innerHTML = `
         <tr>
-          <td colspan="6" style="text-align:center;padding:24px;color:var(--text-faint)">
+            <td colspan="6" style="text-align:center;padding:24px;color:var(--text-faint)">
             <i class="fa-solid fa-circle-notch fa-spin"></i> Loading signals...
-          </td>
+            </td>
         </tr>`;
-      return;
+        return;
     }
 
-    const nSignals  = data.n_signals   || data.signals?.length || 0;
-    const nBuy      = data.n_buy       || 0;
-    const nSell     = data.n_sell      || 0;
-    const nHighConf = data.n_high_conf || 0;
-    const updatedAt = data.updated_at  || null;
-    const modelsAct = data.models_active || {};
+    // ── Stats bar ─────────────────────────────────────────────
+    const nSignals  = data?.n_signals   || data?.signals?.length || 0;
+    const nBuy      = data?.n_buy       || 0;
+    const nSell     = data?.n_sell      || 0;
+    const nHighConf = data?.n_high_conf || 0;
+    const updatedAt = data?.updated_at  || null;
+    const modelsAct = data?.models_active || {};
 
-    // Stats bar (si l'élément existe dans le DOM)
     const statsBar = document.getElementById('dash-signals-stats');
     if (statsBar) {
-      statsBar.innerHTML = `
+        statsBar.innerHTML = `
         <span class="badge badge-blue" style="font-size:10px">
-          <i class="fa-solid fa-satellite-dish" style="font-size:9px"></i> ${nSignals} signals
+            <i class="fa-solid fa-satellite-dish" style="font-size:9px"></i> ${nSignals} signals
         </span>
         <span class="badge badge-green" style="font-size:10px">
-          <i class="fa-solid fa-arrow-up" style="font-size:9px"></i> ${nBuy} BUY
+            <i class="fa-solid fa-arrow-up" style="font-size:9px"></i> ${nBuy} BUY
         </span>
         <span class="badge badge-red" style="font-size:10px">
-          <i class="fa-solid fa-arrow-down" style="font-size:9px"></i> ${nSell} SELL
+            <i class="fa-solid fa-arrow-down" style="font-size:9px"></i> ${nSell} SELL
         </span>
         <span class="badge badge-gold" style="font-size:10px">
-          <i class="fa-solid fa-star" style="font-size:9px"></i> ${nHighConf} High Conf
+            <i class="fa-solid fa-star" style="font-size:9px"></i> ${nHighConf} HC
         </span>
         ${updatedAt ? `
-          <span style="font-size:10px;color:var(--text-faint);margin-left:auto">
-            <i class="fa-regular fa-clock" style="font-size:9px"></i> ${AVUtils.formatAge(updatedAt)}
-          </span>` : ''}`;
+            <span style="font-size:10px;color:var(--text-faint);margin-left:auto">
+            <i class="fa-regular fa-clock" style="font-size:9px"></i>
+            ${AVUtils.formatAge(updatedAt)}
+            </span>` : ''}`;
     }
 
-    // Models bar
     const modelsBar = document.getElementById('dash-models-bar');
     if (modelsBar) {
-      modelsBar.innerHTML = Object.entries(modelsAct).map(([model, active]) => `
+        modelsBar.innerHTML = Object.entries(modelsAct).map(([model, active]) => `
         <span class="badge" style="font-size:9px;padding:2px 7px;
-              background:${active ? 'rgba(59,130,246,0.1)' : 'rgba(100,116,139,0.1)'};
-              color:${active ? 'var(--accent-blue)' : 'var(--text-faint)'};
-              border:1px solid ${active ? 'rgba(59,130,246,0.25)' : 'rgba(100,116,139,0.2)'}">
-          <i class="fa-solid fa-${active ? 'check' : 'xmark'}" style="font-size:8px"></i> ${model}
+                background:${active ? 'rgba(59,130,246,0.1)' : 'rgba(100,116,139,0.1)'};
+                color:${active ? 'var(--accent-blue)' : 'var(--text-faint)'};
+                border:1px solid ${active ? 'rgba(59,130,246,0.25)' : 'rgba(100,116,139,0.2)'}">
+            <i class="fa-solid fa-${active ? 'check' : 'xmark'}" style="font-size:8px"></i>
+            ${model}
         </span>`).join('');
     }
 
-    // Update header badges
     const buysEl = document.getElementById('dash-buys-count');
     const hcEl   = document.getElementById('dash-hc-count');
     if (buysEl) buysEl.textContent = `${nBuy} BUY`;
     if (hcEl)   hcEl.textContent   = `${nHighConf} High Conf`;
 
-    // Top 10 BUY signals
-    const sigsArr = Array.isArray(data.signals) ? data.signals : [];
-    const buySigs = sigsArr
-      .filter(s => s.action === 'BUY')
-      .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))
-      .slice(0, 10);
+    // ── Source 1 : BUY depuis current_signals (filtre insensible à la casse) ──
+    const sigsArr = Array.isArray(data?.signals) ? data.signals : [];
+    let buySigs = sigsArr
+        .filter(s => (s.action || '').toUpperCase() === 'BUY')
+        .sort((a, b) => parseFloat(b.confidence || 0) - parseFloat(a.confidence || 0))
+        .slice(0, 10)
+        .map(s => ({
+        symbol:        s.symbol,
+        action:        s.action || 'BUY',
+        confidence:    parseFloat(s.confidence || 0),
+        price:         parseFloat(s.price      || 0),
+        score:         parseFloat(s.score || s.meta_score || s.final_score || s.confidence || 0),
+        allocated_usd: 0,
+        quantity:      0,
+        rp_weight:     0,
+        _src:          'signal',
+        }));
 
-    if (buySigs.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="6" style="text-align:center;padding:28px;color:var(--text-faint)">
-            <i class="fa-solid fa-magnifying-glass"
-               style="display:block;font-size:20px;margin-bottom:8px;opacity:0.3"></i>
-            No BUY signals at the moment
-          </td>
-        </tr>`;
-      return;
+    // ── Source 2 : capital_allocation si aucun BUY dans signals ───────────
+    if (buySigs.length === 0 && allocationData?.allocations) {
+        buySigs = Object.entries(allocationData.allocations)
+        .map(([sym, obj]) => {
+            if (!obj || typeof obj !== 'object') return null;
+            return {
+            symbol:        sym,
+            action:        obj.action        || 'BUY',
+            confidence:    parseFloat(obj.confidence    || 0),
+            price:         parseFloat(obj.price         || 0),
+            score:         parseFloat(obj.confidence    || 0),
+            allocated_usd: parseFloat(obj.allocated_usd || 0),
+            quantity:      parseInt(obj.quantity        || 0),
+            rp_weight:     parseFloat(obj.rp_weight     || 0),
+            _src:          'allocation',
+            };
+        })
+        .filter(e => e && e.confidence > 0)
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 10);
     }
 
-    tbody.innerHTML = buySigs.map((sig, idx) => {
-      const sym   = sig.symbol    || '—';
-      const conf  = parseFloat(sig.confidence || 0);
-      const price = parseFloat(sig.price      || 0);
-      const score = parseFloat(sig.score || sig.meta_score || sig.final_score || conf);
-      const isHC  = conf >= AV_CONFIG.THRESHOLDS.highConf;
+    // ── Mise à jour dynamique du thead selon la source ────────────────────
+    const useAlloc = buySigs.length > 0 && buySigs[0]._src === 'allocation';
+    const tHead = tbody.closest('table')?.querySelector('thead tr');
+    if (tHead) {
+        tHead.innerHTML = useAlloc
+        ? `<th style="padding-left:14px">Symbol</th>
+            <th style="min-width:130px">Confidence</th>
+            <th style="text-align:right">Allocated</th>
+            <th style="text-align:right">Qty / Price</th>
+            <th style="text-align:right">RP Weight</th>
+            <th style="text-align:center">Status</th>`
+        : `<th style="padding-left:14px">Symbol</th>
+            <th style="text-align:center">Action</th>
+            <th style="min-width:110px">Confidence</th>
+            <th style="text-align:right">Price</th>
+            <th style="text-align:right">Score</th>
+            <th style="text-align:center">Status</th>`;
+    }
 
-      const logoHtml = typeof window._getLogoHtml === 'function'
+    // ── État vide ─────────────────────────────────────────────────────────
+    if (buySigs.length === 0) {
+        tbody.innerHTML = `
+        <tr>
+            <td colspan="6" style="text-align:center;padding:28px;color:var(--text-faint)">
+            <i class="fa-solid fa-magnifying-glass"
+                style="display:block;font-size:20px;margin-bottom:8px;opacity:0.3"></i>
+            No BUY signals at the moment
+            </td>
+        </tr>`;
+        return;
+    }
+
+    // ── Rendu des lignes ──────────────────────────────────────────────────
+    tbody.innerHTML = buySigs.map(sig => {
+        const { symbol, action, confidence, price, score,
+                allocated_usd, quantity, rp_weight, _src } = sig;
+
+        const sym       = symbol || '—';
+        const conf      = parseFloat(confidence || 0);
+        const isHC      = conf >= AV_CONFIG.THRESHOLDS.highConf;
+        const confPct   = (conf * 100).toFixed(1);
+        const confColor = conf >= 0.75 ? 'var(--accent-green)'
+                        : conf >= 0.55 ? 'var(--accent-blue)'
+                        : 'var(--accent-orange)';
+        const isBuy     = (action || '').toUpperCase() === 'BUY';
+
+        const logoHtml = typeof window._getLogoHtml === 'function'
         ? window._getLogoHtml(sym, 20)
-        : `<span class="sym-fallback-icon"
-               style="display:inline-flex;align-items:center;justify-content:center;
-                      width:20px;height:20px;border-radius:5px;background:var(--gradient-brand);
-                      color:#fff;font-size:10px;font-weight:800">${sym.charAt(0)}</span>`;
+        : `<span style="display:inline-flex;align-items:center;justify-content:center;
+                        width:20px;height:20px;border-radius:5px;
+                        background:var(--gradient-brand);color:#fff;
+                        font-size:10px;font-weight:800;flex-shrink:0">
+            ${sym.charAt(0)}
+            </span>`;
 
-      const confPct   = (conf * 100).toFixed(1);
-      const confColor = conf >= 0.75 ? 'var(--accent-green)'
-                      : conf >= 0.55 ? 'var(--accent-blue)'
-                      : 'var(--accent-orange)';
+        // Barre de confiance (commune aux deux sources)
+        const confBar = `
+        <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:4px;border-radius:2px;
+                        background:rgba(148,163,184,0.15);overflow:hidden">
+            <div style="width:${confPct}%;height:100%;background:${confColor};
+                        border-radius:2px;transition:width 0.5s ease"></div>
+            </div>
+            <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);
+                        color:${confColor};min-width:36px">${confPct}%</span>
+        </div>`;
 
-      return `
+        // Badge status (commun)
+        const statusBadge = isHC
+        ? `<span class="badge badge-gold" style="font-size:9px;white-space:nowrap">
+            <i class="fa-solid fa-star" style="font-size:8px"></i> HIGH
+            </span>`
+        : `<span style="color:var(--text-faint);font-size:11px">—</span>`;
+
+        // ── Ligne allocation (données riches) ─────────────────────
+        if (_src === 'allocation') {
+        return `
+            <tr class="dash-sig-row${isHC ? ' dash-sig-hc' : ''}"
+                style="cursor:pointer"
+                onclick="if(window.StockDetail) StockDetail.open('${sym}')"
+                title="${sym} · ${AVUtils.formatCurrency(allocated_usd)} allocated">
+
+            <!-- Symbol + Logo + Action badge -->
+            <td style="padding:9px 14px">
+                <div style="display:flex;align-items:center;gap:8px">
+                ${logoHtml}
+                <div>
+                    <div style="font-weight:700;font-size:13px;
+                                color:var(--text-primary);line-height:1.2">${sym}</div>
+                    <span style="display:inline-flex;align-items:center;gap:3px;
+                                margin-top:2px;padding:1px 6px;font-size:9px;font-weight:700;
+                                border-radius:var(--radius-full);
+                                background:${isBuy ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};
+                                color:${isBuy ? 'var(--accent-green)' : 'var(--accent-red)'};
+                                border:1px solid ${isBuy ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}">
+                    <i class="fa-solid fa-arrow-${isBuy ? 'up' : 'down'}"
+                        style="font-size:7px"></i> ${action}
+                    </span>
+                </div>
+                </div>
+            </td>
+
+            <!-- Confidence -->
+            <td style="padding:9px 10px">${confBar}</td>
+
+            <!-- Allocated USD -->
+            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;
+                        font-weight:700;color:var(--text-primary);text-align:right">
+                ${allocated_usd > 0 ? AVUtils.formatCurrency(allocated_usd) : '—'}
+            </td>
+
+            <!-- Qty / Price -->
+            <td style="padding:9px 12px;text-align:right;line-height:1.4">
+                <div style="font-size:11px;font-weight:600;font-family:var(--font-mono);
+                            color:var(--text-primary)">
+                ${quantity > 0 ? quantity.toLocaleString('en-US') + ' sh.' : '—'}
+                </div>
+                <div style="font-size:9px;color:var(--text-faint)">
+                ${price > 0 ? '@ $' + price.toFixed(2) : ''}
+                </div>
+            </td>
+
+            <!-- RP Weight -->
+            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:11px;
+                        font-weight:700;color:var(--accent-violet);text-align:right">
+                ${rp_weight > 0 ? (rp_weight * 100).toFixed(2) + '%' : '—'}
+            </td>
+
+            <!-- Status -->
+            <td style="padding:9px 8px;text-align:center">${statusBadge}</td>
+            </tr>`;
+        }
+
+        // ── Ligne signal standard ─────────────────────────────────
+        return `
         <tr class="dash-sig-row${isHC ? ' dash-sig-hc' : ''}"
             style="cursor:pointer"
             onclick="if(window.StockDetail) StockDetail.open('${sym}')"
-            title="View ${sym} detail">
-          <td style="padding:8px 6px;text-align:center;font-size:10px;
-                     color:var(--text-faint);font-family:var(--font-mono)">${idx + 1}</td>
-          <td style="padding:8px 10px">
+            title="View ${sym}">
+
+            <!-- Symbol + Logo -->
+            <td style="padding:9px 14px">
             <div style="display:flex;align-items:center;gap:7px">
-              ${logoHtml}
-              <div>
-                <div style="font-weight:700;font-size:13px;color:var(--text-primary);line-height:1.2">
-                  ${sym}
-                </div>
+                ${logoHtml}
+                <div>
+                <div style="font-weight:700;font-size:13px;
+                            color:var(--text-primary);line-height:1.2">${sym}</div>
                 ${isHC ? `
-                  <div style="font-size:9px;color:#eab308;font-weight:700;letter-spacing:0.3px">
+                    <div style="font-size:9px;color:#eab308;font-weight:700">
                     <i class="fa-solid fa-star" style="font-size:8px"></i> HIGH CONF
-                  </div>` : ''}
-              </div>
+                    </div>` : ''}
+                </div>
             </div>
-          </td>
-          <td style="padding:8px 6px;text-align:center">
+            </td>
+
+            <!-- Action -->
+            <td style="padding:9px 6px;text-align:center">
             <span class="badge badge-green" style="font-size:10px;padding:2px 8px">
-              <i class="fa-solid fa-arrow-up" style="font-size:8px"></i> BUY
+                <i class="fa-solid fa-arrow-up" style="font-size:8px"></i> BUY
             </span>
-          </td>
-          <td style="padding:8px 10px;min-width:110px">
-            <div style="display:flex;align-items:center;gap:6px">
-              <div style="flex:1;height:4px;border-radius:2px;
-                          background:rgba(148,163,184,0.15);overflow:hidden">
-                <div style="width:${confPct}%;height:100%;background:${confColor};
-                            border-radius:2px;transition:width 0.5s ease"></div>
-              </div>
-              <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);
-                           color:${confColor};min-width:36px">${confPct}%</span>
-            </div>
-          </td>
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:12px;
-                     font-weight:600;color:var(--text-primary)">
-            ${price > 0 ? AVUtils.formatCurrency(price) : '—'}
-          </td>
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;
-                     color:${confColor};font-weight:700">
-            ${score > 0 ? score.toFixed(4) : '—'}
-          </td>
+            </td>
+
+            <!-- Confidence -->
+            <td style="padding:9px 10px">${confBar}</td>
+
+            <!-- Price -->
+            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:12px;
+                    font-weight:600;color:var(--text-primary);text-align:right">
+            ${price > 0 ? '$' + price.toFixed(2) : '—'}
+            </td>
+
+            <!-- Score -->
+            <td style="padding:9px 12px;font-family:var(--font-mono);font-size:11px;
+                    color:${confColor};font-weight:700;text-align:right">
+            ${score > 0 ? parseFloat(score).toFixed(4) : '—'}
+            </td>
+
+            <!-- Status -->
+            <td style="padding:9px 8px;text-align:center">${statusBadge}</td>
         </tr>`;
     }).join('');
-  }
+    }
 
   // ══════════════════════════════════════════════════════════
   // NAV CHART — Lightweight Charts
@@ -962,21 +1098,22 @@
 
     // ── Timer 2 : Signals + Regime (60s) ─────────────────────
     _refreshTimers.push(setInterval(async () => {
-      try {
-        const [signals, regime, history, portfolio] = await Promise.allSettled([
-          AVApi.fetchJSON(URLS.signals,   0),
-          AVApi.fetchJSON(URLS.regime,    0),
-          AVApi.fetchJSON(URLS.history,   0),
-          AVApi.fetchJSON(URLS.portfolio, 0),
+    try {
+        const [signals, regime, history, portfolio, allocation] = await Promise.allSettled([
+        AVApi.fetchJSON(URLS.signals,    0),
+        AVApi.fetchJSON(URLS.regime,     0),
+        AVApi.fetchJSON(URLS.history,    0),
+        AVApi.fetchJSON(URLS.portfolio,  0),
+        AVApi.fetchJSON(URLS.allocation, 0),  // ← AJOUT
         ]);
         const p = d => d.status === 'fulfilled' ? d.value : null;
-        renderSignals(p(signals));
+        renderSignals(p(signals), p(allocation));  // ← AJOUT p(allocation)
         renderRegime(p(regime));
         renderNavChart(p(history), p(portfolio));
         _updateTopbarRegime(p(regime));
-      } catch (err) {
+    } catch (err) {
         console.warn('[Dashboard] Refresh (signals) error:', err.message);
-      }
+    }
     }, AV_CONFIG.REFRESH.signals));
 
     // ── Timer 3 : Agents (30s) ───────────────────────────────
