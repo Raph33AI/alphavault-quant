@@ -84,10 +84,31 @@
       netliq !== null ? null : 'var(--accent-orange)'
     );
 
-    // ── Unrealized PnL — portfolio.json priorité, fallback pnl_monitor.json ──
-    const pnlRaw = (portfolio?.unrealized_pnl !== undefined && portfolio?.unrealized_pnl !== null)
-      ? portfolio.unrealized_pnl
-      : (pnlMon?.total_pnl_usd ?? null);
+    // ── Unrealized PnL — somme des positions si root = 0 ───────
+    // portfolio.json racine : unrealized_pnl = 0.0 (non peuplé)
+    // → calcul depuis positions[].unrealized_pnl (source réelle)
+    const posArrForPnl = Object.values(portfolio?.positions || {});
+
+    let pnlRaw = null;
+
+    // Priorité 1 : racine portfolio si valeur non nulle
+    if (portfolio?.unrealized_pnl !== undefined &&
+        portfolio?.unrealized_pnl !== null &&
+        parseFloat(portfolio.unrealized_pnl) !== 0) {
+    pnlRaw = parseFloat(portfolio.unrealized_pnl);
+    }
+
+    // Priorité 2 : somme des unrealized_pnl de chaque position
+    if ((pnlRaw === null || pnlRaw === 0) && posArrForPnl.length > 0) {
+    pnlRaw = posArrForPnl.reduce(
+        (sum, p) => sum + parseFloat(p.unrealized_pnl ?? p.pnl ?? 0), 0
+    );
+    }
+
+    // Priorité 3 : fallback pnl_monitor.json
+    if ((pnlRaw === null || pnlRaw === 0) && pnlMon?.total_pnl_usd) {
+    pnlRaw = parseFloat(pnlMon.total_pnl_usd);
+    }
 
     const pnl    = parseFloat(pnlRaw ?? 0);
     const pnlFmt = isNaN(pnl) ? '—' : (pnl >= 0 ? '+' : '') + AVUtils.formatCurrencyFull(pnl);
@@ -97,13 +118,13 @@
     const losing  = parseInt(pnlMon?.losing     ?? 0);
 
     _setKpi(
-      'pnl',
-      pnlFmt,
-      pnlRaw !== null
+    'pnl',
+    pnlFmt,
+    pnlRaw !== null
         ? `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}%`
         : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
-      null,
-      pnlClr
+    null,
+    pnlClr
     );
 
     const pnlValEl = document.getElementById('kpi-pnl-val');
@@ -213,134 +234,226 @@
     if (subEl) subEl.innerHTML = sub || '';
   }
 
-  // ══════════════════════════════════════════════════════════
-  // REGIME CARD — source : regime.json
-  // ══════════════════════════════════════════════════════════
-  function renderRegime(data) {
+  // ══════════════════════════════════════════════════════════════
+    // REGIME CARD — miroir exact de av-regime.js renderBanner
+    // Source : regime.json
+    // ══════════════════════════════════════════════════════════════
+    function renderRegime(data) {
     const body = document.getElementById('dash-regime-body');
     if (!body) return;
     if (!data) { body.innerHTML = `<div class="dash-skeleton-block"></div>`; return; }
 
-    const regime = data.regime || data.signal || data.current_regime || 'NEUTRAL';
-    const conf   = parseFloat(data.confidence || 0);
-    const prev   = data.previous_regime || '—';
-    const dur    = parseInt(data.regime_duration || 0);
-    const probas = data.probabilities || {};
-    const indic  = data.indicators   || {};
-    const colors = AVUtils.regimeColor(regime);
+    const regime  = data.regime || data.signal || data.current_regime || 'NEUTRAL';
+    const conf    = parseFloat(data.confidence || 0);
+    const prev    = data.previous_regime || null;
+    const dur     = parseInt(data.regime_duration || 0);
+    const probas  = data.probabilities || {};
+    const indic   = data.indicators   || {};
+    const threshs = data.signal_thresholds || {};
 
-    const regimeIcons = {
-      BULL:       'fa-solid fa-arrow-trend-up',
-      trend_up:   'fa-solid fa-arrow-trend-up',
-      BEAR:       'fa-solid fa-arrow-trend-down',
-      trend_down: 'fa-solid fa-arrow-trend-down',
-      NEUTRAL:    'fa-solid fa-minus',
-      CRISIS:     'fa-solid fa-triangle-exclamation',
+    // ── Méta par régime (couleurs + icônes + descriptions) ───
+    const REGIME_META = {
+        BULL:       { colorHex: '#10b981', bgSoft: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.30)', icon: 'fa-arrow-trend-up',      label: 'Bull Market',  desc: 'Sustained bull market conditions. Strong breadth and momentum. System operates at full capacity.' },
+        trend_up:   { colorHex: '#10b981', bgSoft: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.30)', icon: 'fa-arrow-trend-up',      label: 'Trend Up',     desc: 'Markets in a confirmed uptrend. Momentum positive across monitored assets. System favors long positions.' },
+        BEAR:       { colorHex: '#ef4444', bgSoft: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.28)',  icon: 'fa-arrow-trend-down',    label: 'Bear Market',  desc: 'Bear market confirmed. Defensive posture adopted. System reduces gross exposure and tightens risk controls.' },
+        trend_down: { colorHex: '#ef4444', bgSoft: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.28)',  icon: 'fa-arrow-trend-down',    label: 'Trend Down',   desc: 'Markets in a confirmed downtrend. System reduces sizes, tightens stops, increases short exposure.' },
+        NEUTRAL:    { colorHex: '#3b82f6', bgSoft: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', icon: 'fa-minus',               label: 'Neutral',      desc: 'Consolidation phase. No clear directional bias. Conservative sizing, risk management priority.' },
+        CRISIS:     { colorHex: '#f59e0b', bgSoft: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.30)', icon: 'fa-triangle-exclamation', label: 'Crisis',       desc: 'Crisis conditions detected. Extreme volatility. DD Halt may activate. Maximum defensive posture.' },
     };
 
-    // ── Probabilités ───────────────────────────────────────
+    const meta = REGIME_META[regime] || {
+        colorHex: '#6b7280', bgSoft: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.20)',
+        icon: 'fa-circle-question', label: regime, desc: 'Regime data being collected...',
+    };
+
+    const confPct = conf > 0 ? (conf * 100).toFixed(1) : '0';
+
+    // ── Probabilités ─────────────────────────────────────────
+    const PROBA_COLORS = {
+        BULL: '#10b981', BEAR: '#ef4444', NEUTRAL: '#3b82f6', CRISIS: '#f59e0b',
+    };
     const probaRows = ['BULL', 'BEAR', 'NEUTRAL', 'CRISIS'].map(r => {
-      const pct  = Math.round((probas[r] || 0) * 100);
-      const rClr = AVUtils.regimeColor(r);
-      return `
-        <div class="dash-proba-row">
-          <span class="dash-proba-label">${r}</span>
-          <div class="dash-proba-bar">
-            <div class="dash-proba-fill"
-                 style="width:${pct}%;background:${rClr.bg}"></div>
-          </div>
-          <span class="dash-proba-val">${pct}%</span>
+        const pct  = Math.round((probas[r] || 0) * 100);
+        const clr  = PROBA_COLORS[r] || '#6b7280';
+        return `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+            <span style="font-size:10px;font-weight:700;color:var(--text-faint);
+                        min-width:54px;text-transform:uppercase">${r}</span>
+            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${clr};
+                        border-radius:3px;transition:width 0.8s ease"></div>
+            </div>
+            <span style="font-size:10px;font-weight:800;font-family:var(--font-mono);
+                        color:${clr};min-width:30px;text-align:right">${pct}%</span>
         </div>`;
     }).join('');
 
-    // ── Indicateurs SPY ────────────────────────────────────
+    // ── Indicateurs SPY ──────────────────────────────────────
     const spyPrice = parseFloat(indic.spy_price || 0);
     const spyMa5   = parseFloat(indic.spy_ma5   || 0);
     const spyMa20  = parseFloat(indic.spy_ma20  || 0);
     const spyMa50  = parseFloat(indic.spy_ma50  || 0);
 
-    const indicHTML = spyPrice > 0 ? `
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 0;
-                  padding:10px 12px;border-radius:10px;
-                  background:var(--bg-secondary);border:1px solid var(--border)">
+    const mkIndic = (label, val, ref) => {
+        if (val <= 0) return '';
+        const color = spyPrice > 0 && spyPrice >= ref
+        ? '#10b981' : '#ef4444';
+        return `
+        <div style="display:flex;flex-direction:column;align-items:center;
+                    flex:1;min-width:52px;padding:8px 6px;
+                    background:var(--bg-primary);border-radius:8px;border:1px solid var(--border)">
+            <span style="font-size:9px;font-weight:700;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">${label}</span>
+            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);color:${color}">
+            $${val.toFixed(2)}
+            </span>
+            <span style="font-size:8px;color:${color};margin-top:1px">
+            ${spyPrice >= ref ? '▲ Above' : '▼ Below'}
+            </span>
+        </div>`;
+    };
 
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                       text-transform:uppercase;letter-spacing:0.4px">SPY</span>
-          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                       color:var(--text-primary)">$${spyPrice.toFixed(2)}</span>
+    const indicSection = spyPrice > 0 ? `
+        <div style="margin-top:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-faint);
+                    text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
+            <i class="fa-solid fa-chart-simple" style="font-size:9px"></i> SPY Indicators
         </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <div style="display:flex;flex-direction:column;align-items:center;
+                        flex:1;min-width:52px;padding:8px 6px;
+                        background:${meta.bgSoft};border-radius:8px;
+                        border:1px solid ${meta.border}">
+            <span style="font-size:9px;font-weight:700;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">SPY</span>
+            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);
+                        color:${meta.colorHex}">$${spyPrice.toFixed(2)}</span>
+            </div>
+            ${mkIndic('MA5',  spyMa5,  spyMa5)}
+            ${mkIndic('MA20', spyMa20, spyMa20)}
+            ${mkIndic('MA50', spyMa50, spyMa50)}
+        </div>
+        </div>` : '';
 
-        ${spyMa5 > 0 ? `
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                       text-transform:uppercase;letter-spacing:0.4px">MA5</span>
-          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                       color:${spyPrice >= spyMa5 ? 'var(--accent-green)' : 'var(--accent-red)'}">
-            $${spyMa5.toFixed(2)}
-          </span>
-        </div>` : ''}
+    // ── Stats (Bull ratio / Bear ratio / Halt) ────────────────
+    const bullPct = probas['BULL'] ? (probas['BULL'] * 100).toFixed(1) : '—';
+    const bearPct = probas['BEAR'] ? (probas['BEAR'] * 100).toFixed(1) : '—';
+    const ddHalt  = data.dd_halt || false;
 
-        ${spyMa20 > 0 ? `
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                       text-transform:uppercase;letter-spacing:0.4px">MA20</span>
-          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                       color:${spyPrice >= spyMa20 ? 'var(--accent-green)' : 'var(--accent-red)'}">
-            $${spyMa20.toFixed(2)}
-          </span>
-        </div>` : ''}
+    const mkStat = (label, val, color) => `
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px;
+                    padding:10px 12px;background:var(--bg-primary);
+                    border-radius:10px;border:1px solid var(--border)">
+        <div style="font-size:9px;font-weight:600;color:var(--text-faint);
+                    text-transform:uppercase;letter-spacing:0.4px">${label}</div>
+        <div style="font-size:15px;font-weight:800;font-family:var(--font-mono);color:${color}">${val}</div>
+        </div>`;
 
-        ${spyMa50 > 0 ? `
-        <div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:54px">
-          <span style="font-size:9px;font-weight:600;color:var(--text-faint);
-                       text-transform:uppercase;letter-spacing:0.4px">MA50</span>
-          <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                       color:${spyPrice >= spyMa50 ? 'var(--accent-green)' : 'var(--accent-red)'}">
-            $${spyMa50.toFixed(2)}
-          </span>
-        </div>` : ''}
-
-      </div>` : '';
+    // ── Seuils trading ────────────────────────────────────────
+    const buyThr  = threshs.buy  ? (threshs.buy  * 100).toFixed(0) + '%' : '—';
+    const sellThr = threshs.sell ? (threshs.sell * 100).toFixed(0) + '%' : '—';
 
     body.innerHTML = `
-      <div class="dash-regime-main">
-        <div class="dash-regime-badge"
-             style="background:${colors.soft};border:2px solid ${colors.bg}">
-          <i class="${regimeIcons[regime] || 'fa-solid fa-circle'}"
-             style="color:${colors.bg};font-size:20px"></i>
+
+        <!-- ── BANNER PRINCIPAL ── -->
+        <div style="display:flex;align-items:flex-start;gap:20px;padding:20px;
+                    border-radius:14px;border:2px solid ${meta.border};
+                    background:var(--bg-secondary);position:relative;overflow:hidden;
+                    margin-bottom:16px">
+
+        <!-- Barre colorée top -->
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;
+                    background:${meta.colorHex};border-radius:14px 14px 0 0;opacity:0.6"></div>
+
+        <!-- Icône -->
+        <div style="width:64px;height:64px;border-radius:16px;flex-shrink:0;
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:26px;background:${meta.bgSoft};color:${meta.colorHex}">
+            <i class="fa-solid ${meta.icon}"></i>
         </div>
-        <div class="dash-regime-info">
-          <div class="dash-regime-name" style="color:${colors.bg}">${regime}</div>
-          <div class="dash-regime-conf">${(conf * 100).toFixed(0)}% confidence</div>
-          ${prev !== '—' ? `
-            <div style="font-size:10px;color:var(--text-faint);margin-top:2px">
-              <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
-              Was ${prev} &middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago
+
+        <!-- Info principale -->
+        <div style="flex:1;min-width:0">
+            <div style="font-size:10px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:1px;color:${meta.colorHex};opacity:0.8;margin-bottom:4px">
+            <i class="fa-solid fa-globe" style="font-size:9px"></i>
+            Market Regime — SPY Reference
+            </div>
+            <div style="font-size:22px;font-weight:900;color:var(--text-primary);
+                        line-height:1.1;margin-bottom:6px">${meta.label}</div>
+            <div style="font-size:11px;color:var(--text-secondary);line-height:1.6;
+                        margin-bottom:12px;max-width:340px">${meta.desc}</div>
+
+            <!-- Confidence bar -->
+            <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:8px;background:var(--border);
+                        border-radius:4px;overflow:hidden;max-width:220px">
+                <div style="width:${confPct}%;height:100%;background:${meta.colorHex};
+                            border-radius:4px;transition:width 0.8s ease"></div>
+            </div>
+            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
+                        color:${meta.colorHex}">${confPct}%</span>
+            <span style="font-size:10px;color:var(--text-faint)">confidence</span>
+            </div>
+
+            ${prev ? `
+            <div style="margin-top:8px;font-size:10px;color:var(--text-faint)">
+            <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
+            Previously <strong>${prev}</strong>
+            ${dur > 0 ? `&middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago` : ''}
             </div>` : ''}
         </div>
-      </div>
 
-      ${indicHTML}
+        <!-- Stats box -->
+        <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;min-width:120px">
+            ${mkStat('Bull Ratio', bullPct !== '—' ? bullPct + '%' : '—', '#10b981')}
+            ${mkStat('Bear Ratio', bearPct !== '—' ? bearPct + '%' : '—', '#ef4444')}
+            ${mkStat('DD Halt', ddHalt ? 'Active' : 'Off', ddHalt ? '#ef4444' : '#10b981')}
+        </div>
+        </div>
 
-      <div class="dash-regime-probas" style="margin-top:14px">
+        <!-- ── PROBABILITÉS ── -->
+        <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-faint);
+                    text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
+            <i class="fa-solid fa-chart-pie" style="font-size:9px"></i> Regime Probabilities
+        </div>
         ${probaRows}
-      </div>
+        </div>
 
-      <a href="signals.html"
-         style="display:flex;align-items:center;gap:6px;margin-top:14px;
+        <!-- ── INDICATEURS SPY ── -->
+        ${indicSection}
+
+        <!-- ── SEUILS TRADING ── -->
+        ${(threshs.buy || threshs.sell) ? `
+        <div style="display:flex;gap:8px;margin-top:14px;padding:10px 12px;
+                    border-radius:10px;background:var(--bg-secondary);
+                    border:1px solid var(--border)">
+        <div style="flex:1;font-size:11px;color:var(--text-faint)">
+            <i class="fa-solid fa-sliders" style="font-size:9px"></i>
+            Buy signal threshold
+            <strong style="color:var(--accent-green)">${buyThr}</strong>
+        </div>
+        <div style="flex:1;font-size:11px;color:var(--text-faint);text-align:right">
+            Sell threshold
+            <strong style="color:var(--accent-red)">${sellThr}</strong>
+        </div>
+        </div>` : ''}
+
+        <!-- ── LIEN signals.html ── -->
+        <a href="signals.html"
+        style="display:flex;align-items:center;gap:6px;margin-top:14px;
                 padding:8px 12px;border-radius:9px;text-decoration:none;
                 background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.18);
                 font-size:11px;font-weight:600;color:var(--accent-blue);
                 transition:background 0.15s ease"
-         onmouseover="this.style.background='rgba(59,130,246,0.12)'"
-         onmouseout="this.style.background='rgba(59,130,246,0.06)'">
+        onmouseover="this.style.background='rgba(59,130,246,0.12)'"
+        onmouseout="this.style.background='rgba(59,130,246,0.06)'">
         <i class="fa-solid fa-satellite-dish" style="font-size:11px"></i>
         View ML Signals
-        <i class="fa-solid fa-arrow-right"
-           style="font-size:9px;margin-left:auto;opacity:0.7"></i>
-      </a>`;
-  }
+        <i class="fa-solid fa-arrow-right" style="font-size:9px;margin-left:auto;opacity:0.7"></i>
+        </a>`;
+    }
 
   // ══════════════════════════════════════════════════════════
   // AGENT HEALTH (R2)
