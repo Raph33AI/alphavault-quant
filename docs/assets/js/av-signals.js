@@ -506,7 +506,7 @@
             <div>
             <div class="sig-alloc-empty-title">Awaiting High Confidence Signals</div>
             <div class="sig-alloc-empty-sub">
-                Capital allocator activates when confidence &gt;
+                Activates when signal confidence &gt;
                 <strong>${(hcGate * 100).toFixed(0)}%</strong>
             </div>
             </div>
@@ -523,71 +523,44 @@
         return;
     }
 
-    // ── Parser robuste — gère number | string | object ──────
-    const _parseVal = (raw) => {
-        if (raw === null || raw === undefined) return NaN;
-        if (typeof raw === 'number') return raw;
-        if (typeof raw === 'string') return parseFloat(raw);
-        if (typeof raw === 'object') {
-        // Cherche les champs connus dans l'ordre de priorité
-        const keys = [
-            'weight', 'fraction', 'pct', 'kelly_fraction',
-            'position_size', 'size', 'allocation', 'amount',
-        ];
-        for (const k of keys) {
-            const v = parseFloat(raw[k]);
-            if (!isNaN(v) && v > 0) return v;
-        }
-        // Fallback : premier nombre positif trouvé dans l'objet
-        for (const v of Object.values(raw)) {
-            if (typeof v === 'number' && !isNaN(v) && v > 0) return v;
-        }
-        }
-        return NaN;
-    };
-
-    // Construit + trie les entrées
+    // ── Parse les entrées depuis la structure réelle ──────────
     const entries = Object.entries(allocs)
-        .map(([sym, raw]) => ({ sym, val: _parseVal(raw) }))
-        .filter(e => !isNaN(e.val) && e.val > 0)
-        .sort((a, b) => b.val - a.val)
+        .map(([sym, raw]) => {
+        const obj = (typeof raw === 'object' && raw !== null) ? raw : {};
+        return {
+            sym,
+            action:        obj.action        || 'BUY',
+            confidence:    parseFloat(obj.confidence    || 0),
+            allocated_usd: parseFloat(obj.allocated_usd || 0),
+            quantity:      parseInt(obj.quantity        || 0),
+            price:         parseFloat(obj.price         || 0),
+            kelly_fraction:parseFloat(obj.kelly_fraction|| 0),
+            rp_weight:     parseFloat(obj.rp_weight     || 0),
+        };
+        })
+        .filter(e => e.confidence > 0 || e.allocated_usd > 0)
+        .sort((a, b) => b.confidence - a.confidence)
         .slice(0, 10);
 
     if (entries.length === 0) {
         body.innerHTML = `
         <div style="text-align:center;padding:20px;color:var(--text-faint);font-size:12px">
-            <i class="fa-solid fa-circle-info" style="font-size:16px;display:block;margin-bottom:8px"></i>
-            No allocation data available
+            No allocation data
         </div>`;
         return;
     }
 
-    const maxVal   = entries[0].val;
-    // Auto-détection : fraction (0-1) ou dollar ($) ou déjà en %
-    const isDollar   = maxVal > 100;   // Montant dollar → afficher en $
-    const isFraction = maxVal <= 1.5;  // Fraction Kelly → afficher en %
-
-    const fmtVal = (v) => {
-        if (isDollar)   return AVUtils.formatCurrency(v);
-        if (isFraction) return `${(v * 100).toFixed(2)}%`;
-        return `${v.toFixed(2)}%`;       // Déjà en %
-    };
-
-    // Total
-    const totalDisplay = (() => {
-        if (!total || total === 0) return '—';
-        if (total > 100)  return AVUtils.formatCurrency(total);
-        if (total <= 1.5) return `${(total * 100).toFixed(1)}%`;
-        return `${total.toFixed(1)}%`;
-    })();
+    const fmtTotal = total > 0 ? AVUtils.formatCurrency(total) : '—';
 
     body.innerHTML = `
         <div class="sig-alloc-header-row">
         <span class="badge badge-green" style="font-size:10px">
-            <i class="fa-solid fa-circle-check"></i> ${nPos || entries.length} allocated
+            <i class="fa-solid fa-circle-check"></i>
+            ${nPos || entries.length} allocated
         </span>
         <span class="badge badge-blue" style="font-size:10px">
-            Total: ${totalDisplay}
+            <i class="fa-solid fa-dollar-sign" style="font-size:9px"></i>
+            ${fmtTotal}
         </span>
         <span class="badge badge-gray" style="font-size:9px;margin-left:auto">
             ${method.replace(/_/g, ' ')}
@@ -595,39 +568,82 @@
         </div>
 
         <div class="sig-alloc-list">
-        ${entries.map(({ sym, val }) => {
+        ${entries.map(e => {
+            const { sym, action, confidence, allocated_usd, quantity, price, rp_weight } = e;
+
             const logoH = typeof window._getLogoHtml === 'function'
-            ? window._getLogoHtml(sym, 18)
+            ? window._getLogoHtml(sym, 22)
             : `<span style="display:inline-flex;align-items:center;justify-content:center;
-                            width:18px;height:18px;border-radius:4px;
-                            background:var(--gradient-brand);color:#fff;
-                            font-size:8px;font-weight:800;flex-shrink:0">
+                            width:22px;height:22px;border-radius:5px;background:var(--gradient-brand);
+                            color:#fff;font-size:10px;font-weight:800;flex-shrink:0">
                 ${sym.charAt(0)}
                 </span>`;
 
-            const barW = maxVal > 0
-            ? Math.min((val / maxVal) * 100, 100).toFixed(1)
-            : '0';
+            const confPct   = (confidence * 100).toFixed(1);
+            const confColor = confidence >= 0.92 ? 'var(--accent-green)'
+                            : confidence >= 0.80 ? 'var(--accent-blue)'
+                            : 'var(--accent-orange)';
+
+            const isBuy = (action || '').toUpperCase() === 'BUY';
 
             return `
-            <div class="sig-alloc-row">
-                <div style="display:flex;align-items:center;gap:6px;
-                            width:72px;flex-shrink:0">
+            <div class="sig-alloc-entry">
+
+                <!-- Col 1 : Logo + Symbole + Action -->
+                <div class="sig-alloc-col-sym">
                 ${logoH}
-                <span style="font-size:12px;font-weight:700;
-                            color:var(--text-primary)">${sym}</span>
+                <div style="min-width:0">
+                    <div style="font-size:12px;font-weight:700;
+                                color:var(--text-primary);line-height:1.2">${sym}</div>
+                    <span class="sig-action-badge ${isBuy ? 'buy' : 'sell'}"
+                        style="padding:1px 5px;font-size:9px;margin-top:2px">
+                    <i class="fa-solid fa-arrow-${isBuy ? 'up' : 'down'}"
+                        style="font-size:7px"></i> ${action}
+                    </span>
                 </div>
-                <div style="flex:1;margin:0 10px">
-                <div class="av-progress-track" style="height:5px">
-                    <div class="av-progress-fill"
-                        style="width:${barW}%;background:var(--gradient-brand)">
+                </div>
+
+                <!-- Col 2 : Confidence (barre) -->
+                <div class="sig-alloc-col-conf">
+                <div style="display:flex;align-items:center;gap:6px">
+                    <div style="flex:1;height:4px;border-radius:2px;
+                                background:rgba(148,163,184,0.15);overflow:hidden">
+                    <div style="width:${confPct}%;height:100%;background:${confColor};
+                                border-radius:2px;transition:width 0.4s ease"></div>
                     </div>
+                    <span style="font-size:10px;font-weight:700;font-family:var(--font-mono);
+                                color:${confColor};min-width:34px">${confPct}%</span>
+                </div>
+                <div style="font-size:9px;color:var(--text-faint);margin-top:2px">
+                    Confidence
                 </div>
                 </div>
-                <span style="font-size:11px;font-weight:700;font-family:var(--font-mono);
-                            color:var(--accent-blue);min-width:56px;text-align:right">
-                ${fmtVal(val)}
-                </span>
+
+                <!-- Col 3 : Montant $ + Qty × Prix -->
+                <div class="sig-alloc-col-usd">
+                <div style="font-size:12px;font-weight:700;font-family:var(--font-mono);
+                            color:var(--text-primary)">
+                    ${allocated_usd > 0 ? AVUtils.formatCurrency(allocated_usd) : '—'}
+                </div>
+                <div style="font-size:9px;color:var(--text-faint);margin-top:2px;
+                            white-space:nowrap">
+                    ${quantity > 0
+                    ? `${quantity.toLocaleString('en-US')} × $${price > 0 ? price.toFixed(2) : '—'}`
+                    : '—'}
+                </div>
+                </div>
+
+                <!-- Col 4 : RP Weight -->
+                <div class="sig-alloc-col-rp">
+                <div style="font-size:11px;font-weight:700;font-family:var(--font-mono);
+                            color:var(--accent-violet)">
+                    ${rp_weight > 0 ? `${(rp_weight * 100).toFixed(2)}%` : '—'}
+                </div>
+                <div style="font-size:9px;color:var(--text-faint);margin-top:2px">
+                    RP Weight
+                </div>
+                </div>
+
             </div>`;
         }).join('')}
         </div>

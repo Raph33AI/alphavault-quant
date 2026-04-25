@@ -502,3 +502,44 @@
     align-items: center;
   }
 }
+
+/* ── Capital Allocation — Entrées riches ───────────────────────── */
+.sig-alloc-entry {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px 64px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
+}
+
+.sig-alloc-entry:last-child { border-bottom: none; }
+
+.sig-alloc-entry:hover {
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+  margin: 0 -8px;
+  padding: 9px 8px;
+}
+
+.sig-alloc-col-sym {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.sig-alloc-col-conf { min-width: 0; }
+
+.sig-alloc-col-usd  { text-align: right; }
+
+.sig-alloc-col-rp   { text-align: right; }
+
+/* Responsive : masque RP Weight sur mobile */
+@media (max-width: 640px) {
+  .sig-alloc-entry {
+    grid-template-columns: 90px 1fr 90px;
+  }
+  .sig-alloc-col-rp { display: none; }
+}
