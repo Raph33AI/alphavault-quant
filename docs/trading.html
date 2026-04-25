@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trading — AlphaVault Quant</title>
+  <title>Trading Terminal — AlphaVault Quant</title>
 
+  <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -13,689 +14,516 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/av-global.css">
-  <link rel="stylesheet" href="assets/css/av-components.css">
-  <link rel="stylesheet" href="assets/css/av-charts.css">
-  <link rel="stylesheet" href="assets/css/av-trading.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-  <style>
-    .trading-layout {
-      display: grid;
-      grid-template-columns: 380px 1fr;
-      gap: 16px;
-      margin-bottom: 16px;
-    }
-    .order-form-body {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .order-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-      margin-bottom: 5px;
-      display: block;
-    }
-    .order-input {
-      width: 100%;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--border);
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      font-size: 13px;
-      font-family: var(--font-sans);
-      transition: var(--transition-fast);
-      box-sizing: border-box;
-    }
-    .order-input:focus {
-      outline: none;
-      border-color: var(--accent-blue);
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-    }
-    .order-input::placeholder { color: var(--text-faint); }
-    .side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .side-btn {
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: 2px solid var(--border);
-      background: var(--bg-primary);
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: var(--transition-fast);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-    }
-    .side-btn[data-side="BUY"].active {
-      background: rgba(16,185,129,0.1);
-      border-color: #10b981;
-      color: #10b981;
-    }
-    .side-btn[data-side="SELL"].active {
-      background: rgba(239,68,68,0.1);
-      border-color: #ef4444;
-      color: #ef4444;
-    }
-    .type-selector {
-      display: inline-flex;
-      background: var(--bg-primary);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 3px;
-      gap: 3px;
-    }
-    .type-btn {
-      padding: 6px 16px;
-      border-radius: calc(var(--radius-md) - 2px);
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition-fast);
-    }
-    .type-btn.active {
-      background: var(--bg-card);
-      color: var(--accent-blue);
-      box-shadow: var(--shadow-sm);
-    }
-    .btn-submit-buy {
-      width: 100%;
-      padding: 13px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: var(--transition-smooth);
-      box-shadow: 0 4px 14px rgba(16,185,129,0.35);
-      font-family: var(--font-sans);
-    }
-    .btn-submit-buy:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(16,185,129,0.45);
-    }
-    .btn-submit-sell {
-      width: 100%;
-      padding: 13px;
-      border-radius: var(--radius-md);
-      border: none;
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      transition: var(--transition-smooth);
-      box-shadow: 0 4px 14px rgba(239,68,68,0.35);
-      font-family: var(--font-sans);
-    }
-    .btn-submit-sell:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(239,68,68,0.45);
-    }
-    #limit-price-row { display: none; }
-    .autocomplete-wrap { position: relative; }
-    #symbol-autocomplete {
-      position: absolute;
-      top: 100%; left: 0; right: 0;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-lg);
-      z-index: 100;
-      display: none;
-      margin-top: 4px;
-      overflow: hidden;
-    }
-    .autocomplete-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 12px;
-      font-size: 12px;
-      cursor: pointer;
-      border-bottom: 1px solid var(--border);
-      transition: background 0.12s;
-    }
-    .autocomplete-item:last-child { border-bottom: none; }
-    .autocomplete-item:hover { background: var(--bg-hover); }
-    .controls-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    @media (max-width: 1024px) { .trading-layout { grid-template-columns: 1fr; } }
-    @media (max-width: 768px)  { .controls-grid { grid-template-columns: 1fr; } }
-  </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/trading.css">
 </head>
 <body>
-<div class="layout">
 
-  <!-- SIDEBAR -->
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">AlphaVault Quant</div>
-      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Main</div>
-      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
-      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
-      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Analysis</div>
-      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
-      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
-      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Tools</div>
-      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
-      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
-      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
-    </div>
-    <div class="sidebar-status">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div class="av-layout">
+
+    <!-- ════════════ SIDEBAR ════════════ -->
+    <nav class="av-sidebar" id="av-sidebar">
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i> Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i> Trading
+        </a>
+        <div class="av-nav-section">Intelligence</div>
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i> Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i> Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+        <div class="av-nav-section">Tools</div>
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i> Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
       </div>
-      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
-    </div>
-  </nav>
 
-  <!-- MAIN -->
-  <main class="main">
-    <header class="top-header">
-      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
-      <div>
-        <span class="top-header-title">Trading Terminal</span>
-        <span class="top-header-sub" id="trading-header-sub">Loading...</span>
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
       </div>
-      <div class="top-header-actions">
-        <div id="mode-badge-header"></div>
-        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
-      </div>
-    </header>
+    </nav>
 
-    <div class="page-content">
+    <!-- ════════════ MAIN ════════════ -->
+    <div class="av-main">
 
-      <!-- Connection Status Bar -->
-      <div id="trading-connection-bar" style="margin-bottom:16px">
-        <div style="padding:14px 18px;background:var(--bg-card);border:1px solid var(--border-card);
-                    border-radius:var(--radius-lg);color:var(--text-muted);font-size:12px">
-          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          Loading connection status...
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-bolt"></i> Trading Terminal
+        </div>
+        <div class="av-topbar-spacer"></div>
+        <div class="av-topbar-actions">
+          <span style="font-size:11px;color:var(--text-faint);
+                       display:flex;align-items:center;gap:5px">
+            <i class="fa-solid fa-rotate fa-spin" style="font-size:8px;
+               color:var(--accent-blue)"></i>
+            Refresh 30s
+          </span>
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Toggle theme" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Trading Layout: Order Form + Right Panel -->
-      <div class="trading-layout">
+      <div class="av-content">
 
-        <!-- Order Form -->
-        <div>
-          <div class="card" style="padding:0;overflow:hidden">
-            <div style="padding:14px 18px;border-bottom:1px solid var(--border);
-                        font-size:13px;font-weight:700;color:var(--text-primary);
-                        display:flex;align-items:center;gap:8px">
-              <i class="fa-solid fa-paper-plane" style="color:#3b82f6"></i>
-              Submit Order
-              <span id="order-api-status" style="margin-left:auto;font-size:10px"></span>
+        <!-- ── MODE BANNER ─────────────────────────────── -->
+        <div class="av-card trd-mode-banner">
+          <div class="trd-mode-left">
+            <div class="trd-mode-badge-wrap" id="trd-mode-badge">
+              <span class="trd-badge-paper">
+                <i class="fa-solid fa-circle"></i> PAPER
+              </span>
             </div>
+            <div class="trd-mode-info">
+              <div class="trd-mode-label" id="trd-mode-label">
+                <span class="skeleton-line"
+                      style="width:180px;height:15px;display:inline-block"></span>
+              </div>
+              <div class="trd-mode-account" id="trd-mode-account">
+                <span class="skeleton-line"
+                      style="width:120px;height:12px;display:inline-block"></span>
+              </div>
+            </div>
+          </div>
+          <div class="trd-mode-center" id="trd-mode-badges"></div>
+          <div class="trd-mode-right" id="trd-conn-status"></div>
+        </div>
 
-            <div class="order-form-body">
+        <!-- ── KPI ROW ─────────────────────────────────── -->
+        <div class="trd-kpi-grid">
 
-              <!-- BUY / SELL -->
-              <div>
-                <label class="order-label">Side</label>
-                <div class="side-grid">
-                  <button class="side-btn active" data-side="BUY">
-                    <i class="fa-solid fa-arrow-up"></i> BUY
+          <!-- NetLiq — R1 : TOUJOURS portfolio.json -->
+          <div class="trd-kpi-block">
+            <div class="trd-kpi-icon" style="background:rgba(59,130,246,0.1);
+                                             color:var(--accent-blue)">
+              <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div class="trd-kpi-content">
+              <div class="trd-kpi-lbl">Net Liquidation</div>
+              <div id="trd-kpi-netliq">
+                <span class="skeleton-line" style="width:100px;height:24px;
+                                                   display:block"></span>
+              </div>
+              <div class="trd-kpi-sub">Source: portfolio.json</div>
+            </div>
+          </div>
+
+          <!-- Available Cash -->
+          <div class="trd-kpi-block">
+            <div class="trd-kpi-icon" style="background:rgba(16,185,129,0.1);
+                                             color:var(--accent-green)">
+              <i class="fa-solid fa-money-bill-wave"></i>
+            </div>
+            <div class="trd-kpi-content">
+              <div class="trd-kpi-lbl">Available Cash</div>
+              <div id="trd-kpi-cash">
+                <span class="skeleton-line" style="width:100px;height:24px;
+                                                   display:block"></span>
+              </div>
+              <div class="trd-kpi-sub">Buying power</div>
+            </div>
+          </div>
+
+          <!-- Executed Orders -->
+          <div class="trd-kpi-block">
+            <div class="trd-kpi-icon" style="background:rgba(16,185,129,0.1);
+                                             color:var(--accent-green)">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div class="trd-kpi-content">
+              <div class="trd-kpi-lbl">Orders Executed</div>
+              <div id="trd-kpi-executed">
+                <span class="skeleton-line" style="width:60px;height:24px;
+                                                   display:block"></span>
+              </div>
+              <div class="trd-kpi-sub">This session</div>
+            </div>
+          </div>
+
+          <!-- Failed Orders -->
+          <div class="trd-kpi-block">
+            <div class="trd-kpi-icon" style="background:rgba(239,68,68,0.08);
+                                             color:var(--accent-red)">
+              <i class="fa-solid fa-circle-xmark"></i>
+            </div>
+            <div class="trd-kpi-content">
+              <div class="trd-kpi-lbl">Orders Failed</div>
+              <div id="trd-kpi-failed">
+                <span class="skeleton-line" style="width:40px;height:24px;
+                                                   display:block"></span>
+              </div>
+              <div class="trd-kpi-sub">Errors / rejections</div>
+            </div>
+          </div>
+
+        </div><!-- /trd-kpi-grid -->
+
+        <!-- ── MAIN GRID ───────────────────────────────── -->
+        <div class="trd-main-grid">
+
+          <!-- ── LEFT COLUMN ──────────────────────────── -->
+          <div class="trd-left-col">
+
+            <!-- Order Form Card -->
+            <div class="av-card trd-order-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-bolt"></i>
+                New Order
+                <span class="badge badge-gray" style="font-size:9px;margin-left:4px">
+                  IBeam :5055
+                </span>
+              </div>
+              <div class="av-card-body trd-order-body">
+
+                <!-- SSH Warning Banner -->
+                <div class="trd-ssh-banner" id="trd-ssh-banner" style="display:none">
+                  <!-- Filled by JS -->
+                </div>
+
+                <!-- Form -->
+                <form class="trd-order-form" id="trd-order-form" autocomplete="off">
+
+                  <!-- BUY / SELL Toggle -->
+                  <div class="trd-side-toggle">
+                    <button type="button" class="trd-side-btn buy active"
+                            data-side="BUY">
+                      <i class="fa-solid fa-arrow-trend-up"></i> BUY
+                    </button>
+                    <button type="button" class="trd-side-btn sell"
+                            data-side="SELL">
+                      <i class="fa-solid fa-arrow-trend-down"></i> SELL
+                    </button>
+                  </div>
+
+                  <!-- Symbol -->
+                  <div class="trd-form-group">
+                    <label class="trd-form-label" for="trd-sym-input">
+                      <i class="fa-solid fa-magnifying-glass"
+                         style="font-size:10px;color:var(--text-faint)"></i>
+                      Symbol
+                    </label>
+                    <input id="trd-sym-input"
+                           type="text"
+                           class="trd-form-input"
+                           placeholder="AAPL, NVDA, MSFT..."
+                           maxlength="10"
+                           required>
+                    <div class="trd-form-hint">
+                      Enter a valid NYSE / NASDAQ ticker
+                    </div>
+                  </div>
+
+                  <!-- Quantity -->
+                  <div class="trd-form-group">
+                    <label class="trd-form-label" for="trd-qty-input">
+                      <i class="fa-solid fa-hashtag"
+                         style="font-size:10px;color:var(--text-faint)"></i>
+                      Quantity (shares)
+                    </label>
+                    <input id="trd-qty-input"
+                           type="number"
+                           class="trd-form-input"
+                           placeholder="100"
+                           min="1"
+                           step="1"
+                           required>
+                    <div class="trd-form-hint">Whole shares only</div>
+                  </div>
+
+                  <!-- Order Type -->
+                  <div class="trd-form-group">
+                    <label class="trd-form-label">
+                      <i class="fa-solid fa-layer-group"
+                         style="font-size:10px;color:var(--text-faint)"></i>
+                      Order Type
+                    </label>
+                    <div class="trd-type-tabs">
+                      <button type="button" class="trd-type-tab active"
+                              data-type="MKT">
+                        MKT — Market
+                      </button>
+                      <button type="button" class="trd-type-tab"
+                              data-type="LMT">
+                        LMT — Limit
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Limit Price (hidden by default) -->
+                  <div class="trd-form-group" id="trd-limit-row" style="display:none">
+                    <label class="trd-form-label" for="trd-lim-input">
+                      <i class="fa-solid fa-dollar-sign"
+                         style="font-size:10px;color:var(--text-faint)"></i>
+                      Limit Price ($)
+                    </label>
+                    <input id="trd-lim-input"
+                           type="number"
+                           class="trd-form-input"
+                           placeholder="0.00"
+                           min="0.01"
+                           step="0.01">
+                    <div class="trd-form-hint">
+                      Order will execute at this price or better
+                    </div>
+                  </div>
+
+                  <!-- Submit -->
+                  <button type="submit" class="trd-submit-btn buy" id="trd-submit-btn">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                    Submit Buy Order
                   </button>
-                  <button class="side-btn" data-side="SELL">
-                    <i class="fa-solid fa-arrow-down"></i> SELL
-                  </button>
+
+                </form>
+              </div><!-- /av-card-body -->
+            </div><!-- /order card -->
+
+            <!-- Pending Orders Card -->
+            <div class="av-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-list-check"></i>
+                Pending Orders
+                <div id="trd-orders-badge" style="margin-left:auto;display:flex;gap:5px">
+                  <span class="skeleton-line" style="width:80px;height:18px;
+                                                     display:block"></span>
                 </div>
               </div>
+              <div id="trd-orders-body">
+                <!-- Filled by JS -->
+              </div>
+            </div>
 
-              <!-- Symbol -->
-              <div>
-                <label class="order-label" for="order-symbol">Symbol</label>
-                <div class="autocomplete-wrap">
-                  <input type="text" id="order-symbol" class="order-input"
-                         placeholder="AAPL, MSFT, NVDA..."
-                         autocomplete="off" spellcheck="false"
-                         style="text-transform:uppercase;font-family:var(--font-mono);
-                                font-weight:700;letter-spacing:0.5px">
-                  <div id="symbol-autocomplete"></div>
+          </div><!-- /trd-left-col -->
+
+          <!-- ── RIGHT COLUMN ─────────────────────────── -->
+          <div class="trd-right-col">
+
+            <!-- Trading Controls Card -->
+            <div class="av-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-sliders"></i>
+                Trading Controls
+                <span class="badge badge-orange" style="font-size:9px;margin-left:4px">
+                  SSH required
+                </span>
+              </div>
+              <div class="av-card-body trd-ctrl-body">
+
+                <!-- Paper / Live Row -->
+                <div class="trd-ctrl-row">
+                  <div class="trd-ctrl-info">
+                    <div class="trd-ctrl-label">
+                      <i class="fa-solid fa-server"
+                         style="color:var(--accent-blue);font-size:11px"></i>
+                      Trading Mode
+                    </div>
+                    <div class="trd-ctrl-desc">
+                      Switch between Paper and Live IBKR account
+                    </div>
+                  </div>
+                  <div class="trd-ctrl-right">
+                    <div id="trd-ctrl-mode-status"
+                         style="margin-bottom:8px;text-align:center">
+                      <span class="skeleton-line" style="width:70px;height:18px;
+                                                         display:block;margin:0 auto"></span>
+                    </div>
+                    <button class="trd-ctrl-btn to-live" id="trd-switch-mode-btn"
+                            disabled>
+                      <i class="fa-solid fa-right-left"></i>
+                      Switch to Live
+                    </button>
+                  </div>
+                </div>
+
+                <div class="trd-ctrl-divider"></div>
+
+                <!-- Auto / Manual Row -->
+                <div class="trd-ctrl-row">
+                  <div class="trd-ctrl-info">
+                    <div class="trd-ctrl-label">
+                      <i class="fa-solid fa-robot"
+                         style="color:var(--accent-green);font-size:11px"></i>
+                      Agent Mode
+                    </div>
+                    <div class="trd-ctrl-desc">
+                      Pause or resume automatic order placement
+                    </div>
+                  </div>
+                  <div class="trd-ctrl-right">
+                    <div id="trd-ctrl-auto-status"
+                         style="margin-bottom:8px;text-align:center">
+                      <span class="skeleton-line" style="width:70px;height:18px;
+                                                         display:block;margin:0 auto"></span>
+                    </div>
+                    <button class="trd-ctrl-btn to-manual" id="trd-auto-manual-btn"
+                            disabled>
+                      <i class="fa-solid fa-pause"></i>
+                      Pause Trading
+                    </button>
+                  </div>
+                </div>
+
+                <!-- SSH Reminder -->
+                <div class="trd-ctrl-ssh-note">
+                  <i class="fa-solid fa-circle-info"
+                     style="color:var(--accent-blue);font-size:11px;flex-shrink:0"></i>
+                  <span>
+                    Controls require SSH tunnel to
+                    <code style="font-size:10px;background:var(--bg-secondary);
+                                 padding:1px 5px;border-radius:3px">localhost:5002</code>
+                  </span>
+                </div>
+
+              </div>
+            </div><!-- /controls card -->
+
+            <!-- Order Locks Card -->
+            <div class="av-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-lock"></i>
+                Order Locks
+                <div id="trd-locks-count" style="margin-left:auto">
+                  <span class="skeleton-line" style="width:70px;height:18px;
+                                                     display:block"></span>
                 </div>
               </div>
-
-              <!-- Quantity -->
-              <div>
-                <label class="order-label" for="order-qty">Quantity</label>
-                <input type="number" id="order-qty" class="order-input"
-                       placeholder="100" min="1" step="1"
-                       style="font-family:var(--font-mono)">
-              </div>
-
-              <!-- Order Type -->
-              <div>
-                <label class="order-label">Order Type</label>
-                <div class="type-selector">
-                  <button class="type-btn active" data-order-type="MKT">MKT</button>
-                  <button class="type-btn" data-order-type="LMT">LMT</button>
+              <div class="av-card-body">
+                <div id="trd-locks-body">
+                  <div class="trd-empty-state trd-empty-sm">
+                    <i class="fa-solid fa-circle-notch fa-spin"
+                       style="font-size:16px;color:var(--accent-blue);
+                              display:block;margin-bottom:6px"></i>
+                    <span style="font-size:11px;color:var(--text-faint)">Loading...</span>
+                  </div>
                 </div>
               </div>
-
-              <!-- Limit Price (hidden by default) -->
-              <div id="limit-price-row">
-                <label class="order-label" for="order-limit-price">Limit Price ($)</label>
-                <input type="number" id="order-limit-price" class="order-input"
-                       placeholder="0.00" step="0.01" min="0"
-                       style="font-family:var(--font-mono)">
-              </div>
-
-              <!-- Submit -->
-              <button id="order-submit-btn" class="btn-submit-buy">
-                <i class="fa-solid fa-paper-plane"></i>
-                <span id="order-submit-label">Submit BUY Order</span>
-              </button>
-
-              <!-- API Unavailable Notice -->
-              <div id="order-api-notice" style="display:none;
-                   padding:10px 14px;background:rgba(245,158,11,0.08);
-                   border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-md);
-                   font-size:11px;color:var(--text-secondary)">
-                <i class="fa-solid fa-terminal" style="color:#f59e0b"></i>
-                <strong>Dashboard API offline</strong> — SSH tunnel required:<br>
-                <code style="font-size:10px;color:var(--accent-blue);word-break:break-all">
-                  ssh -i ~/ssh-key-2026-04-18.key -L 5002:localhost:5002 ubuntu@141.253.101.68
-                </code>
-                <button onclick="AVTrading.retryAPICheck()" class="btn-sm"
-                        style="margin-top:8px;width:100%;justify-content:center">
-                  <i class="fa-solid fa-rotate"></i> Retry Connection
-                </button>
-              </div>
-
             </div>
-          </div>
-        </div>
 
-        <!-- Right Panel: Orders + Locks -->
-        <div style="display:flex;flex-direction:column;gap:14px">
-
-          <!-- Pending Orders -->
-          <div class="card">
-            <div class="section-header">
-              <i class="fa-solid fa-list-check" style="color:#3b82f6"></i>
-              Pending Orders
-            </div>
-            <div id="pending-orders-section">
-              <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
-                <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+            <!-- Queue Status Card -->
+            <div class="av-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-bars-staggered"></i>
+                Queue Status
+              </div>
+              <div class="av-card-body" style="padding-bottom:8px">
+                <div id="trd-queue-body">
+                  <div class="trd-queue-row">
+                    <div class="trd-queue-label">
+                      <i class="fa-solid fa-arrow-right-from-bracket"
+                         style="color:var(--accent-red);font-size:11px"></i>
+                      Exit Queue
+                    </div>
+                    <span class="skeleton-line" style="width:60px;height:16px;
+                                                       display:block"></span>
+                  </div>
+                  <div class="trd-queue-row">
+                    <div class="trd-queue-label">
+                      <i class="fa-solid fa-arrow-right-to-bracket"
+                         style="color:var(--accent-blue);font-size:11px"></i>
+                      Regular Queue
+                    </div>
+                    <span class="skeleton-line" style="width:60px;height:16px;
+                                                       display:block"></span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <!-- Order Locks -->
-          <div class="card">
-            <div id="order-locks-section">
-              <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
-                <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+            <!-- Session Stats Card -->
+            <div class="av-card">
+              <div class="av-card-header">
+                <i class="fa-solid fa-chart-bar"></i>
+                Session Statistics
+                <span class="badge badge-gray" style="font-size:9px;margin-left:auto">
+                  This session
+                </span>
+              </div>
+              <div class="av-card-body">
+                <div id="trd-stats-body">
+                  <div class="trd-stats-grid">
+                    ${['Executed','Failed','Skipped','Success Rate'].map(() => `
+                      <div class="trd-stat-item">
+                        <div class="trd-stat-icon" style="background:var(--bg-secondary)">
+                          <span class="skeleton-line"
+                                style="width:16px;height:16px;display:block;
+                                       border-radius:50%"></span>
+                        </div>
+                        <span class="skeleton-line"
+                              style="width:40px;height:22px;display:block;
+                                     margin:4px auto 0"></span>
+                        <span class="skeleton-line"
+                              style="width:55px;height:10px;display:block;
+                                     margin:4px auto 0"></span>
+                      </div>`).join('')}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-        </div>
-      </div><!-- /trading-layout -->
+          </div><!-- /trd-right-col -->
+        </div><!-- /trd-main-grid -->
 
-      <!-- Controls: Paper/Live + Auto/Manual -->
-      <div class="controls-grid">
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
 
-        <!-- Paper/Live Toggle -->
-        <div class="card control-card">
-          <div class="control-card-header">
-            <i class="fa-solid fa-toggle-on" style="color:#3b82f6"></i>
-            Trading Mode
-          </div>
-          <div class="paper-live-selector">
-            <button id="toggle-paper-btn" class="active">
-              <i class="fa-solid fa-flask" style="font-size:14px"></i>
-              Paper Trading
-            </button>
-            <button id="toggle-live-btn">
-              <i class="fa-solid fa-circle" style="font-size:10px;animation:pulse 1.5s infinite"></i>
-              Live Trading
-            </button>
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);line-height:1.6">
-            <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
-            Switching to LIVE uses account
-            <strong style="color:var(--text-primary)">${AV_CONFIG?.ACCOUNT?.live || 'U21160314'}</strong>
-            with real capital. Triple confirmation required.
-          </div>
-        </div>
+  <!-- Scripts — ordre obligatoire -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-trading.js"></script>
 
-        <!-- Auto/Manual Toggle -->
-        <div class="card control-card">
-          <div class="control-card-header">
-            <i class="fa-solid fa-robot" style="color:#10b981"></i>
-            Execution Mode
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-            <button id="toggle-auto-btn" class="active"
-                    style="padding:12px;border-radius:var(--radius-md);border:2px solid var(--border);
-                           background:rgba(16,185,129,0.1);border-color:#10b981;color:#10b981;
-                           font-weight:700;cursor:pointer;display:flex;align-items:center;
-                           justify-content:center;gap:7px;font-size:13px">
-              <i class="fa-solid fa-robot"></i> Auto
-            </button>
-            <button id="toggle-manual-btn"
-                    style="padding:12px;border-radius:var(--radius-md);border:2px solid var(--border);
-                           background:transparent;color:var(--text-muted);font-weight:700;cursor:pointer;
-                           display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px">
-              <i class="fa-solid fa-hand"></i> Manual
-            </button>
-          </div>
-          <div style="display:flex;gap:8px">
-            <button id="toggle-pause-btn" class="btn-sm" style="flex:1;justify-content:center">
-              <i class="fa-solid fa-pause"></i> Pause Auto
-            </button>
-            <button id="toggle-resume-btn" class="btn-sm" style="flex:1;justify-content:center;display:none">
-              <i class="fa-solid fa-play"></i> Resume Auto
-            </button>
-          </div>
-        </div>
-
-      </div><!-- /controls-grid -->
-
-    </div><!-- /page-content -->
-  </main>
-</div>
-
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
-<div id="av-toast-wrap"></div>
-
-<script src="assets/js/av-config.js"></script>
-<script src="assets/js/av-utils.js"></script>
-<script src="assets/js/av-api.js"></script>
-<script src="assets/js/av-charts.js"></script>
-<script src="assets/js/av-portfolio.js"></script>
-<script src="assets/js/av-signals.js"></script>
-<script src="assets/js/av-agents.js"></script>
-<script src="assets/js/av-trading.js"></script>
-<script src="assets/js/av-controls.js"></script>
-<script src="assets/js/av-stock-detail.js"></script>
-
-<script>
-(function _guard() {
-  const REQUIRED = {
-    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
-    'AVApi':'assets/js/av-api.js','AVTrading':'assets/js/av-trading.js',
-    'AVControls':'assets/js/av-controls.js',
-  };
-  const missing = Object.entries(REQUIRED)
-    .filter(([n]) => typeof window[n] === 'undefined')
-    .map(([n, f]) => `${n} → ${f}`);
-  if (missing.length) {
-    document.body.insertAdjacentHTML('afterbegin',
-      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
-                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
-                   border-bottom:3px solid #ef4444;line-height:1.8">
-         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
-         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
-       </div>`);
-    return;
-  }
-  _initPage().catch(e => console.error('[Trading]', e));
-})();
-
-async function _initPage() {
-  await AVApi.init();
-  AVControls.init();
-  await AVTrading.init();
-
-  const $sb = document.getElementById('sidebar');
-  const $ov = document.getElementById('sidebar-overlay');
-  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
-    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
-  });
-  $ov?.addEventListener('click', () => {
-    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
-  });
-
-  // ── Order form bindings ───────────────────────────────
-  // BUY / SELL side buttons
-  document.querySelectorAll('.side-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const side      = btn.dataset.side;
-      const label     = document.getElementById('order-submit-label');
-      const submitBtn = document.getElementById('order-submit-btn');
-      if (label)     label.textContent = `Submit ${side} Order`;
-      if (submitBtn) submitBtn.className =
-        side === 'BUY' ? 'btn-submit-buy' : 'btn-submit-sell';
-    });
-  });
-
-  // MKT / LMT type buttons
-  document.querySelectorAll('.type-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const limitRow = document.getElementById('limit-price-row');
-      if (limitRow) limitRow.style.display =
-        btn.dataset.orderType === 'LMT' ? 'block' : 'none';
-    });
-  });
-
-  // Symbol autocomplete from cached signals
-  const symInput = document.getElementById('order-symbol');
-  const acList   = document.getElementById('symbol-autocomplete');
-
-  symInput?.addEventListener('input', AVUtils.debounce(() => {
-    const val  = (symInput.value || '').toUpperCase().trim();
-    if (!val || val.length < 1) { if (acList) acList.style.display = 'none'; return; }
-
-    const signals    = AVApi.getCached('signals');
-    const sigsArr    = Array.isArray(signals?.signals) ? signals.signals
-                     : signals?.signals && typeof signals.signals === 'object'
-                       ? Object.entries(signals.signals).map(([s, v]) => ({ symbol: s, ...v }))
-                       : [];
-    const matches    = sigsArr
-      .filter(s => (s.symbol || '').startsWith(val))
-      .slice(0, 7);
-
-    if (!matches.length || !acList) return;
-
-    acList.innerHTML = matches.map(s => {
-      const conf     = sf(s.confidence || 0);
-      const actColor = s.action === 'BUY' ? '#10b981' : '#ef4444';
-      return `
-        <div class="autocomplete-item" data-sym="${s.symbol}">
-          <span style="font-weight:700;font-family:var(--font-mono)">${s.symbol}</span>
-          <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;
-                       background:${actColor}12;color:${actColor}">${s.action}</span>
-          <span style="margin-left:auto;font-size:10px;font-family:var(--font-mono);
-                       color:var(--text-muted)">${(conf*100).toFixed(0)}%</span>
-        </div>`;
-    }).join('');
-    acList.style.display = 'block';
-
-    acList.querySelectorAll('.autocomplete-item').forEach(item => {
-      item.addEventListener('click', () => {
-        if (symInput) symInput.value = item.dataset.sym;
-        acList.style.display = 'none';
-      });
-    });
-  }, 150));
-
-  // Hide autocomplete on outside click
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.autocomplete-wrap') && acList)
-      acList.style.display = 'none';
-  });
-
-  // Submit order
-  document.getElementById('order-submit-btn')?.addEventListener('click', async () => {
-    const sym   = (symInput?.value || '').trim().toUpperCase();
-    const qty   = parseInt(document.getElementById('order-qty')?.value || '0');
-    const type  = document.querySelector('.type-btn.active')?.dataset.orderType || 'MKT';
-    const side  = document.querySelector('.side-btn.active')?.dataset.side || 'BUY';
-    const limit = sf(document.getElementById('order-limit-price')?.value || 0);
-
-    if (!sym)                  { showToast('Enter a symbol', 'warn'); return; }
-    if (qty <= 0)              { showToast('Quantity must be > 0', 'warn'); return; }
-    if (type === 'LMT' && !limit) { showToast('Enter a limit price', 'warn'); return; }
-
-    const available = await AVApi.checkDashboardAPI();
-    if (!available) {
-      document.getElementById('order-api-notice').style.display = 'block';
-      showToast('Dashboard API offline — SSH tunnel required', 'error', 5000);
-      return;
-    }
-
-    const modeData = await AVApi.getExecutionMode();
-    const account  = safeGet(modeData, 'mode', 'paper') === 'live'
-                   ? AV_CONFIG.ACCOUNT.live : AV_CONFIG.ACCOUNT.paper;
-    const modeName = (safeGet(modeData, 'mode', 'paper') || 'PAPER').toUpperCase();
-
-    showModal({
-      title: `Confirm ${side} Order`,
-      body: `
-        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text-muted)">Symbol:</span>
-            <strong style="font-family:var(--font-mono)">${sym}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text-muted)">Side:</span>
-            <strong style="color:${side === 'BUY' ? '#10b981' : '#ef4444'}">${side}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text-muted)">Quantity:</span>
-            <strong>${qty.toLocaleString()}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text-muted)">Type:</span>
-            <strong>${type}${type === 'LMT' ? ' @ ' + formatCurrency(limit) : ''}</strong>
-          </div>
-          <div style="display:flex;justify-content:space-between">
-            <span style="color:var(--text-muted)">Account:</span>
-            <strong style="color:${modeName === 'LIVE' ? '#ef4444' : '#10b981'}">
-              ${account} (${modeName})
-            </strong>
-          </div>
-        </div>`,
-      confirmText: `Submit ${side}`,
-      danger: side === 'SELL' || modeName === 'LIVE',
-      onConfirm: async () => {
-        const submitBtn = document.getElementById('order-submit-btn');
-        if (submitBtn) { submitBtn.disabled = true; }
-        try {
-          const { data, error } = await AVApi.callDashboardAPI('/orders', {
-            method: 'POST',
-            body:   JSON.stringify({ symbol: sym, side, quantity: qty,
-                                     order_type: type, limit_price: limit }),
-          });
-          if (error) throw new Error(error);
-          showToast(`${side} ${qty}x ${sym} submitted`, 'success');
-          if (symInput) symInput.value = '';
-          document.getElementById('order-qty').value = '';
-        } catch(e) {
-          showToast(`Order failed: ${e.message}`, 'error', 5000);
-        } finally {
-          if (submitBtn) { submitBtn.disabled = false; }
-        }
-      },
-    });
-  });
-
-  // ── Load & render all data ────────────────────────────
-  async function _loadAll() {
-    const [execRaw, ibkrRaw, ordersRaw, modeData] = await Promise.all([
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.execution, AV_CONFIG.REFRESH.execution),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.ibkr,      AV_CONFIG.REFRESH.execution),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.orders,    AV_CONFIG.REFRESH.execution),
-      AVApi.getExecutionMode(),
-    ]);
-
-    AVTrading.renderConnectionStatus(execRaw, ibkrRaw, modeData);
-    AVTrading.renderPendingOrders(ordersRaw);
-    AVTrading.renderOrderLocks(execRaw);
-    AVControls.updateModeBadge(modeData);
-
-    // Header subtitle
-    const sub = document.getElementById('trading-header-sub');
-    if (sub) {
-      const mode    = (safeGet(modeData, 'mode', 'paper') || 'paper').toUpperCase();
-      const account = safeGet(modeData, 'account', AV_CONFIG.ACCOUNT.paper);
-      sub.textContent = `${mode} · ${account}`;
-    }
-
-    // API status badge
-    const apiStatus  = document.getElementById('order-api-status');
-    const apiNotice  = document.getElementById('order-api-notice');
-    const apiAvail   = AVTrading.isApiAvailable();
-    if (apiStatus) {
-      apiStatus.innerHTML = apiAvail
-        ? '<span class="badge badge-green"><i class="fa-solid fa-plug"></i> API Connected</span>'
-        : '<span class="badge badge-orange"><i class="fa-solid fa-plug"></i> API Offline</span>';
-    }
-    if (apiNotice) apiNotice.style.display = apiAvail ? 'none' : 'block';
-  }
-
-  // Paper/Live + Auto/Manual (from AVControls)
-  AVControls.initPaperLiveSwitch?.();
-  AVControls.initAutoManualSwitch?.();
-
-  // Auto-refresh 30s
-  AVApi.startAutoRefresh({
-    execution: AV_CONFIG.REFRESH.execution,
-    orders:    AV_CONFIG.REFRESH.execution,
-    ibkr:      AV_CONFIG.REFRESH.execution,
-    mode:      AV_CONFIG.REFRESH.execution,
-    onUpdate: async (key, data) => {
-      const exec   = AVApi.getCached('execution');
-      const ibkr   = AVApi.getCached('ibkr');
-      const mode   = AVApi.getCached('mode');
-      if (key === 'execution') {
-        AVTrading.renderOrderLocks(data);
-        if (exec && ibkr && mode) AVTrading.renderConnectionStatus(exec, ibkr, mode);
-      }
-      if (key === 'orders') AVTrading.renderPendingOrders(data);
-      if (key === 'mode')   AVControls.updateModeBadge(data);
-      await AVApi.updateSidebarStatus();
-    },
-  });
-
-  await _loadAll();
-}
-</script>
 </body>
 </html>

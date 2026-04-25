@@ -1,0 +1,826 @@
+/* ================================================================
+   trading.css — AlphaVault Quant Trading Terminal v1.0
+   Styles spécifiques à trading.html — préfixe trd-
+================================================================ */
+
+/* ── Mode Banner ───────────────────────────────────────────────── */
+.trd-mode-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 22px;
+  flex-wrap: wrap;
+  border-left: 4px solid var(--accent-blue);
+  transition: border-color 0.3s ease;
+}
+
+.trd-mode-banner.is-live {
+  border-left-color: var(--accent-red);
+}
+
+.trd-mode-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.trd-mode-badge-wrap {
+  flex-shrink: 0;
+}
+
+.trd-badge-paper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+  border: 1.5px solid rgba(16, 185, 129, 0.3);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.trd-badge-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  border: 1.5px solid rgba(239, 68, 68, 0.3);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+/* Pulsing dot for LIVE mode */
+@keyframes trd-pulse-anim {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.7); }
+}
+
+.trd-pulse {
+  font-size: 8px !important;
+  animation: trd-pulse-anim 1.2s ease-in-out infinite;
+}
+
+.trd-mode-info {
+  min-width: 0;
+}
+
+.trd-mode-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trd-mode-account {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.trd-mode-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.trd-mode-right {
+  margin-left: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+}
+
+.trd-conn-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trd-conn-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+/* ── KPI Grid ──────────────────────────────────────────────────── */
+.trd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.trd-kpi-block {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  transition: box-shadow 0.15s, transform 0.15s;
+}
+
+.trd-kpi-block:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.trd-kpi-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.trd-kpi-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.trd-kpi-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.trd-kpi-val {
+  font-size: 20px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.trd-kpi-sub {
+  font-size: 9px;
+  color: var(--text-faint);
+  margin-top: 3px;
+  font-style: italic;
+}
+
+/* ── Main Grid Layout ──────────────────────────────────────────── */
+.trd-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 14px;
+  align-items: start;
+}
+
+.trd-left-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trd-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Order Form Card ───────────────────────────────────────────── */
+.trd-order-body {
+  padding-top: 0 !important;
+}
+
+/* SSH Warning Banner */
+.trd-ssh-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  margin-bottom: 18px;
+}
+
+.trd-ssh-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-orange);
+  margin-bottom: 6px;
+}
+
+.trd-ssh-code {
+  display: block;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--text-primary);
+  word-break: break-all;
+  user-select: all;
+  cursor: text;
+}
+
+.trd-ssh-hint {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 5px;
+  line-height: 1.5;
+}
+
+/* Order Form */
+.trd-order-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+}
+
+/* BUY / SELL Toggle */
+.trd-side-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+}
+
+.trd-side-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+  letter-spacing: 0.5px;
+}
+
+.trd-side-btn:hover {
+  background: var(--bg-hover);
+}
+
+.trd-side-btn.buy:hover  { color: var(--accent-green); }
+.trd-side-btn.sell:hover { color: var(--accent-red); }
+
+.trd-side-btn.active.buy {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--accent-green);
+  border-bottom: 3px solid var(--accent-green);
+}
+
+.trd-side-btn.active.sell {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--accent-red);
+  border-bottom: 3px solid var(--accent-red);
+}
+
+/* Form Groups */
+.trd-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trd-form-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trd-form-input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.trd-form-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.trd-form-input::placeholder {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-family: var(--font-sans);
+}
+
+.trd-form-hint {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* MKT / LMT Tabs */
+.trd-type-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.trd-type-tab {
+  flex: 1;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+.trd-type-tab:hover { color: var(--accent-blue); }
+
+.trd-type-tab.active {
+  background: var(--gradient-brand);
+  color: #fff;
+}
+
+/* Submit Button */
+.trd-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 15px 24px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font-sans);
+  letter-spacing: 0.3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.trd-submit-btn.buy {
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+}
+
+.trd-submit-btn.buy:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857, #059669);
+  box-shadow: 0 6px 22px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+.trd-submit-btn.sell {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.trd-submit-btn.sell:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  box-shadow: 0 6px 22px rgba(239, 68, 68, 0.45);
+  transform: translateY(-1px);
+}
+
+.trd-submit-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Empty States ──────────────────────────────────────────────── */
+.trd-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 20px;
+  text-align: center;
+}
+
+.trd-empty-icon {
+  font-size: 28px;
+  opacity: 0.15;
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.trd-empty-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.trd-empty-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+.trd-empty-sm {
+  padding: 16px;
+}
+
+/* ── Controls Card ─────────────────────────────────────────────── */
+.trd-ctrl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.trd-ctrl-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0;
+}
+
+.trd-ctrl-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.trd-ctrl-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.trd-ctrl-desc {
+  font-size: 10px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.trd-ctrl-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  min-width: 140px;
+}
+
+.trd-ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.trd-ctrl-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.trd-ctrl-btn.to-live:hover:not(:disabled) {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.trd-ctrl-btn.to-paper:hover:not(:disabled) {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.trd-ctrl-btn.to-manual:hover:not(:disabled) {
+  border-color: var(--accent-orange);
+  color: var(--accent-orange);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.trd-ctrl-btn.to-auto:hover:not(:disabled) {
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.trd-ctrl-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.trd-ctrl-divider {
+  height: 1px;
+  background: var(--border);
+}
+
+.trd-ctrl-ssh-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(59, 130, 246, 0.04);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+
+/* ── Order Locks ───────────────────────────────────────────────── */
+.trd-locks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.trd-lock-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  min-width: 56px;
+  transition: background 0.15s;
+}
+
+.trd-lock-chip:hover {
+  background: rgba(245, 158, 11, 0.12);
+}
+
+.trd-lock-sym {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-orange);
+  font-family: var(--font-mono);
+  line-height: 1.2;
+}
+
+.trd-lock-price {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  margin-top: 2px;
+}
+
+/* ── Queue Status ──────────────────────────────────────────────── */
+.trd-queue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.trd-queue-row:last-child {
+  border-bottom: none;
+}
+
+.trd-queue-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.trd-queue-val {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* ── Session Stats ─────────────────────────────────────────────── */
+.trd-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.trd-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.trd-stat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.trd-stat-val {
+  font-size: 18px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.trd-stat-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ── Confirmation Modal Grid ───────────────────────────────────── */
+.trd-confirm-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.trd-confirm-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.trd-confirm-row:last-child {
+  border-bottom: none;
+}
+
+.trd-confirm-lbl {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.trd-confirm-val {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ── Action Badge (inherited from signals) ─────────────────────── */
+/* .sig-action-badge .buy .sell are defined in signals.css or av-global */
+/* Re-define here in case trading.css is loaded standalone */
+.sig-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sig-action-badge.buy {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sig-action-badge.sell {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .trd-main-grid {
+    grid-template-columns: 1fr 340px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .trd-main-grid {
+    grid-template-columns: 1fr;
+  }
+  .trd-right-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .trd-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .trd-mode-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .trd-mode-right {
+    margin-left: 0;
+    align-items: flex-start;
+  }
+  .trd-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .trd-right-col {
+    grid-template-columns: 1fr;
+  }
+  .trd-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+}
+
+@media (max-width: 540px) {
+  .trd-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .trd-kpi-block {
+    padding: 12px;
+  }
+  .trd-kpi-val {
+    font-size: 16px;
+  }
+  .trd-side-btn {
+    font-size: 13px;
+    padding: 12px 14px;
+  }
+  .trd-order-form {
+    padding: 14px;
+  }
+  .trd-ctrl-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .trd-ctrl-right {
+    min-width: 100%;
+    flex-direction: row;
+    align-items: center;
+  }
+}
