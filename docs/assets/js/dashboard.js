@@ -195,6 +195,7 @@
     null,
     'var(--accent-violet)'
     )
+  }
 
   // ══════════════════════════════════════════════════════════════
     // REGIME CARD — source : regime.json

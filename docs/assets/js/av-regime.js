@@ -549,7 +549,7 @@ function renderHeatmap(p) {
         const isEtf   = SECTOR_ETFS.some(e => e.ticker === ticker);
 
         // ✅ CORRECTION 3 — stock-detail au lieu d'advanced-analysis
-        const url     = `stock-detail.html?symbol=${encodeURIComponent(ticker)}`;
+        const url = `signals.html?q=${encodeURIComponent(ticker)}`;
 
         // ✅ CORRECTION 1 — logo 20px via AVUtils
         const logoHtml = AVUtils._getLogoHtml(ticker, 20);
