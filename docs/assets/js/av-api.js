@@ -301,6 +301,7 @@ const AVApi = (() => {
     getAgentHealth,
     getTopBuySignals,
     getNavHistory,
+    URLS: AV_CONFIG.SIGNAL_URLS,
   };
 
 })();

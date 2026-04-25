@@ -423,6 +423,7 @@ const AVUtils = (() => {
     getCurrentPage,
     skeletonHTML,
     _getLogoHtml,
+    formatCompact: formatCurrency,   // alias — formatCurrency fait déjà T/B/M/K
   };
 
 })();

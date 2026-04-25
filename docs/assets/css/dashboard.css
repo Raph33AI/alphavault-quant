@@ -1,245 +1,361 @@
-/* ============================================================
+/* ================================================================
    dashboard.css — AlphaVault Quant Dashboard v1.0
    Styles spécifiques à dashboard.html
-   ============================================================ */
+================================================================ */
 
-/* ── KPI Grid ───────────────────────────────────────────────── */
+/* ── KPI Grid ──────────────────────────────────────────────────── */
 .dash-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 14px;
 }
 
-/* ── Middle grid : Regime + Agents + Execution ─────────────── */
+/* KPI Card */
+.av-kpi-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px 18px 14px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.av-kpi-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+/* Accent bar au top */
+.av-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
+  opacity: 0.55;
+}
+
+.av-kpi-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.av-kpi-label i { font-size: 12px; }
+
+.av-kpi-value {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  line-height: 1.1;
+  margin-bottom: 8px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  word-break: break-all;
+}
+
+.av-kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 18px;
+  line-height: 1.4;
+}
+
+/* ── Leverage Progress ─────────────────────────────────────────── */
+.dash-lev-progress { margin-top: 8px; }
+.dash-lev-progress .av-progress-track { height: 4px; }
+
+/* ── Middle Grid (3 cartes) ────────────────────────────────────── */
 .dash-middle-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
 
-/* ── Regime block ───────────────────────────────────────────── */
+/* ── Regime Card ───────────────────────────────────────────────── */
 .dash-regime-main {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .dash-regime-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-lg);
-  font-size: 22px;
   flex-shrink: 0;
 }
 
-.dash-regime-info { flex: 1; min-width: 0; }
-
 .dash-regime-name {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 900;
-  color: var(--text-primary);
-  letter-spacing: -0.5px;
   line-height: 1.1;
+  margin-bottom: 3px;
 }
 
 .dash-regime-conf {
   font-size: 12px;
-  color: var(--text-muted);
   font-weight: 600;
-  margin-top: 2px;
+  color: var(--text-muted);
 }
 
 .dash-regime-probas {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
 
 .dash-proba-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
 }
 
 .dash-proba-label {
-  width: 54px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text-muted);
+  width: 52px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .dash-proba-bar {
   flex: 1;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--border);
+  height: 5px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .dash-proba-fill {
   height: 100%;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   transition: width 0.6s ease;
 }
 
 .dash-proba-val {
-  width: 34px;
-  text-align: right;
-  font-family: var(--font-mono);
+  font-size: 10px;
   font-weight: 700;
-  font-size: 11px;
+  font-family: var(--font-mono);
   color: var(--text-secondary);
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
-/* ── Agent Health ────────────────────────────────────────────── */
+/* ── Agent Health ──────────────────────────────────────────────── */
 .dash-agents-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 8px;
   margin-bottom: 14px;
 }
 
 .dash-agents-stat {
+  flex: 1;
   background: var(--bg-secondary);
   border-radius: var(--radius-md);
-  padding: 8px 10px;
+  padding: 10px 8px;
   text-align: center;
 }
 
 .dash-agents-stat-val {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 900;
   font-family: var(--font-mono);
-  color: var(--text-primary);
-  line-height: 1.1;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .dash-agents-stat-lbl {
-  font-size: 10px;
-  color: var(--text-faint);
+  font-size: 9px;
   font-weight: 600;
+  color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
 }
 
 .dash-agents-list {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
+  margin-bottom: 10px;
 }
 
 .dash-agent-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
-  transition: background var(--transition-fast);
+  transition: background 0.12s;
 }
 
-.dash-agent-row:hover { background: var(--bg-hover); }
+.dash-agent-row:hover { background: var(--bg-secondary); }
 
-.dash-agent-status-icon {
-  font-size: 10px;
-  width: 14px;
-  text-align: center;
+.dash-agent-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
   flex-shrink: 0;
 }
 
 .dash-agent-name {
   flex: 1;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  text-overflow: ellipsis;
-  overflow: hidden;
+  text-transform: capitalize;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .dash-agent-cycles {
+  font-size: 10px;
   font-family: var(--font-mono);
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.dash-agent-age {
   font-size: 10px;
   color: var(--text-faint);
+  flex-shrink: 0;
 }
 
-/* ── Execution card ──────────────────────────────────────────── */
-.dash-exec-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.dash-exec-item {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-}
-
-.dash-exec-item-lbl {
-  font-size: 10px;
-  color: var(--text-faint);
+.dash-agents-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  justify-content: center;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  color: var(--accent-blue);
+  font-size: 11px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  margin-bottom: 3px;
+  text-decoration: none;
+  background: rgba(59, 130, 246, 0.05);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  transition: all 0.15s;
 }
 
-.dash-exec-item-val {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
+.dash-agents-link:hover { background: rgba(59, 130, 246, 0.1); }
+
+/* ── Execution Card ────────────────────────────────────────────── */
+.dash-exec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
 }
 
-/* ── Signals table enhancements ─────────────────────────────── */
-#dash-signals-card {
-  margin-bottom: 16px;
-}
-
-.dash-conf-bar-wrap {
+.dash-exec-conn {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-width: 140px;
+  padding: 8px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
 }
 
-.dash-conf-bar-track {
-  flex: 1;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--border);
-  overflow: hidden;
+.dash-exec-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
-.dash-conf-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-full);
-  transition: width 0.5s ease;
+.dash-exec-stat {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  text-align: center;
 }
 
-.dash-conf-pct {
+.dash-exec-stat-val {
+  font-size: 18px;
+  font-weight: 900;
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 700;
-  min-width: 36px;
-  text-align: right;
+  margin-bottom: 2px;
 }
 
-/* ── NAV Chart ───────────────────────────────────────────────── */
-#dash-nav-card {
-  margin-bottom: 16px;
+.dash-exec-stat-lbl {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
+.dash-exec-cap-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* ── Signals Table ─────────────────────────────────────────────── */
+#dash-signals-stats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+#dash-models-bar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 5px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.dash-sig-row td { cursor: pointer; }
+.dash-sig-row:hover td { background: var(--bg-hover); }
+
+.dash-sig-hc {
+  background: rgba(234, 179, 8, 0.02) !important;
+}
+
+.dash-sig-hc td:first-child {
+  border-left: 2px solid rgba(234, 179, 8, 0.5);
+}
+
+/* ── NAV Chart Card ────────────────────────────────────────────── */
 .dash-chart-legend {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   margin-bottom: 10px;
   flex-wrap: wrap;
 }
@@ -247,138 +363,74 @@
 .dash-legend-item {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 11px;
   color: var(--text-muted);
-  font-weight: 600;
 }
 
 .dash-legend-dot {
   width: 8px;
   height: 8px;
-  border-radius: 2px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.dash-chart-crosshair {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-family: var(--font-mono);
+/* Chart container */
+#dash-nav-chart {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-/* ── System Status Bar ──────────────────────────────────────── */
+/* ── Status Bar ────────────────────────────────────────────────── */
 .dash-status-bar {
   display: flex;
   align-items: center;
-  gap: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 0;
-  overflow: hidden;
+  overflow-x: auto;
+  scrollbar-width: none;
   box-shadow: var(--shadow-sm);
-  flex-wrap: wrap;
+  padding: 0 4px;
 }
+
+.dash-status-bar::-webkit-scrollbar { display: none; }
 
 .dash-status-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 11px 16px;
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 600;
-  border-right: 1px solid var(--border);
-  flex-shrink: 0;
+  padding: 10px 12px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.dash-status-item:last-child { border-right: none; }
-
-.dash-status-item i {
-  font-size: 11px;
-  color: var(--text-faint);
+.dash-status-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
 }
 
-/* ── Skeleton placeholder ─────────────────────────────────────── */
-.dash-skeleton-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 0;
-}
-
-.dash-skeleton-block::before,
-.dash-skeleton-block::after,
-.dash-skeleton-block > span {
-  content: '';
-  display: block;
-  height: 14px;
-  border-radius: var(--radius-sm);
-  background: var(--skeleton-bg);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s ease infinite;
-}
-
-.dash-skeleton-block::before { width: 60%; }
-.dash-skeleton-block::after  { width: 80%; }
-
-/* ── KPI accent colors ────────────────────────────────────────── */
-#kpi-netliq   { border-top: 3px solid var(--accent-blue); }
-#kpi-pnl      { border-top: 3px solid var(--accent-green); }
-#kpi-leverage { border-top: 3px solid var(--accent-orange); }
-#kpi-positions{ border-top: 3px solid var(--accent-violet); }
-
-#kpi-netliq::before,
-#kpi-pnl::before,
-#kpi-leverage::before,
-#kpi-positions::before { display: none; }
-
-/* ── Empty state ─────────────────────────────────────────────── */
-.dash-empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 32px 16px;
-  color: var(--text-muted);
-}
-
-.dash-empty-state i {
-  font-size: 24px;
-  opacity: 0.4;
-}
-
-.dash-empty-state p { font-size: 12px; text-align: center; line-height: 1.6; }
-
-/* ── RESPONSIVE ──────────────────────────────────────────────── */
+/* ── Responsive ────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
-  .dash-kpi-grid     { grid-template-columns: repeat(2, 1fr); }
-  .dash-middle-grid  { grid-template-columns: 1fr 1fr; }
+  .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 900px) {
-  .dash-middle-grid  { grid-template-columns: 1fr; }
-
-  .dash-status-bar {
-    gap: 0;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-  }
+  .dash-middle-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {
-  .dash-kpi-grid     { grid-template-columns: 1fr 1fr; gap: 10px; }
-
-  .dash-conf-bar-wrap { min-width: 100px; }
-
-  #dash-nav-chart    { height: 200px; }
-
-  .av-card-header { flex-wrap: wrap; gap: 6px; }
-
-  .dash-status-item { padding: 9px 12px; }
+  .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .av-kpi-value  { font-size: 20px; }
+  .dash-agents-summary { gap: 6px; }
+  .dash-exec-stats { gap: 5px; }
+  #dash-nav-chart { height: 200px; }
+  .dash-status-item { padding: 8px 10px; font-size: 10px; }
 }
 
 @media (max-width: 400px) {
