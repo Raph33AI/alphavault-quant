@@ -1,0 +1,488 @@
+/* ================================================================
+   portfolio.css — AlphaVault Quant Portfolio v1.0
+   Styles spécifiques à portfolio.html
+================================================================ */
+
+/* ── KPI Grid (4 cartes) ───────────────────────────────────────── */
+.port-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+/* ── Monitor + Composition Row ─────────────────────────────────── */
+.port-monitor-row {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 14px;
+  align-items: start;
+}
+
+.port-pnl-section { min-width: 0; }
+.port-comp-section { flex-shrink: 0; }
+
+/* ── PnL Monitor Cards ─────────────────────────────────────────── */
+.port-pnl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.port-pnl-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  transition: box-shadow 0.2s;
+}
+
+.port-pnl-card:hover { box-shadow: var(--shadow-card); }
+
+.port-pnl-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.port-pnl-val {
+  font-size: 22px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.port-pnl-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-faint);
+  flex-wrap: wrap;
+}
+
+/* Win / Loss split */
+.port-wl-split {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.port-wl-block {
+  flex: 1;
+  text-align: center;
+  padding: 6px 0;
+}
+
+.port-wl-num {
+  font-size: 26px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.port-wl-block.win  .port-wl-num { color: var(--accent-green); }
+.port-wl-block.loss .port-wl-num { color: var(--accent-red); }
+
+.port-wl-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+}
+
+.port-wl-divider {
+  width: 1px;
+  height: 48px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ── Portfolio Composition ─────────────────────────────────────── */
+.port-comp-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.port-comp-chart-wrap {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.port-comp-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.port-comp-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.port-comp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* ── Filter Bar ────────────────────────────────────────────────── */
+.port-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+
+.port-filter-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--bg-card);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.port-filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.port-filter-tab:hover { color: var(--accent-blue); background: var(--bg-hover); }
+
+.port-filter-tab.active {
+  background: var(--gradient-brand);
+  color: #fff;
+}
+
+.port-filter-stats {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* ── Position Table ────────────────────────────────────────────── */
+.port-pos-row { cursor: pointer; transition: background 0.12s; }
+.port-pos-row:hover td { background: var(--bg-hover) !important; }
+
+.port-sort-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+
+.port-sort-th:hover { color: var(--accent-blue); }
+
+/* Side Badge */
+.port-side-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.port-side-badge.long {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.port-side-badge.short {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* ── Pagination ────────────────────────────────────────────────── */
+.port-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+
+.port-page-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.port-page-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: var(--bg-hover);
+}
+
+.port-page-btn.active {
+  background: var(--gradient-brand);
+  color: #fff;
+  border-color: transparent;
+}
+
+.port-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Risk Grid (2×2) ───────────────────────────────────────────── */
+.port-risk-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.port-risk-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 18px;
+  transition: box-shadow 0.2s;
+}
+
+.port-risk-card:hover { box-shadow: var(--shadow-card); }
+
+.port-gauge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.port-gauge-big-val {
+  font-size: 28px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 14px;
+}
+
+.port-gauge-track-lg {
+  height: 8px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 4px;
+  overflow: visible;
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.port-gauge-fill-lg {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--gradient-brand);
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Limit marker */
+.port-gauge-limit {
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+}
+
+.port-gauge-limit-line {
+  width: 2px;
+  height: 16px;
+  background: var(--text-faint);
+  border-radius: 1px;
+  opacity: 0.6;
+}
+
+.port-gauge-labels-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* VaR Stats Grid */
+.port-var-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.port-var-stat {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+
+.port-var-lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+}
+
+.port-var-val {
+  font-size: 16px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+/* Risk warnings / info */
+.port-risk-warning {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--accent-orange);
+  font-weight: 600;
+}
+
+.port-risk-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.15);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--accent-cyan);
+  line-height: 1.5;
+}
+
+/* ── Alerts Section ────────────────────────────────────────────── */
+.port-no-alerts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.port-alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(245, 158, 11, 0.04);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  border-radius: var(--radius-md);
+  margin-bottom: 8px;
+}
+
+.port-alert-row:last-child { margin-bottom: 0; }
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .port-kpi-grid  { grid-template-columns: repeat(2, 1fr); }
+  .port-risk-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 960px) {
+  .port-monitor-row { grid-template-columns: 1fr; }
+  .port-comp-section { order: -1; }
+
+  .port-comp-wrapper {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .port-comp-chart-wrap { width: 100px; height: 100px; }
+}
+
+@media (max-width: 768px) {
+  .port-kpi-grid    { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .port-pnl-grid    { grid-template-columns: 1fr; }
+  .port-risk-grid   { grid-template-columns: 1fr; }
+  .port-filter-bar  { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .port-filter-stats{ margin-left: 0; }
+
+  .port-gauge-big-val { font-size: 22px; }
+
+  /* Masque colonnes moins importantes sur mobile */
+  #port-positions-table thead th:nth-child(7),
+  #port-positions-table thead th:nth-child(8),
+  #port-positions-table tbody td:nth-child(7),
+  #port-positions-table tbody td:nth-child(8) {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .port-kpi-grid    { grid-template-columns: 1fr; }
+  .port-pnl-val     { font-size: 18px; }
+
+  /* Masque encore plus de colonnes */
+  #port-positions-table thead th:nth-child(3),
+  #port-positions-table thead th:nth-child(4),
+  #port-positions-table tbody td:nth-child(3),
+  #port-positions-table tbody td:nth-child(4) {
+    display: none;
+  }
+}

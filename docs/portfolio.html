@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portfolio — AlphaVault Quant</title>
 
+  <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -13,352 +14,390 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/av-global.css">
-  <link rel="stylesheet" href="assets/css/av-components.css">
-  <link rel="stylesheet" href="assets/css/av-charts.css">
-  <link rel="stylesheet" href="assets/css/av-trading.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-  <style>
-    .portfolio-layout {
-      display: grid;
-      grid-template-columns: 1fr 300px;
-      gap: 16px;
-    }
-    .risk-gauges-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    .risk-gauge-box {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: var(--radius-lg);
-      padding: 16px 18px;
-      box-shadow: var(--shadow-sm);
-    }
-    @media (max-width: 1024px) { .portfolio-layout { grid-template-columns: 1fr; } }
-    @media (max-width: 768px)  { .risk-gauges-grid { grid-template-columns: 1fr; } }
-  </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/portfolio.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<div class="layout">
 
-  <!-- SIDEBAR -->
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">AlphaVault Quant</div>
-      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Main</div>
-      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
-      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
-      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Analysis</div>
-      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
-      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
-      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Tools</div>
-      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
-      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
-      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
-    </div>
-    <div class="sidebar-status">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
-      </div>
-      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
-    </div>
-  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-  <!-- MAIN -->
-  <main class="main">
-    <header class="top-header">
-      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
-      <div>
-        <span class="top-header-title">Portfolio</span>
-        <span class="top-header-sub" id="port-header-sub">Loading...</span>
+  <div class="av-layout">
+
+    <!-- ════════════════════════════════════════════════════
+         SIDEBAR
+         ════════════════════════════════════════════════════ -->
+    <nav class="av-sidebar" id="av-sidebar">
+
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i> Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+          <span class="av-nav-badge" id="sidebar-signals-badge">—</span>
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i> Trading
+        </a>
+
+        <div class="av-nav-section">Intelligence</div>
+
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i> Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i> Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+
+        <div class="av-nav-section">Tools</div>
+
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i> Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
       </div>
-      <div class="top-header-actions">
-        <div id="mode-badge-header"></div>
-        <button class="btn-icon" id="av-theme-toggle" title="Toggle theme">
-          <i class="fa-solid fa-moon"></i>
+
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ════════════════════════════════════════════════════
+         MAIN
+         ════════════════════════════════════════════════════ -->
+    <div class="av-main">
+
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
         </button>
-      </div>
-    </header>
-
-    <div class="page-content">
-
-      <!-- KPI Risk Row -->
-      <div class="kpi-row" id="portfolio-kpi-row" style="margin-bottom:16px">
-        <div class="kpi-card skeleton" style="min-height:90px"></div>
-        <div class="kpi-card skeleton" style="min-height:90px"></div>
-        <div class="kpi-card skeleton" style="min-height:90px"></div>
-        <div class="kpi-card skeleton" style="min-height:90px"></div>
-      </div>
-
-      <!-- PnL Monitor -->
-      <div id="pnl-monitor-cards" style="margin-bottom:16px">
-        <div style="padding:20px;text-align:center;color:var(--text-muted)">
-          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          Loading PnL data...
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-briefcase"></i>
+          Portfolio
+        </div>
+        <div class="av-topbar-spacer"></div>
+        <div class="av-topbar-actions">
+          <span class="badge badge-gray" style="font-size:10px" id="port-filtered-count">
+            — positions
+          </span>
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Toggle theme" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Risk Gauges -->
-      <div class="risk-gauges-grid">
-        <div class="risk-gauge-box" id="risk-leverage">
-          <div style="color:var(--text-muted);font-size:12px;padding:10px;text-align:center">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+      <!-- ── PAGE CONTENT ─────────────────────────────────── -->
+      <div class="av-content">
+
+        <!-- ─── KPI ROW (4) ─────────────────────────────── -->
+        <div class="port-kpi-grid">
+
+          <!-- Net Liquidation (R1) -->
+          <div class="av-kpi-card">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-wallet" style="color:var(--accent-blue)"></i>
+              Net Liquidation
+            </div>
+            <div class="av-kpi-value" id="port-netliq-val">
+              <span class="skeleton-line" style="width:130px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="port-netliq-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
           </div>
-        </div>
-        <div class="risk-gauge-box" id="risk-drawdown">
-          <div style="color:var(--text-muted);font-size:12px;padding:10px;text-align:center">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          </div>
-        </div>
-        <div class="risk-gauge-box" id="risk-var">
-          <div style="color:var(--text-muted);font-size:12px;padding:10px;text-align:center">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          </div>
-        </div>
-        <div class="risk-gauge-box" id="risk-correlation">
-          <div style="color:var(--text-muted);font-size:12px;padding:10px;text-align:center">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          </div>
-        </div>
-      </div>
 
-      <!-- Alerts -->
-      <div class="card" style="margin-bottom:16px;padding:14px 18px">
-        <div class="section-header" style="margin-bottom:8px">
-          <i class="fa-solid fa-bell" style="color:#f59e0b"></i> Risk Alerts
-        </div>
-        <div id="risk-alerts">
-          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-        </div>
-      </div>
+          <!-- Leverage (R7) -->
+          <div class="av-kpi-card">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-gauge-high" style="color:var(--accent-orange)"></i>
+              Leverage
+            </div>
+            <div class="av-kpi-value" id="port-leverage-val">
+              <span class="skeleton-line" style="width:80px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="port-leverage-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+            <div class="av-progress-track" style="margin-top:10px;height:4px">
+              <div class="av-progress-fill" id="port-lev-fill" style="width:0%"></div>
+            </div>
+          </div>
 
-      <!-- Positions + Top Shorts -->
-      <div class="portfolio-layout">
+          <!-- Drawdown -->
+          <div class="av-kpi-card">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-arrow-trend-down" style="color:var(--accent-blue)"></i>
+              Drawdown
+            </div>
+            <div class="av-kpi-value" id="port-drawdown-val">
+              <span class="skeleton-line" style="width:70px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="port-drawdown-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
 
-        <div>
-          <div class="av-table-wrapper">
-            <!-- Filters -->
-            <div class="filters-bar">
-              <span style="font-size:12px;font-weight:700;color:var(--text-primary)">
-                Positions
+          <!-- Risk Score -->
+          <div class="av-kpi-card">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-shield-halved" style="color:var(--accent-violet)"></i>
+              Risk Score
+            </div>
+            <div class="av-kpi-value" id="port-riskscore-val">
+              <span class="skeleton-line" style="width:80px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="port-riskscore-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ─── PNL MONITOR + COMPOSITION ──────────────── -->
+        <div class="port-monitor-row">
+
+          <!-- PnL Monitor -->
+          <div class="av-card port-pnl-section">
+            <div class="av-card-header">
+              <i class="fa-solid fa-chart-bar"></i>
+              PnL Monitor
+              <span class="badge badge-gray" style="font-size:9px;margin-left:4px">
+                pnl_monitor.json
               </span>
-              <span id="pos-count" class="badge badge-blue"></span>
-              <button class="filter-btn active" data-pos-filter="ALL">All</button>
-              <button class="filter-btn" data-pos-filter="LONG">
-                <i class="fa-solid fa-arrow-up" style="font-size:9px;color:#10b981"></i> Long
-              </button>
-              <button class="filter-btn" data-pos-filter="SHORT">
-                <i class="fa-solid fa-arrow-down" style="font-size:9px;color:#ef4444"></i> Short
-              </button>
-              <button class="filter-btn" data-pos-filter="PNL_POS">
-                <i class="fa-solid fa-circle-check" style="font-size:9px;color:#10b981"></i> PnL+
-              </button>
-              <button class="filter-btn" data-pos-filter="PNL_NEG">
-                <i class="fa-solid fa-circle-xmark" style="font-size:9px;color:#ef4444"></i> PnL-
-              </button>
-              <input type="text" class="search-input" id="pos-search"
-                     placeholder="Search symbol..." style="margin-left:auto;max-width:180px">
             </div>
-            <!-- Table -->
-            <div style="overflow-x:auto">
-              <table class="av-table">
-                <thead>
-                  <tr>
-                    <th data-sort-col="symbol">Symbol <i class="fa-solid fa-sort sort-icon"></i></th>
-                    <th>Side</th>
-                    <th style="text-align:right" data-sort-col="quantity">Qty <i class="fa-solid fa-sort sort-icon"></i></th>
-                    <th style="text-align:right">Price</th>
-                    <th style="text-align:right" data-sort-col="market_value">Mkt Value <i class="fa-solid fa-sort-down sort-icon"></i></th>
-                    <th style="text-align:right" data-sort-col="pnl">PnL $ <i class="fa-solid fa-sort sort-icon"></i></th>
-                    <th style="text-align:right">Avg Cost</th>
-                    <th>ML Signal</th>
-                  </tr>
-                </thead>
-                <tbody id="positions-tbody">
-                  <tr>
-                    <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">
-                      <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:16px"></i>
-                      <span style="margin-left:8px">Loading positions...</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="av-card-body" id="port-pnl-body">
+              <div class="dash-skeleton-block"></div>
             </div>
-            <div class="pagination-bar" id="positions-pagination"></div>
           </div>
+
+          <!-- Portfolio Composition Donut -->
+          <div class="av-card port-comp-section">
+            <div class="av-card-header">
+              <i class="fa-solid fa-chart-pie"></i>
+              Composition
+            </div>
+            <div class="av-card-body">
+              <div class="port-comp-wrapper">
+                <div class="port-comp-chart-wrap">
+                  <canvas id="port-comp-chart" width="160" height="160"></canvas>
+                </div>
+                <div id="port-comp-labels" class="port-comp-labels">
+                  <div class="dash-skeleton-block"
+                       style="height:40px;width:120px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
-        <!-- Top Shorts Aside -->
-        <div>
-          <div class="card">
-            <div class="section-header">
-              <i class="fa-solid fa-arrow-down" style="color:#ef4444"></i>
-              Top Short Positions
+        <!-- ─── POSITIONS TABLE ─────────────────────────── -->
+        <div class="av-card" id="port-positions-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-layer-group"></i>
+            Positions
+            <span class="badge badge-blue" style="font-size:10px" id="port-filtered-count">
+              — positions
+            </span>
+            <!-- Search -->
+            <div style="margin-left:auto;position:relative">
+              <i class="fa-solid fa-magnifying-glass"
+                 style="position:absolute;left:9px;top:50%;transform:translateY(-50%);
+                        font-size:10px;color:var(--text-faint);pointer-events:none"></i>
+              <input id="port-search" type="text" placeholder="Search symbol..."
+                     autocomplete="off"
+                     style="padding:6px 10px 6px 28px;border-radius:var(--radius-md);
+                            border:1px solid var(--border);background:var(--bg-secondary);
+                            color:var(--text-primary);font-size:12px;
+                            font-family:var(--font-sans);outline:none;width:150px;
+                            transition:border-color 0.15s">
             </div>
-            <div id="top-shorts-table">
-              <div style="padding:16px;text-align:center;color:var(--text-muted);font-size:12px">
-                <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          </div>
+
+          <!-- Filter Tabs -->
+          <div class="port-filter-bar">
+            <div class="port-filter-tabs">
+              <button class="port-filter-tab active" data-filter="ALL">
+                <i class="fa-solid fa-layer-group" style="font-size:10px"></i> All
+              </button>
+              <button class="port-filter-tab" data-filter="LONG">
+                <i class="fa-solid fa-arrow-up" style="font-size:10px"></i> Long
+              </button>
+              <button class="port-filter-tab" data-filter="SHORT">
+                <i class="fa-solid fa-arrow-down" style="font-size:10px"></i> Short
+              </button>
+              <button class="port-filter-tab" data-filter="PNL+">
+                <i class="fa-solid fa-circle-plus" style="font-size:10px"></i> Profit
+              </button>
+              <button class="port-filter-tab" data-filter="PNL-">
+                <i class="fa-solid fa-circle-minus" style="font-size:10px"></i> Loss
+              </button>
+            </div>
+            <div class="port-filter-stats">
+              <span class="badge badge-blue" style="font-size:10px" id="port-stat-total">
+                — positions
+              </span>
+              <span class="badge badge-green" style="font-size:10px" id="port-stat-long">
+                — Long
+              </span>
+              <span class="badge badge-red" style="font-size:10px" id="port-stat-short">
+                — Short
+              </span>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="av-table-wrapper" style="border:none;border-radius:0">
+            <table class="av-table" id="port-positions-table">
+              <thead>
+                <tr>
+                  <th class="port-sort-th" data-sort="symbol" style="padding-left:14px">
+                    Symbol
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th style="text-align:center">Side</th>
+                  <th class="port-sort-th" data-sort="quantity_abs" style="text-align:right">
+                    Quantity
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th class="port-sort-th" data-sort="market_value_abs" style="text-align:right">
+                    Mkt Value
+                    <i class="sort-icon fa-solid fa-sort-down fa-xs"></i>
+                  </th>
+                  <th class="port-sort-th" data-sort="unrealized_pnl" style="text-align:right">
+                    PnL $
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th class="port-sort-th" data-sort="pnl_pct" style="text-align:right">
+                    PnL %
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th style="text-align:right">Price</th>
+                  <th style="text-align:right">Avg Cost</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="port-positions-tbody">
+                <tr>
+                  <td colspan="9" style="text-align:center;padding:36px;color:var(--text-faint)">
+                    <i class="fa-solid fa-circle-notch fa-spin"
+                       style="font-size:20px;color:var(--accent-blue)"></i>
+                    <div style="margin-top:10px;font-size:12px">
+                      Loading positions...
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div id="port-pagination" class="port-pagination"></div>
+        </div>
+
+        <!-- ─── RISK GAUGES (2×2) ───────────────────────── -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-shield-halved"></i>
+            Risk Metrics
+            <span class="badge badge-gray" style="font-size:9px;margin-left:4px">
+              risk_metrics.json
+            </span>
+            <a href="analytics.html" class="btn btn-secondary btn-xs" style="margin-left:auto">
+              <i class="fa-solid fa-chart-line"></i> Full Analytics
+            </a>
+          </div>
+          <div class="av-card-body">
+            <div class="port-risk-grid">
+              <!-- Leverage -->
+              <div class="port-risk-card" id="risk-lev-card">
+                <div class="dash-skeleton-block"></div>
+              </div>
+              <!-- Drawdown -->
+              <div class="port-risk-card" id="risk-dd-card">
+                <div class="dash-skeleton-block"></div>
+              </div>
+              <!-- VaR (R5) -->
+              <div class="port-risk-card" id="risk-var-card">
+                <div class="dash-skeleton-block"></div>
+              </div>
+              <!-- Correlation -->
+              <div class="port-risk-card" id="risk-corr-card">
+                <div class="dash-skeleton-block"></div>
               </div>
             </div>
           </div>
         </div>
 
-      </div><!-- /portfolio-layout -->
-    </div><!-- /page-content -->
-  </main>
-</div>
+        <!-- ─── ALERTS ───────────────────────────────────── -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-bell"></i>
+            Risk Alerts
+          </div>
+          <div class="av-card-body" id="port-alerts-body">
+            <div class="dash-skeleton-block" style="height:50px"></div>
+          </div>
+        </div>
 
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
-<div id="sdp-fullpage" style="display:none"></div>
-<div id="av-toast-wrap"></div>
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="assets/js/av-config.js"></script>
-<script src="assets/js/av-utils.js"></script>
-<script src="assets/js/av-api.js"></script>
-<script src="assets/js/av-charts.js"></script>
-<script src="assets/js/av-portfolio.js"></script>
-<script src="assets/js/av-signals.js"></script>
-<script src="assets/js/av-agents.js"></script>
-<script src="assets/js/av-trading.js"></script>
-<script src="assets/js/av-controls.js"></script>
-<script src="assets/js/av-stock-detail.js"></script>
+  <!-- Scripts — ordre impératif -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-stock-detail.js"></script>
+  <script src="assets/js/av-watchlist.js"></script>
+  <script src="assets/js/av-portfolio.js"></script>
 
-<script>
-(function _guard() {
-  const REQUIRED = {
-    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
-    'AVApi':'assets/js/av-api.js','AVPortfolio':'assets/js/av-portfolio.js',
-    'AVControls':'assets/js/av-controls.js','StockDetail':'assets/js/av-stock-detail.js',
-  };
-  const missing = Object.entries(REQUIRED)
-    .filter(([n]) => typeof window[n] === 'undefined')
-    .map(([n, f]) => `${n} → ${f}`);
-  if (missing.length) {
-    document.body.insertAdjacentHTML('afterbegin',
-      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
-                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
-                   border-bottom:3px solid #ef4444;line-height:1.8">
-         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
-         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
-         <br><strong>→ F12 → Network → check 404s</strong>
-       </div>`);
-    return;
-  }
-  _initPage().catch(e => { console.error('[Portfolio]', e); });
-})();
-
-async function _initPage() {
-  await AVApi.init();
-  AVControls.init();
-
-  // Mobile sidebar
-  const $sb = document.getElementById('sidebar');
-  const $ov = document.getElementById('sidebar-overlay');
-  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
-    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
-  });
-  $ov?.addEventListener('click', () => {
-    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
-  });
-
-  let _positions  = {};
-  let _signalsMap = {};
-
-  async function _loadAll() {
-    // Charge en parallèle
-    const [portfolio, risk, pnl, sigRaw, modeData] = await Promise.all([
-      AVApi.getPortfolio(),
-      AVApi.getRisk(),
-      AVApi.getPnLMonitor(),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.signals, AV_CONFIG.REFRESH.signals),
-      AVApi.getExecutionMode(),
-    ]);
-
-    // Build signals map
-    _signalsMap = {};
-    const sigsArr = sigsRaw(sigRaw);
-    sigsArr.forEach(s => { if (s.symbol) _signalsMap[s.symbol] = s; });
-
-    // Header subtitle
-    const sub = document.getElementById('port-header-sub');
-    if (sub && portfolio) {
-      const n = portfolio.positions_count
-             || Object.keys(portfolio.positions || {}).length;
-      sub.textContent = `${n} positions · NetLiq ${formatCurrency(portfolio.netliq, 0)}`;
-    }
-
-    // Renders
-    AVPortfolio.renderKPIRow(portfolio, risk?.raw || risk);
-    if (pnl)  AVPortfolio.renderPnLMonitor(pnl);
-    if (risk) AVPortfolio.renderRiskGauges(risk);
-    AVControls.updateModeBadge(modeData);
-
-    // Positions
-    _positions = portfolio?.positions || {};
-    AVPortfolio.initPositionFilters(() => {
-      AVPortfolio.renderPositionsTable(_positions, _signalsMap);
-    });
-    AVPortfolio.renderPositionsTable(_positions, _signalsMap);
-    AVPortfolio.renderTopShorts(_positions);
-  }
-
-  // Normalise signals (array ou dict)
-  function sigsRaw(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw.signals)) return raw.signals;
-    if (raw.signals && typeof raw.signals === 'object')
-      return Object.entries(raw.signals).map(([sym, v]) => ({ symbol: sym, ...v }));
-    return [];
-  }
-
-  // Auto-refresh 30s
-  AVApi.startAutoRefresh({
-    portfolio: AV_CONFIG.REFRESH.portfolio,
-    risk:      AV_CONFIG.REFRESH.portfolio,
-    pnl:       AV_CONFIG.REFRESH.portfolio,
-    mode:      AV_CONFIG.REFRESH.execution,
-    onUpdate: async (key, data) => {
-      if (key === 'portfolio') {
-        const pf = await AVApi.getPortfolio();
-        if (!pf) return;
-        AVPortfolio.renderKPIRow(pf, AVApi.getCached('risk'));
-        _positions = pf.positions || {};
-        AVPortfolio.renderPositionsTable(_positions, _signalsMap);
-        AVPortfolio.renderTopShorts(_positions);
-        const sub = document.getElementById('port-header-sub');
-        if (sub) sub.textContent =
-          `${pf.positions_count} positions · NetLiq ${formatCurrency(pf.netliq, 0)}`;
-      }
-      if (key === 'risk') {
-        const r = await AVApi.getRisk();
-        if (r) AVPortfolio.renderRiskGauges(r);
-      }
-      if (key === 'pnl')  AVPortfolio.renderPnLMonitor(data);
-      if (key === 'mode') AVControls.updateModeBadge(data);
-      await AVApi.updateSidebarStatus();
-    },
-  });
-
-  await _loadAll();
-}
-</script>
 </body>
 </html>

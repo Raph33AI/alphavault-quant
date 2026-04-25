@@ -1,617 +1,1021 @@
 // ============================================================
-// av-portfolio.js — AlphaVault Quant Dashboard v1.0
-// Portfolio : positions, risk gauges, PnL monitor
-// Dépend de : av-config.js, av-utils.js, av-api.js, av-charts.js
-// Règles : R1 (NetLiq), R2 (agents), R3 (shorts), R4 (avg_cost), R5 (VaR)
+// portfolio.js — AlphaVault Quant Portfolio v1.0
+// Controller pour portfolio.html
+// Dépend : av-config.js, av-utils.js, av-api.js
 // ============================================================
 
-const AVPortfolio = (() => {
+(function () {
+  'use strict';
 
   // ── State ─────────────────────────────────────────────────
-  let _positions   = {};
-  let _filter      = 'ALL';   // ALL | LONG | SHORT | PNL_POS | PNL_NEG
-  let _sortBy      = 'market_value';
-  let _sortDir     = 'desc';
-  let _page        = 1;
-  const PAGE_SIZE  = 20;
-  let _searchQuery = '';
+  let _portfolio     = null;
+  let _risk          = null;
+  let _pnl           = null;
+  let _positions     = [];        // Array parsé depuis positions{}
+  let _filtered      = [];        // Après filter + sort
+  let _currentFilter = 'ALL';
+  let _currentSearch = '';
+  let _sortField     = 'market_value_abs';
+  let _sortDir       = 'desc';
+  let _currentPage   = 1;
+  let _compChart     = null;      // Chart.js composition donut
+  let _refreshTimers = [];
+
+  const PAGE_SIZE = 20;
 
   // ══════════════════════════════════════════════════════════
-  // KPI RISK ROW — 4 cartes en haut de portfolio.html
+  // INIT
   // ══════════════════════════════════════════════════════════
+  async function init() {
+    AVUtils.ThemeManager.init();
+    AVUtils.setSidebarActive('portfolio');
+    _bindThemeToggle();
+    _bindSidebar();
+    _bindFilterTabs();
+    _bindSearch();
+    _bindSortHeaders();
 
-  /**
-   * Render les 4 KPI cards (NetLiq, Leverage, Drawdown, Risk Score)
-   */
-  function renderKPIRow(portfolio, risk) {
-    const netliq  = netliqFromPortfolio(portfolio?.raw || portfolio) || 0;
-    const lev     = safeGet(risk, 'leverage.current_leverage', safeGet(risk, 'current_leverage', 0));
-    const isOver  = safeGet(risk, 'leverage.is_over_leveraged', false);
-    const dd      = sf(safeGet(risk, 'drawdown.current', safeGet(risk, 'drawdown.current_drawdown', 0))) * 100;
-    const ddMax   = sf(safeGet(risk, 'drawdown.threshold', 0.15)) * 100;
-    const score   = sf(safeGet(risk, 'risk_score', 0));
-    const pnl     = sf(safeGet(portfolio, 'unrealized_pnl', 0));
-    const pnlPct  = netliq > 0 ? (pnl / netliq * 100) : 0;
+    _showSkeletons();
 
-    const scoreColor = score <= 25 ? '#10b981' : score <= 50 ? '#3b82f6' : score <= 75 ? '#f59e0b' : '#ef4444';
-    const scoreLabel = score <= 25 ? 'Low' : score <= 50 ? 'Moderate' : score <= 75 ? 'High' : 'Critical';
+    await loadData();
+    _startRefresh();
 
-    const kpis = [
-      {
-        icon:    'fa-wallet',
-        label:   'Net Liquidation',
-        value:   formatCurrency(netliq, 0),
-        sub:     `Cash: ${formatCurrency(safeGet(portfolio, 'cash', 0), 0)}`,
-        color:   '#3b82f6',
-        note:    safeGet(portfolio, 'cash_pct', 0) > 1
-                 ? badgeHTML('158% Cash — Normal (Margin)', 'blue', 'fa-circle-info')
-                 : '',
-      },
-      {
-        icon:    'fa-chart-pie',
-        label:   'Unrealized PnL',
-        value:   formatCurrency(pnl, 0),
-        sub:     `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}% of NAV`,
-        color:   pnl >= 0 ? '#10b981' : '#ef4444',
-        note:    '',
-      },
-      {
-        icon:    'fa-weight-scale',
-        label:   'Leverage',
-        value:   `${sf(lev).toFixed(3)}x`,
-        sub:     `Max: ${AV_CONFIG.THRESHOLDS.maxLeverage}x`,
-        color:   isOver ? '#f59e0b' : '#10b981',
-        note:    isOver
-                 ? badgeHTML(`Over-leveraged — reduce ${sf(safeGet(risk, 'leverage.reduce_by_pct', 0)).toFixed(1)}%`, 'orange', 'fa-triangle-exclamation')
-                 : badgeHTML('Within limits', 'green', 'fa-check'),
-      },
-      {
-        icon:    'fa-shield-halved',
-        label:   'Risk Score',
-        value:   `${score.toFixed(0)}/100`,
-        sub:     scoreLabel,
-        color:   scoreColor,
-        note:    progressBar(score, scoreColor, 5),
-      },
-    ];
-
-    const container = document.getElementById('portfolio-kpi-row');
-    if (!container) return;
-
-    container.innerHTML = kpis.map(k => `
-      <div class="kpi-card" style="border-top:3px solid ${k.color}">
-        <div class="kpi-card-header">
-          <i class="fa-solid ${k.icon}" style="color:${k.color}"></i>
-          <span class="kpi-label">${k.label}</span>
-        </div>
-        <div class="kpi-value" style="color:${k.color}">${k.value}</div>
-        <div class="kpi-sub">${k.sub}</div>
-        ${k.note ? `<div style="margin-top:8px">${k.note}</div>` : ''}
-      </div>`).join('');
+    console.log('[portfolio] v1.0 init complete');
   }
 
   // ══════════════════════════════════════════════════════════
-  // POSITIONS TABLE — 45 positions, filtres, tri, pagination
+  // DATA
   // ══════════════════════════════════════════════════════════
+  async function loadData() {
+    const URLS = AV_CONFIG.SIGNAL_URLS;
+    const [portRes, riskRes, pnlRes] = await Promise.allSettled([
+      AVApi.fetchJSON(URLS.portfolio, 0),
+      AVApi.fetchJSON(URLS.risk,      0),
+      AVApi.fetchJSON(URLS.pnl,       0),
+    ]);
 
-  /**
-   * Initialise les filtres et la recherche
-   */
-  function initPositionFilters(onFilter) {
-    // Boutons filtres
-    document.querySelectorAll('[data-pos-filter]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('[data-pos-filter]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        _filter = btn.dataset.posFilter;
-        _page   = 1;
-        onFilter();
-      });
-    });
+    _portfolio = portRes.status === 'fulfilled' ? portRes.value : null;
+    _risk      = riskRes.status === 'fulfilled' ? riskRes.value : null;
+    _pnl       = pnlRes.status  === 'fulfilled' ? pnlRes.value  : null;
 
-    // En-têtes de tri
-    document.querySelectorAll('[data-sort-col]').forEach(th => {
-      th.style.cursor = 'pointer';
-      th.addEventListener('click', () => {
-        const col = th.dataset.sortCol;
-        if (_sortBy === col) {
-          _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
-        } else {
-          _sortBy  = col;
-          _sortDir = 'desc';
-        }
-        _page = 1;
-        onFilter();
-        // Met à jour les icônes de tri
-        document.querySelectorAll('[data-sort-col]').forEach(h => {
-          const icon = h.querySelector('.sort-icon');
-          if (icon) {
-            icon.className = `sort-icon fa-solid ${
-              h.dataset.sortCol === _sortBy
-                ? (_sortDir === 'desc' ? 'fa-sort-down' : 'fa-sort-up')
-                : 'fa-sort'
-            }`;
-          }
-        });
-      });
-    });
-
-    // Recherche
-    const searchEl = document.getElementById('pos-search');
-    if (searchEl) {
-      searchEl.addEventListener('input', AVUtils.debounce(() => {
-        _searchQuery = searchEl.value.trim().toUpperCase();
-        _page = 1;
-        onFilter();
-      }, 200));
-    }
+    _positions = _buildPositions(_portfolio);
+    _applyFiltersAndSort();
+    renderAll();
   }
 
-  /**
-   * Filtre + trie les positions selon l'état courant
-   * @param {object} positions — normalisées via AVUtils.formatPosition
-   */
-  function _getFilteredPositions(positions) {
-    let list = Object.values(positions);
+  function renderAll() {
+    renderKPIs();
+    renderPnLMonitor();
+    renderCompositionChart();
+    _renderPositionPage();
+    renderRiskGauges();
+    renderAlerts();
+    _updateSidebarStatus();
+    _updateFilterStats();
+  }
 
-    // Filtre par type
-    switch (_filter) {
-      case 'LONG':    list = list.filter(p => !p.isShort); break;
-      case 'SHORT':   list = list.filter(p =>  p.isShort); break;
-      case 'PNL_POS': list = list.filter(p => p.pnl > 0);  break;
-      case 'PNL_NEG': list = list.filter(p => p.pnl < 0);  break;
+  // ══════════════════════════════════════════════════════════
+  // POSITIONS — PARSE dict → array
+  // ══════════════════════════════════════════════════════════
+  function _buildPositions(data) {
+    if (!data?.positions) return [];
+    return Object.entries(data.positions).map(([symbol, pos]) => {
+      const qty  = parseFloat(pos.quantity       ?? 0);
+      const mval = parseFloat(pos.market_value   ?? 0);
+      const pnl  = parseFloat(pos.unrealized_pnl ?? 0);
+      const pct  = parseFloat(pos.pnl_pct        ?? 0);
+      const price= parseFloat(pos.current_price  ?? 0);
+      const cost = parseFloat(pos.avg_cost       ?? 0);
+      // R3 : side déterminé par qty si absent
+      const side = pos.side || (qty < 0 ? 'SHORT' : 'LONG');
+
+      return {
+        symbol,
+        side,
+        quantity:         qty,
+        quantity_abs:     Math.abs(qty),
+        market_value:     mval,
+        market_value_abs: Math.abs(mval),
+        unrealized_pnl:   pnl,
+        pnl_pct:          pct,
+        current_price:    price,
+        avg_cost:         cost,   // R4 : si 0 → N/A à l'affichage
+      };
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // FILTER + SORT
+  // ══════════════════════════════════════════════════════════
+  function _applyFiltersAndSort() {
+    let list = [..._positions];
+
+    // Filtre side / pnl
+    switch (_currentFilter) {
+      case 'LONG':  list = list.filter(p => p.side === 'LONG');  break;
+      case 'SHORT': list = list.filter(p => p.side === 'SHORT'); break;
+      case 'PNL+':  list = list.filter(p => p.unrealized_pnl > 0); break;
+      case 'PNL-':  list = list.filter(p => p.unrealized_pnl < 0); break;
     }
 
-    // Recherche symbole
-    if (_searchQuery) {
-      list = list.filter(p => p.symbol.includes(_searchQuery));
+    // Filtre recherche
+    if (_currentSearch) {
+      const q = _currentSearch.toUpperCase().trim();
+      list = list.filter(p => p.symbol.includes(q));
     }
 
     // Tri
     list.sort((a, b) => {
-      let va, vb;
-      switch(_sortBy) {
-        case 'market_value': va = a.market_value; vb = b.market_value; break;
-        case 'pnl':          va = a.pnl;          vb = b.pnl;          break;
-        case 'pnl_pct':      va = a.pnl_pct;      vb = b.pnl_pct;      break;
-        case 'symbol':       va = a.symbol;        vb = b.symbol;       break;
-        default:             va = a.market_value;  vb = b.market_value;
+      let va = a[_sortField] ?? 0;
+      let vb = b[_sortField] ?? 0;
+      if (typeof va === 'string') {
+        return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       }
-      if (typeof va === 'string') return _sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       return _sortDir === 'asc' ? va - vb : vb - va;
     });
 
-    return list;
+    _filtered    = list;
+    _currentPage = 1;
   }
 
-  /**
-   * Render complet du tableau de positions
-   * @param {object} positions — { SYM: {normalisé} }
-   * @param {object} signalsMap — optionnel pour enrichir avec signal ML
-   */
-  function renderPositionsTable(positions, signalsMap = {}) {
-    _positions = positions || {};
-    const tbody = document.getElementById('positions-tbody');
-    if (!tbody) return;
+  // ══════════════════════════════════════════════════════════
+  // KPI CARDS (4)
+  // ══════════════════════════════════════════════════════════
+  function renderKPIs() {
+    // ── R1 NetLiq ───────────────────────────────────────────
+    const netliq   = AVUtils.netliqFromPortfolio(_portfolio);
+    const cash     = parseFloat(_portfolio?.cash || 0);
+    const cashPct  = netliq > 0 ? (cash / netliq * 100) : 0;
+    const isMargin = cashPct > 100;  // R6 : > 100% = marge, NORMAL
 
-    const filtered = _getFilteredPositions(_positions);
-    const total    = filtered.length;
-    const pages    = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    _page          = Math.min(_page, pages);
-    const start    = (_page - 1) * PAGE_SIZE;
-    const display  = filtered.slice(start, start + PAGE_SIZE);
+    _setKpi('port-netliq', {
+      val:      netliq !== null ? AVUtils.formatCurrencyFull(netliq) : '—',
+      sub:      `<i class="fa-solid fa-coins" style="color:var(--accent-blue);font-size:9px"></i>
+                 Cash: ${AVUtils.formatCurrencyFull(cash)}
+                 <span class="badge badge-${isMargin ? 'info' : 'blue'}" style="font-size:9px">
+                   ${cashPct.toFixed(0)}%${isMargin ? ' (Margin)' : ''}
+                 </span>`,
+      valColor: null,
+    });
 
-    // Compteur
-    const counterEl = document.getElementById('pos-count');
-    if (counterEl) {
-      counterEl.textContent = `${total} position${total !== 1 ? 's' : ''}`;
-    }
+    // ── Leverage (R7) ────────────────────────────────────────
+    const lev    = parseFloat(AVUtils.safeGet(_risk, 'leverage.current_leverage', 0));
+    const overLev= AVUtils.safeGet(_risk, 'leverage.is_over_leveraged', false);
+    const maxLev = parseFloat(AVUtils.safeGet(_risk, 'leverage.max_leverage', 1.0));
+    const redBy  = parseFloat(AVUtils.safeGet(_risk, 'leverage.reduce_by_pct', 0));
 
-    if (!display.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">
-            <i class="fa-solid fa-inbox" style="font-size:20px;margin-bottom:8px;display:block;opacity:0.4"></i>
-            No positions match the current filter.
-          </td>
-        </tr>`;
-      _renderPagination(pages, total);
-      return;
-    }
-
-    tbody.innerHTML = display.map(pos => {
-      const sig       = signalsMap[pos.symbol] || null;
-      const pnlPos    = pos.pnl >= 0;
-      const pnlColor  = pnlPos ? 'var(--accent-green)' : 'var(--accent-red)';
-      const pnlArrow  = pnlPos ? 'fa-arrow-up' : 'fa-arrow-down';
-      const sideColor = pos.isShort ? '#ef4444' : '#10b981';
-      const sideBg    = pos.isShort ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)';
-
-      // Signal ML optionnel
-      const sigHtml = sig
-        ? `<span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;
-                        background:${sig.action === 'BUY' ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)'};
-                        color:${sig.action === 'BUY' ? '#10b981' : '#ef4444'}">
-            <i class="fa-solid ${sig.action === 'BUY' ? 'fa-arrow-up' : 'fa-arrow-down'}" style="font-size:8px"></i>
-            ${sig.action} ${(sf(sig.confidence) * 100).toFixed(0)}%
+    _setKpi('port-leverage', {
+      val:      lev > 0 ? `${lev.toFixed(3)}x` : '—',
+      sub:      overLev
+        ? `<span class="badge badge-orange" style="font-size:9px">
+             <i class="fa-solid fa-triangle-exclamation"></i>
+             Over-leveraged — reduce ${(redBy*100).toFixed(0)}%
            </span>`
-        : '<span style="color:var(--text-muted);font-size:11px">—</span>';
+        : `<i class="fa-solid fa-circle-check" style="color:var(--accent-green)"></i>
+           Within limit (max ${maxLev.toFixed(1)}x)`,
+      valColor: overLev ? 'var(--accent-orange)' : null,
+    });
 
-      return `
-        <tr class="positions-row" data-sym="${pos.symbol}"
-            style="cursor:pointer;transition:background 0.15s"
-            onclick="if(window.StockDetail) StockDetail.open('${pos.symbol}')">
-          <td style="padding:10px 12px">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span class="sym-badge" style="font-weight:700;color:var(--text-primary);font-size:13px">
-                ${pos.symbol}
-              </span>
-            </div>
-          </td>
-          <td style="padding:10px 12px">
-            <span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px;
-                         background:${sideBg};color:${sideColor}">
-              <i class="fa-solid ${pos.isShort ? 'fa-arrow-down' : 'fa-arrow-up'}" style="font-size:9px"></i>
-              ${pos.side}
-            </span>
-          </td>
-          <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
-                     color:var(--text-primary);text-align:right">
-            ${pos.quantity.toLocaleString('en-US')}
-          </td>
-          <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
-                     color:var(--text-primary);text-align:right">
-            ${formatCurrency(pos.price, 2)}
-          </td>
-          <td style="padding:10px 12px;font-family:var(--font-mono);font-size:13px;
-                     font-weight:700;text-align:right">
-            ${formatCurrency(pos.market_value, 0)}
-          </td>
-          <td style="padding:10px 12px;text-align:right">
-            <span style="font-family:var(--font-mono);font-size:12px;font-weight:700;
-                         color:${pnlColor}">
-              <i class="fa-solid ${pnlArrow}" style="font-size:9px"></i>
-              ${formatCurrency(pos.pnl, 0)}
-            </span>
-            <div style="font-size:10px;color:${pnlColor};margin-top:1px">
-              ${pos.pnl_pct >= 0 ? '+' : ''}${sf(pos.pnl_pct).toFixed(2)}%
-            </div>
-          </td>
-          <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
-                     color:var(--text-muted);text-align:right">
-            ${pos.avg_cost}
-          </td>
-          <td style="padding:10px 12px">
-            ${sigHtml}
-          </td>
-        </tr>`;
-    }).join('');
-
-    _renderPagination(pages, total);
-  }
-
-  function _renderPagination(pages, total) {
-    const container = document.getElementById('positions-pagination');
-    if (!container) return;
-
-    if (pages <= 1) {
-      container.innerHTML = `
-        <span style="font-size:11px;color:var(--text-muted)">
-          ${total} positions · Page 1/1
-        </span>`;
-      return;
+    // Barre de progression levier
+    const levFill = document.getElementById('port-lev-fill');
+    if (levFill && lev > 0) {
+      const pct = Math.min((lev / Math.max(maxLev, 1)) * 100, 130);
+      levFill.style.width      = `${Math.min(pct, 100)}%`;
+      levFill.style.background = overLev ? 'var(--gradient-red)' : 'var(--gradient-green)';
     }
 
-    const start = Math.max(1, _page - 2);
-    const end   = Math.min(pages, start + 4);
+    // ── Drawdown ─────────────────────────────────────────────
+    const dd         = parseFloat(AVUtils.safeGet(_risk, 'drawdown.current_drawdown', 0));
+    const maxDD      = parseFloat(AVUtils.safeGet(_risk, 'drawdown.threshold', 0.15));
+    const ddBreached = AVUtils.safeGet(_risk, 'drawdown.is_breached', false);
+    const ddPct      = (dd * 100).toFixed(2);
+    const ddColor    = dd > 0.10 ? 'var(--accent-red)'
+                     : dd > 0.05 ? 'var(--accent-orange)'
+                     : 'var(--accent-green)';
 
-    container.innerHTML = `
-      <button class="page-btn" data-pg="prev" ${_page <= 1 ? 'disabled' : ''}>
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      ${Array.from({ length: end - start + 1 }, (_, i) => start + i).map(p => `
-        <button class="page-btn ${p === _page ? 'active' : ''}" data-pg="${p}">${p}</button>
-      `).join('')}
-      <button class="page-btn" data-pg="next" ${_page >= pages ? 'disabled' : ''}>
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-      <span style="font-size:11px;color:var(--text-muted);margin-left:4px">
-        ${total} positions · Page ${_page}/${pages}
-      </span>`;
+    _setKpi('port-drawdown', {
+      val:      `${ddPct}%`,
+      sub:      ddBreached
+        ? `<span class="badge badge-red" style="font-size:9px">
+             <i class="fa-solid fa-hand"></i> DD Halt triggered
+           </span>`
+        : `<span style="color:${ddColor};font-size:10px;font-weight:600">
+             ${dd <= 0.02 ? 'Healthy' : dd <= 0.07 ? 'Normal' : 'Caution'}
+           </span>
+           &nbsp;&middot;&nbsp;
+           <span style="color:var(--text-faint);font-size:10px">
+             Limit: ${(maxDD*100).toFixed(0)}%
+           </span>`,
+      valColor: ddColor,
+    });
 
-    container.querySelectorAll('.page-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const pg = btn.dataset.pg;
-        if (pg === 'prev') { if (_page > 1) _page--; }
-        else if (pg === 'next') { if (_page < pages) _page++; }
-        else _page = parseInt(pg);
-        renderPositionsTable(_positions);
-      });
+    // ── Risk Score ───────────────────────────────────────────
+    const rScore  = parseFloat(AVUtils.safeGet(_risk, 'risk_score', 0));
+    const rsColor = rScore === 0 ? 'var(--text-faint)'
+                  : rScore < 30 ? 'var(--accent-green)'
+                  : rScore < 60 ? 'var(--accent-orange)'
+                  : 'var(--accent-red)';
+    const rsLabel = rScore < 30 ? 'Low Risk' : rScore < 60 ? 'Moderate' : 'High Risk';
+
+    _setKpi('port-riskscore', {
+      val:      rScore > 0 ? `${rScore}/100` : '—',
+      sub:      rScore > 0
+        ? `<span class="badge" style="font-size:9px;background:${rsColor}18;
+              color:${rsColor};border:1px solid ${rsColor}30">
+             ${rsLabel}
+           </span>
+           <div class="av-progress-track" style="margin-top:6px;height:3px">
+             <div class="av-progress-fill"
+                  style="width:${rScore}%;background:${rsColor}"></div>
+           </div>`
+        : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
+      valColor: rScore > 0 ? rsColor : null,
     });
   }
 
+  function _setKpi(id, { val, sub, valColor }) {
+    const valEl = document.getElementById(`${id}-val`);
+    const subEl = document.getElementById(`${id}-sub`);
+    if (valEl) {
+      valEl.innerHTML = val;
+      valEl.style.color = valColor || '';
+    }
+    if (subEl) subEl.innerHTML = sub || '';
+  }
+
   // ══════════════════════════════════════════════════════════
-  // PNL MONITOR CARDS
+  // PNL MONITOR
   // ══════════════════════════════════════════════════════════
+  function renderPnLMonitor() {
+    const body = document.getElementById('port-pnl-body');
+    if (!body) return;
 
-  function renderPnLMonitor(pnlData) {
-    const container = document.getElementById('pnl-monitor-cards');
-    if (!container || !pnlData) return;
+    const totalPnl = parseFloat(_pnl?.total_pnl_usd
+                  ?? _portfolio?.unrealized_pnl ?? 0);
+    const winRate  = parseFloat(_pnl?.win_rate   ?? 0);
+    const winning  = parseInt(_pnl?.winning      ?? 0);
+    const losing   = parseInt(_pnl?.losing       ?? 0);
+    const nPos     = parseInt(_pnl?.n_positions  ?? _positions.length ?? 0);
+    const regime   = _pnl?.current_regime || 'NEUTRAL';
+    const rColors  = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
 
-    const totalPnl  = sf(pnlData.total_pnl);
-    const winRate   = sf(pnlData.win_rate);
-    const winning   = sf(pnlData.winning);
-    const losing    = sf(pnlData.losing);
-    const nPos      = sf(pnlData.n_positions);
-    const regime    = pnlData.regime || 'NEUTRAL';
+    const pnlColor = totalPnl > 0 ? 'var(--accent-green)'
+                   : totalPnl < 0 ? 'var(--accent-red)'
+                   : 'var(--text-primary)';
+    const pnlSign  = totalPnl > 0 ? '+' : '';
+    const pnlIcon  = totalPnl > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
 
-    container.innerHTML = `
-      <div class="pnl-stat-card" style="border-left:3px solid ${totalPnl >= 0 ? '#10b981' : '#ef4444'}">
-        <div class="pnl-stat-icon">
-          <i class="fa-solid fa-dollar-sign" style="color:${totalPnl >= 0 ? '#10b981' : '#ef4444'}"></i>
-        </div>
-        <div>
-          <div class="pnl-stat-label">Total Unrealized PnL</div>
-          <div class="pnl-stat-value" style="color:${totalPnl >= 0 ? '#10b981' : '#ef4444'}">
-            ${totalPnl >= 0 ? '+' : ''}${formatCurrency(totalPnl, 0)}
+    const wrColor  = winRate >= 50 ? 'var(--accent-green)' : 'var(--accent-orange)';
+
+    body.innerHTML = `
+      <div class="port-pnl-grid">
+
+        <!-- Total PnL -->
+        <div class="port-pnl-card">
+          <div class="port-pnl-label">
+            <i class="fa-solid fa-chart-line" style="color:${pnlColor}"></i>
+            Unrealized PnL
           </div>
-        </div>
-      </div>
-
-      <div class="pnl-stat-card" style="border-left:3px solid #3b82f6">
-        <div class="pnl-stat-icon">
-          <i class="fa-solid fa-percent" style="color:#3b82f6"></i>
-        </div>
-        <div>
-          <div class="pnl-stat-label">Win Rate</div>
-          <div class="pnl-stat-value" style="color:#3b82f6">${winRate.toFixed(1)}%</div>
-          <div style="margin-top:4px">${progressBar(winRate, '#3b82f6', 4)}</div>
-        </div>
-      </div>
-
-      <div class="pnl-stat-card" style="border-left:3px solid #10b981">
-        <div class="pnl-stat-icon">
-          <i class="fa-solid fa-trophy" style="color:#10b981"></i>
-        </div>
-        <div>
-          <div class="pnl-stat-label">Win / Loss</div>
-          <div class="pnl-stat-value">
-            <span style="color:#10b981">${winning}W</span>
-            <span style="color:var(--text-muted);font-size:14px"> / </span>
-            <span style="color:#ef4444">${losing}L</span>
+          <div class="port-pnl-val" style="color:${pnlColor}">
+            ${pnlSign}${AVUtils.formatCurrencyFull(totalPnl)}
           </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+          <div class="port-pnl-sub">
+            <i class="fa-solid ${pnlIcon}" style="color:${pnlColor}"></i>
             ${nPos} positions tracked
           </div>
         </div>
-      </div>
 
-      <div class="pnl-stat-card" style="border-left:3px solid ${AV_CONFIG.REGIME_COLORS[regime]?.bg || '#6b7280'}">
-        <div class="pnl-stat-icon">
-          <i class="fa-solid fa-globe" style="color:${AV_CONFIG.REGIME_COLORS[regime]?.bg || '#6b7280'}"></i>
+        <!-- Win Rate -->
+        <div class="port-pnl-card">
+          <div class="port-pnl-label">
+            <i class="fa-solid fa-bullseye" style="color:${wrColor}"></i>
+            Win Rate
+          </div>
+          <div class="port-pnl-val" style="color:${wrColor}">
+            ${winRate.toFixed(1)}%
+          </div>
+          <div style="margin-top:10px">
+            <div class="av-progress-track" style="height:6px">
+              <div class="av-progress-fill"
+                   style="width:${winRate}%;
+                          background:${winRate>=50?'var(--gradient-green)':'linear-gradient(135deg,#f59e0b,#d97706)'}">
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;
+                        font-size:9px;color:var(--text-faint)">
+              <span>0%</span><span>50%</span><span>100%</span>
+            </div>
+          </div>
         </div>
-        <div>
-          <div class="pnl-stat-label">Current Regime</div>
-          <div class="pnl-stat-value">${regimeBadge(regime)}</div>
+
+        <!-- W/L Split -->
+        <div class="port-pnl-card">
+          <div class="port-pnl-label">
+            <i class="fa-solid fa-scale-balanced" style="color:var(--accent-blue)"></i>
+            Win / Loss Split
+          </div>
+          <div class="port-wl-split">
+            <div class="port-wl-block win">
+              <div class="port-wl-num">${winning}</div>
+              <div class="port-wl-lbl">Winning</div>
+            </div>
+            <div class="port-wl-divider"></div>
+            <div class="port-wl-block loss">
+              <div class="port-wl-num">${losing}</div>
+              <div class="port-wl-lbl">Losing</div>
+            </div>
+          </div>
+          <div class="port-pnl-sub" style="margin-top:10px;justify-content:center">
+            <span style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:var(--radius-full);
+                         background:${rColors.soft};color:${rColors.bg};border:1px solid ${rColors.bg}40">
+              <i class="fa-solid fa-circle" style="font-size:6px"></i> ${regime}
+            </span>
+          </div>
         </div>
+
       </div>`;
   }
 
   // ══════════════════════════════════════════════════════════
-  // RISK GAUGES — Leverage, Drawdown, VaR, Correlation
+  // COMPOSITION DONUT CHART (Long vs Short)
   // ══════════════════════════════════════════════════════════
+  function renderCompositionChart() {
+    const canvas = document.getElementById('port-comp-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
 
-  function renderRiskGauges(risk) {
-    if (!risk) return;
+    const longMV  = _positions
+      .filter(p => p.side === 'LONG')
+      .reduce((s, p) => s + p.market_value_abs, 0);
+    const shortMV = _positions
+      .filter(p => p.side === 'SHORT')
+      .reduce((s, p) => s + p.market_value_abs, 0);
 
-    // ── Leverage ──────────────────────────────────────────
-    const levEl = document.getElementById('risk-leverage');
-    if (levEl) {
-      const lev    = sf(safeGet(risk, 'leverage.current_leverage', 0));
-      const maxLev = sf(safeGet(risk, 'leverage.max_leverage', AV_CONFIG.THRESHOLDS.maxLeverage));
-      const isOver = safeGet(risk, 'leverage.is_over_leveraged', false);
-      const redPct = sf(safeGet(risk, 'leverage.reduce_by_pct', 0));
-      const pct    = maxLev > 0 ? Math.min((lev / maxLev) * 100, 150) : 0;
-      const color  = isOver ? '#f59e0b' : '#10b981';
+    const total   = longMV + shortMV;
+    const longPct = total > 0 ? ((longMV / total) * 100).toFixed(1) : 0;
+    const shrtPct = total > 0 ? ((shortMV / total) * 100).toFixed(1) : 0;
 
-      levEl.innerHTML = `
-        <div class="risk-gauge-header">
-          <div class="risk-gauge-label">
-            <i class="fa-solid fa-weight-scale" style="color:${color}"></i>
-            Leverage
-          </div>
-          ${isOver
-            ? badgeHTML(`Over by ${redPct.toFixed(1)}%`, 'orange', 'fa-triangle-exclamation')
-            : badgeHTML('Within limits', 'green', 'fa-check')}
+    // Update labels
+    const lbl = document.getElementById('port-comp-labels');
+    if (lbl) {
+      lbl.innerHTML = `
+        <div class="port-comp-label">
+          <span class="port-comp-dot" style="background:#10b981"></span>
+          <span>Long ${longPct}%</span>
+          <span style="color:var(--text-faint);font-size:10px">
+            ${AVUtils.formatCurrency(longMV)}
+          </span>
         </div>
-        <div class="risk-gauge-values">
-          <span class="risk-gauge-current" style="color:${color}">${lev.toFixed(3)}x</span>
-          <span class="risk-gauge-max">/ ${maxLev.toFixed(1)}x max</span>
-        </div>
-        ${progressBar(Math.min(pct, 100), color, 8)}
-        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
-          ${isOver ? `Reduce positions by ${redPct.toFixed(1)}% to reach target` : 'Leverage within authorized range'}
+        <div class="port-comp-label">
+          <span class="port-comp-dot" style="background:#ef4444"></span>
+          <span>Short ${shrtPct}%</span>
+          <span style="color:var(--text-faint);font-size:10px">
+            ${AVUtils.formatCurrency(shortMV)}
+          </span>
         </div>`;
     }
 
-    // ── Drawdown ──────────────────────────────────────────
-    const ddEl = document.getElementById('risk-drawdown');
-    if (ddEl) {
-      const dd      = sf(safeGet(risk, 'drawdown.current',    safeGet(risk, 'drawdown.current_drawdown', 0))) * 100;
-      const ddMax   = sf(safeGet(risk, 'drawdown.max_drawdown', 0)) * 100;
-      const thresh  = sf(safeGet(risk, 'drawdown.threshold', AV_CONFIG.THRESHOLDS.maxDrawdown)) * 100;
-      const peak    = sf(safeGet(risk, 'drawdown.portfolio_peak', 0));
-      const breach  = safeGet(risk, 'drawdown.is_breached', false);
-      const pct     = thresh > 0 ? Math.min((dd / thresh) * 100, 100) : 0;
-      const color   = breach ? '#ef4444' : dd > thresh * 0.7 ? '#f59e0b' : '#10b981';
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
 
-      ddEl.innerHTML = `
-        <div class="risk-gauge-header">
-          <div class="risk-gauge-label">
-            <i class="fa-solid fa-arrow-trend-down" style="color:${color}"></i>
-            Drawdown
-          </div>
-          ${breach
-            ? badgeHTML('Threshold breached', 'red', 'fa-xmark')
-            : badgeHTML(`${dd.toFixed(3)}% / ${thresh.toFixed(0)}% limit`, 'green', 'fa-check')}
-        </div>
-        <div class="risk-gauge-values">
-          <span class="risk-gauge-current" style="color:${color}">${dd.toFixed(3)}%</span>
-          <span class="risk-gauge-max">/ ${thresh.toFixed(0)}% limit</span>
-        </div>
-        ${progressBar(pct, color, 8)}
-        <div style="display:flex;gap:12px;margin-top:6px;font-size:10px;color:var(--text-muted)">
-          <span>Max DD: ${ddMax.toFixed(3)}%</span>
-          ${peak > 0 ? `<span>Peak: ${formatCurrency(peak, 0)}</span>` : ''}
-        </div>`;
+    if (_compChart) {
+      _compChart.data.datasets[0].data = [longMV, shortMV];
+      _compChart.update('none');
+      return;
     }
 
-    // ── VaR / Sharpe (R5) ─────────────────────────────────
-    const varEl = document.getElementById('risk-var');
-    if (varEl) {
-      const var95  = sf(safeGet(risk, 'var_metrics.var_95',   0));
-      const var99  = sf(safeGet(risk, 'var_metrics.var_99',   0));
-      const sharpe = sf(safeGet(risk, 'var_metrics.sharpe',   safeGet(risk, 'var_metrics.sharpe_ratio', 0)));
-      const vol    = sf(safeGet(risk, 'var_metrics.volatility', 0));
-
-      const metrics = [
-        { label: 'VaR 95%',    value: var95,  format: v => `${(v * 100).toFixed(2)}%` },
-        { label: 'VaR 99%',    value: var99,  format: v => `${(v * 100).toFixed(2)}%` },
-        { label: 'Sharpe',     value: sharpe, format: v => v.toFixed(3) },
-        { label: 'Volatility', value: vol,    format: v => `${(v * 100).toFixed(2)}%` },
-      ];
-
-      varEl.innerHTML = `
-        <div class="risk-gauge-header">
-          <div class="risk-gauge-label">
-            <i class="fa-solid fa-chart-bar" style="color:#8b5cf6"></i>
-            VaR &amp; Sharpe
-          </div>
-          ${badgeHTML('Insufficient History', 'blue', 'fa-clock')}
-        </div>
-        <div class="risk-var-grid">
-          ${metrics.map(m => `
-            <div class="risk-var-item">
-              <div class="risk-var-label">${m.label}</div>
-              <div class="risk-var-value">
-                ${m.value === 0 ? varDisplay(0) : m.format(m.value)}
-              </div>
-            </div>`).join('')}
-        </div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px">
-          <i class="fa-solid fa-circle-info" style="color:#3b82f6"></i>
-          Stats available after 30+ portfolio snapshots
-        </div>`;
-    }
-
-    // ── Correlation ───────────────────────────────────────
-    const corrEl = document.getElementById('risk-correlation');
-    if (corrEl) {
-      const maxCorr = sf(safeGet(risk, 'correlation.max_correlation', 0));
-      const avgCorr = sf(safeGet(risk, 'correlation.avg_correlation', 0));
-      const thresh  = sf(safeGet(risk, 'correlation.threshold', AV_CONFIG.THRESHOLDS.maxCorr));
-      const isHigh  = safeGet(risk, 'correlation.is_high', false);
-      const color   = isHigh ? '#f59e0b' : '#10b981';
-      const pct     = thresh > 0 ? Math.min((maxCorr / thresh) * 100, 130) : 0;
-
-      corrEl.innerHTML = `
-        <div class="risk-gauge-header">
-          <div class="risk-gauge-label">
-            <i class="fa-solid fa-link" style="color:${color}"></i>
-            Correlation
-          </div>
-          ${isHigh
-            ? badgeHTML('High correlation', 'orange', 'fa-triangle-exclamation')
-            : badgeHTML('Acceptable', 'green', 'fa-check')}
-        </div>
-        <div class="risk-gauge-values">
-          <span class="risk-gauge-current" style="color:${color}">${maxCorr.toFixed(4)}</span>
-          <span class="risk-gauge-max">max / ${thresh.toFixed(2)} limit</span>
-        </div>
-        ${progressBar(Math.min(pct, 100), color, 8)}
-        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
-          Avg correlation: ${avgCorr.toFixed(4)}
-        </div>`;
-    }
-
-    // ── Alerts ────────────────────────────────────────────
-    const alertsEl = document.getElementById('risk-alerts');
-    if (alertsEl) {
-      const alerts = safeGet(risk, 'alerts', []);
-      alertsEl.innerHTML = alerts.length
-        ? alerts.map(a => `
-            <div class="risk-alert-item">
-              <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
-              <span>${typeof a === 'string' ? a : JSON.stringify(a)}</span>
-            </div>`).join('')
-        : `<div style="display:flex;align-items:center;gap:8px;color:#10b981;font-size:13px">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>No active alerts</span>
-           </div>`;
-    }
+    _compChart = new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels:   ['Long', 'Short'],
+        datasets: [{
+          data:            [longMV, shortMV],
+          backgroundColor: ['rgba(16,185,129,0.85)', 'rgba(239,68,68,0.85)'],
+          borderColor:     ['#10b981', '#ef4444'],
+          borderWidth:     2,
+          hoverOffset:     8,
+        }],
+      },
+      options: {
+        responsive:       true,
+        maintainAspectRatio: false,
+        cutout:           '72%',
+        animation:        { duration: 600, easing: 'easeInOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: dark ? '#1e293b' : '#fff',
+            borderColor:     dark ? '#334155' : '#e2e8f0',
+            borderWidth:     1,
+            titleColor:      dark ? '#f1f5f9' : '#0f172a',
+            bodyColor:       dark ? '#94a3b8' : '#64748b',
+            callbacks: {
+              label: ctx => {
+                const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+                return ` ${ctx.label}: ${AVUtils.formatCurrency(ctx.raw)} (${pct}%)`;
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   // ══════════════════════════════════════════════════════════
-  // TOP SHORT POSITIONS — Tableau top 10
+  // POSITIONS TABLE — RENDER PAGE
   // ══════════════════════════════════════════════════════════
+  function _renderPositionPage() {
+    const tbody     = document.getElementById('port-positions-tbody');
+    const countEl   = document.getElementById('port-filtered-count');
+    if (!tbody) return;
 
-  function renderTopShorts(positions) {
-    const container = document.getElementById('top-shorts-table');
+    const total     = _filtered.length;
+    const pages     = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    _currentPage    = Math.min(_currentPage, pages);
+    const start     = (_currentPage - 1) * PAGE_SIZE;
+    const slice     = _filtered.slice(start, start + PAGE_SIZE);
+
+    if (countEl) {
+      countEl.textContent = `${total} result${total !== 1 ? 's' : ''}`;
+    }
+
+    if (!_portfolio) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center;padding:32px;color:var(--text-faint)">
+            <i class="fa-solid fa-circle-notch fa-spin"
+               style="font-size:20px;color:var(--accent-blue)"></i>
+            <div style="margin-top:10px;font-size:12px">Loading positions...</div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    if (total === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="9" style="text-align:center;padding:32px;color:var(--text-faint)">
+            <i class="fa-solid fa-filter"
+               style="font-size:24px;display:block;margin-bottom:10px;opacity:0.25"></i>
+            No positions match the current filter
+          </td>
+        </tr>`;
+      _renderPagination(1, 0);
+      return;
+    }
+
+    tbody.innerHTML = slice.map(pos => _renderPositionRow(pos)).join('');
+    _renderPagination(pages, total);
+  }
+
+  function _renderPositionRow(pos) {
+    const {
+      symbol, side, quantity_abs, market_value_abs,
+      unrealized_pnl, pnl_pct, current_price, avg_cost
+    } = pos;
+
+    const isShort  = side === 'SHORT';
+    const pnlColor = unrealized_pnl > 0 ? 'var(--accent-green)'
+                   : unrealized_pnl < 0 ? 'var(--accent-red)'
+                   : 'var(--text-muted)';
+    const pnlSign  = unrealized_pnl > 0 ? '+' : '';
+    const pnlIcon  = unrealized_pnl > 0 ? 'fa-arrow-trend-up'
+                   : unrealized_pnl < 0 ? 'fa-arrow-trend-down'
+                   : 'fa-minus';
+    const pctSign  = pnl_pct > 0 ? '+' : '';
+
+    const logoHtml = typeof window._getLogoHtml === 'function'
+      ? window._getLogoHtml(symbol, 24)
+      : `<span style="display:inline-flex;align-items:center;justify-content:center;
+                      width:24px;height:24px;border-radius:6px;
+                      background:var(--gradient-brand);color:#fff;
+                      font-size:11px;font-weight:800;flex-shrink:0">
+           ${symbol.charAt(0)}
+         </span>`;
+
+    return `
+      <tr class="port-pos-row" data-sym="${symbol}"
+          onclick="if(window.StockDetail) StockDetail.open('${symbol}')"
+          title="View ${symbol} detail">
+
+        <!-- Symbol + Logo -->
+        <td style="padding:10px 14px">
+          <div style="display:flex;align-items:center;gap:9px">
+            ${logoHtml}
+            <div>
+              <div style="font-weight:700;font-size:13px;
+                          color:var(--text-primary);line-height:1.2">${symbol}</div>
+              <div style="font-size:9px;color:var(--text-faint)">
+                <i class="fa-solid fa-chart-bar" style="font-size:8px"></i> View detail
+              </div>
+            </div>
+          </div>
+        </td>
+
+        <!-- Side (R3) -->
+        <td style="padding:10px 8px;text-align:center">
+          <span class="port-side-badge ${isShort ? 'short' : 'long'}">
+            <i class="fa-solid fa-arrow-${isShort ? 'down' : 'up'}"
+               style="font-size:8px"></i>
+            ${side}
+          </span>
+        </td>
+
+        <!-- Quantity (R3: abs()) -->
+        <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
+                   font-weight:600;color:var(--text-primary);text-align:right">
+          ${quantity_abs.toLocaleString('en-US')}
+        </td>
+
+        <!-- Market Value (R3: abs()) -->
+        <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
+                   font-weight:600;color:var(--text-primary);text-align:right">
+          ${market_value_abs > 0 ? AVUtils.formatCurrencyFull(market_value_abs) : '—'}
+        </td>
+
+        <!-- PnL $ -->
+        <td style="padding:10px 12px;text-align:right">
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px;
+                      font-family:var(--font-mono);font-size:12px;font-weight:700;
+                      color:${pnlColor}">
+            <i class="fa-solid ${pnlIcon}" style="font-size:9px"></i>
+            ${pnlSign}${AVUtils.formatCurrencyFull(unrealized_pnl)}
+          </div>
+        </td>
+
+        <!-- PnL % -->
+        <td style="padding:10px 12px;font-size:11px;font-weight:700;
+                   color:${pnlColor};text-align:right;font-family:var(--font-mono)">
+          ${pctSign}${Math.abs(pnl_pct).toFixed(2)}%
+        </td>
+
+        <!-- Current Price -->
+        <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
+                   color:var(--text-secondary);text-align:right">
+          ${current_price > 0 ? `$${current_price.toFixed(2)}` : '—'}
+        </td>
+
+        <!-- Avg Cost (R4: 0 → N/A) -->
+        <td style="padding:10px 12px;font-family:var(--font-mono);font-size:12px;
+                   color:var(--text-faint);text-align:right">
+          ${AVUtils.avgCostDisplay(avg_cost)}
+        </td>
+
+        <!-- Action -->
+        <td style="padding:10px 8px;text-align:center">
+          <button class="btn btn-secondary btn-xs"
+                  title="View ${symbol} detail"
+                  onclick="event.stopPropagation();
+                           if(window.StockDetail) StockDetail.open('${symbol}')">
+            <i class="fa-solid fa-chart-bar"></i>
+          </button>
+        </td>
+      </tr>`;
+  }
+
+  // ── Pagination ─────────────────────────────────────────────
+  function _renderPagination(pages, total) {
+    const container = document.getElementById('port-pagination');
     if (!container) return;
 
-    const shorts = Object.values(positions || {})
-      .filter(p => p.isShort)
-      .sort((a, b) => b.market_value - a.market_value)
-      .slice(0, 10);
-
-    if (!shorts.length) {
+    if (pages <= 1) {
       container.innerHTML = `
-        <div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">
-          <i class="fa-solid fa-inbox" style="margin-right:6px"></i>No short positions
+        <span style="font-size:11px;color:var(--text-faint)">
+          ${total} position${total !== 1 ? 's' : ''} &middot; Page 1/1
+        </span>`;
+      return;
+    }
+
+    const startP = Math.max(1, _currentPage - 2);
+    const endP   = Math.min(pages, startP + 4);
+
+    container.innerHTML = `
+      <button class="port-page-btn" data-pg="prev"
+              ${_currentPage <= 1 ? 'disabled' : ''}>
+        <i class="fa-solid fa-chevron-left" style="font-size:9px"></i>
+      </button>
+      ${Array.from({ length: endP - startP + 1 }, (_, i) => startP + i).map(p => `
+        <button class="port-page-btn ${p === _currentPage ? 'active' : ''}"
+                data-pg="${p}">${p}</button>`).join('')}
+      <button class="port-page-btn" data-pg="next"
+              ${_currentPage >= pages ? 'disabled' : ''}>
+        <i class="fa-solid fa-chevron-right" style="font-size:9px"></i>
+      </button>
+      <span style="font-size:11px;color:var(--text-muted);margin-left:8px">
+        ${total} positions &middot; Page ${_currentPage}/${pages}
+      </span>`;
+
+    container.querySelectorAll('.port-page-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pg = btn.dataset.pg;
+        if (pg === 'prev' && _currentPage > 1)       _currentPage--;
+        else if (pg === 'next' && _currentPage < pages) _currentPage++;
+        else if (!isNaN(parseInt(pg)))                _currentPage = parseInt(pg);
+        _renderPositionPage();
+      });
+    });
+  }
+
+  // ── Filter stats ───────────────────────────────────────────
+  function _updateFilterStats() {
+    const longPos  = _positions.filter(p => p.side === 'LONG').length;
+    const shortPos = _positions.filter(p => p.side === 'SHORT').length;
+
+    const t = document.getElementById('port-stat-total');
+    const l = document.getElementById('port-stat-long');
+    const s = document.getElementById('port-stat-short');
+    if (t) t.innerHTML = `<i class="fa-solid fa-layer-group" style="font-size:9px"></i> ${_positions.length} positions`;
+    if (l) l.innerHTML = `<i class="fa-solid fa-arrow-up" style="font-size:9px"></i> ${longPos} Long`;
+    if (s) s.innerHTML = `<i class="fa-solid fa-arrow-down" style="font-size:9px"></i> ${shortPos} Short`;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // RISK GAUGES (4 cartes)
+  // ══════════════════════════════════════════════════════════
+  function renderRiskGauges() {
+    _renderLeverageGauge();
+    _renderDrawdownGauge();
+    _renderVaRCard();
+    _renderCorrelationCard();
+  }
+
+  function _renderLeverageGauge() {
+    const card = document.getElementById('risk-lev-card');
+    if (!card) return;
+
+    const lev     = parseFloat(AVUtils.safeGet(_risk, 'leverage.current_leverage', 0));
+    const maxLev  = parseFloat(AVUtils.safeGet(_risk, 'leverage.max_leverage', 1.0));
+    const overLev = AVUtils.safeGet(_risk, 'leverage.is_over_leveraged', false);
+    const redBy   = parseFloat(AVUtils.safeGet(_risk, 'leverage.reduce_by_pct', 0));
+    const pct     = maxLev > 0 ? Math.min((lev / maxLev) * 100, 100) : 0;
+
+    card.innerHTML = `
+      <div class="port-gauge-header">
+        <i class="fa-solid fa-gauge-high" style="color:var(--accent-orange)"></i>
+        Leverage
+        <span class="badge badge-${overLev ? 'orange' : 'green'}" style="margin-left:auto;font-size:9px">
+          <i class="fa-solid fa-${overLev ? 'triangle-exclamation' : 'check'}"></i>
+          ${overLev ? 'Over-leveraged' : 'OK'}
+        </span>
+      </div>
+      <div class="port-gauge-big-val" style="color:${overLev?'var(--accent-orange)':'var(--text-primary)'}">
+        ${lev > 0 ? `${lev.toFixed(3)}x` : '—'}
+      </div>
+      <div class="port-gauge-track-lg">
+        <div class="port-gauge-fill-lg"
+             style="width:${pct}%;background:${overLev?'var(--gradient-red)':'var(--gradient-green)'}">
+        </div>
+        <div class="port-gauge-limit" style="left:${Math.min((1/Math.max(maxLev,1))*100,100)}%">
+          <div class="port-gauge-limit-line"></div>
+        </div>
+      </div>
+      <div class="port-gauge-labels-row">
+        <span>0x</span>
+        <span style="color:${overLev?'var(--accent-orange)':'var(--text-faint)'}">
+          Max: ${maxLev.toFixed(1)}x
+        </span>
+      </div>
+      ${overLev && redBy > 0 ? `
+        <div class="port-risk-warning">
+          <i class="fa-solid fa-circle-arrow-down"></i>
+          Reduce exposure by ${(redBy*100).toFixed(1)}% to normalize
+        </div>` : ''}`;
+  }
+
+  function _renderDrawdownGauge() {
+    const card = document.getElementById('risk-dd-card');
+    if (!card) return;
+
+    const dd       = parseFloat(AVUtils.safeGet(_risk, 'drawdown.current_drawdown', 0));
+    const maxDD    = parseFloat(AVUtils.safeGet(_risk, 'drawdown.threshold', 0.15));
+    const peak     = parseFloat(AVUtils.safeGet(_risk, 'drawdown.portfolio_peak', 0));
+    const breached = AVUtils.safeGet(_risk, 'drawdown.is_breached', false);
+    const pct      = maxDD > 0 ? Math.min((dd / maxDD) * 100, 100) : 0;
+    const ddColor  = breached ? 'var(--accent-red)'
+                   : dd > 0.08 ? 'var(--accent-orange)'
+                   : 'var(--accent-green)';
+
+    card.innerHTML = `
+      <div class="port-gauge-header">
+        <i class="fa-solid fa-arrow-trend-down" style="color:var(--accent-blue)"></i>
+        Drawdown
+        <span class="badge badge-${breached ? 'red' : 'green'}" style="margin-left:auto;font-size:9px">
+          <i class="fa-solid fa-${breached ? 'hand' : 'check'}"></i>
+          ${breached ? 'Halted' : 'Safe'}
+        </span>
+      </div>
+      <div class="port-gauge-big-val" style="color:${ddColor}">
+        ${(dd * 100).toFixed(2)}%
+      </div>
+      <div class="port-gauge-track-lg">
+        <div class="port-gauge-fill-lg"
+             style="width:${pct}%;background:${breached?'var(--gradient-red)':dd>0.05?'linear-gradient(135deg,#f59e0b,#d97706)':'var(--gradient-green)'}">
+        </div>
+      </div>
+      <div class="port-gauge-labels-row">
+        <span>0%</span>
+        <span>Threshold: ${(maxDD*100).toFixed(0)}%</span>
+      </div>
+      ${peak > 0 ? `
+        <div style="margin-top:10px;display:flex;align-items:center;gap:6px;
+                    font-size:11px;color:var(--text-faint)">
+          <i class="fa-solid fa-mountain-sun" style="font-size:10px"></i>
+          Portfolio Peak: <strong style="color:var(--text-secondary)">
+            ${AVUtils.formatCurrencyFull(peak)}
+          </strong>
+        </div>` : ''}`;
+  }
+
+  function _renderVaRCard() {
+    const card = document.getElementById('risk-var-card');
+    if (!card) return;
+
+    const var95  = parseFloat(AVUtils.safeGet(_risk, 'var_metrics.var_95',      0));
+    const var99  = parseFloat(AVUtils.safeGet(_risk, 'var_metrics.var_99',      0));
+    const sharpe = parseFloat(AVUtils.safeGet(_risk, 'var_metrics.sharpe_ratio',0));
+    const vol    = parseFloat(AVUtils.safeGet(_risk, 'var_metrics.volatility',  0));
+    const noData = var95 === 0 && sharpe === 0;   // R5
+
+    card.innerHTML = `
+      <div class="port-gauge-header">
+        <i class="fa-solid fa-shield-halved" style="color:var(--accent-violet)"></i>
+        VaR &amp; Sharpe
+        ${noData ? `
+          <span class="badge badge-info" style="margin-left:auto;font-size:9px"
+                title="Requires 30+ portfolio snapshots">
+            <i class="fa-solid fa-circle-info"></i> Insuff. History
+          </span>` : ''}
+      </div>
+      <div class="port-var-grid">
+        <div class="port-var-stat">
+          <div class="port-var-lbl">VaR 95%</div>
+          <div class="port-var-val" style="color:${noData?'var(--text-faint)':'var(--accent-red)'}">
+            ${noData ? 'N/A' : `${(var95*100).toFixed(2)}%`}
+          </div>
+        </div>
+        <div class="port-var-stat">
+          <div class="port-var-lbl">VaR 99%</div>
+          <div class="port-var-val" style="color:${noData?'var(--text-faint)':'var(--accent-red)'}">
+            ${noData ? 'N/A' : `${(var99*100).toFixed(2)}%`}
+          </div>
+        </div>
+        <div class="port-var-stat">
+          <div class="port-var-lbl">Sharpe Ratio</div>
+          <div class="port-var-val"
+               style="color:${noData?'var(--text-faint)':sharpe>1?'var(--accent-green)':sharpe>0?'var(--accent-orange)':'var(--accent-red)'}">
+            ${noData ? 'N/A' : sharpe.toFixed(3)}
+          </div>
+        </div>
+        <div class="port-var-stat">
+          <div class="port-var-lbl">Volatility</div>
+          <div class="port-var-val" style="color:${noData?'var(--text-faint)':'var(--text-primary)'}">
+            ${noData ? 'N/A' : `${(vol*100).toFixed(2)}%`}
+          </div>
+        </div>
+      </div>
+      ${noData ? `
+        <div class="port-risk-info">
+          <i class="fa-solid fa-clock" style="font-size:10px"></i>
+          Statistics available after 30+ daily portfolio snapshots.
+          System is collecting data each cycle.
+        </div>` : ''}`;
+  }
+
+  function _renderCorrelationCard() {
+    const card = document.getElementById('risk-corr-card');
+    if (!card) return;
+
+    const maxCorr = parseFloat(AVUtils.safeGet(_risk, 'correlation.max_correlation', 0));
+    const avgCorr = parseFloat(AVUtils.safeGet(_risk, 'correlation.avg_correlation', 0));
+    const isHigh  = AVUtils.safeGet(_risk, 'correlation.is_high', false);
+    const thresh  = parseFloat(AVUtils.safeGet(_risk, 'correlation.threshold', 0.70));
+    const fillPct = Math.min(maxCorr * 100, 100);
+    const cColor  = isHigh ? 'var(--accent-orange)' : 'var(--accent-green)';
+
+    card.innerHTML = `
+      <div class="port-gauge-header">
+        <i class="fa-solid fa-diagram-project" style="color:var(--accent-cyan)"></i>
+        Correlation
+        <span class="badge badge-${isHigh ? 'orange' : 'green'}" style="margin-left:auto;font-size:9px">
+          <i class="fa-solid fa-${isHigh ? 'triangle-exclamation' : 'check'}"></i>
+          ${isHigh ? 'High' : 'Normal'}
+        </span>
+      </div>
+      <div class="port-gauge-big-val" style="color:${cColor}">
+        ${maxCorr > 0 ? maxCorr.toFixed(4) : '—'}
+        <span style="font-size:12px;font-weight:600;color:var(--text-muted);margin-left:4px">max</span>
+      </div>
+      <div class="port-gauge-track-lg" style="margin-top:12px">
+        <div class="port-gauge-fill-lg"
+             style="width:${fillPct}%;background:${isHigh?'var(--gradient-red)':'var(--gradient-green)'}">
+        </div>
+        <div class="port-gauge-limit" style="left:${thresh*100}%">
+          <div class="port-gauge-limit-line"></div>
+        </div>
+      </div>
+      <div class="port-gauge-labels-row">
+        <span>0</span>
+        <span>Threshold: ${thresh.toFixed(2)}</span>
+        <span>1.0</span>
+      </div>
+      <div style="margin-top:10px;display:flex;align-items:center;gap:8px;
+                  font-size:11px;color:var(--text-faint)">
+        <i class="fa-solid fa-chart-scatter" style="font-size:10px"></i>
+        Avg: <strong style="color:var(--text-secondary)">${avgCorr > 0 ? avgCorr.toFixed(4) : '—'}</strong>
+      </div>
+      ${isHigh ? `
+        <div class="port-risk-warning">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          High correlation — consider diversifying positions
+        </div>` : ''}`;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // ALERTS
+  // ══════════════════════════════════════════════════════════
+  function renderAlerts() {
+    const body = document.getElementById('port-alerts-body');
+    if (!body) return;
+
+    const alerts = AVUtils.safeGet(_risk, 'alerts', []);
+
+    if (!alerts || alerts.length === 0) {
+      body.innerHTML = `
+        <div class="port-no-alerts">
+          <i class="fa-solid fa-shield-check"
+             style="font-size:22px;color:var(--accent-green)"></i>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary)">
+              No active risk alerts
+            </div>
+            <div style="font-size:11px;color:var(--text-faint);margin-top:2px">
+              All risk metrics within acceptable thresholds
+            </div>
+          </div>
+          <span class="badge badge-green" style="margin-left:auto">
+            <i class="fa-solid fa-circle-check"></i> System Healthy
+          </span>
         </div>`;
       return;
     }
 
-    const maxMV = shorts[0]?.market_value || 1;
-
-    container.innerHTML = shorts.map((pos, i) => {
-      const barW  = (pos.market_value / maxMV * 100).toFixed(1);
-      const color = pos.pnl >= 0 ? '#10b981' : '#ef4444';
-
-      return `
-        <div class="top-short-row" onclick="if(window.StockDetail) StockDetail.open('${pos.symbol}')"
-             style="cursor:pointer">
-          <div class="top-short-rank">#${i + 1}</div>
-          <div class="top-short-sym">${pos.symbol}</div>
-          <div class="top-short-bar-wrap">
-            <div class="top-short-bar" style="width:${barW}%;background:rgba(239,68,68,0.35)"></div>
+    body.innerHTML = alerts.map(alert => `
+      <div class="port-alert-row">
+        <i class="fa-solid fa-triangle-exclamation"
+           style="color:var(--accent-orange);font-size:14px;flex-shrink:0"></i>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12px;font-weight:700;color:var(--text-primary)">
+            ${alert.type || alert.alert_type || 'Risk Alert'}
           </div>
-          <div class="top-short-mv" style="font-family:var(--font-mono);font-size:12px;font-weight:700">
-            -${formatCurrency(pos.market_value, 0)}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+            ${alert.message || JSON.stringify(alert)}
           </div>
-          <div class="top-short-pnl" style="color:${color};font-family:var(--font-mono);font-size:11px">
-            ${pos.pnl >= 0 ? '+' : ''}${sf(pos.pnl_pct).toFixed(1)}%
-          </div>
-        </div>`;
-    }).join('');
+        </div>
+        <span class="badge badge-orange" style="font-size:9px;flex-shrink:0">Active</span>
+      </div>`).join('');
   }
 
   // ══════════════════════════════════════════════════════════
-  // PUBLIC API
+  // SKELETONS
   // ══════════════════════════════════════════════════════════
-  return {
-    renderKPIRow,
-    initPositionFilters,
-    renderPositionsTable,
-    renderPnLMonitor,
-    renderRiskGauges,
-    renderTopShorts,
-    getFilter:   () => _filter,
-    getPage:     () => _page,
-    resetFilter: () => { _filter = 'ALL'; _page = 1; _searchQuery = ''; },
-  };
+  function _showSkeletons() {
+    ['port-netliq','port-leverage','port-drawdown','port-riskscore'].forEach(id => {
+      const el = document.getElementById(`${id}-val`);
+      if (el) el.innerHTML = `<span class="skeleton-line"
+                                     style="width:110px;height:26px;display:block"></span>`;
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // SIDEBAR STATUS
+  // ══════════════════════════════════════════════════════════
+  function _updateSidebarStatus() {
+    const dot   = document.getElementById('sb-ibkr-dot');
+    const label = document.getElementById('sb-mode-label');
+    const sync  = document.getElementById('sb-last-sync');
+    const mode  = _portfolio?.mode || 'paper';
+    const upd   = _portfolio?.updated_at || null;
+
+    if (dot)   { dot.className = 'av-status-dot green'; }
+    if (label) { label.textContent = `${mode.toUpperCase()} — Portfolio`; }
+    if (sync && upd) sync.textContent = AVUtils.formatAge(upd);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // AUTO-REFRESH (30s)
+  // ══════════════════════════════════════════════════════════
+  function _startRefresh() {
+    const URLS = AV_CONFIG.SIGNAL_URLS;
+
+    _refreshTimers.push(setInterval(async () => {
+      try {
+        const [portRes, riskRes, pnlRes] = await Promise.allSettled([
+          AVApi.fetchJSON(URLS.portfolio, 0),
+          AVApi.fetchJSON(URLS.risk,      0),
+          AVApi.fetchJSON(URLS.pnl,       0),
+        ]);
+        const p = d => d.status === 'fulfilled' ? d.value : null;
+        _portfolio = p(portRes) || _portfolio;
+        _risk      = p(riskRes) || _risk;
+        _pnl       = p(pnlRes)  || _pnl;
+
+        _positions = _buildPositions(_portfolio);
+        _applyFiltersAndSort();
+        renderAll();
+      } catch (err) {
+        console.warn('[Portfolio] Refresh error:', err.message);
+      }
+    }, AV_CONFIG.REFRESH.portfolio));
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // BINDINGS
+  // ══════════════════════════════════════════════════════════
+  function _bindFilterTabs() {
+    document.querySelectorAll('.port-filter-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        _currentFilter = btn.dataset.filter;
+        document.querySelectorAll('.port-filter-tab').forEach(b =>
+          b.classList.remove('active'));
+        btn.classList.add('active');
+        _applyFiltersAndSort();
+        _renderPositionPage();
+      });
+    });
+  }
+
+  function _bindSearch() {
+    const input = document.getElementById('port-search');
+    if (!input) return;
+    input.addEventListener('input', AVUtils.debounce(() => {
+      _currentSearch = input.value.trim();
+      _applyFiltersAndSort();
+      _renderPositionPage();
+    }, 200));
+  }
+
+  function _bindSortHeaders() {
+    document.querySelectorAll('.port-sort-th').forEach(th => {
+      th.style.cursor = 'pointer';
+      th.addEventListener('click', () => {
+        const field = th.dataset.sort;
+        if (_sortField === field) {
+          _sortDir = _sortDir === 'desc' ? 'asc' : 'desc';
+        } else {
+          _sortField = field;
+          _sortDir   = 'desc';
+        }
+        // Update sort icons
+        document.querySelectorAll('.port-sort-th').forEach(h => {
+          const ic = h.querySelector('.sort-icon');
+          if (!ic) return;
+          ic.className = `sort-icon fa-solid fa-${
+            h.dataset.sort === _sortField
+              ? (_sortDir === 'desc' ? 'sort-down' : 'sort-up')
+              : 'sort'
+          } fa-xs`;
+          ic.style.opacity = h.dataset.sort === _sortField ? '1' : '0.3';
+        });
+        _applyFiltersAndSort();
+        _renderPositionPage();
+      });
+    });
+  }
+
+  function _bindThemeToggle() {
+    const btn = document.getElementById('av-theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      AVUtils.ThemeManager.toggle();
+      // Redraw donut avec nouvelles couleurs
+      if (_compChart) { _compChart.destroy(); _compChart = null; }
+      renderCompositionChart();
+    });
+  }
+
+  function _bindSidebar() {
+    const toggler = document.getElementById('av-hamburger');
+    const sidebar = document.getElementById('av-sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (toggler && sidebar) {
+      toggler.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('active');
+      });
+    }
+    if (overlay && sidebar) {
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        if (overlay) overlay.classList.remove('active');
+      });
+    }
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  window._PortfolioCtrl = { destroy: () => _refreshTimers.forEach(clearInterval) };
 
 })();
-
-window.AVPortfolio = AVPortfolio;
-console.log('[av-portfolio] Loaded — Positions | Risk gauges | PnL monitor | R1-R5');
