@@ -154,25 +154,20 @@ const AVUtils = (() => {
 
   function _getLogoHtml(sym, size = 24) {
     if (!sym) return _logoFallback(sym || '?', size);
+    const s      = sym.toUpperCase().trim();
+    const r      = Math.round(size * 0.22);
+    const parqet = `https://assets.parqet.com/logos/symbol/${s}?format=png`;
+    const fmp    = `https://financialmodelingprep.com/image-stock/${s}.png`;
 
-    const s = sym.toUpperCase().trim();
-    const radius = Math.round(size * 0.22);
-    const fmpUrl = `https://financialmodelingprep.com/image-stock/${s}.png`;
-    const parqetUrl = `https://assets.parqet.com/logos/symbol/${s}?format=png`;
-
-    return `<img
-      src="${parqetUrl}"
-      alt="${s}"
-      width="${size}"
-      height="${size}"
-      style="width:${size}px;height:${size}px;border-radius:${radius}px;object-fit:contain;
-             background:var(--bg-secondary);flex-shrink:0;display:block;"
-      onerror="this.onerror=null;this.src='${fmpUrl}';
-               this.onerror=function(){this.style.display='none';
-               const sp=document.createElement('span');
-               sp.innerHTML='${_logoFallbackInline(s, size)}';
-               this.parentNode.insertBefore(sp.firstChild,this);this.remove();};">`;
-  }
+    // onerror simplifié : 1er échec → FMP, 2ème → _avLogoFallback global
+    // AUCUNE single-quote dans l'attribut onerror → plus de bug d'affichage
+    return `<img src="${parqet}" alt="${s}" width="${size}" height="${size}" ` +
+        `style="width:${size}px;height:${size}px;border-radius:${r}px;` +
+        `object-fit:contain;background:var(--bg-secondary,#f1f5f9);` +
+        `flex-shrink:0;display:block" ` +
+        `onerror="if(!this._f){this._f=1;this.src=&quot;${fmp}&quot;}` +
+        `else{window._avLogoFallback(this,&quot;${s}&quot;,${size})}">`;
+    }
 
   function _logoFallback(sym, size = 24) {
     const colors = [
@@ -190,16 +185,6 @@ const AVUtils = (() => {
                           font-weight:800;flex-shrink:0;font-family:var(--font-sans)">
               ${letter}
             </span>`;
-  }
-
-  function _logoFallbackInline(sym, size) {
-    const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444','#06b6d4','#ec4899','#84cc16'];
-    const idx = (sym.charCodeAt(0) || 0) % colors.length;
-    const color = colors[idx];
-    const fontSize = Math.floor(size * 0.42);
-    const radius = Math.round(size * 0.22);
-    const letter = (sym || '?').charAt(0).toUpperCase();
-    return `<span style="display:inline-flex;align-items:center;justify-content:center;width:${size}px;height:${size}px;border-radius:${radius}px;background:${color};color:#fff;font-size:${fontSize}px;font-weight:800;flex-shrink:0">${letter}</span>`;
   }
 
   // ══════════════════════════════════════════════════════════
@@ -430,6 +415,38 @@ const AVUtils = (() => {
 
 // ── Globals exposés (compatibilité av-watchlist.js / av-stock-detail.js) ──
 window.AVUtils      = AVUtils;
+/**
+ * Fallback logo global — appelé par onerror des <img> logo.
+ * Injecté comme fonction globale pour éviter tout problème
+ * de quotes dans les attributs HTML onerror.
+ */
+window._avLogoFallback = function (el, sym, size) {
+  try {
+    const colors = [
+      '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b',
+      '#ef4444', '#06b6d4', '#ec4899', '#84cc16',
+    ];
+    const idx    = ((sym || '').charCodeAt(0) || 0) % colors.length;
+    const radius = Math.round(size * 0.22);
+    const fSize  = Math.floor(size * 0.42);
+    const letter = (sym || '?').charAt(0).toUpperCase();
+
+    const sp = document.createElement('span');
+    sp.style.cssText =
+      'display:inline-flex;align-items:center;justify-content:center;' +
+      `width:${size}px;height:${size}px;border-radius:${radius}px;` +
+      `background:${colors[idx]};color:#fff;font-size:${fSize}px;` +
+      'font-weight:800;flex-shrink:0;font-family:Inter,sans-serif';
+    sp.textContent = letter;
+
+    if (el && el.parentNode) {
+      el.parentNode.insertBefore(sp, el);
+      el.remove();
+    }
+  } catch (e) { /* silent */ }
+};
+
+// Ré-exposer sur AVUtils aussi (compatibilité av-watchlist, av-stock-detail)
 window._getLogoHtml = AVUtils._getLogoHtml;
 window.showToast    = AVUtils.showToast;
 window.showModal    = AVUtils.showModal;
