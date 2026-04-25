@@ -44,7 +44,7 @@
   function renderAll(data) {
     if (!data) return;
     renderKPIs(data);
-    renderRegime(data.regime);
+    renderRegime(data.regime, data.decisions, data.system); // ← AJOUT data.decisions + data.system
     renderAgentHealth(data.health);
     renderExecution(data.execution, data.mode, data.ibkr);
     renderSignals(data.signals, data.allocation);
@@ -54,7 +54,7 @@
     _updateTopbarMode(data.mode);
     _updateTopbarRegime(data.regime);
     _updateRefreshTime();
-  }
+    }
 
   function showLoadingState() {
     ['kpi-netliq-val','kpi-pnl-val','kpi-leverage-val','kpi-positions-val'].forEach(id => {
@@ -234,213 +234,202 @@
     if (subEl) subEl.innerHTML = sub || '';
   }
 
-  // ══════════════════════════════════════════════════════════════
-    // REGIME CARD — miroir exact de av-regime.js renderBanner
-    // Source : regime.json
-    // ══════════════════════════════════════════════════════════════
-    function renderRegime(data) {
+  // ══════════════════════════════════════════════════════════
+    // REGIME CARD — miroir exact de renderBanner() av-regime.js
+    // Sources : agent_decisions.json (primary) + regime.json (fallback) + system_status.json
+    // ══════════════════════════════════════════════════════════
+    function renderRegime(regimeData, decisionsData, systemData) {
     const body = document.getElementById('dash-regime-body');
     if (!body) return;
-    if (!data) { body.innerHTML = `<div class="dash-skeleton-block"></div>`; return; }
+    if (!regimeData && !decisionsData) {
+        body.innerHTML = `<div class="dash-skeleton-block"></div>`;
+        return;
+    }
 
-    const regime  = data.regime || data.signal || data.current_regime || 'NEUTRAL';
-    const conf    = parseFloat(data.confidence || 0);
-    const prev    = data.previous_regime || null;
-    const dur     = parseInt(data.regime_duration || 0);
-    const probas  = data.probabilities || {};
-    const indic   = data.indicators   || {};
-    const threshs = data.signal_thresholds || {};
-
-    // ── Méta par régime (couleurs + icônes + descriptions) ───
+    // ── REGIME_META identique à av-regime.js ─────────────────
     const REGIME_META = {
-        BULL:       { colorHex: '#10b981', bgSoft: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.30)', icon: 'fa-arrow-trend-up',      label: 'Bull Market',  desc: 'Sustained bull market conditions. Strong breadth and momentum. System operates at full capacity.' },
-        trend_up:   { colorHex: '#10b981', bgSoft: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.30)', icon: 'fa-arrow-trend-up',      label: 'Trend Up',     desc: 'Markets in a confirmed uptrend. Momentum positive across monitored assets. System favors long positions.' },
-        BEAR:       { colorHex: '#ef4444', bgSoft: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.28)',  icon: 'fa-arrow-trend-down',    label: 'Bear Market',  desc: 'Bear market confirmed. Defensive posture adopted. System reduces gross exposure and tightens risk controls.' },
-        trend_down: { colorHex: '#ef4444', bgSoft: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.28)',  icon: 'fa-arrow-trend-down',    label: 'Trend Down',   desc: 'Markets in a confirmed downtrend. System reduces sizes, tightens stops, increases short exposure.' },
-        NEUTRAL:    { colorHex: '#3b82f6', bgSoft: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.25)', icon: 'fa-minus',               label: 'Neutral',      desc: 'Consolidation phase. No clear directional bias. Conservative sizing, risk management priority.' },
-        CRISIS:     { colorHex: '#f59e0b', bgSoft: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.30)', icon: 'fa-triangle-exclamation', label: 'Crisis',       desc: 'Crisis conditions detected. Extreme volatility. DD Halt may activate. Maximum defensive posture.' },
+        trend_up:   {
+        label: 'Trend Up',    short: 'BULL',    icon: 'fa-arrow-trend-up',
+        colorHex: '#10b981', border: 'rgba(16,185,129,0.30)', iconBg: 'rgba(16,185,129,0.12)',
+        desc: 'Markets are in a confirmed uptrend. Momentum is positive across the majority of monitored assets. The system favors long positions with higher size multipliers and increased risk tolerance.',
+        },
+        trend_down: {
+        label: 'Trend Down',  short: 'BEAR',    icon: 'fa-arrow-trend-down',
+        colorHex: '#ef4444', border: 'rgba(239,68,68,0.30)',  iconBg: 'rgba(239,68,68,0.10)',
+        desc: 'Markets are in a confirmed downtrend. Bearish pressure is dominant. The system reduces position sizes, tightens stop-losses, and increases short exposure where allowed.',
+        },
+        NEUTRAL:    {
+        label: 'Neutral',     short: 'NEUTRAL', icon: 'fa-minus',
+        colorHex: '#3b82f6', border: 'rgba(59,130,246,0.25)', iconBg: 'rgba(59,130,246,0.10)',
+        desc: 'Markets are in a consolidation or indecision phase. No clear directional bias. The system uses conservative sizing and prioritizes risk management over return generation.',
+        },
+        BULL:       {
+        label: 'Bull Market', short: 'BULL',    icon: 'fa-arrow-trend-up',
+        colorHex: '#10b981', border: 'rgba(16,185,129,0.30)', iconBg: 'rgba(16,185,129,0.12)',
+        desc: 'Sustained bull market conditions. Strong breadth and momentum. System operates at full capacity with elevated position sizing.',
+        },
+        BEAR:       {
+        label: 'Bear Market', short: 'BEAR',    icon: 'fa-arrow-trend-down',
+        colorHex: '#ef4444', border: 'rgba(239,68,68,0.30)',  iconBg: 'rgba(239,68,68,0.10)',
+        desc: 'Bear market conditions confirmed. Defensive posture adopted. System reduces gross exposure and tightens all risk controls.',
+        },
+        CRISIS:     {
+        label: 'Crisis',      short: 'CRISIS',  icon: 'fa-triangle-exclamation',
+        colorHex: '#f59e0b', border: 'rgba(245,158,11,0.30)', iconBg: 'rgba(245,158,11,0.12)',
+        desc: 'Crisis conditions detected. Extreme volatility and drawdown risk. All trading may be halted via DD Halt mechanism. Maximum defensive posture active.',
+        },
+    };
+    const FALLBACK = {
+        label: 'Unknown', short: '—', icon: 'fa-circle-question',
+        colorHex: '#6b7280', border: 'rgba(107,114,128,0.20)', iconBg: 'rgba(107,114,128,0.08)',
+        desc: 'Regime data not yet available. Waiting for regime_detector to complete a full cycle.',
     };
 
-    const meta = REGIME_META[regime] || {
-        colorHex: '#6b7280', bgSoft: 'rgba(107,114,128,0.08)', border: 'rgba(107,114,128,0.20)',
-        icon: 'fa-circle-question', label: regime, desc: 'Regime data being collected...',
-    };
+    // ── Parse agent_decisions — IDENTIQUE à _parseRegimeData() de av-regime.js ──
+    const allDec       = decisionsData?.decisions || {};
+    const symbolRegimes = {};
 
-    const confPct = conf > 0 ? (conf * 100).toFixed(1) : '0';
+    for (const [ticker, ddata] of Object.entries(allDec)) {
+        const council = ddata?.council;
+        if (!council) continue;
+        let regime = 'unknown';
+        const reason = council.reason || '';
+        const match  = reason.match(/regime=(\S+)/);
+        if (match) regime = match[1];
+        let conf = 0;
+        const confMatch = reason.match(/conf=([\d.]+)/);
+        if (confMatch) conf = parseFloat(confMatch[1]);
+        symbolRegimes[ticker] = {
+        regime,
+        confidence: council.confidence || conf,
+        };
+    }
 
-    // ── Probabilités ─────────────────────────────────────────
-    const PROBA_COLORS = {
-        BULL: '#10b981', BEAR: '#ef4444', NEUTRAL: '#3b82f6', CRISIS: '#f59e0b',
-    };
-    const probaRows = ['BULL', 'BEAR', 'NEUTRAL', 'CRISIS'].map(r => {
-        const pct  = Math.round((probas[r] || 0) * 100);
-        const clr  = PROBA_COLORS[r] || '#6b7280';
-        return `
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-            <span style="font-size:10px;font-weight:700;color:var(--text-faint);
-                        min-width:54px;text-transform:uppercase">${r}</span>
-            <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${clr};
-                        border-radius:3px;transition:width 0.8s ease"></div>
-            </div>
-            <span style="font-size:10px;font-weight:800;font-family:var(--font-mono);
-                        color:${clr};min-width:30px;text-align:right">${pct}%</span>
-        </div>`;
-    }).join('');
+    // Régime global = SPY (même logique que av-regime.js)
+    const spyData      = symbolRegimes['SPY'];
+    const globalRegime = spyData?.regime
+        || regimeData?.regime || regimeData?.signal || regimeData?.current_regime
+        || 'NEUTRAL';
+    const globalConf   = spyData?.confidence
+        || parseFloat(regimeData?.confidence || 0);
 
-    // ── Indicateurs SPY ──────────────────────────────────────
-    const spyPrice = parseFloat(indic.spy_price || 0);
-    const spyMa5   = parseFloat(indic.spy_ma5   || 0);
-    const spyMa20  = parseFloat(indic.spy_ma20  || 0);
-    const spyMa50  = parseFloat(indic.spy_ma50  || 0);
+    // Comptage par type
+    const counts    = {};
+    for (const { regime } of Object.values(symbolRegimes)) {
+        counts[regime] = (counts[regime] || 0) + 1;
+    }
+    const total     = Object.values(symbolRegimes).length;
+    const upCount   = counts['trend_up']   || 0;
+    const downCount = counts['trend_down'] || 0;
 
-    const mkIndic = (label, val, ref) => {
-        if (val <= 0) return '';
-        const color = spyPrice > 0 && spyPrice >= ref
-        ? '#10b981' : '#ef4444';
-        return `
-        <div style="display:flex;flex-direction:column;align-items:center;
-                    flex:1;min-width:52px;padding:8px 6px;
-                    background:var(--bg-primary);border-radius:8px;border:1px solid var(--border)">
-            <span style="font-size:9px;font-weight:700;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">${label}</span>
-            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);color:${color}">
-            $${val.toFixed(2)}
-            </span>
-            <span style="font-size:8px;color:${color};margin-top:1px">
-            ${spyPrice >= ref ? '▲ Above' : '▼ Below'}
-            </span>
-        </div>`;
-    };
+    // Timestamp
+    const timestamp = decisionsData?.timestamp || null;
+    const ts = timestamp
+        ? new Date(timestamp).toLocaleString('fr-FR', {
+            day: '2-digit', month: '2-digit',
+            hour: '2-digit', minute: '2-digit',
+        })
+        : '—';
 
-    const indicSection = spyPrice > 0 ? `
-        <div style="margin-top:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--text-faint);
-                    text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">
-            <i class="fa-solid fa-chart-simple" style="font-size:9px"></i> SPY Indicators
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <div style="display:flex;flex-direction:column;align-items:center;
-                        flex:1;min-width:52px;padding:8px 6px;
-                        background:${meta.bgSoft};border-radius:8px;
-                        border:1px solid ${meta.border}">
-            <span style="font-size:9px;font-weight:700;color:var(--text-faint);
-                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:3px">SPY</span>
-            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);
-                        color:${meta.colorHex}">$${spyPrice.toFixed(2)}</span>
-            </div>
-            ${mkIndic('MA5',  spyMa5,  spyMa5)}
-            ${mkIndic('MA20', spyMa20, spyMa20)}
-            ${mkIndic('MA50', spyMa50, spyMa50)}
-        </div>
-        </div>` : '';
+    const meta     = REGIME_META[globalRegime] || FALLBACK;
+    const confPct  = globalConf > 0 ? (globalConf * 100).toFixed(1) : '—';
+    const ddHalt   = systemData?.dd_halt || false;
+    const bullPct  = total > 0 ? (upCount   / total * 100).toFixed(1) : '—';
+    const bearPct  = total > 0 ? (downCount / total * 100).toFixed(1) : '—';
 
-    // ── Stats (Bull ratio / Bear ratio / Halt) ────────────────
-    const bullPct = probas['BULL'] ? (probas['BULL'] * 100).toFixed(1) : '—';
-    const bearPct = probas['BEAR'] ? (probas['BEAR'] * 100).toFixed(1) : '—';
-    const ddHalt  = data.dd_halt || false;
-
-    const mkStat = (label, val, color) => `
-        <div style="flex:1;display:flex;flex-direction:column;gap:3px;
-                    padding:10px 12px;background:var(--bg-primary);
-                    border-radius:10px;border:1px solid var(--border)">
-        <div style="font-size:9px;font-weight:600;color:var(--text-faint);
-                    text-transform:uppercase;letter-spacing:0.4px">${label}</div>
-        <div style="font-size:15px;font-weight:800;font-family:var(--font-mono);color:${color}">${val}</div>
-        </div>`;
-
-    // ── Seuils trading ────────────────────────────────────────
-    const buyThr  = threshs.buy  ? (threshs.buy  * 100).toFixed(0) + '%' : '—';
-    const sellThr = threshs.sell ? (threshs.sell * 100).toFixed(0) + '%' : '—';
-
+    // ── Render identique à renderBanner av-regime.js (inline styles) ──
     body.innerHTML = `
 
-        <!-- ── BANNER PRINCIPAL ── -->
-        <div style="display:flex;align-items:flex-start;gap:20px;padding:20px;
+        <!-- Meta badges (identique rgm-banner-meta) -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;
+                    background:rgba(107,114,128,0.10);color:var(--text-faint)">
+            <i class="fa-solid fa-clock" style="font-size:8px"></i> ${ts}
+        </span>
+        <span style="font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;
+                    background:rgba(107,114,128,0.10);color:var(--text-faint)">
+            ${total} symbols analyzed
+        </span>
+        </div>
+
+        <!-- Banner (identique .rgm-banner) -->
+        <div style="display:flex;align-items:center;gap:24px;padding:24px 20px;
                     border-radius:14px;border:2px solid ${meta.border};
-                    background:var(--bg-secondary);position:relative;overflow:hidden;
-                    margin-bottom:16px">
+                    background:var(--bg-secondary);position:relative;overflow:hidden">
 
         <!-- Barre colorée top -->
         <div style="position:absolute;top:0;left:0;right:0;height:3px;
-                    background:${meta.colorHex};border-radius:14px 14px 0 0;opacity:0.6"></div>
+                    border-radius:14px 14px 0 0;background:${meta.colorHex};opacity:0.4"></div>
 
-        <!-- Icône -->
-        <div style="width:64px;height:64px;border-radius:16px;flex-shrink:0;
-                    display:flex;align-items:center;justify-content:center;
-                    font-size:26px;background:${meta.bgSoft};color:${meta.colorHex}">
+        <!-- Icône (identique .rgm-banner-icon-wrap) -->
+        <div style="width:72px;height:72px;border-radius:18px;display:flex;flex-shrink:0;
+                    align-items:center;justify-content:center;font-size:28px;
+                    background:${meta.iconBg};color:${meta.colorHex}">
             <i class="fa-solid ${meta.icon}"></i>
         </div>
 
-        <!-- Info principale -->
+        <!-- Info (identique .rgm-banner-info) -->
         <div style="flex:1;min-width:0">
-            <div style="font-size:10px;font-weight:700;text-transform:uppercase;
-                        letter-spacing:1px;color:${meta.colorHex};opacity:0.8;margin-bottom:4px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:1px;opacity:0.7;margin-bottom:6px;color:${meta.colorHex}">
             <i class="fa-solid fa-globe" style="font-size:9px"></i>
             Market Regime — SPY Reference
             </div>
             <div style="font-size:22px;font-weight:900;color:var(--text-primary);
-                        line-height:1.1;margin-bottom:6px">${meta.label}</div>
-            <div style="font-size:11px;color:var(--text-secondary);line-height:1.6;
-                        margin-bottom:12px;max-width:340px">${meta.desc}</div>
+                        line-height:1.1;margin-bottom:8px">${meta.label}</div>
+            <div style="font-size:12px;color:var(--text-secondary);line-height:1.6;
+                        max-width:340px;margin-bottom:12px">${meta.desc}</div>
 
-            <!-- Confidence bar -->
+            <!-- Confidence bar (identique .rgm-conf-bar-wrap) -->
             <div style="display:flex;align-items:center;gap:10px">
-            <div style="flex:1;height:8px;background:var(--border);
-                        border-radius:4px;overflow:hidden;max-width:220px">
-                <div style="width:${confPct}%;height:100%;background:${meta.colorHex};
-                            border-radius:4px;transition:width 0.8s ease"></div>
+            <div style="flex:1;height:8px;background:var(--border);border-radius:4px;
+                        overflow:hidden;max-width:200px">
+                <div style="width:${confPct !== '—' ? confPct : 0}%;height:100%;
+                            background:${meta.colorHex};border-radius:4px;
+                            transition:width 0.8s cubic-bezier(0.4,0,0.2,1)"></div>
             </div>
-            <span style="font-size:13px;font-weight:800;font-family:var(--font-mono);
-                        color:${meta.colorHex}">${confPct}%</span>
-            <span style="font-size:10px;color:var(--text-faint)">confidence</span>
+            <span style="font-size:12px;font-weight:800;font-family:var(--font-mono);
+                        color:${meta.colorHex};flex-shrink:0;min-width:38px;text-align:right">
+                ${confPct !== '—' ? confPct + '%' : '—'}
+            </span>
+            </div>
+        </div>
+
+        <!-- Stat boxes (identique .rgm-banner-stats) -->
+        <div style="display:flex;flex-direction:column;gap:10px;flex-shrink:0;min-width:140px">
+
+            <div style="display:flex;flex-direction:column;gap:3px;padding:10px 14px;
+                        background:var(--bg-primary);border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">Bull Ratio</div>
+            <div style="font-size:15px;font-weight:800;font-family:var(--font-mono);color:#10b981">
+                ${bullPct}${bullPct !== '—' ? '%' : ''}
+            </div>
             </div>
 
-            ${prev ? `
-            <div style="margin-top:8px;font-size:10px;color:var(--text-faint)">
-            <i class="fa-solid fa-clock-rotate-left" style="font-size:9px"></i>
-            Previously <strong>${prev}</strong>
-            ${dur > 0 ? `&middot; ${dur} cycle${dur !== 1 ? 's' : ''} ago` : ''}
-            </div>` : ''}
+            <div style="display:flex;flex-direction:column;gap:3px;padding:10px 14px;
+                        background:var(--bg-primary);border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">Bear Ratio</div>
+            <div style="font-size:15px;font-weight:800;font-family:var(--font-mono);color:#ef4444">
+                ${bearPct}${bearPct !== '—' ? '%' : ''}
+            </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:3px;padding:10px 14px;
+                        background:var(--bg-primary);border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:9px;font-weight:600;color:var(--text-faint);
+                        text-transform:uppercase;letter-spacing:0.4px">DD Halt</div>
+            <div style="font-size:15px;font-weight:800;font-family:var(--font-mono);
+                        color:${ddHalt ? '#ef4444' : '#10b981'}">
+                ${ddHalt ? 'Active' : 'Inactive'}
+            </div>
+            </div>
+
+        </div>
         </div>
 
-        <!-- Stats box -->
-        <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;min-width:120px">
-            ${mkStat('Bull Ratio', bullPct !== '—' ? bullPct + '%' : '—', '#10b981')}
-            ${mkStat('Bear Ratio', bearPct !== '—' ? bearPct + '%' : '—', '#ef4444')}
-            ${mkStat('DD Halt', ddHalt ? 'Active' : 'Off', ddHalt ? '#ef4444' : '#10b981')}
-        </div>
-        </div>
-
-        <!-- ── PROBABILITÉS ── -->
-        <div style="margin-bottom:14px">
-        <div style="font-size:10px;font-weight:700;color:var(--text-faint);
-                    text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">
-            <i class="fa-solid fa-chart-pie" style="font-size:9px"></i> Regime Probabilities
-        </div>
-        ${probaRows}
-        </div>
-
-        <!-- ── INDICATEURS SPY ── -->
-        ${indicSection}
-
-        <!-- ── SEUILS TRADING ── -->
-        ${(threshs.buy || threshs.sell) ? `
-        <div style="display:flex;gap:8px;margin-top:14px;padding:10px 12px;
-                    border-radius:10px;background:var(--bg-secondary);
-                    border:1px solid var(--border)">
-        <div style="flex:1;font-size:11px;color:var(--text-faint)">
-            <i class="fa-solid fa-sliders" style="font-size:9px"></i>
-            Buy signal threshold
-            <strong style="color:var(--accent-green)">${buyThr}</strong>
-        </div>
-        <div style="flex:1;font-size:11px;color:var(--text-faint);text-align:right">
-            Sell threshold
-            <strong style="color:var(--accent-red)">${sellThr}</strong>
-        </div>
-        </div>` : ''}
-
-        <!-- ── LIEN signals.html ── -->
+        <!-- Lien signals.html -->
         <a href="signals.html"
         style="display:flex;align-items:center;gap:6px;margin-top:14px;
                 padding:8px 12px;border-radius:9px;text-decoration:none;
@@ -451,7 +440,8 @@
         onmouseout="this.style.background='rgba(59,130,246,0.06)'">
         <i class="fa-solid fa-satellite-dish" style="font-size:11px"></i>
         View ML Signals
-        <i class="fa-solid fa-arrow-right" style="font-size:9px;margin-left:auto;opacity:0.7"></i>
+        <i class="fa-solid fa-arrow-right"
+            style="font-size:9px;margin-left:auto;opacity:0.7"></i>
         </a>`;
     }
 
@@ -1273,24 +1263,26 @@
       }
     }, AV_CONFIG.REFRESH.portfolio));
 
-    // Timer 2 : Signals + Regime (60s)
+    // ── Timer 2 : Signals + Regime (60s) ─────────────────────
     _refreshTimers.push(setInterval(async () => {
-      try {
-        const [signals, regime, history, portfolio, allocation] = await Promise.allSettled([
-          AVApi.fetchJSON(URLS.signals,    0),
-          AVApi.fetchJSON(URLS.regime,     0),
-          AVApi.fetchJSON(URLS.history,    0),
-          AVApi.fetchJSON(URLS.portfolio,  0),
-          AVApi.fetchJSON(URLS.allocation, 0),
+    try {
+        const [signals, regime, history, portfolio, allocation, decisions, sys] = await Promise.allSettled([
+        AVApi.fetchJSON(URLS.signals,    0),
+        AVApi.fetchJSON(URLS.regime,     0),
+        AVApi.fetchJSON(URLS.history,    0),
+        AVApi.fetchJSON(URLS.portfolio,  0),
+        AVApi.fetchJSON(URLS.allocation, 0),
+        AVApi.fetchJSON(URLS.decisions,  0),  // ← AJOUT
+        AVApi.fetchJSON(URLS.system,     0),  // ← AJOUT
         ]);
         const p = d => d.status === 'fulfilled' ? d.value : null;
         renderSignals(p(signals), p(allocation));
-        renderRegime(p(regime));
+        renderRegime(p(regime), p(decisions), p(sys)); // ← CORRIGÉ
         renderNavChart(p(history), p(portfolio));
         _updateTopbarRegime(p(regime));
-      } catch (err) {
+    } catch (err) {
         console.warn('[Dashboard] Refresh (signals) error:', err.message);
-      }
+    }
     }, AV_CONFIG.REFRESH.signals));
 
     // Timer 3 : Agents (30s)

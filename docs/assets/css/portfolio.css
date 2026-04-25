@@ -486,3 +486,546 @@
     display: none;
   }
 }
+
+/* ============================================================
+   portfolio.css — AlphaVault Quant Portfolio v1.0
+   ============================================================ */
+
+/* ══════════════════════════════════════════════════════════════
+   KPI GRID — 4 cartes supérieures
+   ══════════════════════════════════════════════════════════════ */
+.port-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.port-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  min-width: 0;
+}
+.port-kpi-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.port-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.port-kpi-icon-blue    { background: rgba(59,130,246,0.10);  color: var(--accent-blue);   }
+.port-kpi-icon-orange  { background: rgba(245,158,11,0.10);  color: var(--accent-orange); }
+.port-kpi-icon-red     { background: rgba(239,68,68,0.08);   color: var(--accent-red);    }
+.port-kpi-icon-violet  { background: rgba(139,92,246,0.10);  color: var(--accent-violet); }
+.port-kpi-icon-green   { background: rgba(16,185,129,0.10);  color: var(--accent-green);  }
+
+.port-kpi-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.port-kpi-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+#port-netliq-val,
+#port-leverage-val,
+#port-drawdown-val,
+#port-riskscore-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+  font-family: var(--font-mono);
+  margin-bottom: 6px;
+  min-height: 28px;
+}
+
+#port-netliq-sub,
+#port-leverage-sub,
+#port-drawdown-sub,
+#port-riskscore-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  min-height: 18px;
+  line-height: 1.4;
+}
+
+/* Progress bar levier dans la carte */
+.dash-lev-progress,
+.port-lev-progress {
+  margin-top: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PROGRESS BARS (si pas dans av-components.css)
+   ══════════════════════════════════════════════════════════════ */
+.av-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.av-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PNL MONITOR
+   ══════════════════════════════════════════════════════════════ */
+.port-pnl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.port-pnl-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow 0.2s ease;
+}
+.port-pnl-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.port-pnl-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.port-pnl-val {
+  font-size: 22px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.port-pnl-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Win/Loss Split */
+.port-wl-split {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 4px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.port-wl-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  gap: 4px;
+}
+.port-wl-block.win  { background: rgba(16,185,129,0.06); }
+.port-wl-block.loss { background: rgba(239,68,68,0.06);  }
+
+.port-wl-divider {
+  width: 1px;
+  height: 48px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.port-wl-num {
+  font-size: 24px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+.port-wl-block.win  .port-wl-num { color: var(--accent-green); }
+.port-wl-block.loss .port-wl-num { color: var(--accent-red);   }
+
+.port-wl-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RISK GAUGES
+   ══════════════════════════════════════════════════════════════ */
+.port-gauges-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.port-gauge-card {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.port-gauge-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+}
+
+.port-gauge-big-val {
+  font-size: 28px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.port-gauge-track-lg {
+  width: 100%;
+  height: 10px;
+  background: var(--border);
+  border-radius: 5px;
+  overflow: visible;
+  position: relative;
+}
+
+.port-gauge-fill-lg {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.port-gauge-limit {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.port-gauge-limit-line {
+  width: 100%;
+  height: 100%;
+  background: var(--text-faint);
+  border-radius: 1px;
+  opacity: 0.6;
+}
+
+.port-gauge-labels-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+.port-risk-warning {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.22);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-orange);
+}
+
+.port-risk-info {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(59,130,246,0.06);
+  border: 1px solid rgba(59,130,246,0.18);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-blue);
+}
+
+/* VaR grid */
+.port-var-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.port-var-stat {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.port-var-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.port-var-val {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   POSITIONS TABLE
+   ══════════════════════════════════════════════════════════════ */
+.port-pos-row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+  border-bottom: 1px solid var(--border);
+}
+.port-pos-row:hover {
+  background: var(--bg-secondary);
+}
+
+.port-side-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-full, 20px);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.port-side-badge.long {
+  background: rgba(16,185,129,0.10);
+  color: var(--accent-green);
+  border: 1px solid rgba(16,185,129,0.25);
+}
+.port-side-badge.short {
+  background: rgba(239,68,68,0.08);
+  color: var(--accent-red);
+  border: 1px solid rgba(239,68,68,0.22);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FILTER TABS & SEARCH
+   ══════════════════════════════════════════════════════════════ */
+.port-filter-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.port-filter-tab {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+}
+.port-filter-tab:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+.port-filter-tab.active {
+  background: rgba(59,130,246,0.10);
+  color: var(--accent-blue);
+  border-color: rgba(59,130,246,0.35);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════════════════════════ */
+.port-pagination {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.port-page-btn {
+  padding: 5px 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-faint);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: var(--font-sans, 'Inter', sans-serif);
+  min-width: 32px;
+  text-align: center;
+}
+.port-page-btn:hover:not(:disabled) {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--accent-blue);
+}
+.port-page-btn.active {
+  background: var(--accent-blue);
+  color: #fff;
+  border-color: var(--accent-blue);
+}
+.port-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ALERTS
+   ══════════════════════════════════════════════════════════════ */
+.port-no-alerts {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  border-radius: 12px;
+  background: rgba(16,185,129,0.05);
+  border: 1px solid rgba(16,185,129,0.18);
+}
+
+.port-alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(245,158,11,0.06);
+  border: 1px solid rgba(245,158,11,0.18);
+  margin-bottom: 8px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   COMPOSITION CHART
+   ══════════════════════════════════════════════════════════════ */
+.port-comp-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.port-comp-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.port-comp-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   STATS ROW (total/long/short compteurs)
+   ══════════════════════════════════════════════════════════════ */
+.port-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SORT HEADERS
+   ══════════════════════════════════════════════════════════════ */
+.port-sort-th {
+  user-select: none;
+  white-space: nowrap;
+}
+.port-sort-th:hover { color: var(--accent-blue); }
+
+.sort-icon {
+  margin-left: 4px;
+  opacity: 0.3;
+  transition: opacity 0.15s ease;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width: 1100px) {
+  .port-kpi-grid     { grid-template-columns: repeat(2, 1fr); }
+  .port-gauges-grid  { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .port-kpi-grid     { grid-template-columns: 1fr 1fr; }
+  .port-pnl-grid     { grid-template-columns: 1fr; }
+  .port-gauges-grid  { grid-template-columns: 1fr; }
+  .port-kpi-card     { padding: 14px 16px; gap: 10px; }
+
+  #port-netliq-val,
+  #port-leverage-val,
+  #port-drawdown-val,
+  #port-riskscore-val { font-size: 18px; }
+}
+
+@media (max-width: 480px) {
+  .port-kpi-grid     { grid-template-columns: 1fr; }
+  .port-var-grid     { grid-template-columns: 1fr; }
+}

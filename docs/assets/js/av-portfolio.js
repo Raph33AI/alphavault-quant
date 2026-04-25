@@ -250,91 +250,124 @@
     const body = document.getElementById('port-pnl-body');
     if (!body) return;
 
-    const totalPnl = parseFloat(_pnl?.total_pnl_usd
-                  ?? _portfolio?.unrealized_pnl ?? 0);
-    const winRate  = parseFloat(_pnl?.win_rate   ?? 0);
-    const winning  = parseInt(_pnl?.winning      ?? 0);
-    const losing   = parseInt(_pnl?.losing       ?? 0);
-    const nPos     = parseInt(_pnl?.n_positions  ?? _positions.length ?? 0);
-    const regime   = _pnl?.current_regime || 'NEUTRAL';
-    const rColors  = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
+    // ── PnL — même logique que dashboard.js ─────────────────
+    // Priorité 1 : pnl_monitor.json.total_pnl_usd
+    // Priorité 2 : portfolio.json.unrealized_pnl (si non nul)
+    // Priorité 3 : somme positions[].unrealized_pnl (source réelle)
+    let totalPnl = null;
 
+    if (_pnl?.total_pnl_usd !== undefined &&
+        _pnl?.total_pnl_usd !== null &&
+        parseFloat(_pnl.total_pnl_usd) !== 0) {
+        totalPnl = parseFloat(_pnl.total_pnl_usd);
+    }
+
+    if ((totalPnl === null || totalPnl === 0) &&
+        _portfolio?.unrealized_pnl !== undefined &&
+        parseFloat(_portfolio.unrealized_pnl) !== 0) {
+        totalPnl = parseFloat(_portfolio.unrealized_pnl);
+    }
+
+    if ((totalPnl === null || totalPnl === 0) && _positions.length > 0) {
+        totalPnl = _positions.reduce((sum, p) => sum + p.unrealized_pnl, 0);
+    }
+
+    totalPnl = parseFloat(totalPnl ?? 0);
+
+    // ── Win/Loss — depuis pnl_monitor si dispo, sinon calcul positions ──
+    const winningFromPos = _positions.filter(p => p.unrealized_pnl > 0).length;
+    const losingFromPos  = _positions.filter(p => p.unrealized_pnl < 0).length;
+    const winRateFromPos = _positions.length > 0
+        ? (winningFromPos / _positions.length * 100)
+        : 0;
+
+    const winRate = parseFloat(_pnl?.win_rate  ?? winRateFromPos);
+    const winning = parseInt(_pnl?.winning     ?? winningFromPos);
+    const losing  = parseInt(_pnl?.losing      ?? losingFromPos);
+    const nPos    = parseInt(_pnl?.n_positions ?? _positions.length ?? 0);
+    const regime  = _pnl?.current_regime || 'NEUTRAL';
+    const rColors = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
+
+    // ── Suite du rendu inchangée ─────────────────────────────
     const pnlColor = totalPnl > 0 ? 'var(--accent-green)'
-                   : totalPnl < 0 ? 'var(--accent-red)'
-                   : 'var(--text-primary)';
+                    : totalPnl < 0 ? 'var(--accent-red)'
+                    : 'var(--text-primary)';
     const pnlSign  = totalPnl > 0 ? '+' : '';
     const pnlIcon  = totalPnl > 0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
-
     const wrColor  = winRate >= 50 ? 'var(--accent-green)' : 'var(--accent-orange)';
 
     body.innerHTML = `
-      <div class="port-pnl-grid">
+        <div class="port-pnl-grid">
 
         <!-- Total PnL -->
         <div class="port-pnl-card">
-          <div class="port-pnl-label">
+            <div class="port-pnl-label">
             <i class="fa-solid fa-chart-line" style="color:${pnlColor}"></i>
             Unrealized PnL
-          </div>
-          <div class="port-pnl-val" style="color:${pnlColor}">
+            </div>
+            <div class="port-pnl-val" style="color:${pnlColor}">
             ${pnlSign}${AVUtils.formatCurrencyFull(totalPnl)}
-          </div>
-          <div class="port-pnl-sub">
+            </div>
+            <div class="port-pnl-sub">
             <i class="fa-solid ${pnlIcon}" style="color:${pnlColor}"></i>
             ${nPos} positions tracked
-          </div>
+            </div>
         </div>
 
         <!-- Win Rate -->
         <div class="port-pnl-card">
-          <div class="port-pnl-label">
+            <div class="port-pnl-label">
             <i class="fa-solid fa-bullseye" style="color:${wrColor}"></i>
             Win Rate
-          </div>
-          <div class="port-pnl-val" style="color:${wrColor}">
+            </div>
+            <div class="port-pnl-val" style="color:${wrColor}">
             ${winRate.toFixed(1)}%
-          </div>
-          <div style="margin-top:10px">
+            </div>
+            <div style="margin-top:10px">
             <div class="av-progress-track" style="height:6px">
-              <div class="av-progress-fill"
-                   style="width:${winRate}%;
-                          background:${winRate>=50?'var(--gradient-green)':'linear-gradient(135deg,#f59e0b,#d97706)'}">
-              </div>
+                <div class="av-progress-fill"
+                    style="width:${winRate}%;
+                            background:${winRate >= 50
+                            ? 'var(--gradient-green)'
+                            : 'linear-gradient(135deg,#f59e0b,#d97706)'}">
+                </div>
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:4px;
                         font-size:9px;color:var(--text-faint)">
-              <span>0%</span><span>50%</span><span>100%</span>
+                <span>0%</span><span>50%</span><span>100%</span>
             </div>
-          </div>
+            </div>
         </div>
 
         <!-- W/L Split -->
         <div class="port-pnl-card">
-          <div class="port-pnl-label">
+            <div class="port-pnl-label">
             <i class="fa-solid fa-scale-balanced" style="color:var(--accent-blue)"></i>
             Win / Loss Split
-          </div>
-          <div class="port-wl-split">
+            </div>
+            <div class="port-wl-split">
             <div class="port-wl-block win">
-              <div class="port-wl-num">${winning}</div>
-              <div class="port-wl-lbl">Winning</div>
+                <div class="port-wl-num">${winning}</div>
+                <div class="port-wl-lbl">Winning</div>
             </div>
             <div class="port-wl-divider"></div>
             <div class="port-wl-block loss">
-              <div class="port-wl-num">${losing}</div>
-              <div class="port-wl-lbl">Losing</div>
+                <div class="port-wl-num">${losing}</div>
+                <div class="port-wl-lbl">Losing</div>
             </div>
-          </div>
-          <div class="port-pnl-sub" style="margin-top:10px;justify-content:center">
-            <span style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:var(--radius-full);
-                         background:${rColors.soft};color:${rColors.bg};border:1px solid ${rColors.bg}40">
-              <i class="fa-solid fa-circle" style="font-size:6px"></i> ${regime}
+            </div>
+            <div class="port-pnl-sub" style="margin-top:10px;justify-content:center">
+            <span style="font-size:10px;font-weight:700;padding:2px 10px;
+                        border-radius:var(--radius-full);
+                        background:${rColors.soft};color:${rColors.bg};
+                        border:1px solid ${rColors.bg}40">
+                <i class="fa-solid fa-circle" style="font-size:6px"></i> ${regime}
             </span>
-          </div>
+            </div>
         </div>
 
-      </div>`;
-  }
+        </div>`;
+    }
 
   // ══════════════════════════════════════════════════════════
   // COMPOSITION DONUT CHART (Long vs Short)
