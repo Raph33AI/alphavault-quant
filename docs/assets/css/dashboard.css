@@ -1,0 +1,386 @@
+/* ============================================================
+   dashboard.css — AlphaVault Quant Dashboard v1.0
+   Styles spécifiques à dashboard.html
+   ============================================================ */
+
+/* ── KPI Grid ───────────────────────────────────────────────── */
+.dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Middle grid : Regime + Agents + Execution ─────────────── */
+.dash-middle-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Regime block ───────────────────────────────────────────── */
+.dash-regime-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dash-regime-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.dash-regime-info { flex: 1; min-width: 0; }
+
+.dash-regime-name {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+
+.dash-regime-conf {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.dash-regime-probas {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dash-proba-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.dash-proba-label {
+  width: 54px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.dash-proba-bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.dash-proba-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.6s ease;
+}
+
+.dash-proba-val {
+  width: 34px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ── Agent Health ────────────────────────────────────────────── */
+.dash-agents-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.dash-agents-stat {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.dash-agents-stat-val {
+  font-size: 18px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.dash-agents-stat-lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dash-agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dash-agent-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  transition: background var(--transition-fast);
+}
+
+.dash-agent-row:hover { background: var(--bg-hover); }
+
+.dash-agent-status-icon {
+  font-size: 10px;
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.dash-agent-name {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.dash-agent-cycles {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+/* ── Execution card ──────────────────────────────────────────── */
+.dash-exec-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.dash-exec-item {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 8px 10px;
+}
+
+.dash-exec-item-lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+}
+
+.dash-exec-item-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ── Signals table enhancements ─────────────────────────────── */
+#dash-signals-card {
+  margin-bottom: 16px;
+}
+
+.dash-conf-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+}
+
+.dash-conf-bar-track {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border);
+  overflow: hidden;
+}
+
+.dash-conf-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.5s ease;
+}
+
+.dash-conf-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ── NAV Chart ───────────────────────────────────────────────── */
+#dash-nav-card {
+  margin-bottom: 16px;
+}
+
+.dash-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.dash-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.dash-chart-crosshair {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+/* ── System Status Bar ──────────────────────────────────────── */
+.dash-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.dash-status-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.dash-status-item:last-child { border-right: none; }
+
+.dash-status-item i {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* ── Skeleton placeholder ─────────────────────────────────────── */
+.dash-skeleton-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.dash-skeleton-block::before,
+.dash-skeleton-block::after,
+.dash-skeleton-block > span {
+  content: '';
+  display: block;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--skeleton-bg);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease infinite;
+}
+
+.dash-skeleton-block::before { width: 60%; }
+.dash-skeleton-block::after  { width: 80%; }
+
+/* ── KPI accent colors ────────────────────────────────────────── */
+#kpi-netliq   { border-top: 3px solid var(--accent-blue); }
+#kpi-pnl      { border-top: 3px solid var(--accent-green); }
+#kpi-leverage { border-top: 3px solid var(--accent-orange); }
+#kpi-positions{ border-top: 3px solid var(--accent-violet); }
+
+#kpi-netliq::before,
+#kpi-pnl::before,
+#kpi-leverage::before,
+#kpi-positions::before { display: none; }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.dash-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+}
+
+.dash-empty-state i {
+  font-size: 24px;
+  opacity: 0.4;
+}
+
+.dash-empty-state p { font-size: 12px; text-align: center; line-height: 1.6; }
+
+/* ── RESPONSIVE ──────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .dash-kpi-grid     { grid-template-columns: repeat(2, 1fr); }
+  .dash-middle-grid  { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .dash-middle-grid  { grid-template-columns: 1fr; }
+
+  .dash-status-bar {
+    gap: 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-kpi-grid     { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .dash-conf-bar-wrap { min-width: 100px; }
+
+  #dash-nav-chart    { height: 200px; }
+
+  .av-card-header { flex-wrap: wrap; gap: 6px; }
+
+  .dash-status-item { padding: 9px 12px; }
+}
+
+@media (max-width: 400px) {
+  .dash-kpi-grid { grid-template-columns: 1fr; }
+}

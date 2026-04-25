@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — AlphaVault Quant</title>
 
+  <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -13,634 +14,390 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="assets/css/av.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-  <style>
-    /* ── Dashboard page styles ── */
-    .av-dash-two {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-    .av-sys-bar {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 18px; background: var(--bg-card);
-      border: 1px solid var(--border); border-radius: var(--radius);
-      flex-wrap: wrap; font-size: 12px; box-shadow: var(--sh-xs);
-    }
-    .av-sys-sep { width: 1px; height: 14px; background: var(--border-s); flex-shrink: 0; }
-    .av-prob-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
-    .av-prob-lbl { font-size: 10px; font-weight: 700; min-width: 62px; font-family: var(--mono); }
-    .av-prob-val { font-size: 11px; font-weight: 700; font-family: var(--mono); min-width: 32px; text-align: right; }
-    .av-agent-mini { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-xs); background: var(--bg-sec); border: 1px solid var(--border); margin-bottom: 5px; transition: border-color var(--t); }
-    .av-agent-mini:hover { border-color: var(--blue); }
-    .av-agent-mini-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .av-agent-mini-name { flex: 1; font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .av-agent-mini-cyc  { font-size: 10px; color: var(--faint); font-family: var(--mono); }
-    .av-agent-mini-age  { font-size: 10px; color: var(--faint); min-width: 50px; text-align: right; }
-    .av-regime-badge    { padding: 10px 20px; border-radius: var(--radius-sm); font-size: 20px; font-weight: 900; font-family: var(--mono); text-align: center; min-width: 90px; }
-    @media (max-width: 900px) { .av-dash-two { grid-template-columns: 1fr; } }
-    @media (max-width: 768px) { .av-sys-sep  { display: none; } }
-  </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <!-- Dashboard CSS -->
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+
+  <!-- Lightweight Charts (NAV chart) -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+
+  <!-- Chart.js (sparklines) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
-<div class="av-layout">
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-  <!-- Overlay (mobile) -->
-  <div class="av-overlay" id="av-overlay"></div>
+  <!-- ══════════════════════════════════════════════════════════
+       LAYOUT
+       ══════════════════════════════════════════════════════════ -->
+  <div class="av-layout" id="av-layout">
 
-  <!-- ════════════════════════════════════════
-       SIDEBAR
-  ════════════════════════════════════════ -->
-  <nav class="av-sidebar" id="av-sidebar">
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <nav class="av-sidebar" id="av-sidebar">
 
-    <a class="av-sidebar-logo" href="dashboard.html">
-      <img src="assets/images/alpha-logo.png" alt="AlphaVault">
-      <div class="av-logo-name">
-        <span class="av-logo-title">AlphaVault</span>
-        <span class="av-logo-ver">Quant v5.0.9</span>
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault" onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i>
+          Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i>
+          ML Signals
+          <span class="av-nav-badge" id="sidebar-signals-badge">—</span>
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i>
+          Trading
+        </a>
+
+        <div class="av-nav-section">Intelligence</div>
+
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i>
+          Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i>
+          Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i>
+          Analytics
+        </a>
+
+        <div class="av-nav-section">Tools</div>
+
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i>
+          Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i>
+          Settings
+        </a>
       </div>
-    </a>
 
-    <nav class="av-nav">
-      <a href="dashboard.html"  class="av-nav-item active" data-page="dashboard">
-        <i class="fa-solid fa-gauge-high"></i> Dashboard
-      </a>
-      <a href="portfolio.html"  class="av-nav-item" data-page="portfolio">
-        <i class="fa-solid fa-briefcase"></i> Portfolio
-      </a>
-      <a href="signals.html"    class="av-nav-item" data-page="signals">
-        <i class="fa-solid fa-wave-square"></i> ML Signals
-      </a>
-      <a href="trading.html"    class="av-nav-item" data-page="trading">
-        <i class="fa-solid fa-bolt"></i> Trading
-      </a>
-      <a href="agents.html"     class="av-nav-item" data-page="agents">
-        <i class="fa-solid fa-robot"></i> Agents
-      </a>
-      <a href="regime.html"     class="av-nav-item" data-page="regime">
-        <i class="fa-solid fa-globe"></i> Regime
-      </a>
-      <a href="analytics.html"  class="av-nav-item" data-page="analytics">
-        <i class="fa-solid fa-chart-area"></i> Analytics
-      </a>
-      <a href="watchlist.html"  class="av-nav-item" data-page="watchlist">
-        <i class="fa-solid fa-eye"></i> Watchlist
-      </a>
-      <a href="settings.html"   class="av-nav-item" data-page="settings">
-        <i class="fa-solid fa-gear"></i> Settings
-      </a>
+      <!-- Sidebar status -->
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)" id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+
     </nav>
 
-    <div class="av-sidebar-foot">
-      <div class="av-sidebar-foot-row">
-        <span class="av-dot off" id="av-ibkr-dot"></span>
-        <span id="av-mode-label" style="font-size:11px;font-weight:700;color:var(--text)">Loading...</span>
-      </div>
-      <span id="av-last-sync">Connecting...</span>
-    </div>
+    <!-- ── MAIN ─────────────────────────────────────────────── -->
+    <div class="av-main">
 
-  </nav>
-
-  <!-- ════════════════════════════════════════
-       MAIN
-  ════════════════════════════════════════ -->
-  <div class="av-main">
-
-    <!-- Top Header -->
-    <header class="av-header">
-      <button class="av-toggle-btn" id="av-sidebar-toggle" aria-label="Menu">
-        <i class="fa-solid fa-bars"></i>
-      </button>
-
-      <div class="av-header-title">
-        <i class="fa-solid fa-gauge-high" style="color:var(--blue);font-size:16px"></i>
-        <div>
-          <h1>Dashboard</h1>
-          <span class="av-page-sub">Live multi-agent overview</span>
-        </div>
-      </div>
-
-      <div class="av-header-right">
-        <span class="av-api-dot off" id="av-api-dot" title="Dashboard API :5002"></span>
-        <div id="av-mode-badge-header"></div>
-        <button class="av-icon-btn" id="av-theme-btn" title="Toggle theme">
-          <i class="fa-solid fa-moon"></i>
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
         </button>
-      </div>
-    </header>
 
-    <!-- Page Content -->
-    <main class="av-content">
-
-      <!-- ── KPI Row ─────────────────────── -->
-      <div class="av-kpi-grid" id="dash-kpi-row">
-        <div class="av-skel-kpi"><div class="av-skel av-skel-line" style="width:40%"></div><div class="av-skel av-skel-val"></div><div class="av-skel av-skel-sub"></div></div>
-        <div class="av-skel-kpi"><div class="av-skel av-skel-line" style="width:46%"></div><div class="av-skel av-skel-val"></div><div class="av-skel av-skel-sub"></div></div>
-        <div class="av-skel-kpi"><div class="av-skel av-skel-line" style="width:36%"></div><div class="av-skel av-skel-val"></div><div class="av-skel av-skel-sub"></div></div>
-        <div class="av-skel-kpi"><div class="av-skel av-skel-line" style="width:42%"></div><div class="av-skel av-skel-val"></div><div class="av-skel av-skel-sub"></div></div>
-      </div>
-
-      <!-- ── Regime + Agents ────────────── -->
-      <div class="av-dash-two">
-
-        <div class="av-card" id="dash-regime-card">
-          <div class="av-card-head">
-            <span class="av-card-title"><i class="fa-solid fa-globe" style="color:var(--blue)"></i>Market Regime</span>
-            <a href="regime.html" class="av-btn-sm"><i class="fa-solid fa-arrow-right" style="font-size:9px"></i> Details</a>
-          </div>
-          <div class="av-card-body av-loading" id="dash-regime-body">
-            <i class="fa-solid fa-circle-notch fa-spin"></i>Loading...
-          </div>
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-chart-pie"></i>
+          Dashboard
         </div>
 
-        <div class="av-card" id="dash-agents-card">
-          <div class="av-card-head">
-            <span class="av-card-title"><i class="fa-solid fa-robot" style="color:var(--blue)"></i>Agent Health</span>
-            <div style="display:flex;align-items:center;gap:6px">
-              <div id="dash-agents-badge"></div>
-              <a href="agents.html" class="av-btn-sm"><i class="fa-solid fa-arrow-right" style="font-size:9px"></i> All</a>
-            </div>
-          </div>
-          <div class="av-card-body av-loading" id="dash-agents-body">
-            <i class="fa-solid fa-circle-notch fa-spin"></i>Loading...
-          </div>
-        </div>
+        <div class="av-topbar-spacer"></div>
 
-      </div>
-
-      <!-- ── NAV Chart ──────────────────── -->
-      <div id="dash-nav-chart">
-        <div class="av-chart-card">
-          <div class="av-chart-head">
-            <div class="av-chart-title"><i class="fa-solid fa-chart-area" style="color:var(--blue)"></i><div><div>Portfolio NAV</div><div class="av-chart-sub">rolling_history.json — 60s refresh</div></div></div>
-          </div>
-          <div class="av-chart-box av-loading"><i class="fa-solid fa-circle-notch fa-spin"></i>Loading chart...</div>
-        </div>
-      </div>
-
-      <!-- ── Top BUY Signals ────────────── -->
-      <div class="av-card">
-        <div class="av-card-head">
-          <span class="av-card-title">
-            <i class="fa-solid fa-arrow-trend-up" style="color:var(--green)"></i>
-            Top BUY Signals
-            <span id="dash-sig-count" style="font-size:11px;color:var(--muted);font-weight:400"></span>
+        <div class="av-topbar-actions">
+          <!-- Mode badge -->
+          <span class="badge" id="topbar-mode-badge" style="font-size:10px">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:8px"></i>
+            Loading
           </span>
-          <a href="signals.html" class="av-btn-sm"><i class="fa-solid fa-wave-square" style="font-size:9px"></i> All Signals</a>
-        </div>
-        <div id="top-signals-table">
-          <div class="av-loading"><i class="fa-solid fa-circle-notch fa-spin"></i>Loading signals...</div>
-        </div>
-      </div>
 
-      <!-- ── System Status Bar ──────────── -->
-      <div class="av-sys-bar" id="dash-sys-bar">
-        <i class="fa-solid fa-server" style="color:var(--blue);font-size:13px;flex-shrink:0"></i>
-        <div id="dash-sys-inner" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1">
-          <span style="color:var(--muted)"><i class="fa-solid fa-circle-notch fa-spin" style="font-size:10px"></i> Connecting...</span>
-        </div>
-      </div>
+          <!-- Regime badge -->
+          <span class="badge badge-green" id="topbar-regime-badge" style="display:none">
+            <i class="fa-solid fa-circle-arrow-up"></i>
+            BULL
+          </span>
 
-    </main>
-  </div><!-- /.av-main -->
-</div><!-- /.av-layout -->
+          <!-- Last refresh -->
+          <span style="font-size:11px;color:var(--text-faint);white-space:nowrap;display:flex;
+                       align-items:center;gap:5px" id="topbar-refresh-time">
+            <i class="fa-regular fa-clock"></i>
+            <span>—</span>
+          </span>
 
-<!-- ═══════════════════════════════════════
-     SCRIPTS
-═══════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-
-<script src="assets/js/av-config.js"></script>
-<script src="assets/js/av-utils.js"></script>
-<script src="assets/js/av-api.js"></script>
-<script src="assets/js/av-charts.js"></script>
-<script src="assets/js/av-portfolio.js"></script>
-<script src="assets/js/av-signals.js"></script>
-<script src="assets/js/av-agents.js"></script>
-<script src="assets/js/av-trading.js"></script>
-<script src="assets/js/av-controls.js"></script>
-<script src="assets/js/av-watchlist.js"></script>
-<script src="assets/js/av-stock-detail.js"></script>
-
-<script>
-/* ── Theme (immediately, before render) ──────────────── */
-(function(){
-  const t = localStorage.getItem('av-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('av-theme-btn');
-  if (btn) btn.innerHTML = `<i class="fa-solid fa-${t==='dark'?'sun':'moon'}"></i>`;
-})();
-
-/* ── Dashboard init ──────────────────────────────────── */
-(async function(){
-  'use strict';
-
-  /* sidebar mobile */
-  const sidebar  = document.getElementById('av-sidebar');
-  const overlay  = document.getElementById('av-overlay');
-  const togBtn   = document.getElementById('av-sidebar-toggle');
-
-  function openSidebar()  { sidebar.classList.add('open'); overlay.classList.add('open'); document.body.style.overflow='hidden'; }
-  function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); document.body.style.overflow=''; }
-
-  togBtn?.addEventListener('click', () => sidebar.classList.contains('open') ? closeSidebar() : openSidebar());
-  overlay?.addEventListener('click', closeSidebar);
-
-  /* theme toggle */
-  document.getElementById('av-theme-btn')?.addEventListener('click', () => {
-    const cur  = document.documentElement.getAttribute('data-theme') || 'light';
-    const next = cur === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('av-theme', next);
-    const btn = document.getElementById('av-theme-btn');
-    if (btn) btn.innerHTML = `<i class="fa-solid fa-${next==='dark'?'sun':'moon'}"></i>`;
-  });
-
-  /* active nav */
-  document.querySelectorAll('.av-nav-item').forEach(a => {
-    a.classList.remove('active');
-    if (a.dataset.page === 'dashboard') a.classList.add('active');
-  });
-
-  /* ── helpers ── */
-  const _sf  = v => { const n=parseFloat(v); return isNaN(n)?0:n; };
-  const _get = (o,p,d=null) => { try{ return p.split('.').reduce((a,k)=>a?.[k],o)??d; }catch{ return d; } };
-
-  function _badge(txt, color, icon=''){
-    const C={green:'rgba(16,185,129,.10)|#10b981|rgba(16,185,129,.22)',red:'rgba(239,68,68,.10)|#ef4444|rgba(239,68,68,.22)',orange:'rgba(245,158,11,.10)|#f59e0b|rgba(245,158,11,.22)',blue:'rgba(59,130,246,.10)|#3b82f6|rgba(59,130,246,.22)',violet:'rgba(139,92,246,.10)|#8b5cf6|rgba(139,92,246,.22)',gray:'rgba(107,114,128,.10)|#6b7280|rgba(107,114,128,.20)',gold:'rgba(234,179,8,.10)|#eab308|rgba(234,179,8,.22)'};
-    const [bg,tc,bc]=(C[color]||C.blue).split('|');
-    return `<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${bg};color:${tc};border:1px solid ${bc}">${icon?`<i class="fa-solid ${icon}" style="font-size:8px"></i>`:''}${txt}</span>`;
-  }
-
-  function _bar(pct,color,h=6){
-    const w=Math.min(100,Math.max(0,_sf(pct)));
-    return `<div style="height:${h}px;border-radius:9999px;background:rgba(148,163,184,.13);overflow:hidden"><div style="width:${w.toFixed(1)}%;height:100%;background:${color};border-radius:9999px;transition:width .5s ease"></div></div>`;
-  }
-
-  function _cur(n,dec=0){
-    if(n==null||isNaN(parseFloat(n))) return '--';
-    const v=parseFloat(n);
-    return (v<0?'-$':'$')+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:dec,maximumFractionDigits:dec});
-  }
-
-  function _age(iso){
-    if(!iso) return '--';
-    const d=Date.now()-new Date(iso).getTime();
-    const m=Math.floor(d/60000),h=Math.floor(m/60),dy=Math.floor(h/24);
-    return dy>0?`${dy}d ago`:h>0?`${h}h ago`:m>0?`${m}m ago`:'just now';
-  }
-
-  function _netliq(data){
-    if(!data) return 0;
-    for(const f of['net_liq','netliq','NetLiquidation']){
-      const v=parseFloat(data[f]);
-      if(v>1000) return v;
-    }
-    return 0;
-  }
-
-  /* ── Sidebar status ── */
-  function _updateSidebarStatus(mode, ibkr, port){
-    const dot    = document.getElementById('av-ibkr-dot');
-    const ml     = document.getElementById('av-mode-label');
-    const ls     = document.getElementById('av-last-sync');
-    const conn   = _get(ibkr,'ibkr_connected',_get(ibkr,'connected',false));
-    if(dot){ dot.className='av-dot '+(conn?'on':'off'); }
-    if(ml && mode){
-      const m=(_get(mode,'mode','paper')||'PAPER').toUpperCase();
-      const a=_get(mode,'auto',false)?'AUTO':'MANUAL';
-      ml.textContent=`${a} ${m}`;
-      ml.style.color=m==='LIVE'?'#ef4444':'#10b981';
-    }
-    if(ls && port){
-      const ts=_get(port,'updated_at',null);
-      ls.textContent=ts?`Updated ${_age(ts)}`:'Live data';
-    }
-  }
-
-  /* ── KPI Row — R1: net_liq only from portfolio.json ── */
-  function renderKPIs(portfolio, risk){
-    const el=document.getElementById('dash-kpi-row');
-    if(!el) return;
-
-    const netliq   = _netliq(portfolio?.raw||portfolio);
-    const pnl      = _sf(portfolio?.unrealized_pnl||_get(portfolio,'raw.unrealized_pnl',0));
-    const lev      = _sf(_get(risk,'leverage.current_leverage',_get(risk,'current_leverage',0)));
-    const isOver   = _get(risk,'leverage.is_over_leveraged',false);
-    const posCount = _sf(portfolio?.positions_count||0);
-    const longC    = _sf(portfolio?.long_count||0);
-    const shortC   = _sf(portfolio?.short_count||0);
-    const cash     = _sf(portfolio?.cash||0);
-    const cashPct  = _sf(portfolio?.cash_pct||0);
-    const pnlColor = pnl>=0?'#10b981':'#ef4444';
-    const levColor = isOver?'#f59e0b':'#10b981';
-    const navPct   = netliq>0?((pnl/netliq)*100):0;
-
-    el.innerHTML = `
-      <div class="av-kpi" style="border-top:3px solid #3b82f6">
-        <div class="av-kpi-head"><i class="fa-solid fa-wallet" style="color:#3b82f6"></i><span class="av-kpi-label">Net Liquidation</span></div>
-        <div class="av-kpi-val" style="color:#3b82f6">${_cur(netliq,0)}</div>
-        <div class="av-kpi-sub">
-          Cash: ${_cur(cash,0)}
-          ${cashPct>1.0?`&nbsp;${_badge('158% Cash — Normal','blue','fa-circle-info')}`:''}
+          <!-- Theme toggle -->
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Switch to Dark Mode" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
         </div>
       </div>
 
-      <div class="av-kpi" style="border-top:3px solid ${pnlColor}">
-        <div class="av-kpi-head"><i class="fa-solid fa-chart-line" style="color:${pnlColor}"></i><span class="av-kpi-label">Unrealized PnL</span></div>
-        <div class="av-kpi-val" style="color:${pnlColor}">${pnl>=0?'+':''}${_cur(pnl,0)}</div>
-        <div class="av-kpi-sub" style="color:${pnlColor};font-weight:700">${pnl>=0?'+':''}${navPct.toFixed(2)}% of NAV</div>
-      </div>
+      <!-- ── PAGE CONTENT ──────────────────────────────────── -->
+      <div class="av-content">
 
-      <div class="av-kpi" style="border-top:3px solid ${levColor}">
-        <div class="av-kpi-head"><i class="fa-solid fa-weight-scale" style="color:${levColor}"></i><span class="av-kpi-label">Leverage</span></div>
-        <div class="av-kpi-val" style="color:${levColor}">${lev.toFixed(3)}x</div>
-        <div class="av-kpi-sub">
-          ${isOver
-            ? _badge('Over-leveraged — max 1.0x','orange','fa-triangle-exclamation')
-            : _badge('Within limits','green','fa-check')}
-        </div>
-      </div>
+        <!-- ─── KPI ROW ─────────────────────────────────────── -->
+        <div class="dash-kpi-grid" id="dash-kpi-grid">
 
-      <div class="av-kpi" style="border-top:3px solid #8b5cf6">
-        <div class="av-kpi-head"><i class="fa-solid fa-briefcase" style="color:#8b5cf6"></i><span class="av-kpi-label">Positions</span></div>
-        <div class="av-kpi-val" style="color:#8b5cf6">${posCount}</div>
-        <div class="av-kpi-sub">
-          <span style="color:#10b981;font-weight:700">${longC} LONG</span>
-          <span style="color:var(--border-s);margin:0 4px">/</span>
-          <span style="color:#ef4444;font-weight:700">${shortC} SHORT</span>
-        </div>
-      </div>`;
-  }
-
-  /* ── Regime ── */
-  function renderRegime(regime){
-    const body=document.getElementById('dash-regime-body');
-    if(!body||!regime) return;
-
-    const RC={'BULL':{bg:'#10b981',sh:'rgba(16,185,129,.30)'},'BEAR':{bg:'#ef4444',sh:'rgba(239,68,68,.30)'},'NEUTRAL':{bg:'#6b7280',sh:'rgba(107,114,128,.20)'},'CRISIS':{bg:'#7c3aed',sh:'rgba(124,58,237,.30)'}};
-    const r     = (regime.regime||'NEUTRAL').toUpperCase();
-    const conf  = _sf(regime.confidence||0);
-    const prev  = regime.previous||'--';
-    const probs = regime.probs||{};
-    const rc    = RC[r]||RC.NEUTRAL;
-
-    body.classList.remove('av-loading');
-    body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-        <div class="av-regime-badge" style="background:${rc.bg};color:#fff;box-shadow:0 4px 16px ${rc.sh}">
-          ${r}
-        </div>
-        <div>
-          <div style="font-size:28px;font-weight:900;font-family:var(--mono);color:var(--text);line-height:1">${(conf*100).toFixed(0)}%</div>
-          <div style="font-size:11px;color:var(--muted)">Confidence</div>
-          <div style="font-size:10px;color:var(--faint);margin-top:3px">
-            <i class="fa-solid fa-arrows-left-right" style="font-size:8px"></i> From ${prev}
-          </div>
-        </div>
-      </div>
-      ${['BULL','BEAR','NEUTRAL','CRISIS'].map(k=>{
-        const v=_sf(probs[k]||0); const pct=(v*100).toFixed(0);
-        const c=(RC[k]||RC.NEUTRAL).bg;
-        return `<div class="av-prob-row">
-          <span class="av-prob-lbl" style="color:${c}">${k}</span>
-          <div style="flex:1">${_bar(pct,c,6)}</div>
-          <span class="av-prob-val" style="color:${c}">${pct}%</span>
-        </div>`;
-      }).join('')}`;
-  }
-
-  /* ── Agents — R2: idle + errors===0 → green ── */
-  function renderAgents(health){
-    const body  = document.getElementById('dash-agents-body');
-    const badge = document.getElementById('dash-agents-badge');
-    if(!health) return;
-
-    const nAct  = _sf(health.n_active||0);
-    const nAg   = _sf(health.n_agents||13);
-    const nErr  = _sf(health.n_errors||0);
-    const ags   = health.agentsMap||{};
-    const allOk = nErr===0;
-
-    if(badge) badge.innerHTML = allOk
-      ? _badge(`${nAct}/${nAg} Active`,'green','fa-circle-check')
-      : _badge(`${nErr} error${nErr>1?'s':''}`,'red','fa-circle-exclamation');
-
-    const ORDER=['market_scanner','signal','regime_detector','sentiment','capital_allocator','risk_manager'];
-    const rows = ORDER.map(name=>{
-      const ag  = ags[name]||{};
-      const ok  = (ag.errors===0||ag.errors==null);
-      const dotBg = ok?'#10b981':'#ef4444';
-      const desc  = typeof AV_CONFIG!=='undefined'?AV_CONFIG.AGENT_DESCRIPTIONS[name]:null;
-      const lbl   = desc?.label||name.replace(/_/g,' ');
-      const cyc   = _sf(ag.cycles||0);
-      const lr    = ag.last_run?_age(ag.last_run):'--';
-      return `<div class="av-agent-mini">
-        <span class="av-agent-mini-dot" style="background:${dotBg};box-shadow:0 0 5px ${dotBg}88"></span>
-        <span class="av-agent-mini-name">${lbl}</span>
-        <span class="av-agent-mini-cyc">${cyc.toLocaleString()}</span>
-        <span class="av-agent-mini-age">${lr}</span>
-      </div>`;
-    }).join('');
-
-    if(body){
-      body.classList.remove('av-loading');
-      body.innerHTML = `
-        <div style="margin-bottom:12px">
-          ${_bar((nAct/nAg)*100,allOk?'#10b981':'#f59e0b',7)}
-          <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--muted)">
-            <span>${nAct} active</span>
-            <span>${nErr===0?'No errors':`${nErr} error(s)`}</span>
-          </div>
-        </div>
-        ${rows}`;
-    }
-  }
-
-  /* ── Top Signals table ── */
-  function renderTopSignals(signals){
-    const el=document.getElementById('top-signals-table');
-    if(!el) return;
-    const buys=(signals||[]).filter(s=>s.action==='BUY').sort((a,b)=>_sf(b.confidence)-_sf(a.confidence)).slice(0,10);
-    const cnt  = document.getElementById('dash-sig-count');
-    if(cnt) cnt.textContent=`— ${buys.length} BUY signal${buys.length!==1?'s':''}`;
-    if(!buys.length){
-      el.innerHTML=`<div class="av-empty"><i class="fa-solid fa-magnifying-glass"></i>No BUY signals at current threshold</div>`;
-      return;
-    }
-    el.innerHTML=`<div class="av-table-wrap"><table class="av-table">
-      <thead><tr>
-        <th>Symbol</th><th>Confidence</th><th style="text-align:right">Price</th><th style="text-align:right">Score</th><th>Status</th>
-      </tr></thead>
-      <tbody>${buys.map(s=>{
-        const conf=_sf(s.confidence);
-        const pct=(conf*100).toFixed(1);
-        const score=_sf(s.score||s.final_score||conf);
-        const isHigh=conf>=0.75;
-        const col=conf>=0.85?'#10b981':conf>=0.75?'#3b82f6':conf>=0.60?'#f59e0b':'#6b7280';
-        return `<tr style="cursor:pointer" onclick="if(window.StockDetail)StockDetail.open('${s.symbol}')">
-          <td><span style="font-weight:700;color:var(--text)">${s.symbol}</span>${isHigh?`&nbsp;<i class="fa-solid fa-star" style="color:#eab308;font-size:9px"></i>`:''}</td>
-          <td>
-            <div style="display:flex;align-items:center;gap:6px;min-width:110px">
-              <div style="flex:1;height:5px;border-radius:9999px;background:rgba(148,163,184,.13);overflow:hidden">
-                <div style="width:${pct}%;height:100%;background:${col};border-radius:9999px"></div>
-              </div>
-              <span style="font-size:11px;font-weight:700;font-family:var(--mono);color:${col};min-width:38px">${pct}%</span>
+          <!-- Net Liquidation (R1) -->
+          <div class="av-kpi-card" id="kpi-netliq">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-wallet" style="color:var(--accent-blue)"></i>
+              Net Liquidation
             </div>
-          </td>
-          <td style="text-align:right;font-family:var(--mono);font-size:12px">${_sf(s.price)>0?_cur(s.price,2):'--'}</td>
-          <td style="text-align:right;font-family:var(--mono);font-size:12px;font-weight:700;color:${col}">${score.toFixed(4)}</td>
-          <td>${isHigh?_badge('HIGH','gold','fa-star'):_badge('NORMAL','blue')}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div>`;
-  }
+            <div class="av-kpi-value" id="kpi-netliq-val">
+              <span class="skeleton-line" style="width:140px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="kpi-netliq-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
 
-  /* ── System status bar ── */
-  function renderSysBar(system, ibkr){
-    const inner=document.getElementById('dash-sys-inner');
-    if(!inner) return;
-    const SESSION={'us_regular':{l:'US Market Open',c:'#10b981'},'us_postmarket':{l:'Post-Market',c:'#f59e0b'},'us_premarket':{l:'Pre-Market',c:'#3b82f6'},'closed':{l:'Market Closed',c:'#6b7280'}};
-    const sess   = SESSION[_get(system,'session','closed')]||{l:_get(system,'session','--'),c:'#6b7280'};
-    const cycle  = _get(system,'oracle_cycle','--');
-    const nAg    = _get(system,'agents_active',0);
-    const ddHalt = _get(system,'dd_halt',false);
-    const llmOk  = _get(system,'llm_available',false);
-    const ibkrOk = _get(ibkr,'connected',_get(ibkr,'ibkr_connected',false));
-    const ibMode = _get(ibkr,'mode','paper');
-    const now    = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+          <!-- Unrealized PnL -->
+          <div class="av-kpi-card" id="kpi-pnl">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-arrow-trend-up" style="color:var(--accent-green)"></i>
+              Unrealized P&amp;L
+            </div>
+            <div class="av-kpi-value" id="kpi-pnl-val">
+              <span class="skeleton-line" style="width:120px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="kpi-pnl-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
 
-    inner.innerHTML=`
-      <span style="display:flex;align-items:center;gap:5px">
-        <span style="width:7px;height:7px;border-radius:50%;background:${sess.c};box-shadow:0 0 5px ${sess.c}66;flex-shrink:0"></span>
-        <span style="font-size:12px;font-weight:700;color:${sess.c}">${sess.l}</span>
-      </span>
-      <span class="av-sys-sep"></span>
-      <span style="font-size:11px;color:var(--muted)">
-        <i class="fa-solid fa-rotate" style="color:var(--blue);font-size:9px"></i>
-        Cycle <strong style="color:var(--text);font-family:var(--mono)">#${cycle}</strong>
-      </span>
-      <span class="av-sys-sep"></span>
-      <span style="font-size:11px;color:var(--muted)">
-        <i class="fa-solid fa-robot" style="color:var(--violet);font-size:9px"></i>
-        <strong style="color:var(--text);font-family:var(--mono)">${nAg}/13</strong> agents
-      </span>
-      <span class="av-sys-sep"></span>
-      ${ddHalt
-        ? `<span style="font-size:11px;font-weight:700;color:#ef4444"><i class="fa-solid fa-hand" style="font-size:9px"></i> DD HALT</span>`
-        : `<span style="font-size:11px;color:#10b981"><i class="fa-solid fa-circle-check" style="font-size:9px"></i> DD OK</span>`}
-      <span class="av-sys-sep"></span>
-      <span style="font-size:11px;color:var(--muted)">Ollama: <span style="font-weight:700;color:${llmOk?'#10b981':'#6b7280'}">${llmOk?'Ready':'Standby'}</span></span>
-      <span class="av-sys-sep"></span>
-      <span style="font-size:11px;color:var(--muted)">
-        IBKR: <span style="font-weight:700;color:${ibkrOk?'#10b981':'#ef4444'}">
-          <i class="fa-solid fa-plug" style="font-size:9px"></i>
-          ${ibkrOk?'Connected ('+ibMode.toUpperCase()+')':'Disconnected'}
-        </span>
-      </span>
-      <span style="margin-left:auto;font-size:10px;color:var(--faint);font-family:var(--mono)">
-        <i class="fa-solid fa-clock" style="font-size:9px"></i> ${now}
-      </span>`;
-  }
+          <!-- Leverage (R7) -->
+          <div class="av-kpi-card" id="kpi-leverage">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-gauge-high" style="color:var(--accent-orange)"></i>
+              Leverage
+            </div>
+            <div class="av-kpi-value" id="kpi-leverage-val">
+              <span class="skeleton-line" style="width:80px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="kpi-leverage-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
 
-  /* ── Mode badge ── */
-  function renderModeBadge(mode){
-    const el=document.getElementById('av-mode-badge-header');
-    if(!el||!mode) return;
-    const m=(_get(mode,'mode','paper')||'paper').toUpperCase();
-    const a=_get(mode,'auto',false)?'AUTO':'MANUAL';
-    const isLive=m==='LIVE';
-    const c=isLive?'#ef4444':'#10b981';
-    el.innerHTML=`<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius-sm);background:${c}14;color:${c};border:1px solid ${c}40;font-size:12px;font-weight:700">
-      <span style="width:6px;height:6px;border-radius:50%;background:${c};${isLive?'animation:avPulse 1.5s infinite':''}"></span>
-      ${a} ${m}
-    </span>`;
-  }
+          <!-- Positions -->
+          <div class="av-kpi-card" id="kpi-positions">
+            <div class="av-kpi-label">
+              <i class="fa-solid fa-layer-group" style="color:var(--accent-violet)"></i>
+              Positions
+            </div>
+            <div class="av-kpi-value" id="kpi-positions-val">
+              <span class="skeleton-line" style="width:60px;height:28px;display:block"></span>
+            </div>
+            <div class="av-kpi-sub" id="kpi-positions-sub">
+              <i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i>
+              Loading...
+            </div>
+          </div>
 
-  /* ── API dot ── */
-  function updateApiDot(available){
-    const d=document.getElementById('av-api-dot');
-    if(d){ d.className='av-api-dot '+(available?'on':'off'); d.title=available?'API :5002 connected':'API :5002 unavailable — SSH tunnel required'; }
-  }
+        </div>
 
-  /* ── Main load ── */
-  let _history=[], _netliq=0;
+        <!-- ─── MIDDLE ROW : Regime + Agent Health ─────────── -->
+        <div class="dash-middle-grid">
 
-  async function loadAll(){
-    try{
-      const [portfolio,risk,regime,health,signals,hist,system,ibkr,mode] = await Promise.all([
-        AVApi.getPortfolio(),
-        AVApi.getRisk(),
-        AVApi.getRegime(),
-        AVApi.getAgentHealth(),
-        AVApi.getSignals(),
-        AVApi.getRollingHistory(),
-        AVApi.getSystemStatus(),
-        AVApi.getIBKRStatus(),
-        AVApi.getExecutionMode(),
-      ]);
+          <!-- Regime Card -->
+          <div class="av-card" id="dash-regime-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-globe"></i>
+              Market Regime
+              <a href="regime.html" class="btn btn-secondary btn-xs" style="margin-left:auto">
+                <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+            <div class="av-card-body" id="dash-regime-body">
+              <div class="dash-skeleton-block"></div>
+            </div>
+          </div>
 
-      _history = hist||[];
-      _netliq  = _netliq(portfolio?.raw||portfolio)||0;
+          <!-- Agent Health Card -->
+          <div class="av-card" id="dash-agents-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-robot"></i>
+              Agent Health
+              <a href="agents.html" class="btn btn-secondary btn-xs" style="margin-left:auto">
+                <i class="fa-solid fa-arrow-right"></i>
+              </a>
+            </div>
+            <div class="av-card-body" id="dash-agents-body">
+              <div class="dash-skeleton-block"></div>
+            </div>
+          </div>
 
-      renderKPIs(portfolio, risk);
-      renderRegime(regime);
-      renderAgents(health);
-      renderTopSignals(signals?.signals||[]);
-      renderSysBar(system, ibkr);
-      renderModeBadge(mode);
-      _updateSidebarStatus(mode, ibkr, portfolio?.raw||portfolio);
+          <!-- Execution Status Card -->
+          <div class="av-card" id="dash-exec-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-microchip"></i>
+              Execution
+            </div>
+            <div class="av-card-body" id="dash-exec-body">
+              <div class="dash-skeleton-block"></div>
+            </div>
+          </div>
 
-      /* API check */
-      const apiOk = await AVApi.checkDashboardAPI();
-      updateApiDot(apiOk);
+        </div>
 
-      /* NAV Chart */
-      await AVCharts.renderNAVCard('dash-nav-chart', _history, _netliq, {height:300, showLeverage:true});
+        <!-- ─── TOP BUY SIGNALS ───────────────────────────── -->
+        <div class="av-card" id="dash-signals-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            Top Buy Signals
+            <div style="margin-left:8px;display:flex;align-items:center;gap:4px">
+              <span class="badge badge-green" id="dash-buys-count">0 BUY</span>
+              <span class="badge badge-gold"  id="dash-hc-count">0 High Conf</span>
+            </div>
+            <a href="signals.html" class="btn btn-secondary btn-xs" style="margin-left:auto">
+              View All
+              <i class="fa-solid fa-arrow-right"></i>
+            </a>
+          </div>
+          <div class="av-card-body" style="padding:0">
+            <div class="av-table-wrapper" style="border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)">
+              <table class="av-table" id="dash-signals-table">
+                <thead>
+                  <tr>
+                    <th style="padding-left:20px">Symbol</th>
+                    <th>Action</th>
+                    <th>Confidence</th>
+                    <th>Price</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="dash-signals-tbody">
+                  <tr>
+                    <td colspan="6" style="padding:32px;text-align:center">
+                      <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--accent-blue);font-size:18px"></i>
+                      <div style="margin-top:8px;font-size:12px;color:var(--text-muted)">Loading signals...</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-    } catch(e){
-      console.error('[dashboard] load error:', e);
-    }
-  }
+        <!-- ─── NAV CHART ────────────────────────────────────── -->
+        <div class="av-card" id="dash-nav-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-chart-area"></i>
+            Portfolio NAV History
+            <div class="av-timeframe-group" style="margin-left:auto">
+              <button class="av-timeframe-btn" data-tf="1D">1D</button>
+              <button class="av-timeframe-btn" data-tf="1W">1W</button>
+              <button class="av-timeframe-btn" data-tf="1M">1M</button>
+              <button class="av-timeframe-btn active" data-tf="ALL">ALL</button>
+            </div>
+          </div>
+          <div class="av-card-body" style="padding:12px 16px 16px">
+            <!-- Chart legend -->
+            <div class="dash-chart-legend" id="dash-chart-legend">
+              <div class="dash-legend-item">
+                <div class="dash-legend-dot" style="background:var(--accent-blue)"></div>
+                <span>NAV ($)</span>
+              </div>
+              <div class="dash-legend-item">
+                <i class="fa-solid fa-info-circle" style="font-size:10px;color:var(--text-faint)"></i>
+                <span id="dash-chart-info" style="color:var(--text-faint);font-size:10px">—</span>
+              </div>
+            </div>
+            <!-- Chart -->
+            <div id="dash-nav-chart" style="width:100%;height:280px;position:relative">
+              <div style="display:flex;align-items:center;justify-content:center;height:100%;
+                          gap:10px;color:var(--text-muted)">
+                <i class="fa-solid fa-circle-notch fa-spin" style="color:var(--accent-blue);font-size:18px"></i>
+                <span style="font-size:12px">Loading chart data...</span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-  /* ── Auto-refresh ── */
-  function startRefresh(){
-    const KEYS=['portfolio','risk','health','regime','signals','history','system','ibkr','mode'];
-    const MS  ={ portfolio:30000,risk:30000,health:30000,regime:60000,signals:60000,history:60000,system:60000,ibkr:30000,mode:30000 };
-    KEYS.forEach(key=>{
-      setInterval(async()=>{
-        try{
-          if(key==='portfolio'||key==='risk'){
-            const p=await AVApi.getPortfolio();
-            const r=await AVApi.getRisk();
-            renderKPIs(p,r);
-            _netliq=_netliq(p?.raw||p)||_netliq;
-            _updateSidebarStatus(null,null,p?.raw||p);
-          }
-          if(key==='regime')  { renderRegime(await AVApi.getRegime()); }
-          if(key==='health')  { renderAgents(await AVApi.getAgentHealth()); }
-          if(key==='signals') { const s=await AVApi.getSignals(); renderTopSignals(s?.signals||[]); }
-          if(key==='history') { _history=await AVApi.getRollingHistory(_netliq); await AVCharts.renderNAVCard('dash-nav-chart',_history,_netliq,{height:300,showLeverage:true}); }
-          if(key==='system'||key==='ibkr'){ renderSysBar(await AVApi.getSystemStatus(),await AVApi.getIBKRStatus()); }
-          if(key==='mode')    { const m=await AVApi.getExecutionMode(); renderModeBadge(m); _updateSidebarStatus(m,null,null); }
-        } catch(e){ console.warn('[dashboard] refresh',key,e.message); }
-      }, MS[key]||60000);
-    });
-  }
+        <!-- ─── SYSTEM STATUS BAR ─────────────────────────── -->
+        <div class="dash-status-bar" id="dash-status-bar">
+          <div class="dash-status-item" id="sbar-oracle">
+            <i class="fa-solid fa-server"></i>
+            <span>Oracle A1</span>
+            <span class="badge badge-gray" id="sbar-oracle-val">—</span>
+          </div>
+          <div class="dash-status-item" id="sbar-session">
+            <i class="fa-solid fa-clock"></i>
+            <span>Session</span>
+            <span class="badge badge-blue" id="sbar-session-val">—</span>
+          </div>
+          <div class="dash-status-item" id="sbar-cycle">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Cycle</span>
+            <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;
+                         color:var(--accent-blue)" id="sbar-cycle-val">—</span>
+          </div>
+          <div class="dash-status-item" id="sbar-ibkr">
+            <i class="fa-solid fa-plug"></i>
+            <span>IBKR</span>
+            <span class="badge badge-gray" id="sbar-ibkr-val">—</span>
+          </div>
+          <div class="dash-status-item" id="sbar-agents-count">
+            <i class="fa-solid fa-robot"></i>
+            <span>Agents</span>
+            <span style="font-family:var(--font-mono);font-size:11px;font-weight:700" id="sbar-agents-val">—</span>
+          </div>
+          <div class="dash-status-item" id="sbar-dd-halt">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span>DD Halt</span>
+            <span class="badge badge-green" id="sbar-halt-val">OFF</span>
+          </div>
+          <div class="dash-status-item" id="sbar-workers">
+            <i class="fa-solid fa-cloud"></i>
+            <span>Workers</span>
+            <span class="badge badge-gray" id="sbar-workers-val">—</span>
+          </div>
+        </div>
 
-  /* ── Boot ── */
-  await loadAll();
-  startRefresh();
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
 
-})();
-</script>
+  <!-- Scripts — ordre impératif -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-stock-detail.js"></script>
+  <script src="assets/js/av-watchlist.js"></script>
+  <script src="assets/js/dashboard.js"></script>
 
 </body>
 </html>
