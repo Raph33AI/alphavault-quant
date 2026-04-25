@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ML Signals — AlphaVault Quant</title>
+
+  <!-- ═══════════════════ FAVICONS ═══════════════════ -->
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    .signals-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 16px;
+    }
+    .signals-aside { display: flex; flex-direction: column; gap: 14px; }
+
+    .conf-slider-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .conf-slider {
+      flex: 1;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border);
+      -webkit-appearance: none;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .conf-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      cursor: pointer;
+      box-shadow: 0 0 4px rgba(59,130,246,0.4);
+    }
+
+    .conf-slider::-moz-range-thumb {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      background: var(--accent-blue);
+      cursor: pointer;
+      border: none;
+    }
+
+    .sig-row:hover { background: var(--bg-hover) !important; cursor: pointer; }
+
+    .strategy-donut-wrap {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    @media (max-width: 1024px) {
+      .signals-layout { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">AlphaVault Quant</div>
+      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
+      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Analysis</div>
+      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
+      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
+      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Tools</div>
+      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
+      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
+      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+    <div class="sidebar-status">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="status-dot" id="ibkr-dot"></span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">Loading...</span>
+      </div>
+      <span id="last-sync"></span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="top-header">
+      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+      <div>
+        <span class="top-header-title">ML Signals</span>
+        <span class="top-header-sub" id="signals-header-sub">Loading...</span>
+      </div>
+      <div class="top-header-actions">
+        <div id="mode-badge-header"></div>
+        <button class="btn-sm" id="sig-export-btn">
+          <i class="fa-solid fa-download"></i> Export CSV
+        </button>
+        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- Stats Bar -->
+      <div id="signals-stats-bar" style="margin-bottom:16px">
+        <div class="stats-bar-grid">
+          <div class="stat-pill skeleton" style="min-width:100px;height:62px"></div>
+          <div class="stat-pill skeleton" style="min-width:100px;height:62px"></div>
+          <div class="stat-pill skeleton" style="min-width:100px;height:62px"></div>
+          <div class="stat-pill skeleton" style="min-width:100px;height:62px"></div>
+        </div>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="signals-layout">
+
+        <!-- Left: Table -->
+        <div>
+          <!-- Filters -->
+          <div class="av-table-wrapper">
+            <div class="filters-bar">
+              <button class="filter-btn active" data-sig-filter="ALL">
+                <i class="fa-solid fa-list" style="font-size:9px"></i> All
+              </button>
+              <button class="filter-btn" data-sig-filter="BUY">
+                <i class="fa-solid fa-arrow-up" style="font-size:9px;color:#10b981"></i> BUY
+              </button>
+              <button class="filter-btn" data-sig-filter="SELL">
+                <i class="fa-solid fa-arrow-down" style="font-size:9px;color:#ef4444"></i> SELL
+              </button>
+              <button class="filter-btn" data-sig-filter="HIGH_CONF">
+                <i class="fa-solid fa-star" style="font-size:9px;color:#eab308"></i> High Conf
+              </button>
+
+              <div class="conf-slider-wrap" style="min-width:180px">
+                <span style="font-size:10px;color:var(--text-muted);white-space:nowrap">Min conf:</span>
+                <input type="range" class="conf-slider" id="sig-conf-slider"
+                       min="0" max="100" value="0" step="5">
+                <span id="sig-conf-val" style="font-size:11px;font-weight:700;
+                       font-family:var(--font-mono);color:var(--accent-blue);min-width:30px">0%</span>
+              </div>
+
+              <input type="text" class="search-input" id="sig-search"
+                     placeholder="Search symbol..." style="margin-left:auto">
+
+              <span id="sig-results-count" class="badge badge-blue"></span>
+            </div>
+
+            <!-- Table -->
+            <table class="av-table">
+              <thead>
+                <tr>
+                  <th data-sig-sort="symbol" style="cursor:pointer">
+                    Symbol <i class="fa-solid fa-sort sort-icon"></i>
+                  </th>
+                  <th>Action</th>
+                  <th data-sig-sort="confidence" style="cursor:pointer;min-width:150px">
+                    Confidence <i class="fa-solid fa-sort-down sort-icon"></i>
+                  </th>
+                  <th data-sig-sort="price" style="cursor:pointer;text-align:right">
+                    Price <i class="fa-solid fa-sort sort-icon"></i>
+                  </th>
+                  <th data-sig-sort="score" style="cursor:pointer;text-align:right">
+                    Score <i class="fa-solid fa-sort sort-icon"></i>
+                  </th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="signals-tbody">
+                <tr>
+                  <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:18px"></i>
+                    <div style="margin-top:8px;font-size:13px">Loading ML signals...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="pagination-bar" id="signals-pagination"></div>
+          </div>
+        </div>
+
+        <!-- Right: Aside -->
+        <div class="signals-aside">
+
+          <!-- Strategy Weights -->
+          <div class="card" id="strategy-weights-section">
+            <div style="padding:20px;text-align:center;color:var(--text-muted)">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              <div style="margin-top:6px;font-size:12px">Loading weights...</div>
+            </div>
+          </div>
+
+          <!-- Capital Allocation -->
+          <div class="card" id="capital-allocation-section">
+            <div style="padding:20px;text-align:center;color:var(--text-muted)">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              <div style="margin-top:6px;font-size:12px">Loading allocation...</div>
+            </div>
+          </div>
+
+          <!-- Signal distribution chart -->
+          <div class="card">
+            <div class="section-header">
+              <i class="fa-solid fa-chart-bar" style="color:#8b5cf6"></i>
+              Signal Distribution
+            </div>
+            <div style="height:160px;position:relative">
+              <canvas id="signals-dist-canvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Sentiment -->
+          <div class="card" id="sentiment-mini-card">
+            <div class="section-header">
+              <i class="fa-solid fa-face-smile" style="color:#10b981"></i>
+              Market Sentiment
+            </div>
+            <div id="sentiment-mini-body" style="color:var(--text-muted);font-size:12px;text-align:center;padding:10px">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /signals-layout -->
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="sdp-fullpage" style="display:none"></div>
+<div id="av-toast-wrap"></div>
+
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-controls.js"></script>
+<script src="assets/js/stock-detail.js"></script>
+
+<script>
+(async () => {
+
+  await AVApi.init();
+  AVControls.init();
+
+  const hamburger = document.getElementById('hamburger-btn');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebar-overlay');
+  hamburger?.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('active'); });
+  overlay?.addEventListener('click',   () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); });
+
+  let _sigData = null;
+
+  function _onFilterUpdate() {
+    if (_sigData) AVSignals.renderSignalsTable(_sigData.signals);
+  }
+
+  async function loadSignals() {
+    const [sigData, weightsData, allocData, sentData, modeData] = await Promise.all([
+      AVApi.getSignals(),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.weights,    AV_CONFIG.REFRESH.static),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.allocation, AV_CONFIG.REFRESH.signals),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.sentiment,  AV_CONFIG.REFRESH.static),
+      AVApi.getExecutionMode(),
+    ]);
+
+    _sigData = sigData;
+
+    // Header sub
+    const subEl = document.getElementById('signals-header-sub');
+    if (subEl && sigData) {
+      subEl.textContent = `${sigData.n_signals} signals · ${sigData.n_buy} BUY · ${sigData.n_sell} SELL · ${sigData.n_high_conf} high conf`;
+    }
+
+    // Stats bar
+    AVSignals.renderStatsBar(sigData);
+
+    // Init filters + table
+    AVSignals.initFilters(_onFilterUpdate);
+    AVSignals.renderSignalsTable(sigData.signals);
+
+    // Aside sections
+    AVSignals.renderStrategyWeights(weightsData);
+    AVSignals.renderCapitalAllocation(allocData);
+
+    // Distribution chart
+    AVCharts.renderSignalsDistribution('signals-dist-canvas', sigData);
+
+    // Sentiment
+    renderSentimentMini(sentData);
+
+    // Mode badge
+    AVControls.updateModeBadge(modeData);
+  }
+
+  function renderSentimentMini(sentData) {
+    const el = document.getElementById('sentiment-mini-body');
+    if (!el || !sentData) return;
+
+    const global  = safeGet(sentData, 'global_sentiment', safeGet(sentData, 'overall_sentiment', null));
+    const market  = safeGet(sentData, 'market_sentiment', null);
+    const bullish = sf(safeGet(sentData, 'bullish_pct', 0));
+    const bearish = sf(safeGet(sentData, 'bearish_pct', 0));
+    const neutral = 100 - bullish - bearish;
+
+    if (!global && !market) {
+      el.innerHTML = `
+        <i class="fa-solid fa-clock" style="color:#3b82f6"></i>
+        <div style="margin-top:4px">Sentiment analysis pending</div>
+        <div style="font-size:10px;margin-top:2px">FinBERT processes news every 30min</div>`;
+      return;
+    }
+
+    const sentColor = global === 'positive' ? '#10b981' : global === 'negative' ? '#ef4444' : '#6b7280';
+    const sentIcon  = global === 'positive' ? 'fa-face-smile' : global === 'negative' ? 'fa-face-frown' : 'fa-face-meh';
+
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <i class="fa-solid ${sentIcon}" style="font-size:24px;color:${sentColor}"></i>
+        <div>
+          <div style="font-size:14px;font-weight:800;color:${sentColor};text-transform:capitalize">${global || market || 'Neutral'}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Overall market sentiment</div>
+        </div>
+      </div>
+      ${bullish > 0 || bearish > 0 ? `
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;min-width:55px;color:#10b981">Bullish</span>
+            <div style="flex:1">${progressBar(bullish, '#10b981', 5)}</div>
+            <span style="font-size:10px;font-family:var(--font-mono);color:#10b981">${bullish.toFixed(0)}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;min-width:55px;color:#6b7280">Neutral</span>
+            <div style="flex:1">${progressBar(Math.max(neutral,0), '#6b7280', 5)}</div>
+            <span style="font-size:10px;font-family:var(--font-mono);color:#6b7280">${Math.max(neutral,0).toFixed(0)}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:10px;min-width:55px;color:#ef4444">Bearish</span>
+            <div style="flex:1">${progressBar(bearish, '#ef4444', 5)}</div>
+            <span style="font-size:10px;font-family:var(--font-mono);color:#ef4444">${bearish.toFixed(0)}%</span>
+          </div>
+        </div>` : ''}
+      <div style="font-size:10px;color:var(--text-faint);margin-top:8px;text-align:right">
+        Source: FinBERT · sentiment_scores.json
+      </div>`;
+  }
+
+  // Auto-refresh 60s
+  AVApi.startAutoRefresh({
+    signals:    AV_CONFIG.REFRESH.signals,
+    weights:    AV_CONFIG.REFRESH.static,
+    allocation: AV_CONFIG.REFRESH.signals,
+    mode:       AV_CONFIG.REFRESH.execution,
+    onUpdate: async (key, data) => {
+      if (key === 'signals') {
+        _sigData = await AVApi.getSignals();
+        AVSignals.renderStatsBar(_sigData);
+        AVSignals.renderSignalsTable(_sigData.signals);
+        AVCharts.destroyCJS('signals-dist-canvas');
+        AVCharts.renderSignalsDistribution('signals-dist-canvas', _sigData);
+        const subEl = document.getElementById('signals-header-sub');
+        if (subEl) subEl.textContent = `${_sigData.n_signals} signals · ${_sigData.n_buy} BUY · ${_sigData.n_sell} SELL · ${_sigData.n_high_conf} high conf`;
+      }
+      if (key === 'allocation') AVSignals.renderCapitalAllocation(data);
+      if (key === 'weights')    AVSignals.renderStrategyWeights(data);
+      if (key === 'mode')       AVControls.updateModeBadge(data);
+    },
+  });
+
+  await loadSignals();
+
+})();
+</script>
+</body>
+</html>
