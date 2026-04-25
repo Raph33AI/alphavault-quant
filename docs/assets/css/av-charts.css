@@ -1,45 +1,34 @@
 /* ============================================================
    av-charts.css — AlphaVault Quant Dashboard v1.0
-   Chart containers, headers, timeframes, legends
-   ============================================================ */
+   LightweightCharts + Chart.js containers, timeframes, legends
+============================================================ */
 
-/* ══════════════════════════════════════════════════════════
-   CHART CONTAINERS
-   ══════════════════════════════════════════════════════════ */
-.chart-container {
-  position:   relative;
-  width:      100%;
-  overflow:   hidden;
-  contain:    layout size;
-}
-
+/* ══════════════════════════════════════════════════════════════
+   CHART CARD
+══════════════════════════════════════════════════════════════ */
 .chart-card {
   background:    var(--bg-card);
-  border:        1px solid var(--border-card);
+  border:        1px solid var(--border);
   border-radius: var(--radius-lg);
-  box-shadow:    var(--shadow-card);
+  box-shadow:    var(--shadow-sm);
   overflow:      hidden;
+  transition:    box-shadow 0.2s;
 }
 
-/* Hauteurs standards */
-.chart-h-sm  { height:160px; min-height:160px; max-height:160px; }
-.chart-h-md  { height:260px; min-height:260px; max-height:260px; }
-.chart-h-lg  { height:320px; min-height:320px; max-height:320px; }
-.chart-h-xl  { height:420px; min-height:420px; max-height:420px; }
+.chart-card:hover { box-shadow: var(--shadow-md); }
 
-/* Fix anti-growth loop LightweightCharts */
-.chart-container > div { max-height:inherit !important; }
-
-/* ══════════════════════════════════════════════════════════
+/* ══════════════════════════════════════════════════════════════
    CHART HEADER
-   ══════════════════════════════════════════════════════════ */
+══════════════════════════════════════════════════════════════ */
 .chart-header {
-  display:       flex;
-  align-items:   center;
-  gap:           12px;
-  padding:       14px 18px;
-  border-bottom: 1px solid var(--border);
-  flex-wrap:     wrap;
+  display:         flex;
+  align-items:     center;
+  justify-content: space-between;
+  padding:         14px 18px 12px;
+  border-bottom:   1px solid var(--border);
+  gap:             10px;
+  flex-wrap:       wrap;
+  background:      var(--gradient-card-top);
 }
 
 .chart-header-left {
@@ -48,174 +37,171 @@
   gap:         10px;
 }
 
-.chart-header-left i {
-  font-size:  15px;
-  flex-shrink:0;
-}
+.chart-header-left i { font-size: 14px; flex-shrink: 0; }
 
-.chart-title {
-  font-size:   13px;
-  font-weight: 700;
-  color:       var(--text-primary);
-  line-height: 1.2;
-}
-
-.chart-subtitle {
-  font-size:  10px;
-  color:      var(--text-muted);
-  margin-top: 1px;
-}
+.chart-title    { font-size: 13px; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.chart-subtitle { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
 
 .chart-header-right {
-  margin-left: auto;
-  display:     flex;
-  align-items: center;
-  gap:         8px;
-  flex-wrap:   wrap;
-}
-
-/* ══════════════════════════════════════════════════════════
-   TIMEFRAME SELECTOR
-   ══════════════════════════════════════════════════════════ */
-.chart-timeframes {
-  display:        inline-flex;
-  background:     var(--bg-primary);
-  border:         1px solid var(--border);
-  border-radius:  var(--radius-md);
-  padding:        3px;
-  gap:            2px;
-}
-
-.tf-btn {
-  padding:       5px 10px;
-  border-radius: calc(var(--radius-md) - 2px);
-  border:        none;
-  background:    transparent;
-  color:         var(--text-muted);
-  font-size:     11px;
-  font-weight:   600;
-  transition:    var(--transition-fast);
-  cursor:        pointer;
-}
-
-.tf-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.tf-btn.active {
-  background:  var(--gradient-brand);
-  color:       #fff;
-  box-shadow:  0 2px 6px rgba(59,130,246,0.3);
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART STATES — Loading / Empty / Error
-   ══════════════════════════════════════════════════════════ */
-.chart-state {
-  display:        flex;
-  flex-direction: column;
-  align-items:    center;
-  justify-content:center;
-  height:         100%;
-  gap:            8px;
-  color:          var(--text-muted);
-  font-size:      13px;
-}
-
-.chart-state i { font-size:22px; opacity:0.5; }
-
-.chart-loading-spinner {
-  display:     inline-block;
-  width:       22px;
-  height:      22px;
-  border:      2px solid var(--border);
-  border-top:  2px solid var(--accent-blue);
-  border-radius:50%;
-  animation:   spin 0.8s linear infinite;
-}
-
-/* ══════════════════════════════════════════════════════════
-   CHART LEGEND
-   ══════════════════════════════════════════════════════════ */
-.chart-legend {
-  display:    flex;
-  flex-wrap:  wrap;
-  gap:        14px;
-  padding:    10px 18px;
-  font-size:  11px;
-  color:      var(--text-muted);
-  border-top: 1px solid var(--border);
-}
-
-.legend-item {
   display:     flex;
   align-items: center;
   gap:         6px;
+  margin-left: auto;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   CHART CONTAINER (LWC / canvas)
+══════════════════════════════════════════════════════════════ */
+.chart-container {
+  position:   relative;
+  height:     300px;
+  min-height: 300px;
+  max-height: 300px;
+  overflow:   hidden;
+}
+
+.chart-container-lg {
+  height:     420px;
+  min-height: 420px;
+  max-height: 420px;
+}
+
+.chart-container-sm {
+  height:     200px;
+  min-height: 200px;
+  max-height: 200px;
+}
+
+/* NAV section (dashboard / analytics) */
+.nav-chart-section {
+  background:    var(--bg-card);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:    var(--shadow-sm);
+  overflow:      hidden;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TIMEFRAME SELECTOR
+══════════════════════════════════════════════════════════════ */
+.chart-timeframes {
+  display:       flex;
+  gap:           2px;
+  background:    var(--bg-secondary);
+  border:        1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding:       2px;
+}
+
+.tf-btn {
+  padding:       4px 10px;
+  border:        none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background:    transparent;
+  color:         var(--text-muted);
+  font-size:     11px;
+  font-weight:   700;
+  cursor:        pointer;
+  transition:    var(--t-fast);
+  font-family:   var(--font-sans);
+  white-space:   nowrap;
+}
+
+.tf-btn:hover  { color: var(--accent-blue); }
+
+.tf-btn.active {
+  background: var(--bg-card);
+  color:      var(--accent-blue);
+  box-shadow: var(--shadow-xs);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CHART STATES
+══════════════════════════════════════════════════════════════ */
+.chart-loading,
+.chart-empty,
+.chart-error {
+  display:         flex;
+  flex-direction:  column;
+  align-items:     center;
+  justify-content: center;
+  height:          100%;
+  min-height:      180px;
+  gap:             10px;
+  color:           var(--text-muted);
+  font-size:       12px;
+}
+
+.chart-loading i { color: var(--accent-blue); font-size: 18px; }
+.chart-empty  i  { font-size: 22px; opacity: 0.28; }
+.chart-error  i  { color: var(--accent-red); font-size: 16px; }
+
+/* ══════════════════════════════════════════════════════════════
+   CHART LEGEND
+══════════════════════════════════════════════════════════════ */
+.chart-legend {
+  display:     flex;
+  align-items: center;
+  gap:         14px;
+  padding:     8px 16px;
+  border-top:  1px solid var(--border);
+  font-size:   11px;
+  color:       var(--text-muted);
+  flex-wrap:   wrap;
+  background:  var(--bg-secondary);
+}
+
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+
 .legend-dot {
-  width:         9px;
-  height:        9px;
+  width:         8px;
+  height:        8px;
   border-radius: 50%;
   flex-shrink:   0;
 }
 
-.legend-line {
-  width:  18px;
-  height: 2px;
-  flex-shrink: 0;
-  border-radius: 1px;
+/* ══════════════════════════════════════════════════════════════
+   DONUT WRAPPER
+══════════════════════════════════════════════════════════════ */
+.donut-wrap {
+  position:   relative;
+  max-width:  200px;
+  max-height: 200px;
+  margin:     0 auto;
 }
 
-/* ══════════════════════════════════════════════════════════
-   DONUT CHART WRAPPER
-   ══════════════════════════════════════════════════════════ */
-.donut-wrapper {
-  position:  relative;
-  width:     100%;
-  max-width: 220px;
-  margin:    0 auto;
-}
-
-.donut-center-label {
+.donut-center {
   position:   absolute;
   top:        50%;
   left:       50%;
-  transform:  translate(-50%,-50%);
+  transform:  translate(-50%, -50%);
   text-align: center;
   pointer-events: none;
 }
 
-.donut-center-value {
-  font-size:   22px;
-  font-weight: 900;
-  font-family: var(--font-mono);
-  color:       var(--text-primary);
-  line-height: 1;
-}
+.donut-center-value { font-size: 20px; font-weight: 900; font-family: var(--font-mono); color: var(--text-primary); line-height: 1; }
+.donut-center-label { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
-.donut-center-label-text {
-  font-size:  10px;
-  color:      var(--text-muted);
-  margin-top: 3px;
-}
+/* ══════════════════════════════════════════════════════════════
+   SPARKLINE (inline mini chart)
+══════════════════════════════════════════════════════════════ */
+.sparkline-wrap { height: 40px; position: relative; overflow: hidden; }
 
-/* ══════════════════════════════════════════════════════════
-   CONFIDENCE BAR (inline dans tables)
-   ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   CONFIDENCE BAR (signals table)
+══════════════════════════════════════════════════════════════ */
 .conf-bar-wrap {
   display:     flex;
   align-items: center;
-  gap:         7px;
-  min-width:   110px;
+  gap:         6px;
+  min-width:   100px;
 }
 
 .conf-bar-track {
   flex:          1;
   height:        5px;
   border-radius: var(--radius-full);
-  background:    rgba(148,163,184,0.15);
+  background:    rgba(148,163,184,0.14);
   overflow:      hidden;
 }
 
@@ -225,89 +211,26 @@
   transition:    width 0.4s ease;
 }
 
-.conf-bar-value {
+.conf-bar-pct {
   font-size:   11px;
   font-weight: 700;
   font-family: var(--font-mono);
   min-width:   40px;
+  white-space: nowrap;
 }
 
-/* ══════════════════════════════════════════════════════════
-   NAV CHART CARD COMPOSITE
-   ══════════════════════════════════════════════════════════ */
-.nav-chart-card {
-  background:    var(--bg-card);
-  border:        1px solid var(--border-card);
-  border-radius: var(--radius-lg);
-  box-shadow:    var(--shadow-card);
-  overflow:      hidden;
-}
-
-.nav-chart-body {
-  padding: 0;
-}
-
-.nav-chart-footer {
-  padding:    8px 16px;
-  font-size:  10px;
-  color:      var(--text-muted);
-  border-top: 1px solid var(--border);
-  display:    flex;
-  align-items:center;
-  gap:        12px;
-  flex-wrap:  wrap;
-}
-
-/* ══════════════════════════════════════════════════════════
-   SPARKLINES (dans KPI cards)
-   ══════════════════════════════════════════════════════════ */
-.sparkline-wrap {
-  height:   40px;
-  position: relative;
-  margin-top:8px;
-}
-
-.sparkline-wrap canvas {
-  width:  100% !important;
-  height: 40px !important;
-}
-
-/* ══════════════════════════════════════════════════════════
-   AUC BAR (agents ML)
-   ══════════════════════════════════════════════════════════ */
-.auc-bar-wrap {
-  display:     flex;
-  align-items: center;
-  gap:         10px;
-}
-
-.auc-progress {
-  flex:          1;
-  height:        7px;
-  border-radius: var(--radius-full);
-  background:    rgba(148,163,184,0.15);
-  overflow:      hidden;
-}
-
-.auc-fill {
-  height:        100%;
-  border-radius: var(--radius-full);
-  transition:    width 0.6s ease;
-}
-
-/* ══════════════════════════════════════════════════════════
-   RESPONSIVE CHARTS
-   ══════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .chart-header { padding: 12px 14px; gap:8px; }
-  .chart-h-xl   { height:280px; min-height:280px; max-height:280px; }
-  .chart-h-lg   { height:240px; min-height:240px; max-height:240px; }
-  .chart-h-md   { height:200px; min-height:200px; max-height:200px; }
-  .chart-legend { padding:8px 14px; gap:10px; }
-  .chart-timeframes .tf-btn { padding:4px 8px; font-size:10px; }
+  .chart-container    { height: 220px; min-height: 220px; max-height: 220px; }
+  .chart-container-lg { height: 280px; min-height: 280px; max-height: 280px; }
+  .chart-header       { padding: 12px 14px; }
+  .tf-btn             { padding: 4px 8px; font-size: 10px; }
+  .donut-wrap         { max-width: 170px; max-height: 170px; }
 }
 
 @media (max-width: 480px) {
-  .chart-h-xl { height:220px; min-height:220px; max-height:220px; }
-  .chart-h-lg { height:180px; min-height:180px; max-height:180px; }
+  .chart-container    { height: 180px; min-height: 180px; max-height: 180px; }
+  .chart-container-lg { height: 240px; min-height: 240px; max-height: 240px; }
 }
