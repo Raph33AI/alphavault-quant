@@ -506,6 +506,39 @@
   min-width: 64px;
   padding: 8px 11px;
 }
+
+/* ── Logo dans les chips heatmap ────────────────────────────── */
+.rgm-chip-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-bottom: 3px;
+}
+.rgm-chip-logo img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  object-fit: contain;
+  display: block;
+}
+.rgm-chip-logo span {
+  /* fallback lettre — déjà stylé par _avLogoFallback */
+  font-size: 10px !important;
+}
+
+/* Chips avec logo légèrement plus hauts */
+.rgm-chip {
+  padding: 6px 9px 7px;
+  min-width: 54px;
+}
+.rgm-chip-etf {
+  min-width: 60px;
+  padding: 7px 10px 8px;
+}
+
 .rgm-chip-etf .rgm-chip-ticker { font-size: 12px; }
 
 /* ══════════════════════════════════════════════════════════════
@@ -648,20 +681,25 @@
 }
 
 @media (max-width: 900px) {
-  .rgm-kpi-grid   { grid-template-columns: repeat(2, 1fr); }
-  .rgm-mid-grid   { grid-template-columns: 1fr; }
-  .rgm-sector-list { grid-template-columns: 1fr; }
-  .rgm-adapt-grid { grid-template-columns: repeat(2, 1fr); }
+  .rgm-kpi-grid      { grid-template-columns: repeat(2, 1fr); }
+  .rgm-mid-grid      { grid-template-columns: 1fr; }
+  .rgm-adapt-grid    { grid-template-columns: repeat(2, 1fr); }
   .rgm-detector-grid { grid-template-columns: repeat(2, 1fr); }
-  .rgm-banner     { flex-direction: column; gap: 20px; }
-  .rgm-banner-stats { flex-direction: row; width: 100%; }
-  .rgm-banner-stat  { flex: 1; }
+  .rgm-banner        { flex-direction: column; gap: 20px; }
+  .rgm-banner-stats  { flex-direction: row; width: 100%; }
+  .rgm-banner-stat   { flex: 1; }
+
+  /* ✅ CORRECTION 2 — 2 cartes/ligne sur tablette */
+  .rgm-sector-list   { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 600px) {
-  .rgm-kpi-grid       { grid-template-columns: 1fr 1fr; }
-  .rgm-adapt-grid     { grid-template-columns: 1fr; }
-  .rgm-detector-grid  { grid-template-columns: repeat(2, 1fr); }
-  .rgm-banner-stats   { flex-direction: column; }
-  .rgm-chip           { min-width: 50px; }
+  .rgm-kpi-grid      { grid-template-columns: repeat(2, 1fr); }
+  .rgm-adapt-grid    { grid-template-columns: 1fr; }
+  .rgm-detector-grid { grid-template-columns: repeat(2, 1fr); }
+  .rgm-banner-stats  { flex-direction: column; }
+  .rgm-chip          { min-width: 50px; }
+
+  /* ✅ CORRECTION 2 — 2 cartes/ligne sur mobile également */
+  .rgm-sector-list   { grid-template-columns: repeat(2, 1fr); }
 }

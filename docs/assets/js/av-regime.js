@@ -523,14 +523,13 @@
     body.innerHTML = `<div class="rgm-sector-list">${cards}</div>`;
   }
 
-  // ══════════════════════════════════════════════════════════
-  // HEATMAP — tous les symboles
-  // ══════════════════════════════════════════════════════════
-  function renderHeatmap(p) {
+  // ══════════════════════════════════════════════════════════════
+// HEATMAP — tous les symboles
+// ══════════════════════════════════════════════════════════════
+function renderHeatmap(p) {
     const body = document.getElementById('rgm-heatmap-body');
     if (!body) return;
 
-    // Mise à jour meta
     _setHTML('rgm-heatmap-meta', `
       <span class="badge badge-gray badge-xs">${Object.keys(p.symbolRegimes).length} symbols</span>
       <span class="badge badge-xs" style="font-size:9px;color:var(--text-faint)">
@@ -539,22 +538,27 @@
 
     const chips = Object.entries(p.symbolRegimes)
       .sort((a, b) => {
-        // Tri : trend_up d'abord, puis trend_down, puis autres
         const order = { trend_up: 0, trend_down: 1, BULL: 2, BEAR: 3, NEUTRAL: 4, CRISIS: 5 };
         return (order[a[1].regime] ?? 9) - (order[b[1].regime] ?? 9);
       })
       .map(([ticker, data]) => {
-        const meta     = _getRegimeMeta(data.regime);
-        const confPct  = data.confidence > 0
+        const meta    = _getRegimeMeta(data.regime);
+        const confPct = data.confidence > 0
           ? (data.confidence * 100).toFixed(0) + '%'
           : '—';
-        const isEtf    = SECTOR_ETFS.some(e => e.ticker === ticker);
-        const url      = `https://alphavault-ai.com/advanced-analysis.html?symbol=${encodeURIComponent(ticker)}`;
+        const isEtf   = SECTOR_ETFS.some(e => e.ticker === ticker);
+
+        // ✅ CORRECTION 3 — stock-detail au lieu d'advanced-analysis
+        const url     = `stock-detail.html?symbol=${encodeURIComponent(ticker)}`;
+
+        // ✅ CORRECTION 1 — logo 20px via AVUtils
+        const logoHtml = AVUtils._getLogoHtml(ticker, 20);
 
         return `
-          <a href="${url}" target="_blank" rel="noopener"
+          <a href="${url}"
              class="rgm-chip ${meta.chipCls} ${isEtf ? 'rgm-chip-etf' : ''}"
              title="${ticker} — ${meta.label} (${confPct})">
+            <div class="rgm-chip-logo">${logoHtml}</div>
             <span class="rgm-chip-ticker ${meta.tickerCls}">${ticker}</span>
             <span class="rgm-chip-conf">${confPct}</span>
           </a>`;
