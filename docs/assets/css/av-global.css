@@ -678,3 +678,32 @@ button { font-family: var(--font-sans); }
   .av-card-body { padding: 12px; }
   .av-card-header { padding: 10px 12px; font-size: 12px; }
 }
+
+/* ================================================================
+   PATCH — fix décalage sidebar/contenu
+   Ajouter à la fin de av-global.css
+================================================================ */
+
+/* Supprime le grid (inutile avec une sidebar fixed)
+   et utilise uniquement margin-left */
+.av-layout {
+  display: block;
+  min-height: 100vh;
+}
+
+.av-main {
+  margin-left: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 0;
+  width: calc(100% - var(--sidebar-width));
+}
+
+/* Mobile — sidebar cachée, pas de décalage */
+@media (max-width: 768px) {
+  .av-main {
+    margin-left: 0;
+    width: 100%;
+  }
+}
