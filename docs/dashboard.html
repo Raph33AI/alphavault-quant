@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — AlphaVault Quant</title>
-  <meta name="description" content="AlphaVault Quant — Multi-Agent Trading Dashboard v5.0.9">
+  <meta name="description" content="AlphaVault Quant v5.0.9 — Multi-Agent Trading Dashboard">
 
   <!-- ═══════════════════ FAVICONS ═══════════════════ -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -15,59 +15,35 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
-  <!-- ═══════════════════ FONTS & ICONS ═══════════════════ -->
+  <!-- ═══════════════════ CSS ═══════════════════ -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-  <!-- ═══════════════════ CSS ═══════════════════ -->
-  <link rel="stylesheet" href="docs/assets/css/av-global.css">
-  <link rel="stylesheet" href="docs/assets/css/av-components.css">
-  <link rel="stylesheet" href="docs/assets/css/av-charts.css">
-  <link rel="stylesheet" href="docs/assets/css/av-trading.css">
-
-  <!-- ═══════════════════ EXTERNAL LIBS ═══════════════════ -->
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
 
   <style>
-    /* ── Dashboard-specific ─────────────────────────────── */
-    .dash-grid {
+    .dash-main-grid {
       display: grid;
-      grid-template-columns: 1fr 340px;
+      grid-template-columns: 1fr 320px;
       gap: 16px;
       margin-bottom: 16px;
     }
-    .dash-grid-full { grid-column: 1 / -1; }
-
-    .regime-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-card);
-      border-radius: var(--radius-lg);
-      padding: 18px 20px;
-      box-shadow: var(--shadow-card);
+    .dash-signals-grid {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 16px;
+      margin-bottom: 16px;
     }
-
-    .regime-main-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 18px;
-      border-radius: var(--radius-md);
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      margin: 10px 0;
-    }
-
-    .regime-prob-row {
+    .regime-probs {
       display: flex;
       gap: 8px;
+      margin-top: 12px;
       flex-wrap: wrap;
-      margin-top: 10px;
     }
-
     .regime-prob-item {
       flex: 1;
       min-width: 60px;
@@ -77,99 +53,42 @@
       background: var(--bg-primary);
       border: 1px solid var(--border);
     }
-
-    .regime-prob-pct {
-      font-size: 16px;
-      font-weight: 900;
-      font-family: var(--font-mono);
-      line-height: 1;
-    }
-
-    .regime-prob-label {
-      font-size: 9px;
-      color: var(--text-muted);
-      margin-top: 3px;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .agents-mini-list {
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      margin-top: 10px;
-    }
-
-    .agent-mini-row {
+    .system-bar {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      font-size: 11px;
-      background: var(--bg-primary);
-    }
-
-    .agent-mini-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .agent-mini-name { flex: 1; font-weight: 600; color: var(--text-primary); }
-    .agent-mini-status { font-size: 10px; font-weight: 700; }
-
-    .system-status-bar {
-      display: flex;
-      align-items: center;
-      gap: 16px;
+      gap: 14px;
       padding: 12px 18px;
       background: var(--bg-card);
       border: 1px solid var(--border-card);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
       flex-wrap: wrap;
-    }
-
-    .sys-item {
-      display: flex;
-      align-items: center;
-      gap: 6px;
       font-size: 11px;
-      color: var(--text-muted);
     }
-
-    .sys-item strong { color: var(--text-primary); }
-
     .sys-divider {
       width: 1px; height: 16px;
       background: var(--border);
       flex-shrink: 0;
     }
-
     @media (max-width: 1024px) {
-      .dash-grid { grid-template-columns: 1fr; }
+      .dash-main-grid,
+      .dash-signals-grid { grid-template-columns: 1fr; }
     }
-
     @media (max-width: 768px) {
-      .system-status-bar { gap: 10px; }
       .sys-divider { display: none; }
     }
   </style>
 </head>
-
 <body>
+
 <div class="layout">
 
-  <!-- ════════════════════════════════════════════
-       SIDEBAR
-  ════════════════════════════════════════════ -->
+  <!-- ════════════ SIDEBAR ════════════ -->
   <nav class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="sidebar-logo-text">AlphaVault Quant</div>
       <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
     </div>
-
     <div class="nav-section">
       <div class="nav-section-label">Main</div>
       <a href="dashboard.html" class="nav-item" data-page="dashboard">
@@ -182,7 +101,6 @@
         <i class="fa-solid fa-wave-square"></i> ML Signals
       </a>
     </div>
-
     <div class="nav-section">
       <div class="nav-section-label">Analysis</div>
       <a href="regime.html" class="nav-item" data-page="regime">
@@ -195,7 +113,6 @@
         <i class="fa-solid fa-robot"></i> Agents
       </a>
     </div>
-
     <div class="nav-section">
       <div class="nav-section-label">Tools</div>
       <a href="trading.html" class="nav-item" data-page="trading">
@@ -208,75 +125,70 @@
         <i class="fa-solid fa-gear"></i> Settings
       </a>
     </div>
-
     <div class="sidebar-status">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
         <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">Loading...</span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
       </div>
-      <span id="last-sync"></span>
+      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
     </div>
   </nav>
 
-  <!-- ════════════════════════════════════════════
-       MAIN
-  ════════════════════════════════════════════ -->
+  <!-- ════════════ MAIN ════════════ -->
   <main class="main">
 
-    <!-- Top Header -->
+    <!-- Header -->
     <header class="top-header">
       <button class="hamburger-btn" id="hamburger-btn" aria-label="Toggle menu">
         <i class="fa-solid fa-bars"></i>
       </button>
-
       <div>
         <span class="top-header-title">Dashboard</span>
         <span class="top-header-sub">Overview</span>
       </div>
-
       <div class="top-header-actions">
         <div id="mode-badge-header"></div>
-
-        <button class="btn-icon" id="av-refresh-btn" title="Refresh data">
+        <button class="btn-icon" id="av-refresh-btn" title="Refresh">
           <i class="fa-solid fa-rotate" id="refresh-icon"></i>
         </button>
-
-        <button class="btn-icon" id="av-theme-toggle" title="Toggle dark/light mode">
+        <button class="btn-icon" id="av-theme-toggle" title="Toggle theme">
           <i class="fa-solid fa-moon"></i>
         </button>
       </div>
     </header>
 
-    <!-- Page Content -->
     <div class="page-content">
 
-      <!-- ── KPI ROW ───────────────────────────────── -->
-      <div class="kpi-row" id="dashboard-kpi-row">
-        <!-- Filled by JS -->
-        <div class="kpi-card skeleton" style="min-height:100px"></div>
-        <div class="kpi-card skeleton" style="min-height:100px"></div>
-        <div class="kpi-card skeleton" style="min-height:100px"></div>
-        <div class="kpi-card skeleton" style="min-height:100px"></div>
+      <!-- ── KPI ROW ── -->
+      <div class="kpi-row" id="dashboard-kpi-row" style="margin-bottom:16px">
+        <div class="kpi-card skeleton" style="min-height:95px"></div>
+        <div class="kpi-card skeleton" style="min-height:95px"></div>
+        <div class="kpi-card skeleton" style="min-height:95px"></div>
+        <div class="kpi-card skeleton" style="min-height:95px"></div>
       </div>
 
-      <!-- ── REGIME + AGENTS ROW ─────────────────── -->
-      <div class="dash-grid" style="margin-bottom:16px">
+      <!-- ── REGIME + AGENTS ── -->
+      <div class="dash-main-grid">
 
-        <!-- Regime Card -->
-        <div class="regime-card" id="regime-card">
+        <!-- Regime -->
+        <div class="card" id="regime-card">
           <div class="section-header">
             <i class="fa-solid fa-globe" style="color:#3b82f6"></i>
             Market Regime
             <span id="regime-cycle" style="margin-left:auto;font-size:10px;color:var(--text-muted)"></span>
+            <a href="regime.html" style="font-size:10px;color:var(--accent-blue)">
+              Details <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
+            </a>
           </div>
           <div id="regime-card-body">
-            <div style="text-align:center;padding:20px;color:var(--text-muted)">
-              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i> Loading...
+            <div style="text-align:center;padding:24px;color:var(--text-muted)">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              Loading regime...
             </div>
           </div>
         </div>
 
-        <!-- Agents Health Card -->
+        <!-- Agents Health -->
         <div class="card" id="agents-health-card">
           <div class="section-header">
             <i class="fa-solid fa-robot" style="color:#10b981"></i>
@@ -285,67 +197,70 @@
               View all <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
             </a>
           </div>
-          <div id="agents-kpi-mini" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap"></div>
-          <div class="agents-mini-list" id="agents-mini-list">
-            <div style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px">
-              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i> Loading agents...
+          <div id="agents-kpi-mini" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap"></div>
+          <div id="agents-mini-list">
+            <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              Loading agents...
             </div>
           </div>
         </div>
       </div>
 
-      <!-- ── TOP SIGNALS + NAV CHART ROW ──────────── -->
-      <div class="dash-grid" style="margin-bottom:16px">
+      <!-- ── TOP SIGNALS + MINI CARDS ── -->
+      <div class="dash-signals-grid">
 
         <!-- Top BUY Signals -->
         <div class="card">
           <div class="section-header">
             <i class="fa-solid fa-arrow-trend-up" style="color:#10b981"></i>
             Top BUY Signals
-            <span id="dash-sig-meta" style="margin-left:auto;font-size:10px;color:var(--text-muted)"></span>
+            <span id="dash-sig-meta"
+                  style="margin-left:auto;font-size:10px;color:var(--text-muted)"></span>
             <a href="signals.html" style="font-size:10px;color:var(--accent-blue)">
-              View all <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
+              All signals <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
             </a>
           </div>
           <div id="top-signals-table">
             <div style="text-align:center;padding:24px;color:var(--text-muted)">
-              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i> Loading signals...
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              Loading signals...
             </div>
           </div>
         </div>
 
-        <!-- Quick Stats Sidebar -->
+        <!-- PnL + Allocation mini -->
         <div style="display:flex;flex-direction:column;gap:14px">
-
-          <!-- PnL Mini -->
-          <div class="card" id="pnl-mini-card">
+          <div class="card">
             <div class="section-header" style="margin-bottom:10px">
-              <i class="fa-solid fa-chart-line" style="color:#8b5cf6"></i> PnL Monitor
+              <i class="fa-solid fa-chart-line" style="color:#8b5cf6"></i>
+              PnL Monitor
+              <a href="portfolio.html" style="margin-left:auto;font-size:10px;color:var(--accent-blue)">
+                <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
+              </a>
             </div>
             <div id="pnl-mini-body">
-              <div style="color:var(--text-muted);font-size:12px;text-align:center;padding:10px">
+              <div style="text-align:center;padding:10px;color:var(--text-muted);font-size:12px">
                 <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
               </div>
             </div>
           </div>
-
-          <!-- Allocation Mini -->
-          <div class="card" id="alloc-mini-card">
+          <div class="card">
             <div class="section-header" style="margin-bottom:10px">
-              <i class="fa-solid fa-coins" style="color:#10b981"></i> Capital Allocation
+              <i class="fa-solid fa-coins" style="color:#10b981"></i>
+              Capital Allocation
             </div>
             <div id="alloc-mini-body">
-              <div style="color:var(--text-muted);font-size:12px;text-align:center;padding:10px">
+              <div style="text-align:center;padding:10px;color:var(--text-muted);font-size:12px">
                 <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
               </div>
             </div>
           </div>
-
         </div>
       </div>
 
-      <!-- ── NAV CHART ──────────────────────────────── -->
-      <div class="nav-chart-card" style="margin-bottom:16px">
+      <!-- ── NAV CHART ── -->
+      <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
         <div class="chart-header">
           <div class="chart-header-left">
             <i class="fa-solid fa-chart-area" style="color:#3b82f6;font-size:15px"></i>
@@ -364,10 +279,11 @@
           </div>
         </div>
         <div id="nav-chart-container" class="chart-container chart-h-lg"
-             style="padding:4px 0">
+             style="padding:0 4px">
           <div style="display:flex;align-items:center;justify-content:center;
                       height:100%;gap:10px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:16px"></i>
+            <i class="fa-solid fa-circle-notch fa-spin"
+               style="color:#3b82f6;font-size:16px"></i>
             <span style="font-size:13px">Loading NAV chart...</span>
           </div>
         </div>
@@ -378,22 +294,24 @@
           </div>
           <div class="legend-item">
             <div class="legend-dot" style="background:#10b981"></div>
-            <span>BULL regime</span>
+            <span>BULL</span>
           </div>
           <div class="legend-item">
             <div class="legend-dot" style="background:#ef4444"></div>
-            <span>BEAR regime</span>
+            <span>BEAR</span>
           </div>
-          <span style="margin-left:auto">Source: rolling_history.json · 100 points · Refresh 60s</span>
+          <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
+            rolling_history.json · 100 pts · 60s refresh
+          </span>
         </div>
       </div>
 
-      <!-- ── SYSTEM STATUS BAR ──────────────────────── -->
-      <div class="system-status-bar" id="system-status-bar">
-        <i class="fa-solid fa-server" style="color:#3b82f6;font-size:14px"></i>
-        <div class="sys-item">
+      <!-- ── SYSTEM STATUS ── -->
+      <div class="system-bar" id="system-status-bar">
+        <i class="fa-solid fa-server" style="color:#3b82f6;font-size:13px"></i>
+        <div style="color:var(--text-muted)">
           <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:10px"></i>
-          <span>Loading system status...</span>
+          Loading system status...
         </div>
       </div>
 
@@ -401,123 +319,160 @@
   </main>
 </div><!-- /layout -->
 
-<!-- Sidebar overlay (mobile) -->
 <div class="sidebar-overlay" id="sidebar-overlay"></div>
-
-<!-- Stock Detail panel -->
 <div id="sdp-fullpage" style="display:none"></div>
-
-<!-- Toast container -->
 <div id="av-toast-wrap"></div>
 
-<!-- ═══════════════════ JS DEPENDENCIES ═══════════════════ -->
-<script src="docs/assets/js/av-config.js"></script>
-<script src="docs/assets/js/av-utils.js"></script>
-<script src="docs/assets/js/av-api.js"></script>
-<script src="docs/assets/js/av-charts.js"></script>
-<script src="docs/assets/js/av-portfolio.js"></script>
-<script src="docs/assets/js/av-signals.js"></script>
-<script src="docs/assets/js/av-agents.js"></script>
-<script src="docs/assets/js/av-controls.js"></script>
-<script src="docs/assets/js/stock-detail.js"></script>
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-<!-- ═══════════════════ DASHBOARD PAGE SCRIPT ═══════════════════ -->
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-trading.js"></script>
+<script src="assets/js/av-controls.js"></script>
+<script src="assets/js/av-stock-detail.js"></script>
+
 <script>
-(async () => {
+/* ══════════════════════════════════════════════════════
+   DEPENDENCY GUARD — vérifie que tous les modules sont
+   chargés avant d'exécuter le code de la page
+   ══════════════════════════════════════════════════════ */
+(function _guard() {
+  const REQUIRED = {
+    'AV_CONFIG':   'assets/js/av-config.js',
+    'AVUtils':     'assets/js/av-utils.js',
+    'AVApi':       'assets/js/av-api.js',
+    'AVCharts':    'assets/js/av-charts.js',
+    'AVSignals':   'assets/js/av-signals.js',
+    'AVAgents':    'assets/js/av-agents.js',
+    'AVPortfolio': 'assets/js/av-portfolio.js',
+    'AVControls':  'assets/js/av-controls.js',
+    'StockDetail': 'assets/js/av-stock-detail.js',
+  };
 
-  // ── Init commun ──────────────────────────────────────────
+  const missing = Object.entries(REQUIRED)
+    .filter(([n]) => typeof window[n] === 'undefined')
+    .map(([n, f]) => `${n} → ${f}`);
+
+  if (missing.length) {
+    document.body.insertAdjacentHTML('afterbegin', `
+      <div style="position:fixed;top:0;left:0;right:0;z-index:99999;
+                  background:#7f1d1d;color:#fecaca;font-family:monospace;
+                  font-size:12px;padding:14px 20px;line-height:1.8;
+                  border-bottom:3px solid #ef4444">
+        <strong style="font-size:14px">
+          AlphaVault — ${missing.length} missing JS file(s)
+        </strong><br>
+        ${missing.map(m => '&nbsp;&nbsp;• ' + m).join('<br>')}
+        <br><strong>→ F12 → Network tab → check for 404 errors</strong>
+      </div>`);
+    console.error('[AlphaVault] Missing modules:', missing);
+    return;
+  }
+
+  _initPage().catch(err => {
+    console.error('[Dashboard] Fatal:', err);
+    if (typeof showToast === 'function')
+      showToast('Fatal error: ' + err.message, 'error', 8000);
+  });
+})();
+
+/* ══════════════════════════════════════════════════════
+   PAGE INIT
+   ══════════════════════════════════════════════════════ */
+async function _initPage() {
+
+  // ── Init commun ────────────────────────────────────────
   await AVApi.init();
   AVControls.init();
 
-  // ── Mobile sidebar ───────────────────────────────────────
-  const hamburger = document.getElementById('hamburger-btn');
-  const sidebar   = document.getElementById('sidebar');
-  const overlay   = document.getElementById('sidebar-overlay');
-
-  hamburger?.addEventListener('click', () => {
-    sidebar.classList.toggle('mobile-open');
-    overlay.classList.toggle('active');
+  // ── Mobile sidebar ────────────────────────────────────
+  const $sidebar  = document.getElementById('sidebar');
+  const $overlay  = document.getElementById('sidebar-overlay');
+  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
+    $sidebar.classList.toggle('mobile-open');
+    $overlay.classList.toggle('active');
   });
-  overlay?.addEventListener('click', () => {
-    sidebar.classList.remove('mobile-open');
-    overlay.classList.remove('active');
+  $overlay?.addEventListener('click', () => {
+    $sidebar.classList.remove('mobile-open');
+    $overlay.classList.remove('active');
   });
 
-  // ── Refresh button ───────────────────────────────────────
+  // ── Refresh button ────────────────────────────────────
   document.getElementById('av-refresh-btn')?.addEventListener('click', async () => {
     const icon = document.getElementById('refresh-icon');
     if (icon) icon.className = 'fa-solid fa-rotate fa-spin';
     AVApi.invalidateAll();
-    await loadDashboard();
+    await _loadAll();
     if (icon) icon.className = 'fa-solid fa-rotate';
     showToast('Dashboard refreshed', 'success', 2000);
   });
 
-  // State
+  // ── State ─────────────────────────────────────────────
   let _history   = [];
   let _netliq    = 0;
   let _currentTf = 'ALL';
 
-  // ── MAIN LOAD ────────────────────────────────────────────
-  async function loadDashboard() {
+  // ════════════════════════════════════════════════════════
+  // LOAD ALL
+  // ════════════════════════════════════════════════════════
+  async function _loadAll() {
     const data = await AVApi.loadAll(30_000);
+    _netliq = netliqFromPortfolio(data.portfolio) || _netliq;
 
-    // ── KPI Row ─────────────────────────────────────────
-    renderDashKPIs(data.portfolio, data.risk);
-
-    // ── Regime ──────────────────────────────────────────
-    renderRegimeCard(data.regime);
-
-    // ── Agents ──────────────────────────────────────────
-    renderAgentsMini(data.health);
-
-    // ── Mode badge ──────────────────────────────────────
+    _renderKPIs(data.portfolio, data.risk);
+    _renderRegime(data.regime);
+    _renderAgentsMini(data.health);
     AVControls.updateModeBadge(data.mode);
+    _renderPnLMini(data.pnl);
+    _renderAllocMini(data.allocation);
+    _renderSystemBar(data.system, data.ibkr, data.mode);
 
-    // ── Top BUY signals ─────────────────────────────────
+    // Signals
     const sigData = await AVApi.getSignals();
     AVSignals.renderTopBuySignals(sigData.signals, 10);
-    const sigMetaEl = document.getElementById('dash-sig-meta');
-    if (sigMetaEl) {
-      sigMetaEl.textContent = `${sigData.n_buy} BUY · ${sigData.n_high_conf} high conf`;
-    }
+    const el = document.getElementById('dash-sig-meta');
+    if (el) el.textContent =
+      `${sigData.n_buy} BUY · ${sigData.n_high_conf} high conf · ${formatAge(sigData.updated_at)}`;
 
-    // ── PnL Mini ────────────────────────────────────────
-    renderPnLMini(data.pnl);
-
-    // ── Allocation Mini ──────────────────────────────────
-    renderAllocMini(data.allocation);
-
-    // ── System Status ────────────────────────────────────
-    renderSystemStatusBar(data.system, data.ibkr, data.mode);
-
-    // ── NAV Chart ────────────────────────────────────────
-    _netliq  = netliqFromPortfolio(data.portfolio) || _netliq;
+    // NAV chart
     _history = await AVApi.getRollingHistory(_netliq);
-    const subtitleEl = document.getElementById('nav-subtitle');
-    if (subtitleEl) subtitleEl.textContent = `${_history.length} data points · NetLiq: ${formatCurrency(_netliq, 0)}`;
-    await renderNAVChart(_currentTf);
+    const sub = document.getElementById('nav-subtitle');
+    if (sub) sub.textContent =
+      `${_history.length} pts · NetLiq: ${formatCurrency(_netliq, 0)}`;
+    await _renderNAV(_currentTf);
   }
 
-  // ── KPI Row ──────────────────────────────────────────────
-  function renderDashKPIs(portfolio, risk) {
-    const container = document.getElementById('dashboard-kpi-row');
-    if (!container) return;
+  // ════════════════════════════════════════════════════════
+  // KPI ROW (R1, R6, R7)
+  // ════════════════════════════════════════════════════════
+  function _renderKPIs(portfolio, risk) {
+    const el = document.getElementById('dashboard-kpi-row');
+    if (!el) return;
 
-    const netliq   = netliqFromPortfolio(portfolio) || 0;
-    const pnl      = sf(safeGet(portfolio, 'unrealized_pnl', 0));
-    const lev      = sf(safeGet(risk, 'leverage.current_leverage', safeGet(risk, 'current_leverage', 0)));
-    const isOver   = safeGet(risk, 'leverage.is_over_leveraged', false);
-    const nPos     = safeGet(portfolio, 'positions_count', 0);
-    const nLong    = safeGet(portfolio, 'long_count',  0);
-    const nShort   = safeGet(portfolio, 'short_count', 0);
-    const cashPct  = sf(safeGet(portfolio, 'cash_pct', safeGet(portfolio, 'cash_ratio', 0))) * 100;
-    const pnlColor = pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
-    const pnlArrow = pnl >= 0 ? 'fa-arrow-up' : 'fa-arrow-down';
-    const levColor = isOver ? 'var(--accent-orange)' : 'var(--accent-green)';
+    const netliq  = netliqFromPortfolio(portfolio) || 0;
+    const pnl     = sf(safeGet(portfolio, 'unrealized_pnl', 0));
+    const cash    = sf(safeGet(portfolio, 'cash', 0));
+    const cashPct = sf(safeGet(portfolio, 'cash_pct',
+                     safeGet(portfolio, 'cash_ratio', 0))) * 100;
+    const lev     = sf(safeGet(risk, 'leverage.current_leverage',
+                     safeGet(risk, 'current_leverage', 0)));
+    const isOver  = safeGet(risk, 'leverage.is_over_leveraged', false);
+    const nPos    = sf(safeGet(portfolio, 'positions_count', 0));
+    const nLong   = sf(safeGet(portfolio, 'long_count', 0));
+    const nShort  = sf(safeGet(portfolio, 'short_count', 0));
 
-    container.innerHTML = `
-      <!-- NetLiq (R1) -->
+    const pnlC = pnl >= 0 ? '#10b981' : '#ef4444';
+    const levC = isOver   ? '#f59e0b' : '#10b981';
+
+    el.innerHTML = `
+      <!-- NetLiq R1 -->
       <div class="kpi-card" style="border-top:3px solid #3b82f6">
         <div class="kpi-card-header">
           <i class="fa-solid fa-wallet" style="color:#3b82f6"></i>
@@ -525,34 +480,49 @@
         </div>
         <div class="kpi-value" style="color:#3b82f6">${formatCurrency(netliq, 0)}</div>
         <div class="kpi-sub">
-          Cash: ${formatCurrency(safeGet(portfolio, 'cash', 0), 0)}
-          ${cashPct > 100 ? `<span style="color:#3b82f6;font-size:10px;margin-left:4px">(${cashPct.toFixed(0)}% — Margin, normal)</span>` : ''}
+          Cash: ${formatCurrency(cash, 0)}
+          ${cashPct > 100
+            ? `<span style="color:#3b82f6;font-size:10px;margin-left:4px">
+                 (${cashPct.toFixed(0)}% — Margin, normal)
+               </span>`
+            : ''}
         </div>
       </div>
 
-      <!-- Unrealized PnL -->
-      <div class="kpi-card" style="border-top:3px solid ${pnlColor}">
+      <!-- PnL -->
+      <div class="kpi-card" style="border-top:3px solid ${pnlC}">
         <div class="kpi-card-header">
-          <i class="fa-solid ${pnlArrow}" style="color:${pnlColor}"></i>
+          <i class="fa-solid ${pnl >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"
+             style="color:${pnlC}"></i>
           <span class="kpi-label">Unrealized PnL</span>
         </div>
-        <div class="kpi-value" style="color:${pnlColor}">
+        <div class="kpi-value" style="color:${pnlC}">
           ${pnl >= 0 ? '+' : ''}${formatCurrency(pnl, 0)}
         </div>
-        <div class="kpi-sub">${netliq > 0 ? ((pnl / netliq) * 100).toFixed(2) + '% of NAV' : '--'}</div>
+        <div class="kpi-sub">
+          ${netliq > 0
+            ? ((pnl / netliq) * 100).toFixed(2) + '% of NAV'
+            : '—'}
+        </div>
       </div>
 
-      <!-- Leverage (R7) -->
-      <div class="kpi-card" style="border-top:3px solid ${levColor}">
+      <!-- Leverage R7 -->
+      <div class="kpi-card" style="border-top:3px solid ${levC}">
         <div class="kpi-card-header">
-          <i class="fa-solid fa-weight-scale" style="color:${levColor}"></i>
+          <i class="fa-solid fa-weight-scale" style="color:${levC}"></i>
           <span class="kpi-label">Leverage</span>
         </div>
-        <div class="kpi-value" style="color:${levColor}">${lev.toFixed(3)}x</div>
+        <div class="kpi-value" style="color:${levC}">${lev.toFixed(3)}x</div>
         <div class="kpi-sub">
           ${isOver
-            ? `<span style="color:var(--accent-orange)"><i class="fa-solid fa-triangle-exclamation" style="font-size:10px"></i> Over limit — max ${AV_CONFIG.THRESHOLDS.maxLeverage}x</span>`
-            : `<span style="color:var(--accent-green)"><i class="fa-solid fa-check" style="font-size:10px"></i> Within limits</span>`}
+            ? `<span style="color:#f59e0b">
+                 <i class="fa-solid fa-triangle-exclamation" style="font-size:10px"></i>
+                 Over limit (max ${AV_CONFIG.THRESHOLDS.maxLeverage}x)
+               </span>`
+            : `<span style="color:#10b981">
+                 <i class="fa-solid fa-check" style="font-size:10px"></i>
+                 Within limits
+               </span>`}
         </div>
       </div>
 
@@ -564,43 +534,51 @@
         </div>
         <div class="kpi-value" style="color:#8b5cf6">${nPos}</div>
         <div class="kpi-sub">
-          <span style="color:var(--accent-green)">${nLong} LONG</span>
+          <span style="color:#10b981">${nLong} LONG</span>
           <span style="color:var(--text-muted)"> / </span>
-          <span style="color:var(--accent-red)">${nShort} SHORT</span>
+          <span style="color:#ef4444">${nShort} SHORT</span>
         </div>
       </div>`;
   }
 
-  // ── Regime Card ──────────────────────────────────────────
-  function renderRegimeCard(regimeData) {
+  // ════════════════════════════════════════════════════════
+  // REGIME CARD
+  // ════════════════════════════════════════════════════════
+  function _renderRegime(data) {
     const body = document.getElementById('regime-card-body');
-    if (!body || !regimeData) return;
+    if (!body || !data) return;
 
-    const regime  = safeGet(regimeData, 'regime', safeGet(regimeData, 'signal', safeGet(regimeData, 'current_regime', 'NEUTRAL')));
-    const conf    = sf(safeGet(regimeData, 'confidence', 0));
-    const prev    = safeGet(regimeData, 'previous_regime', '--');
-    const dur     = safeGet(regimeData, 'regime_duration', safeGet(regimeData, 'duration', '--'));
-    const probs   = safeGet(regimeData, 'probabilities', {});
-    const thr     = safeGet(regimeData, 'signal_thresholds', {});
-    const colors  = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
+    const regime = safeGet(data, 'regime',
+                   safeGet(data, 'signal',
+                   safeGet(data, 'current_regime', 'NEUTRAL')));
+    const conf   = sf(safeGet(data, 'confidence', 0));
+    const prev   = safeGet(data, 'previous_regime', '—');
+    const dur    = safeGet(data, 'regime_duration', '');
+    const probs  = safeGet(data, 'probabilities', {});
+    const thr    = safeGet(data, 'signal_thresholds', {});
+    const colors = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
+    const ICONS  = { BULL:'fa-arrow-trend-up', BEAR:'fa-arrow-trend-down',
+                     NEUTRAL:'fa-minus', CRISIS:'fa-skull' };
 
     const cycleEl = document.getElementById('regime-cycle');
     if (cycleEl) {
-      const cycle = safeGet(regimeData, 'oracle_cycle', '');
-      if (cycle) cycleEl.textContent = `Oracle #${cycle}`;
+      const c = safeGet(data, 'oracle_cycle', '');
+      if (c) cycleEl.textContent = `Oracle #${c}`;
     }
 
-    const ICONS = { BULL:'fa-arrow-trend-up', BEAR:'fa-arrow-trend-down', NEUTRAL:'fa-minus', CRISIS:'fa-skull' };
-
     body.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div class="regime-main-badge"
-             style="background:${colors.light || colors.bg + '20'};color:${colors.bg};border:2px solid ${colors.bg}40">
-          <i class="fa-solid ${ICONS[regime] || 'fa-circle'}" style="font-size:18px"></i>
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="display:inline-flex;align-items:center;gap:10px;
+                    padding:10px 20px;border-radius:var(--radius-md);
+                    font-size:20px;font-weight:900;letter-spacing:0.5px;
+                    background:${colors.bg}18;color:${colors.bg};
+                    border:2px solid ${colors.bg}40">
+          <i class="fa-solid ${ICONS[regime] || 'fa-circle'}" style="font-size:17px"></i>
           ${regime}
         </div>
         <div>
-          <div style="font-size:24px;font-weight:900;font-family:var(--font-mono);color:${colors.bg}">
+          <div style="font-size:28px;font-weight:900;font-family:var(--font-mono);
+                      color:${colors.bg};line-height:1">
             ${(conf * 100).toFixed(0)}%
           </div>
           <div style="font-size:10px;color:var(--text-muted)">confidence</div>
@@ -608,299 +586,280 @@
         <div style="margin-left:auto;text-align:right">
           <div style="font-size:10px;color:var(--text-muted)">Previous</div>
           <div style="font-size:12px;font-weight:700;color:var(--text-secondary)">${prev}</div>
-          ${dur !== '--' ? `<div style="font-size:10px;color:var(--text-muted)">since ${dur} cycles</div>` : ''}
+          ${dur ? `<div style="font-size:10px;color:var(--text-muted)">${dur} cycles</div>` : ''}
         </div>
       </div>
 
-      <div class="regime-prob-row">
-        ${Object.entries({ BULL:'#10b981', BEAR:'#ef4444', NEUTRAL:'#6b7280', CRISIS:'#7c3aed' }).map(([r, c]) => {
-          const p = sf(probs[r] || 0) * 100;
-          const isActive = r === regime;
-          return `
-            <div class="regime-prob-item" style="${isActive ? `border-color:${c}40;background:${c}08` : ''}">
-              <div class="regime-prob-pct" style="color:${isActive ? c : 'var(--text-primary)'}">
-                ${p.toFixed(0)}%
-              </div>
-              <div class="regime-prob-label">${r}</div>
-            </div>`;
-        }).join('')}
+      <div class="regime-probs">
+        ${[['BULL','#10b981'],['BEAR','#ef4444'],['NEUTRAL','#6b7280'],['CRISIS','#7c3aed']]
+          .map(([r, c]) => {
+            const p  = sf(probs[r] || 0) * 100;
+            const ia = r === regime;
+            return `
+              <div class="regime-prob-item"
+                   style="${ia ? 'border-color:' + c + '40;background:' + c + '08' : ''}">
+                <div style="font-size:17px;font-weight:900;font-family:var(--font-mono);
+                            line-height:1;color:${ia ? c : 'var(--text-primary)'}">
+                  ${p.toFixed(0)}%
+                </div>
+                <div style="font-size:9px;color:var(--text-muted);margin-top:2px;
+                            text-transform:uppercase;letter-spacing:0.4px">${r}</div>
+              </div>`;
+          }).join('')}
       </div>
 
       ${Object.keys(thr).length ? `
-        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <div style="display:flex;gap:6px;margin-top:10px;align-items:center;flex-wrap:wrap">
           <span style="font-size:10px;color:var(--text-muted)">Thresholds:</span>
-          <span class="badge badge-green">Buy: ${(sf(thr.buy || 0.6) * 100).toFixed(0)}%</span>
-          <span class="badge badge-red">Sell: ${(sf(thr.sell || 0.4) * 100).toFixed(0)}%</span>
+          <span class="badge badge-green">Buy ≥${(sf(thr.buy||0.6)*100).toFixed(0)}%</span>
+          <span class="badge badge-red">Sell ≥${(sf(thr.sell||0.4)*100).toFixed(0)}%</span>
         </div>` : ''}`;
   }
 
-  // ── Agents Mini (R2) ─────────────────────────────────────
-  function renderAgentsMini(health) {
+  // ════════════════════════════════════════════════════════
+  // AGENTS MINI (R2)
+  // ════════════════════════════════════════════════════════
+  function _renderAgentsMini(health) {
     const kpiEl  = document.getElementById('agents-kpi-mini');
     const listEl = document.getElementById('agents-mini-list');
     if (!health) return;
 
-    const n_agents = sf(health.n_agents || 13);
-    const n_active = sf(health.n_active || 0);
-    const n_errors = sf(health.n_errors || 0);
+    const na = sf(health.n_agents  || 13);
+    const ac = sf(health.n_active  || 0);
+    const er = sf(health.n_errors  || 0);
 
     if (kpiEl) {
       kpiEl.innerHTML = `
-        <span class="badge badge-blue"><i class="fa-solid fa-robot"></i> ${n_active}/${n_agents} Active</span>
-        ${n_errors === 0
+        <span class="badge badge-blue">
+          <i class="fa-solid fa-robot"></i> ${ac}/${na} Active
+        </span>
+        ${er === 0
           ? '<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> 0 Errors</span>'
-          : `<span class="badge badge-red"><i class="fa-solid fa-circle-exclamation"></i> ${n_errors} Errors</span>`}`;
+          : `<span class="badge badge-red">
+               <i class="fa-solid fa-circle-exclamation"></i> ${er} Error${er > 1 ? 's' : ''}
+             </span>`}`;
     }
 
     if (!listEl) return;
+    const agents = (health.agents || []).slice(0, 6);
 
-    const agents  = health.agents || [];
-    // Affiche les 6 premiers agents
-    const display = agents.slice(0, 6);
-
-    listEl.innerHTML = display.map(agent => {
-      const isOk   = isAgentOk(agent);
-      const dotBg  = isOk ? '#10b981' : '#ef4444';
-      const desc   = AV_CONFIG.AGENT_DESCRIPTIONS[agent.name] || { label: agent.name };
-      const cycles = sf(agent.cycles || 0);
-
+    listEl.innerHTML = agents.map(a => {
+      const ok   = isAgentOk(a);
+      const c    = ok ? '#10b981' : '#ef4444';
+      const desc = AV_CONFIG.AGENT_DESCRIPTIONS[a.name] || { label: a.name };
       return `
-        <div class="agent-mini-row">
-          <span class="agent-mini-dot" style="background:${dotBg};
-            ${isOk ? 'box-shadow:0 0 4px ' + dotBg + '60' : ''}"></span>
-          <span class="agent-mini-name">${desc.label || agent.name}</span>
-          <span class="agent-mini-status" style="color:${dotBg}">
-            ${isOk ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-circle-exclamation"></i>'}
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+                    border-radius:var(--radius-sm);font-size:11px;
+                    background:var(--bg-primary);margin-bottom:4px">
+          <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;
+                       background:${c};${ok ? 'box-shadow:0 0 4px '+c+'60' : ''}"></span>
+          <span style="flex:1;font-weight:600;color:var(--text-primary)">
+            ${desc.label || a.name}
+          </span>
+          <span style="font-size:10px;font-weight:700;color:${c}">
+            <i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i>
           </span>
           <span style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono)">
-            ${cycles.toLocaleString()}
+            ${sf(a.cycles || 0).toLocaleString()}
           </span>
         </div>`;
     }).join('');
 
-    if (agents.length > 6) {
+    if ((health.agents || []).length > 6) {
       listEl.innerHTML += `
-        <a href="agents.html" style="display:block;text-align:center;font-size:11px;
-                                      color:var(--accent-blue);padding:6px;text-decoration:none">
-          View all ${agents.length} agents <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
+        <a href="agents.html"
+           style="display:block;text-align:center;font-size:11px;color:var(--accent-blue);
+                  padding:6px;text-decoration:none;margin-top:2px">
+          View all ${(health.agents || []).length} agents
+          <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
         </a>`;
     }
   }
 
-  // ── PnL Mini ─────────────────────────────────────────────
-  function renderPnLMini(pnlData) {
+  // ════════════════════════════════════════════════════════
+  // PNL MINI
+  // ════════════════════════════════════════════════════════
+  function _renderPnLMini(d) {
     const el = document.getElementById('pnl-mini-body');
-    if (!el || !pnlData) return;
-
-    const total   = sf(pnlData.total_pnl || pnlData.total_pnl_usd || 0);
-    const wr      = sf(pnlData.win_rate   || 0);
-    const winning = sf(pnlData.winning    || 0);
-    const losing  = sf(pnlData.losing     || 0);
-    const color   = total >= 0 ? '#10b981' : '#ef4444';
-
+    if (!el || !d) return;
+    const total = sf(d.total_pnl || d.total_pnl_usd || 0);
+    const wr    = sf(d.win_rate  || 0);
+    const w     = sf(d.winning   || 0);
+    const l     = sf(d.losing    || 0);
+    const c     = total >= 0 ? '#10b981' : '#ef4444';
     el.innerHTML = `
       <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);
-                  color:${color};margin-bottom:6px">
+                  color:${c};margin-bottom:8px">
         ${total >= 0 ? '+' : ''}${formatCurrency(total, 0)}
       </div>
-      <div style="display:flex;gap:10px;margin-bottom:8px">
-        <span style="font-size:11px;color:#10b981">
-          <i class="fa-solid fa-circle-check" style="font-size:9px"></i> ${winning}W
+      <div style="display:flex;gap:12px;margin-bottom:8px;font-size:11px">
+        <span style="color:#10b981">
+          <i class="fa-solid fa-circle-check" style="font-size:9px"></i> ${w}W
         </span>
-        <span style="font-size:11px;color:#ef4444">
-          <i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> ${losing}L
+        <span style="color:#ef4444">
+          <i class="fa-solid fa-circle-xmark" style="font-size:9px"></i> ${l}L
         </span>
-        <span style="font-size:11px;color:var(--text-muted);margin-left:auto">
-          WR: ${wr.toFixed(1)}%
-        </span>
+        <span style="color:var(--text-muted);margin-left:auto">WR: ${wr.toFixed(1)}%</span>
       </div>
       ${progressBar(wr, '#3b82f6', 4)}`;
   }
 
-  // ── Allocation Mini ──────────────────────────────────────
-  function renderAllocMini(allocData) {
+  // ════════════════════════════════════════════════════════
+  // ALLOCATION MINI
+  // ════════════════════════════════════════════════════════
+  function _renderAllocMini(d) {
     const el = document.getElementById('alloc-mini-body');
     if (!el) return;
+    const allocs  = safeGet(d, 'allocations', {});
+    const method  = safeGet(d, 'method', 'kelly_risk_parity');
+    const isEmpty = !Object.keys(allocs).length;
 
-    const allocs = safeGet(allocData, 'allocations', {});
-    const method = safeGet(allocData, 'method', 'kelly_risk_parity');
-    const isEmpty = !allocs || Object.keys(allocs).length === 0;
-
-    if (isEmpty) {
-      el.innerHTML = `
-        <div style="text-align:center;padding:10px">
-          <i class="fa-solid fa-hourglass-half" style="color:#3b82f6;font-size:18px;margin-bottom:6px;display:block;opacity:0.6"></i>
-          <div style="font-size:11px;color:var(--text-muted);line-height:1.5">
-            Awaiting signal confidence &gt;${(AV_CONFIG.THRESHOLDS.highConf * 100).toFixed(0)}%
-          </div>
-          <div style="font-size:10px;color:var(--text-faint);margin-top:4px">${method}</div>
-        </div>`;
-    } else {
-      const top5 = Object.entries(allocs).slice(0, 5);
-      el.innerHTML = top5.map(([sym, val]) => {
+    el.innerHTML = isEmpty ? `
+      <div style="text-align:center;padding:8px">
+        <i class="fa-solid fa-hourglass-half"
+           style="color:#3b82f6;font-size:20px;margin-bottom:8px;display:block;opacity:0.6"></i>
+        <div style="font-size:11px;color:var(--text-muted);line-height:1.5">
+          Awaiting signal confidence<br>&gt;${(AV_CONFIG.THRESHOLDS.highConf*100).toFixed(0)}%
+        </div>
+        <div style="font-size:10px;color:var(--text-faint);margin-top:6px">${method}</div>
+      </div>` :
+      Object.entries(allocs).slice(0, 5).map(([sym, val]) => {
         const pct = sf(val) * 100;
         return `
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-            <span style="font-weight:700;font-size:11px;min-width:45px;color:var(--text-primary)">${sym}</span>
+            <span style="font-weight:700;font-size:11px;min-width:45px;
+                         color:var(--text-primary)">${sym}</span>
             <div style="flex:1">${progressBar(pct, '#3b82f6', 5)}</div>
-            <span style="font-size:10px;font-family:var(--font-mono);color:#3b82f6;min-width:36px;text-align:right">
-              ${pct.toFixed(1)}%
-            </span>
+            <span style="font-size:10px;font-family:var(--font-mono);color:#3b82f6;
+                         min-width:36px;text-align:right">${pct.toFixed(1)}%</span>
           </div>`;
       }).join('');
-    }
   }
 
-  // ── System Status Bar ────────────────────────────────────
-  function renderSystemStatusBar(sys, ibkr, mode) {
+  // ════════════════════════════════════════════════════════
+  // SYSTEM STATUS BAR
+  // ════════════════════════════════════════════════════════
+  function _renderSystemBar(sys, ibkr, mode) {
     const bar = document.getElementById('system-status-bar');
     if (!bar) return;
 
-    const session = safeGet(sys, 'session', '--');
-    const cycle   = safeGet(sys, 'oracle_cycle', '--');
+    const session = safeGet(sys, 'session', '—');
+    const cycle   = safeGet(sys, 'oracle_cycle', '—');
     const nAgents = safeGet(sys, 'agents_active', 13);
     const ddHalt  = safeGet(sys, 'dd_halt', false);
     const ibkrOk  = safeGet(ibkr, 'ibkr_connected', safeGet(ibkr, 'connected', false));
-    const modeStr = `${safeGet(mode, 'auto', false) ? 'AUTO' : 'MANUAL'} ${(safeGet(mode, 'mode', 'paper') || 'PAPER').toUpperCase()}`;
+    const mStr    = `${safeGet(mode, 'auto', false) ? 'AUTO' : 'MANUAL'} ${
+                      (safeGet(mode, 'mode', 'paper') || 'PAPER').toUpperCase()}`;
     const account = safeGet(mode, 'account', AV_CONFIG.ACCOUNT.paper);
+    const SESS_C  = { us_regular:'#10b981', us_postmarket:'#f59e0b',
+                      us_premarket:'#3b82f6', closed:'#6b7280' };
+    const sC = SESS_C[session] || '#6b7280';
+    const sL = session.replace(/_/g,' ').toUpperCase();
 
-    const SESSION_COLORS = {
-      us_regular: '#10b981', us_postmarket: '#f59e0b',
-      us_premarket: '#3b82f6', closed: '#6b7280',
-    };
-    const sColor = SESSION_COLORS[session] || '#6b7280';
-    const sLabel = session.replace(/_/g, ' ').toUpperCase();
+    const item = (icon, color, content) =>
+      `<div style="display:flex;align-items:center;gap:5px;color:var(--text-muted)">
+         <i class="fa-solid ${icon}" style="color:${color};font-size:10px"></i>
+         ${content}
+       </div>`;
 
     bar.innerHTML = `
       <i class="fa-solid fa-server" style="color:#3b82f6;font-size:13px;flex-shrink:0"></i>
-
-      <div class="sys-item">
-        <i class="fa-solid fa-clock" style="color:${sColor};font-size:10px"></i>
-        <span style="color:${sColor};font-weight:700">${sLabel}</span>
-      </div>
-
+      ${item('fa-clock', sC,
+        `<span style="color:${sC};font-weight:700">${sL}</span>`)}
       <div class="sys-divider"></div>
-
-      <div class="sys-item">
-        <i class="fa-solid fa-rotate" style="color:#8b5cf6;font-size:10px"></i>
-        <span>Oracle Cycle <strong>#${cycle}</strong></span>
-      </div>
-
+      ${item('fa-rotate', '#8b5cf6',
+        `Oracle <strong style="color:var(--text-primary)">#${cycle}</strong>`)}
       <div class="sys-divider"></div>
-
-      <div class="sys-item">
-        <i class="fa-solid fa-robot" style="color:#10b981;font-size:10px"></i>
-        <span><strong>${nAgents}</strong>/13 agents</span>
-      </div>
-
+      ${item('fa-robot', '#10b981',
+        `<strong style="color:var(--text-primary)">${nAgents}</strong>/13 agents`)}
       <div class="sys-divider"></div>
-
-      <div class="sys-item">
-        <i class="fa-solid fa-plug" style="color:${ibkrOk ? '#10b981' : '#ef4444'};font-size:10px"></i>
-        <span style="color:${ibkrOk ? '#10b981' : '#ef4444'}">
-          IBKR ${ibkrOk ? 'Connected' : 'Offline'}
-        </span>
-      </div>
-
+      ${item('fa-plug', ibkrOk ? '#10b981' : '#ef4444',
+        `<span style="color:${ibkrOk ? '#10b981' : '#ef4444'}">
+           IBKR ${ibkrOk ? 'Connected' : 'Offline'}
+         </span>`)}
       <div class="sys-divider"></div>
-
-      <div class="sys-item">
-        <i class="fa-solid fa-sliders" style="color:#3b82f6;font-size:10px"></i>
-        <strong>${modeStr}</strong>
-        <span style="color:var(--text-faint)">${account}</span>
-      </div>
-
+      ${item('fa-sliders', '#3b82f6',
+        `<strong style="color:var(--text-primary)">${mStr}</strong>
+         <span style="color:var(--text-faint);font-size:10px">&nbsp;${account}</span>`)}
       ${ddHalt ? `
         <div class="sys-divider"></div>
-        <div class="sys-item" style="color:#ef4444">
-          <i class="fa-solid fa-hand" style="font-size:10px"></i>
-          <strong>DD HALT ACTIVE</strong>
+        <div style="display:flex;align-items:center;gap:5px;color:#ef4444;font-weight:700">
+          <i class="fa-solid fa-hand" style="font-size:10px"></i> DD HALT
         </div>` : ''}
-
       <div style="margin-left:auto;font-size:10px;color:var(--text-faint)">
-        AlphaVault Quant ${AV_CONFIG.VERSION}
+        AlphaVault ${AV_CONFIG.VERSION}
       </div>`;
   }
 
-  // ── NAV Chart ────────────────────────────────────────────
-  async function renderNAVChart(tf) {
-    const container = document.getElementById('nav-chart-container');
-    if (!container) return;
-
+  // ════════════════════════════════════════════════════════
+  // NAV CHART
+  // ════════════════════════════════════════════════════════
+  async function _renderNAV(tf) {
     await AVCharts.renderNAVChart('nav-chart-container', _history, {
-      height:       _getChartHeight(),
-      showLeverage: false,
-      timeframe:    tf,
-      currentNetliq:_netliq,
+      height:        window.innerWidth < 480 ? 200
+                   : window.innerWidth < 768 ? 240 : 300,
+      showLeverage:  false,
+      timeframe:     tf,
+      currentNetliq: _netliq,
     });
   }
 
-  function _getChartHeight() {
-    return window.innerWidth < 480 ? 200 : window.innerWidth < 768 ? 240 : 300;
-  }
-
-  // ── Timeframe selector ───────────────────────────────────
   document.getElementById('nav-tf-selector')?.addEventListener('click', async e => {
     const btn = e.target.closest('.tf-btn');
     if (!btn) return;
-    document.querySelectorAll('#nav-tf-selector .tf-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#nav-tf-selector .tf-btn')
+      .forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     _currentTf = btn.dataset.tf;
     AVCharts.destroyLWC('nav-chart-container');
-    await renderNAVChart(_currentTf);
+    await _renderNAV(_currentTf);
   });
 
-  // ── Auto-refresh ─────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  // AUTO-REFRESH
+  // ════════════════════════════════════════════════════════
   AVApi.startAutoRefresh({
     portfolio:  AV_CONFIG.REFRESH.portfolio,
     risk:       AV_CONFIG.REFRESH.portfolio,
     health:     AV_CONFIG.REFRESH.agents,
     mode:       AV_CONFIG.REFRESH.execution,
     pnl:        AV_CONFIG.REFRESH.portfolio,
-    allocation: AV_CONFIG.REFRESH.signals,
     onUpdate: async (key, freshData) => {
       if (key === 'portfolio') {
-        const risk = AVApi.getCached('risk');
-        renderDashKPIs(freshData, risk);
-        _netliq  = netliqFromPortfolio(freshData) || _netliq;
+        _renderKPIs(freshData, AVApi.getCached('risk'));
+        _netliq = netliqFromPortfolio(freshData) || _netliq;
       }
-      if (key === 'health')     renderAgentsMini({ agents: Object.entries(freshData.agents||{}).map(([n,v])=>({name:n,...v,isOk:isAgentOk(v)})), ...freshData });
-      if (key === 'pnl')        renderPnLMini(freshData);
-      if (key === 'allocation') renderAllocMini(freshData);
-      if (key === 'mode')       AVControls.updateModeBadge(freshData);
+      if (key === 'health') _renderAgentsMini(freshData);
+      if (key === 'pnl')    _renderPnLMini(freshData);
+      if (key === 'mode')   AVControls.updateModeBadge(freshData);
       await AVApi.updateSidebarStatus();
     },
   });
 
-  // Refresh signaux + régime toutes les 60s
+  // 60s — régime + signaux + system
   setInterval(async () => {
-    const [regData, sigData, sysData, ibkrData, modeData, histData] = await Promise.all([
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.regime,  0),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.signals, 0),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.system,  0),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.ibkr,    0),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.mode,    0),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.history, 0),
+    const [reg, sys, ibkr, mode] = await Promise.all([
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.regime, 0),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.system, 0),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.ibkr,   0),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.mode,   0),
     ]);
-    renderRegimeCard(regData);
+    _renderRegime(reg);
+    _renderSystemBar(sys, ibkr, mode);
     const sigs = await AVApi.getSignals();
     AVSignals.renderTopBuySignals(sigs.signals, 10);
-    renderSystemStatusBar(sysData, ibkrData, modeData);
     _history = await AVApi.getRollingHistory(_netliq);
   }, AV_CONFIG.REFRESH.signals);
 
-  // ── Theme change → re-render chart ───────────────────────
-  AVCharts.onThemeChange([
-    async () => {
-      AVCharts.destroyLWC('nav-chart-container');
-      await renderNAVChart(_currentTf);
-    },
-  ]);
+  // Re-render chart on theme change
+  AVCharts.onThemeChange([async () => {
+    AVCharts.destroyLWC('nav-chart-container');
+    await _renderNAV(_currentTf);
+  }]);
 
-  // ── Initial load ─────────────────────────────────────────
-  await loadDashboard();
-
-})();
+  // ── GO ────────────────────────────────────────────────
+  await _loadAll();
+}
 </script>
 
 </body>
