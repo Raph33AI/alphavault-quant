@@ -617,64 +617,80 @@ async function _initPage() {
   }
 
   // ════════════════════════════════════════════════════════
-  // AGENTS MINI (R2)
-  // ════════════════════════════════════════════════════════
-  function _renderAgentsMini(health) {
+    // AGENTS MINI (R2) — FIX : normalise objet ET tableau
+    // ════════════════════════════════════════════════════════
+    function _renderAgentsMini(health) {
     const kpiEl  = document.getElementById('agents-kpi-mini');
     const listEl = document.getElementById('agents-mini-list');
     if (!health) return;
 
-    const na = sf(health.n_agents  || 13);
-    const ac = sf(health.n_active  || 0);
-    const er = sf(health.n_errors  || 0);
+    const na = sf(health.n_agents || 13);
+    const ac = sf(health.n_active || 0);
+    const er = sf(health.n_errors || 0);
 
     if (kpiEl) {
-      kpiEl.innerHTML = `
+        kpiEl.innerHTML = `
         <span class="badge badge-blue">
-          <i class="fa-solid fa-robot"></i> ${ac}/${na} Active
+            <i class="fa-solid fa-robot"></i> ${ac}/${na} Active
         </span>
         ${er === 0
-          ? '<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> 0 Errors</span>'
-          : `<span class="badge badge-red">
-               <i class="fa-solid fa-circle-exclamation"></i> ${er} Error${er > 1 ? 's' : ''}
-             </span>`}`;
+            ? '<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> 0 Errors</span>'
+            : `<span class="badge badge-red">
+                <i class="fa-solid fa-circle-exclamation"></i> ${er} Error${er > 1 ? 's' : ''}
+            </span>`}`;
     }
 
     if (!listEl) return;
-    const agents = (health.agents || []).slice(0, 6);
 
-    listEl.innerHTML = agents.map(a => {
-      const ok   = isAgentOk(a);
-      const c    = ok ? '#10b981' : '#ef4444';
-      const desc = AV_CONFIG.AGENT_DESCRIPTIONS[a.name] || { label: a.name };
-      return `
+    // ── FIX CRITIQUE ────────────────────────────────────────
+    // agent_health.json.agents = OBJET { name: {...} }
+    // AVApi.getAgentHealth().agents = TABLEAU [{name, ...}]
+    // On normalise les deux cas ici
+    const agentsRaw = health.agents || health.agentsMap || {};
+    const agents = Array.isArray(agentsRaw)
+        ? agentsRaw
+        : Object.entries(agentsRaw).map(([name, info]) => ({
+            name,
+            ...info,
+            isOk: isAgentOk(info),
+        }));
+    // ────────────────────────────────────────────────────────
+
+    const display = agents.slice(0, 6);
+
+    listEl.innerHTML = display.map(a => {
+        const ok   = a.isOk !== undefined ? a.isOk : isAgentOk(a);
+        const c    = ok ? '#10b981' : '#ef4444';
+        const desc = AV_CONFIG.AGENT_DESCRIPTIONS[a.name] || { label: a.name };
+        return `
         <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;
                     border-radius:var(--radius-sm);font-size:11px;
                     background:var(--bg-primary);margin-bottom:4px">
-          <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;
-                       background:${c};${ok ? 'box-shadow:0 0 4px '+c+'60' : ''}"></span>
-          <span style="flex:1;font-weight:600;color:var(--text-primary)">
+            <span style="width:7px;height:7px;border-radius:50%;flex-shrink:0;
+                        background:${c};${ok ? 'box-shadow:0 0 4px ' + c + '60' : ''}">
+            </span>
+            <span style="flex:1;font-weight:600;color:var(--text-primary)">
             ${desc.label || a.name}
-          </span>
-          <span style="font-size:10px;font-weight:700;color:${c}">
+            </span>
+            <span style="font-size:10px;font-weight:700;color:${c}">
             <i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-exclamation'}"></i>
-          </span>
-          <span style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono)">
+            </span>
+            <span style="font-size:10px;color:var(--text-faint);font-family:var(--font-mono)">
             ${sf(a.cycles || 0).toLocaleString()}
-          </span>
+            </span>
         </div>`;
     }).join('');
 
-    if ((health.agents || []).length > 6) {
-      listEl.innerHTML += `
+    if (agents.length > 6) {
+        listEl.innerHTML += `
         <a href="agents.html"
-           style="display:block;text-align:center;font-size:11px;color:var(--accent-blue);
-                  padding:6px;text-decoration:none;margin-top:2px">
-          View all ${(health.agents || []).length} agents
-          <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
+            style="display:block;text-align:center;font-size:11px;color:var(--accent-blue);
+                    padding:6px;text-decoration:none;margin-top:2px">
+            View all ${agents.length} agents
+            <i class="fa-solid fa-arrow-right" style="font-size:9px"></i>
         </a>`;
     }
-  }
+    }
 
   // ════════════════════════════════════════════════════════
   // PNL MINI
