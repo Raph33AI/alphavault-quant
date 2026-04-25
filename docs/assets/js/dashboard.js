@@ -84,44 +84,59 @@
       netliq !== null ? null : 'var(--accent-orange)'
     );
 
-    // ── Unrealized PnL — somme des positions si root = 0 ───────
-    // portfolio.json racine : unrealized_pnl = 0.0 (non peuplé)
-    // → calcul depuis positions[].unrealized_pnl (source réelle)
-    const posArrForPnl = Object.values(portfolio?.positions || {});
+    // ── Unrealized PnL — somme positions si root = 0 ────────────
+    const posForCalc     = Object.values(portfolio?.positions || {});
+    const winningFromPos = posForCalc.filter(p => parseFloat(p.unrealized_pnl || 0) > 0).length;
+    const losingFromPos  = posForCalc.filter(p => parseFloat(p.unrealized_pnl || 0) < 0).length;
+    const winRateFromPos = posForCalc.length > 0
+    ? (winningFromPos / posForCalc.length * 100)
+    : 0;
 
     let pnlRaw = null;
-
-    // Priorité 1 : racine portfolio si valeur non nulle
     if (portfolio?.unrealized_pnl !== undefined &&
         portfolio?.unrealized_pnl !== null &&
         parseFloat(portfolio.unrealized_pnl) !== 0) {
     pnlRaw = parseFloat(portfolio.unrealized_pnl);
     }
-
-    // Priorité 2 : somme des unrealized_pnl de chaque position
-    if ((pnlRaw === null || pnlRaw === 0) && posArrForPnl.length > 0) {
-    pnlRaw = posArrForPnl.reduce(
-        (sum, p) => sum + parseFloat(p.unrealized_pnl ?? p.pnl ?? 0), 0
+    if ((pnlRaw === null || pnlRaw === 0) && posForCalc.length > 0) {
+    pnlRaw = posForCalc.reduce(
+        (sum, p) => sum + parseFloat(p.unrealized_pnl ?? 0), 0
     );
     }
-
-    // Priorité 3 : fallback pnl_monitor.json
     if ((pnlRaw === null || pnlRaw === 0) && pnlMon?.total_pnl_usd) {
     pnlRaw = parseFloat(pnlMon.total_pnl_usd);
     }
 
     const pnl    = parseFloat(pnlRaw ?? 0);
     const pnlFmt = isNaN(pnl) ? '—' : (pnl >= 0 ? '+' : '') + AVUtils.formatCurrencyFull(pnl);
-    const pnlClr = pnl > 0 ? 'var(--accent-green)' : pnl < 0 ? 'var(--accent-red)' : 'var(--text-primary)';
-    const winRate = parseFloat(pnlMon?.win_rate ?? 0);
-    const winning = parseInt(pnlMon?.winning    ?? 0);
-    const losing  = parseInt(pnlMon?.losing     ?? 0);
+    const pnlClr = pnl > 0 ? 'var(--accent-green)'
+                : pnl < 0 ? 'var(--accent-red)'
+                : 'var(--text-primary)';
+
+    // Win/Loss — positions EN PREMIER, pnl_monitor si non nul
+    const winRate = parseFloat(pnlMon?.win_rate) > 0
+    ? parseFloat(pnlMon.win_rate)
+    : winRateFromPos;
+    const winning = parseInt(pnlMon?.winning) > 0
+    ? parseInt(pnlMon.winning)
+    : winningFromPos;
+    const losing  = parseInt(pnlMon?.losing) > 0
+    ? parseInt(pnlMon.losing)
+    : losingFromPos;
+
+    // %gain vs portfolio NetLiq
+    const pnlPct = netliq && netliq > 0 && pnl !== 0
+    ? (pnl / (netliq - pnl) * 100)
+    : 0;
+    const pnlPctStr = pnlPct !== 0
+    ? ` &nbsp;·&nbsp; <span style="font-weight:800">${pnlPct > 0 ? '+' : ''}${pnlPct.toFixed(2)}%</span>`
+    : '';
 
     _setKpi(
     'pnl',
     pnlFmt,
     pnlRaw !== null
-        ? `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}%`
+        ? `<i class="fa-solid fa-chart-bar"></i> W:${winning} / L:${losing} &nbsp;·&nbsp; ${winRate.toFixed(1)}% win${pnlPctStr}`
         : '<i class="fa-solid fa-circle-notch fa-spin" style="font-size:9px"></i> Loading...',
     null,
     pnlClr

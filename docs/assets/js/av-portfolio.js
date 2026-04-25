@@ -144,7 +144,13 @@
   function renderKPIs() {
     // ── R1 NetLiq ───────────────────────────────────────────
     const netliq   = AVUtils.netliqFromPortfolio(_portfolio);
-    const cash     = parseFloat(_portfolio?.cash || 0);
+    const cash = parseFloat(
+    _portfolio?.cash
+    ?? _portfolio?.cash_value
+    ?? _portfolio?.Cash
+    ?? _portfolio?.available_cash
+    ?? 0
+    );
     const cashPct  = netliq > 0 ? (cash / netliq * 100) : 0;
     const isMargin = cashPct > 100;  // R6 : > 100% = marge, NORMAL
 
@@ -250,10 +256,7 @@
     const body = document.getElementById('port-pnl-body');
     if (!body) return;
 
-    // ── PnL — même logique que dashboard.js ─────────────────
-    // Priorité 1 : pnl_monitor.json.total_pnl_usd
-    // Priorité 2 : portfolio.json.unrealized_pnl (si non nul)
-    // Priorité 3 : somme positions[].unrealized_pnl (source réelle)
+    // ── PnL — somme positions si root = 0 ──────────────────
     let totalPnl = null;
 
     if (_pnl?.total_pnl_usd !== undefined &&
@@ -261,34 +264,41 @@
         parseFloat(_pnl.total_pnl_usd) !== 0) {
         totalPnl = parseFloat(_pnl.total_pnl_usd);
     }
-
     if ((totalPnl === null || totalPnl === 0) &&
         _portfolio?.unrealized_pnl !== undefined &&
         parseFloat(_portfolio.unrealized_pnl) !== 0) {
         totalPnl = parseFloat(_portfolio.unrealized_pnl);
     }
-
     if ((totalPnl === null || totalPnl === 0) && _positions.length > 0) {
         totalPnl = _positions.reduce((sum, p) => sum + p.unrealized_pnl, 0);
     }
-
     totalPnl = parseFloat(totalPnl ?? 0);
 
-    // ── Win/Loss — depuis pnl_monitor si dispo, sinon calcul positions ──
+    // ── Win/Loss — positions EN PREMIER (source fiable) ─────
     const winningFromPos = _positions.filter(p => p.unrealized_pnl > 0).length;
     const losingFromPos  = _positions.filter(p => p.unrealized_pnl < 0).length;
     const winRateFromPos = _positions.length > 0
         ? (winningFromPos / _positions.length * 100)
         : 0;
 
-    const winRate = parseFloat(_pnl?.win_rate  ?? winRateFromPos);
-    const winning = parseInt(_pnl?.winning     ?? winningFromPos);
-    const losing  = parseInt(_pnl?.losing      ?? losingFromPos);
-    const nPos    = parseInt(_pnl?.n_positions ?? _positions.length ?? 0);
+    // pnl_monitor en renfort uniquement si données > 0
+    const winRate = parseFloat(_pnl?.win_rate) > 0
+        ? parseFloat(_pnl.win_rate)
+        : winRateFromPos;
+    const winning = parseInt(_pnl?.winning) > 0
+        ? parseInt(_pnl.winning)
+        : winningFromPos;
+    const losing  = parseInt(_pnl?.losing) > 0
+        ? parseInt(_pnl.losing)
+        : losingFromPos;
+    const nPos    = parseInt(_pnl?.n_positions) > 0
+        ? parseInt(_pnl.n_positions)
+        : _positions.length;
+
     const regime  = _pnl?.current_regime || 'NEUTRAL';
     const rColors = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
 
-    // ── Suite du rendu inchangée ─────────────────────────────
+    // ── Suite rendu inchangée ────────────────────────────────
     const pnlColor = totalPnl > 0 ? 'var(--accent-green)'
                     : totalPnl < 0 ? 'var(--accent-red)'
                     : 'var(--text-primary)';
@@ -326,7 +336,7 @@
             <div style="margin-top:10px">
             <div class="av-progress-track" style="height:6px">
                 <div class="av-progress-fill"
-                    style="width:${winRate}%;
+                    style="width:${Math.min(winRate, 100)}%;
                             background:${winRate >= 50
                             ? 'var(--gradient-green)'
                             : 'linear-gradient(135deg,#f59e0b,#d97706)'}">
