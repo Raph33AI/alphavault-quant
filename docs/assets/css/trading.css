@@ -1,17 +1,45 @@
 /* ================================================================
-   trading.css — AlphaVault Quant Trading Terminal v1.0
-   Styles spécifiques à trading.html — préfixe trd-
+   trading.css — AlphaVault Quant Trading Terminal v1.0 — REVISED
+   Corrections mobile : overflow horizontal, tables, flex, SSH code
 ================================================================ */
+
+/* ── Reset box-sizing + overflow global (scoped à la page) ─────── */
+.av-layout *,
+.av-layout *::before,
+.av-layout *::after {
+  box-sizing: border-box;
+}
+
+/* Empêche le scroll horizontal sur le conteneur principal */
+.av-main {
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.av-content {
+  overflow-x: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Toutes les av-card respectent leur parent */
+.av-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
 
 /* ── Mode Banner ───────────────────────────────────────────────── */
 .trd-mode-banner {
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px 22px;
+  gap: 16px;
+  padding: 16px 18px;
   flex-wrap: wrap;
   border-left: 4px solid var(--accent-blue);
   transition: border-color 0.3s ease;
+  min-width: 0;
+  width: 100%;
 }
 
 .trd-mode-banner.is-live {
@@ -21,9 +49,9 @@
 .trd-mode-left {
   display: flex;
   align-items: center;
-  gap: 14px;
-  flex: 1;
-  min-width: 0;
+  gap: 12px;
+  flex: 1 1 0;
+  min-width: 0;           /* ← clé : permet la troncature flex */
 }
 
 .trd-mode-badge-wrap {
@@ -34,34 +62,35 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
   background: rgba(16, 185, 129, 0.1);
   color: var(--accent-green);
   border: 1.5px solid rgba(16, 185, 129, 0.3);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .trd-badge-live {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: var(--radius-full);
   background: rgba(239, 68, 68, 0.1);
   color: var(--accent-red);
   border: 1.5px solid rgba(239, 68, 68, 0.3);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
-/* Pulsing dot for LIVE mode */
 @keyframes trd-pulse-anim {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(0.7); }
+  50%       { opacity: 0.4; transform: scale(0.65); }
 }
 
 .trd-pulse {
@@ -70,7 +99,8 @@
 }
 
 .trd-mode-info {
-  min-width: 0;
+  min-width: 0;           /* ← clé pour l'ellipsis */
+  flex: 1 1 0;
 }
 
 .trd-mode-label {
@@ -81,6 +111,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .trd-mode-account {
@@ -88,20 +119,24 @@
   font-weight: 600;
   color: var(--text-faint);
   font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .trd-mode-center {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
 .trd-mode-right {
-  margin-left: auto;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 0;
 }
 
@@ -115,24 +150,29 @@
   font-size: 11px;
   font-weight: 700;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 /* ── KPI Grid ──────────────────────────────────────────────────── */
 .trd-kpi-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
 }
 
 .trd-kpi-block {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  padding: 14px 16px;
   transition: box-shadow 0.15s, transform 0.15s;
+  min-width: 0;           /* ← empêche le débordement */
+  overflow: hidden;
 }
 
 .trd-kpi-block:hover {
@@ -141,63 +181,78 @@
 }
 
 .trd-kpi-icon {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;        /* ← ne pas écraser l'icône */
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 14px;
   flex-shrink: 0;
 }
 
 .trd-kpi-content {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 0;
+  min-width: 0;           /* ← clé pour le texte */
+  overflow: hidden;
 }
 
 .trd-kpi-lbl {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .trd-kpi-val {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
   font-family: var(--font-mono);
   color: var(--text-primary);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .trd-kpi-sub {
   font-size: 9px;
   color: var(--text-faint);
-  margin-top: 3px;
+  margin-top: 2px;
   font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Main Grid Layout ──────────────────────────────────────────── */
 .trd-main-grid {
   display: grid;
-  grid-template-columns: 1fr 380px;
+  grid-template-columns: 1fr 360px;
   gap: 14px;
   align-items: start;
+  min-width: 0;
+  width: 100%;
 }
 
 .trd-left-col {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;           /* ← critique pour les enfants */
 }
 
 .trd-right-col {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  min-width: 0;
 }
 
 /* ── Order Form Card ───────────────────────────────────────────── */
@@ -210,11 +265,14 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: rgba(245, 158, 11, 0.06);
   border: 1px solid rgba(245, 158, 11, 0.25);
   border-radius: var(--radius-md);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .trd-ssh-title {
@@ -233,7 +291,12 @@
   border-radius: var(--radius-sm);
   padding: 7px 10px;
   color: var(--text-primary);
+  /* ─── Corrections overflow ─── */
   word-break: break-all;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;   /* wrap le long texte au lieu de déborder */
+  max-width: 100%;
+  overflow: hidden;
   user-select: all;
   cursor: text;
 }
@@ -243,14 +306,17 @@
   color: var(--text-faint);
   margin-top: 5px;
   line-height: 1.5;
+  word-break: break-word;
 }
 
 /* Order Form */
 .trd-order-form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  padding: 18px;
+  gap: 16px;
+  padding: 16px;
+  width: 100%;
+  min-width: 0;
 }
 
 /* BUY / SELL Toggle */
@@ -261,14 +327,15 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1.5px solid var(--border);
+  width: 100%;
 }
 
 .trd-side-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 20px;
+  gap: 7px;
+  padding: 13px 16px;
   border: none;
   background: var(--bg-secondary);
   color: var(--text-muted);
@@ -278,11 +345,12 @@
   transition: all 0.2s ease;
   font-family: var(--font-sans);
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  width: 100%;
+  min-width: 0;
 }
 
-.trd-side-btn:hover {
-  background: var(--bg-hover);
-}
+.trd-side-btn:hover { background: var(--bg-hover); }
 
 .trd-side-btn.buy:hover  { color: var(--accent-green); }
 .trd-side-btn.sell:hover { color: var(--accent-red); }
@@ -303,7 +371,9 @@
 .trd-form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
 }
 
 .trd-form-label {
@@ -319,6 +389,7 @@
 
 .trd-form-input {
   width: 100%;
+  max-width: 100%;        /* ← ne jamais dépasser le parent */
   padding: 11px 14px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--border);
@@ -329,7 +400,8 @@
   font-family: var(--font-mono);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
-  box-sizing: border-box;
+  box-sizing: border-box;  /* ← inclut le padding dans 100% */
+  min-width: 0;
 }
 
 .trd-form-input:focus {
@@ -357,11 +429,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: 3px;
+  width: 100%;
+  min-width: 0;
 }
 
 .trd-type-tab {
   flex: 1;
-  padding: 8px 14px;
+  min-width: 0;
+  padding: 8px 12px;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -372,6 +447,7 @@
   transition: all 0.15s;
   font-family: var(--font-sans);
   text-align: center;
+  white-space: nowrap;
 }
 
 .trd-type-tab:hover { color: var(--accent-blue); }
@@ -388,7 +464,8 @@
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 15px 24px;
+  max-width: 100%;
+  padding: 15px 20px;
   border: none;
   border-radius: var(--radius-md);
   font-size: 14px;
@@ -397,8 +474,7 @@
   transition: all 0.2s ease;
   font-family: var(--font-sans);
   letter-spacing: 0.3px;
-  position: relative;
-  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .trd-submit-btn.buy {
@@ -432,21 +508,60 @@
   box-shadow: none !important;
 }
 
+/* ── Table Wrapper — correction overflow ───────────────────────── */
+/*
+  RÈGLE CRITIQUE : toutes les tables sont dans un wrapper scrollable.
+  La table peut scroller horizontalement DANS sa zone, mais ne fait
+  pas déborder la page entière.
+*/
+.av-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;   /* scroll fluide iOS */
+  border-radius: var(--radius-md);
+}
+
+.av-table {
+  width: 100%;
+  /* min-width permet le scroll horizontal du tableau lui-même
+     sans que la PAGE scroll horizontalement */
+  min-width: 480px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+/* Cellules tables : no-wrap sur mobile pour éviter la compression */
+.av-table th,
+.av-table td {
+  white-space: nowrap;
+}
+
+/* Sur mobile, on enlève le no-wrap sur les cellules textuelles */
+@media (max-width: 640px) {
+  .av-table th:first-child,
+  .av-table td:first-child {
+    white-space: nowrap;   /* Symbol reste sur une ligne */
+  }
+}
+
 /* ── Empty States ──────────────────────────────────────────────── */
 .trd-empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 36px 20px;
+  padding: 32px 16px;
   text-align: center;
+  min-width: 0;
+  width: 100%;
 }
 
 .trd-empty-icon {
-  font-size: 28px;
+  font-size: 26px;
   opacity: 0.15;
   display: block;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   color: var(--text-secondary);
 }
 
@@ -462,10 +577,11 @@
   color: var(--text-faint);
   line-height: 1.5;
   max-width: 220px;
+  word-break: break-word;
 }
 
 .trd-empty-sm {
-  padding: 16px;
+  padding: 14px;
 }
 
 /* ── Controls Card ─────────────────────────────────────────────── */
@@ -473,17 +589,21 @@
   display: flex;
   flex-direction: column;
   gap: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .trd-ctrl-row {
   display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 16px 0;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  min-width: 0;
+  flex-wrap: wrap;        /* ← wrap si manque de place */
 }
 
 .trd-ctrl-info {
-  flex: 1;
+  flex: 1 1 120px;
   min-width: 0;
 }
 
@@ -501,24 +621,26 @@
   font-size: 10px;
   color: var(--text-faint);
   line-height: 1.5;
+  word-break: break-word;
 }
 
 .trd-ctrl-right {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0;
+  gap: 6px;
   flex-shrink: 0;
-  min-width: 140px;
+  min-width: 130px;
+  max-width: 100%;
 }
 
 .trd-ctrl-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 6px;
   width: 100%;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
   border: 1.5px solid var(--border);
   background: var(--bg-secondary);
@@ -529,11 +651,10 @@
   transition: all 0.15s;
   font-family: var(--font-sans);
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
-.trd-ctrl-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-}
+.trd-ctrl-btn:hover:not(:disabled)   { background: var(--bg-hover); }
 
 .trd-ctrl-btn.to-live:hover:not(:disabled) {
   border-color: var(--accent-red);
@@ -567,19 +688,24 @@
 .trd-ctrl-divider {
   height: 1px;
   background: var(--border);
+  flex-shrink: 0;
 }
 
 .trd-ctrl-ssh-note {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 12px;
+  padding: 10px 12px;
   background: rgba(59, 130, 246, 0.04);
   border-radius: var(--radius-sm);
   font-size: 10px;
   color: var(--text-faint);
   line-height: 1.5;
   margin-top: 4px;
+  word-break: break-word;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Order Locks ───────────────────────────────────────────────── */
@@ -587,23 +713,25 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .trd-lock-chip {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 10px;
+  padding: 6px 9px;
   border-radius: var(--radius-sm);
   background: rgba(245, 158, 11, 0.06);
   border: 1px solid rgba(245, 158, 11, 0.2);
-  min-width: 56px;
+  min-width: 52px;
+  max-width: 80px;
   transition: background 0.15s;
+  flex: 0 0 auto;
 }
 
-.trd-lock-chip:hover {
-  background: rgba(245, 158, 11, 0.12);
-}
+.trd-lock-chip:hover { background: rgba(245, 158, 11, 0.12); }
 
 .trd-lock-sym {
   font-size: 11px;
@@ -611,6 +739,11 @@
   color: var(--accent-orange);
   font-family: var(--font-mono);
   line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .trd-lock-price {
@@ -626,13 +759,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
+  min-width: 0;
+  flex-wrap: wrap;        /* ← wrap si trop étroit */
 }
 
-.trd-queue-row:last-child {
-  border-bottom: none;
-}
+.trd-queue-row:last-child { border-bottom: none; }
 
 .trd-queue-label {
   display: flex;
@@ -641,19 +775,23 @@
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .trd-queue-val {
   font-size: 12px;
   font-weight: 700;
   font-family: var(--font-mono);
+  flex-shrink: 0;
 }
 
 /* ── Session Stats ─────────────────────────────────────────────── */
 .trd-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
 }
 
 .trd-stat-item {
@@ -661,26 +799,31 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .trd-stat-icon {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
   border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .trd-stat-val {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   font-family: var(--font-mono);
   color: var(--text-primary);
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .trd-stat-lbl {
@@ -689,6 +832,7 @@
   color: var(--text-faint);
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 
 /* ── Confirmation Modal Grid ───────────────────────────────────── */
@@ -699,35 +843,37 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   overflow: hidden;
+  width: 100%;
+  min-width: 0;
 }
 
 .trd-confirm-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  gap: 8px;
+  padding: 9px 14px;
   border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
 }
 
-.trd-confirm-row:last-child {
-  border-bottom: none;
-}
+.trd-confirm-row:last-child { border-bottom: none; }
 
 .trd-confirm-lbl {
   font-size: 12px;
   color: var(--text-muted);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .trd-confirm-val {
   font-size: 12px;
   color: var(--text-primary);
   font-family: var(--font-mono);
+  word-break: break-word;
 }
 
-/* ── Action Badge (inherited from signals) ─────────────────────── */
-/* .sig-action-badge .buy .sell are defined in signals.css or av-global */
-/* Re-define here in case trading.css is loaded standalone */
+/* ── Action Badge (compatible signals.css) ─────────────────────── */
 .sig-action-badge {
   display: inline-flex;
   align-items: center;
@@ -751,76 +897,206 @@
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-/* ── Responsive ────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE — mobile-first breakpoints
+═══════════════════════════════════════════════════════════════ */
+
+/* ── ≤ 1280px : réduire la colonne droite ──────────────────────── */
 @media (max-width: 1280px) {
   .trd-main-grid {
-    grid-template-columns: 1fr 340px;
+    grid-template-columns: 1fr 320px;
   }
 }
 
+/* ── ≤ 1100px : empiler les deux colonnes ──────────────────────── */
 @media (max-width: 1100px) {
   .trd-main-grid {
     grid-template-columns: 1fr;
   }
+
+  /* Colonne droite passe en grille 2 colonnes côte à côte */
   .trd-right-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    gap: 14px;
   }
 }
 
+/* ── ≤ 960px : KPI en 2×2 ──────────────────────────────────────── */
 @media (max-width: 960px) {
   .trd-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .trd-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
 }
 
+/* ── ≤ 768px : colonne droite en 1 colonne ─────────────────────── */
 @media (max-width: 768px) {
+  /* Mode banner : empiler verticalement */
   .trd-mode-banner {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 10px;
   }
+
+  .trd-mode-left {
+    width: 100%;
+  }
+
   .trd-mode-right {
-    margin-left: 0;
+    width: 100%;
     align-items: flex-start;
   }
+
+  /* Colonne droite : 1 colonne */
+  .trd-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* KPI en 2 colonnes */
   .trd-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 10px;
   }
-  .trd-right-col {
-    grid-template-columns: 1fr;
+
+  .trd-kpi-val {
+    font-size: 15px;
   }
+
+  /* Stats en 2 colonnes */
   .trd-stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
   }
-}
 
-@media (max-width: 540px) {
-  .trd-kpi-grid {
-    grid-template-columns: 1fr 1fr;
+  /* Masquer colonnes secondaires dans la table orders */
+  .trd-orders-table-hide-sm {
+    display: none;
   }
-  .trd-kpi-block {
-    padding: 12px;
-  }
-  .trd-kpi-val {
-    font-size: 16px;
-  }
-  .trd-side-btn {
-    font-size: 13px;
-    padding: 12px 14px;
-  }
-  .trd-order-form {
-    padding: 14px;
-  }
+
+  /* Controls : empiler info + bouton */
   .trd-ctrl-row {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
   }
+
   .trd-ctrl-right {
     min-width: 100%;
     flex-direction: row;
     align-items: center;
+    justify-content: space-between;
+  }
+}
+
+/* ── ≤ 640px : masquer colonnes table non essentielles ─────────── */
+@media (max-width: 640px) {
+  /* Dans la table Pending Orders : masquer Type et Price */
+  .av-table th:nth-child(4),
+  .av-table td:nth-child(4),
+  .av-table th:nth-child(5),
+  .av-table td:nth-child(5) {
+    display: none;
+  }
+
+  /* min-width table réduit pour mobile */
+  .av-table {
+    min-width: 280px;
+  }
+
+  /* Form : réduire le padding */
+  .trd-order-form {
+    padding: 12px;
+    gap: 13px;
+  }
+
+  /* Side buttons : texte plus compact */
+  .trd-side-btn {
+    font-size: 13px;
+    padding: 11px 10px;
+    gap: 5px;
+  }
+
+  /* KPI : icône plus petite */
+  .trd-kpi-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    font-size: 12px;
+  }
+
+  .trd-kpi-block {
+    padding: 11px 12px;
+    gap: 10px;
+  }
+
+  /* SSH code : police encore plus petite */
+  .trd-ssh-code {
+    font-size: 9px;
+    padding: 6px 8px;
+  }
+
+  /* Stats : valeur plus petite */
+  .trd-stat-val {
+    font-size: 14px;
+  }
+}
+
+/* ── ≤ 480px : KPI en 1 colonne ────────────────────────────────── */
+@media (max-width: 480px) {
+  .trd-kpi-grid {
+    grid-template-columns: 1fr 1fr;   /* garde 2 colonnes, plus dense */
+    gap: 8px;
+  }
+
+  .trd-kpi-lbl {
+    font-size: 8px;
+  }
+
+  .trd-kpi-val {
+    font-size: 14px;
+  }
+
+  .trd-kpi-sub {
+    display: none;   /* masque le sous-titre sur très petit écran */
+  }
+
+  /* Mode badges : 1 par ligne */
+  .trd-mode-center {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  /* Submit button : texte légèrement réduit */
+  .trd-submit-btn {
+    font-size: 13px;
+    padding: 13px 16px;
+  }
+
+  /* Stats en 2×2 */
+  .trd-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── ≤ 360px : très petits écrans ─────────────────────────────── */
+@media (max-width: 360px) {
+  .trd-kpi-grid {
+    grid-template-columns: 1fr;    /* 1 colonne sur très petit */
+  }
+
+  .trd-side-btn {
+    font-size: 12px;
+    padding: 10px 8px;
+  }
+
+  .trd-type-tab {
+    font-size: 11px;
+    padding: 7px 8px;
   }
 }
