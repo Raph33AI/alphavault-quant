@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trading — AlphaVault Quant</title>
+
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
+
+  <style>
+    .trading-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .order-form-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .order-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+      display: block;
+    }
+    .order-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: var(--font-sans);
+      transition: var(--transition-fast);
+      box-sizing: border-box;
+    }
+    .order-input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+    .order-input::placeholder { color: var(--text-faint); }
+    .side-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .side-btn {
+      padding: 12px;
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border);
+      background: var(--bg-primary);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition-fast);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .side-btn[data-side="BUY"].active {
+      background: rgba(16,185,129,0.1);
+      border-color: #10b981;
+      color: #10b981;
+    }
+    .side-btn[data-side="SELL"].active {
+      background: rgba(239,68,68,0.1);
+      border-color: #ef4444;
+      color: #ef4444;
+    }
+    .type-selector {
+      display: inline-flex;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 3px;
+    }
+    .type-btn {
+      padding: 6px 16px;
+      border-radius: calc(var(--radius-md) - 2px);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition-fast);
+    }
+    .type-btn.active {
+      background: var(--bg-card);
+      color: var(--accent-blue);
+      box-shadow: var(--shadow-sm);
+    }
+    .btn-submit-buy {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition-smooth);
+      box-shadow: 0 4px 14px rgba(16,185,129,0.35);
+      font-family: var(--font-sans);
+    }
+    .btn-submit-buy:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(16,185,129,0.45);
+    }
+    .btn-submit-sell {
+      width: 100%;
+      padding: 13px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition-smooth);
+      box-shadow: 0 4px 14px rgba(239,68,68,0.35);
+      font-family: var(--font-sans);
+    }
+    .btn-submit-sell:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(239,68,68,0.45);
+    }
+    #limit-price-row { display: none; }
+    .autocomplete-wrap { position: relative; }
+    #symbol-autocomplete {
+      position: absolute;
+      top: 100%; left: 0; right: 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+      display: none;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .autocomplete-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      transition: background 0.12s;
+    }
+    .autocomplete-item:last-child { border-bottom: none; }
+    .autocomplete-item:hover { background: var(--bg-hover); }
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    @media (max-width: 1024px) { .trading-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 768px)  { .controls-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">AlphaVault Quant</div>
+      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
+      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Analysis</div>
+      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
+      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
+      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Tools</div>
+      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
+      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
+      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+    <div class="sidebar-status">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="status-dot" id="ibkr-dot"></span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
+      </div>
+      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="top-header">
+      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+      <div>
+        <span class="top-header-title">Trading Terminal</span>
+        <span class="top-header-sub" id="trading-header-sub">Loading...</span>
+      </div>
+      <div class="top-header-actions">
+        <div id="mode-badge-header"></div>
+        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- Connection Status Bar -->
+      <div id="trading-connection-bar" style="margin-bottom:16px">
+        <div style="padding:14px 18px;background:var(--bg-card);border:1px solid var(--border-card);
+                    border-radius:var(--radius-lg);color:var(--text-muted);font-size:12px">
+          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          Loading connection status...
+        </div>
+      </div>
+
+      <!-- Trading Layout: Order Form + Right Panel -->
+      <div class="trading-layout">
+
+        <!-- Order Form -->
+        <div>
+          <div class="card" style="padding:0;overflow:hidden">
+            <div style="padding:14px 18px;border-bottom:1px solid var(--border);
+                        font-size:13px;font-weight:700;color:var(--text-primary);
+                        display:flex;align-items:center;gap:8px">
+              <i class="fa-solid fa-paper-plane" style="color:#3b82f6"></i>
+              Submit Order
+              <span id="order-api-status" style="margin-left:auto;font-size:10px"></span>
+            </div>
+
+            <div class="order-form-body">
+
+              <!-- BUY / SELL -->
+              <div>
+                <label class="order-label">Side</label>
+                <div class="side-grid">
+                  <button class="side-btn active" data-side="BUY">
+                    <i class="fa-solid fa-arrow-up"></i> BUY
+                  </button>
+                  <button class="side-btn" data-side="SELL">
+                    <i class="fa-solid fa-arrow-down"></i> SELL
+                  </button>
+                </div>
+              </div>
+
+              <!-- Symbol -->
+              <div>
+                <label class="order-label" for="order-symbol">Symbol</label>
+                <div class="autocomplete-wrap">
+                  <input type="text" id="order-symbol" class="order-input"
+                         placeholder="AAPL, MSFT, NVDA..."
+                         autocomplete="off" spellcheck="false"
+                         style="text-transform:uppercase;font-family:var(--font-mono);
+                                font-weight:700;letter-spacing:0.5px">
+                  <div id="symbol-autocomplete"></div>
+                </div>
+              </div>
+
+              <!-- Quantity -->
+              <div>
+                <label class="order-label" for="order-qty">Quantity</label>
+                <input type="number" id="order-qty" class="order-input"
+                       placeholder="100" min="1" step="1"
+                       style="font-family:var(--font-mono)">
+              </div>
+
+              <!-- Order Type -->
+              <div>
+                <label class="order-label">Order Type</label>
+                <div class="type-selector">
+                  <button class="type-btn active" data-order-type="MKT">MKT</button>
+                  <button class="type-btn" data-order-type="LMT">LMT</button>
+                </div>
+              </div>
+
+              <!-- Limit Price (hidden by default) -->
+              <div id="limit-price-row">
+                <label class="order-label" for="order-limit-price">Limit Price ($)</label>
+                <input type="number" id="order-limit-price" class="order-input"
+                       placeholder="0.00" step="0.01" min="0"
+                       style="font-family:var(--font-mono)">
+              </div>
+
+              <!-- Submit -->
+              <button id="order-submit-btn" class="btn-submit-buy">
+                <i class="fa-solid fa-paper-plane"></i>
+                <span id="order-submit-label">Submit BUY Order</span>
+              </button>
+
+              <!-- API Unavailable Notice -->
+              <div id="order-api-notice" style="display:none;
+                   padding:10px 14px;background:rgba(245,158,11,0.08);
+                   border:1px solid rgba(245,158,11,0.25);border-radius:var(--radius-md);
+                   font-size:11px;color:var(--text-secondary)">
+                <i class="fa-solid fa-terminal" style="color:#f59e0b"></i>
+                <strong>Dashboard API offline</strong> — SSH tunnel required:<br>
+                <code style="font-size:10px;color:var(--accent-blue);word-break:break-all">
+                  ssh -i ~/ssh-key-2026-04-18.key -L 5002:localhost:5002 ubuntu@141.253.101.68
+                </code>
+                <button onclick="AVTrading.retryAPICheck()" class="btn-sm"
+                        style="margin-top:8px;width:100%;justify-content:center">
+                  <i class="fa-solid fa-rotate"></i> Retry Connection
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Orders + Locks -->
+        <div style="display:flex;flex-direction:column;gap:14px">
+
+          <!-- Pending Orders -->
+          <div class="card">
+            <div class="section-header">
+              <i class="fa-solid fa-list-check" style="color:#3b82f6"></i>
+              Pending Orders
+            </div>
+            <div id="pending-orders-section">
+              <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
+                <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Order Locks -->
+          <div class="card">
+            <div id="order-locks-section">
+              <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:12px">
+                <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div><!-- /trading-layout -->
+
+      <!-- Controls: Paper/Live + Auto/Manual -->
+      <div class="controls-grid">
+
+        <!-- Paper/Live Toggle -->
+        <div class="card control-card">
+          <div class="control-card-header">
+            <i class="fa-solid fa-toggle-on" style="color:#3b82f6"></i>
+            Trading Mode
+          </div>
+          <div class="paper-live-selector">
+            <button id="toggle-paper-btn" class="active">
+              <i class="fa-solid fa-flask" style="font-size:14px"></i>
+              Paper Trading
+            </button>
+            <button id="toggle-live-btn">
+              <i class="fa-solid fa-circle" style="font-size:10px;animation:pulse 1.5s infinite"></i>
+              Live Trading
+            </button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.6">
+            <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
+            Switching to LIVE uses account
+            <strong style="color:var(--text-primary)">${AV_CONFIG?.ACCOUNT?.live || 'U21160314'}</strong>
+            with real capital. Triple confirmation required.
+          </div>
+        </div>
+
+        <!-- Auto/Manual Toggle -->
+        <div class="card control-card">
+          <div class="control-card-header">
+            <i class="fa-solid fa-robot" style="color:#10b981"></i>
+            Execution Mode
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+            <button id="toggle-auto-btn" class="active"
+                    style="padding:12px;border-radius:var(--radius-md);border:2px solid var(--border);
+                           background:rgba(16,185,129,0.1);border-color:#10b981;color:#10b981;
+                           font-weight:700;cursor:pointer;display:flex;align-items:center;
+                           justify-content:center;gap:7px;font-size:13px">
+              <i class="fa-solid fa-robot"></i> Auto
+            </button>
+            <button id="toggle-manual-btn"
+                    style="padding:12px;border-radius:var(--radius-md);border:2px solid var(--border);
+                           background:transparent;color:var(--text-muted);font-weight:700;cursor:pointer;
+                           display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px">
+              <i class="fa-solid fa-hand"></i> Manual
+            </button>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button id="toggle-pause-btn" class="btn-sm" style="flex:1;justify-content:center">
+              <i class="fa-solid fa-pause"></i> Pause Auto
+            </button>
+            <button id="toggle-resume-btn" class="btn-sm" style="flex:1;justify-content:center;display:none">
+              <i class="fa-solid fa-play"></i> Resume Auto
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /controls-grid -->
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="av-toast-wrap"></div>
+
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-trading.js"></script>
+<script src="assets/js/av-controls.js"></script>
+<script src="assets/js/av-stock-detail.js"></script>
+
+<script>
+(function _guard() {
+  const REQUIRED = {
+    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
+    'AVApi':'assets/js/av-api.js','AVTrading':'assets/js/av-trading.js',
+    'AVControls':'assets/js/av-controls.js',
+  };
+  const missing = Object.entries(REQUIRED)
+    .filter(([n]) => typeof window[n] === 'undefined')
+    .map(([n, f]) => `${n} → ${f}`);
+  if (missing.length) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
+                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
+                   border-bottom:3px solid #ef4444;line-height:1.8">
+         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
+         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
+       </div>`);
+    return;
+  }
+  _initPage().catch(e => console.error('[Trading]', e));
+})();
+
+async function _initPage() {
+  await AVApi.init();
+  AVControls.init();
+  await AVTrading.init();
+
+  const $sb = document.getElementById('sidebar');
+  const $ov = document.getElementById('sidebar-overlay');
+  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
+    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
+  });
+  $ov?.addEventListener('click', () => {
+    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
+  });
+
+  // ── Order form bindings ───────────────────────────────
+  // BUY / SELL side buttons
+  document.querySelectorAll('.side-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.side-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const side      = btn.dataset.side;
+      const label     = document.getElementById('order-submit-label');
+      const submitBtn = document.getElementById('order-submit-btn');
+      if (label)     label.textContent = `Submit ${side} Order`;
+      if (submitBtn) submitBtn.className =
+        side === 'BUY' ? 'btn-submit-buy' : 'btn-submit-sell';
+    });
+  });
+
+  // MKT / LMT type buttons
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const limitRow = document.getElementById('limit-price-row');
+      if (limitRow) limitRow.style.display =
+        btn.dataset.orderType === 'LMT' ? 'block' : 'none';
+    });
+  });
+
+  // Symbol autocomplete from cached signals
+  const symInput = document.getElementById('order-symbol');
+  const acList   = document.getElementById('symbol-autocomplete');
+
+  symInput?.addEventListener('input', AVUtils.debounce(() => {
+    const val  = (symInput.value || '').toUpperCase().trim();
+    if (!val || val.length < 1) { if (acList) acList.style.display = 'none'; return; }
+
+    const signals    = AVApi.getCached('signals');
+    const sigsArr    = Array.isArray(signals?.signals) ? signals.signals
+                     : signals?.signals && typeof signals.signals === 'object'
+                       ? Object.entries(signals.signals).map(([s, v]) => ({ symbol: s, ...v }))
+                       : [];
+    const matches    = sigsArr
+      .filter(s => (s.symbol || '').startsWith(val))
+      .slice(0, 7);
+
+    if (!matches.length || !acList) return;
+
+    acList.innerHTML = matches.map(s => {
+      const conf     = sf(s.confidence || 0);
+      const actColor = s.action === 'BUY' ? '#10b981' : '#ef4444';
+      return `
+        <div class="autocomplete-item" data-sym="${s.symbol}">
+          <span style="font-weight:700;font-family:var(--font-mono)">${s.symbol}</span>
+          <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:3px;
+                       background:${actColor}12;color:${actColor}">${s.action}</span>
+          <span style="margin-left:auto;font-size:10px;font-family:var(--font-mono);
+                       color:var(--text-muted)">${(conf*100).toFixed(0)}%</span>
+        </div>`;
+    }).join('');
+    acList.style.display = 'block';
+
+    acList.querySelectorAll('.autocomplete-item').forEach(item => {
+      item.addEventListener('click', () => {
+        if (symInput) symInput.value = item.dataset.sym;
+        acList.style.display = 'none';
+      });
+    });
+  }, 150));
+
+  // Hide autocomplete on outside click
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.autocomplete-wrap') && acList)
+      acList.style.display = 'none';
+  });
+
+  // Submit order
+  document.getElementById('order-submit-btn')?.addEventListener('click', async () => {
+    const sym   = (symInput?.value || '').trim().toUpperCase();
+    const qty   = parseInt(document.getElementById('order-qty')?.value || '0');
+    const type  = document.querySelector('.type-btn.active')?.dataset.orderType || 'MKT';
+    const side  = document.querySelector('.side-btn.active')?.dataset.side || 'BUY';
+    const limit = sf(document.getElementById('order-limit-price')?.value || 0);
+
+    if (!sym)                  { showToast('Enter a symbol', 'warn'); return; }
+    if (qty <= 0)              { showToast('Quantity must be > 0', 'warn'); return; }
+    if (type === 'LMT' && !limit) { showToast('Enter a limit price', 'warn'); return; }
+
+    const available = await AVApi.checkDashboardAPI();
+    if (!available) {
+      document.getElementById('order-api-notice').style.display = 'block';
+      showToast('Dashboard API offline — SSH tunnel required', 'error', 5000);
+      return;
+    }
+
+    const modeData = await AVApi.getExecutionMode();
+    const account  = safeGet(modeData, 'mode', 'paper') === 'live'
+                   ? AV_CONFIG.ACCOUNT.live : AV_CONFIG.ACCOUNT.paper;
+    const modeName = (safeGet(modeData, 'mode', 'paper') || 'PAPER').toUpperCase();
+
+    showModal({
+      title: `Confirm ${side} Order`,
+      body: `
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text-muted)">Symbol:</span>
+            <strong style="font-family:var(--font-mono)">${sym}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text-muted)">Side:</span>
+            <strong style="color:${side === 'BUY' ? '#10b981' : '#ef4444'}">${side}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text-muted)">Quantity:</span>
+            <strong>${qty.toLocaleString()}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text-muted)">Type:</span>
+            <strong>${type}${type === 'LMT' ? ' @ ' + formatCurrency(limit) : ''}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between">
+            <span style="color:var(--text-muted)">Account:</span>
+            <strong style="color:${modeName === 'LIVE' ? '#ef4444' : '#10b981'}">
+              ${account} (${modeName})
+            </strong>
+          </div>
+        </div>`,
+      confirmText: `Submit ${side}`,
+      danger: side === 'SELL' || modeName === 'LIVE',
+      onConfirm: async () => {
+        const submitBtn = document.getElementById('order-submit-btn');
+        if (submitBtn) { submitBtn.disabled = true; }
+        try {
+          const { data, error } = await AVApi.callDashboardAPI('/orders', {
+            method: 'POST',
+            body:   JSON.stringify({ symbol: sym, side, quantity: qty,
+                                     order_type: type, limit_price: limit }),
+          });
+          if (error) throw new Error(error);
+          showToast(`${side} ${qty}x ${sym} submitted`, 'success');
+          if (symInput) symInput.value = '';
+          document.getElementById('order-qty').value = '';
+        } catch(e) {
+          showToast(`Order failed: ${e.message}`, 'error', 5000);
+        } finally {
+          if (submitBtn) { submitBtn.disabled = false; }
+        }
+      },
+    });
+  });
+
+  // ── Load & render all data ────────────────────────────
+  async function _loadAll() {
+    const [execRaw, ibkrRaw, ordersRaw, modeData] = await Promise.all([
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.execution, AV_CONFIG.REFRESH.execution),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.ibkr,      AV_CONFIG.REFRESH.execution),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.orders,    AV_CONFIG.REFRESH.execution),
+      AVApi.getExecutionMode(),
+    ]);
+
+    AVTrading.renderConnectionStatus(execRaw, ibkrRaw, modeData);
+    AVTrading.renderPendingOrders(ordersRaw);
+    AVTrading.renderOrderLocks(execRaw);
+    AVControls.updateModeBadge(modeData);
+
+    // Header subtitle
+    const sub = document.getElementById('trading-header-sub');
+    if (sub) {
+      const mode    = (safeGet(modeData, 'mode', 'paper') || 'paper').toUpperCase();
+      const account = safeGet(modeData, 'account', AV_CONFIG.ACCOUNT.paper);
+      sub.textContent = `${mode} · ${account}`;
+    }
+
+    // API status badge
+    const apiStatus  = document.getElementById('order-api-status');
+    const apiNotice  = document.getElementById('order-api-notice');
+    const apiAvail   = AVTrading.isApiAvailable();
+    if (apiStatus) {
+      apiStatus.innerHTML = apiAvail
+        ? '<span class="badge badge-green"><i class="fa-solid fa-plug"></i> API Connected</span>'
+        : '<span class="badge badge-orange"><i class="fa-solid fa-plug"></i> API Offline</span>';
+    }
+    if (apiNotice) apiNotice.style.display = apiAvail ? 'none' : 'block';
+  }
+
+  // Paper/Live + Auto/Manual (from AVControls)
+  AVControls.initPaperLiveSwitch?.();
+  AVControls.initAutoManualSwitch?.();
+
+  // Auto-refresh 30s
+  AVApi.startAutoRefresh({
+    execution: AV_CONFIG.REFRESH.execution,
+    orders:    AV_CONFIG.REFRESH.execution,
+    ibkr:      AV_CONFIG.REFRESH.execution,
+    mode:      AV_CONFIG.REFRESH.execution,
+    onUpdate: async (key, data) => {
+      const exec   = AVApi.getCached('execution');
+      const ibkr   = AVApi.getCached('ibkr');
+      const mode   = AVApi.getCached('mode');
+      if (key === 'execution') {
+        AVTrading.renderOrderLocks(data);
+        if (exec && ibkr && mode) AVTrading.renderConnectionStatus(exec, ibkr, mode);
+      }
+      if (key === 'orders') AVTrading.renderPendingOrders(data);
+      if (key === 'mode')   AVControls.updateModeBadge(data);
+      await AVApi.updateSidebarStatus();
+    },
+  });
+
+  await _loadAll();
+}
+</script>
+</body>
+</html>

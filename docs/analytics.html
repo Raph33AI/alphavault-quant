@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — AlphaVault Quant</title>
+
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
+
+  <style>
+    .analytics-bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .history-point-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-point-row:last-child { border-bottom: none; }
+    .history-point-row:hover { background: var(--bg-hover); }
+    @media (max-width: 900px) { .analytics-bottom-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">AlphaVault Quant</div>
+      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
+      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Analysis</div>
+      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
+      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
+      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Tools</div>
+      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
+      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
+      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+    <div class="sidebar-status">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="status-dot" id="ibkr-dot"></span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
+      </div>
+      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="top-header">
+      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+      <div>
+        <span class="top-header-title">Analytics</span>
+        <span class="top-header-sub" id="analytics-header-sub">NAV history · 100 data points</span>
+      </div>
+      <div class="top-header-actions">
+        <div id="mode-badge-header"></div>
+        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- Performance KPIs (R5 applied) -->
+      <div class="kpi-row" id="perf-kpi-row" style="margin-bottom:16px">
+        <div class="kpi-card skeleton" style="min-height:90px"></div>
+        <div class="kpi-card skeleton" style="min-height:90px"></div>
+        <div class="kpi-card skeleton" style="min-height:90px"></div>
+        <div class="kpi-card skeleton" style="min-height:90px"></div>
+      </div>
+
+      <!-- NAV Chart (full width, with leverage overlay) -->
+      <div class="card" style="margin-bottom:16px;padding:0;overflow:hidden">
+        <div class="chart-header">
+          <div class="chart-header-left">
+            <i class="fa-solid fa-chart-area" style="color:#3b82f6;font-size:15px"></i>
+            <div>
+              <div class="chart-title">Portfolio NAV — Full History</div>
+              <div class="chart-subtitle" id="nav-chart-subtitle">Loading...</div>
+            </div>
+          </div>
+          <div class="chart-header-right">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;
+                           color:var(--text-muted);cursor:pointer">
+              <input type="checkbox" id="show-leverage-toggle" style="accent-color:#f59e0b">
+              Show Leverage
+            </label>
+            <div class="chart-timeframes" id="analytics-tf-selector">
+              <button class="tf-btn" data-tf="1D">1D</button>
+              <button class="tf-btn" data-tf="1W">1W</button>
+              <button class="tf-btn" data-tf="1M">1M</button>
+              <button class="tf-btn active" data-tf="ALL">ALL</button>
+            </div>
+          </div>
+        </div>
+        <div id="analytics-nav-chart" class="chart-container"
+             style="height:380px;min-height:380px;overflow:hidden;position:relative;padding:0 4px">
+          <div style="display:flex;align-items:center;justify-content:center;
+                      height:100%;gap:10px;color:var(--text-muted)">
+            <i class="fa-solid fa-circle-notch fa-spin"
+               style="color:#3b82f6;font-size:18px"></i>
+            <span>Loading NAV chart...</span>
+          </div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <div class="legend-line" style="background:#3b82f6"></div>
+            <span>Net Liquidation ($)</span>
+          </div>
+          <div class="legend-item" id="leverage-legend" style="display:none">
+            <div class="legend-line" style="background:#f59e0b;border-top:2px dashed #f59e0b;height:0"></div>
+            <span>Leverage (x)</span>
+          </div>
+          <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
+            rolling_history.json · 100 pts · R1: portfolio.json
+          </span>
+        </div>
+      </div>
+
+      <!-- Bottom Grid: History Details + Rebalancer -->
+      <div class="analytics-bottom-grid">
+
+        <!-- NAV History Recent Points -->
+        <div class="card">
+          <div class="section-header">
+            <i class="fa-solid fa-clock-rotate-left" style="color:#8b5cf6"></i>
+            Recent History Points
+            <span id="history-count"
+                  style="margin-left:auto;font-size:10px;color:var(--text-muted)"></span>
+          </div>
+          <div id="history-points-list">
+            <div style="text-align:center;padding:20px;color:var(--text-muted)">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rebalancer Status -->
+        <div class="card" id="rebalancer-status-card">
+          <div style="text-align:center;padding:20px;color:var(--text-muted)">
+            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Learning Insights -->
+      <div class="card" id="learning-insights-card" style="margin-top:16px">
+        <div style="text-align:center;padding:20px;color:var(--text-muted)">
+          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="av-toast-wrap"></div>
+
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-trading.js"></script>
+<script src="assets/js/av-controls.js"></script>
+
+<script>
+(function _guard() {
+  const REQUIRED = {
+    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
+    'AVApi':'assets/js/av-api.js','AVCharts':'assets/js/av-charts.js',
+    'AVControls':'assets/js/av-controls.js',
+  };
+  const missing = Object.entries(REQUIRED)
+    .filter(([n]) => typeof window[n] === 'undefined')
+    .map(([n, f]) => `${n} → ${f}`);
+  if (missing.length) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
+                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
+                   border-bottom:3px solid #ef4444;line-height:1.8">
+         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
+         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
+       </div>`);
+    return;
+  }
+  _initPage().catch(e => console.error('[Analytics]', e));
+})();
+
+async function _initPage() {
+  await AVApi.init();
+  AVControls.init();
+
+  const $sb = document.getElementById('sidebar');
+  const $ov = document.getElementById('sidebar-overlay');
+  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
+    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
+  });
+  $ov?.addEventListener('click', () => {
+    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
+  });
+
+  // State
+  let _history       = [];
+  let _netliq        = 0;
+  let _currentTf     = 'ALL';
+  let _showLeverage  = false;
+
+  // Leverage toggle
+  document.getElementById('show-leverage-toggle')?.addEventListener('change', async e => {
+    _showLeverage = e.target.checked;
+    document.getElementById('leverage-legend').style.display =
+      _showLeverage ? 'flex' : 'none';
+    AVCharts.destroyLWC('analytics-nav-chart');
+    await _renderNAV();
+  });
+
+  // Timeframe selector
+  document.getElementById('analytics-tf-selector')?.addEventListener('click', async e => {
+    const btn = e.target.closest('.tf-btn');
+    if (!btn) return;
+    document.querySelectorAll('#analytics-tf-selector .tf-btn')
+      .forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _currentTf = btn.dataset.tf;
+    AVCharts.destroyLWC('analytics-nav-chart');
+    await _renderNAV();
+  });
+
+  // ── Performance KPIs (R5 applied) ────────────────────
+  function _renderPerfKPIs(risk, pnl) {
+    const el = document.getElementById('perf-kpi-row');
+    if (!el) return;
+
+    const sharpe = sf(safeGet(risk, 'var_metrics.sharpe',
+                      safeGet(risk, 'var_metrics.sharpe_ratio', 0)));
+    const var95  = sf(safeGet(risk, 'var_metrics.var_95', 0));
+    const dd     = sf(safeGet(risk, 'drawdown.max_drawdown',
+                      safeGet(risk, 'drawdown.current_drawdown', 0))) * 100;
+    const wr     = sf(safeGet(pnl,  'win_rate', 0));
+
+    const insuff = `<span class="badge badge-info" title="Less than 30 portfolio snapshots">
+      <i class="fa-solid fa-clock"></i> Insufficient History
+    </span>`;
+
+    el.innerHTML = `
+      <div class="kpi-card" style="border-top:3px solid #8b5cf6">
+        <div class="kpi-card-header">
+          <i class="fa-solid fa-chart-line" style="color:#8b5cf6"></i>
+          <span class="kpi-label">Sharpe Ratio</span>
+        </div>
+        <div class="kpi-value" style="font-size:20px;color:#8b5cf6">
+          ${sharpe === 0 ? insuff : sharpe.toFixed(4)}
+        </div>
+        <div class="kpi-sub">Risk-adjusted return</div>
+      </div>
+
+      <div class="kpi-card" style="border-top:3px solid #ef4444">
+        <div class="kpi-card-header">
+          <i class="fa-solid fa-chart-bar" style="color:#ef4444"></i>
+          <span class="kpi-label">VaR 95%</span>
+        </div>
+        <div class="kpi-value" style="font-size:20px;color:#ef4444">
+          ${var95 === 0 ? insuff : (var95 * 100).toFixed(2) + '%'}
+        </div>
+        <div class="kpi-sub">Daily value at risk</div>
+      </div>
+
+      <div class="kpi-card" style="border-top:3px solid #f59e0b">
+        <div class="kpi-card-header">
+          <i class="fa-solid fa-arrow-trend-down" style="color:#f59e0b"></i>
+          <span class="kpi-label">Max Drawdown</span>
+        </div>
+        <div class="kpi-value" style="color:${dd > 5 ? '#ef4444' : '#10b981'}">
+          ${dd.toFixed(3)}%
+        </div>
+        <div class="kpi-sub">
+          ${dd < 1 ? badgeHTML('Minimal', 'green')
+          : dd < 5 ? badgeHTML('Low', 'blue')
+          : badgeHTML('Elevated', 'orange')}
+        </div>
+      </div>
+
+      <div class="kpi-card" style="border-top:3px solid #10b981">
+        <div class="kpi-card-header">
+          <i class="fa-solid fa-trophy" style="color:#10b981"></i>
+          <span class="kpi-label">Win Rate</span>
+        </div>
+        <div class="kpi-value" style="color:#10b981">${wr.toFixed(1)}%</div>
+        <div class="kpi-sub">
+          ${progressBar(wr, '#10b981', 4)}
+        </div>
+      </div>`;
+  }
+
+  // ── NAV Chart ─────────────────────────────────────────
+  async function _renderNAV() {
+    const h = window.innerWidth < 480 ? 280
+            : window.innerWidth < 768 ? 320 : 380;
+    await AVCharts.renderNAVChart('analytics-nav-chart', _history, {
+      height:        h,
+      showLeverage:  _showLeverage,
+      timeframe:     _currentTf,
+      currentNetliq: _netliq,
+    });
+  }
+
+  // ── History Points List ────────────────────────────────
+  function _renderHistoryList(history) {
+    const el    = document.getElementById('history-points-list');
+    const count = document.getElementById('history-count');
+    if (!el) return;
+
+    if (count) count.textContent = `${history.length} points`;
+
+    const recent = [...history].reverse().slice(0, 12);
+
+    if (!recent.length) {
+      el.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12px">
+        <i class="fa-solid fa-hourglass-half" style="color:#3b82f6"></i>
+        Collecting history data...
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = recent.map(pt => {
+      const netliq  = sf(pt.netliq || pt.net_liq || 0);
+      const lev     = sf(pt.leverage || 0);
+      const regime  = pt.regime || 'NEUTRAL';
+      const ts      = pt.ts ? new Date(pt.ts).toLocaleString('en-US', {
+        month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false,
+      }) : '—';
+      const regColor = AV_CONFIG.REGIME_COLORS[regime]?.bg || '#6b7280';
+
+      return `
+        <div class="history-point-row">
+          <span style="font-size:10px;color:var(--text-muted);min-width:100px;
+                       font-family:var(--font-mono)">${ts}</span>
+          <span style="font-weight:700;font-size:12px;font-family:var(--font-mono);
+                       color:var(--accent-blue);flex:1">
+            ${netliq > 0 ? formatCurrency(netliq, 0) : '—'}
+          </span>
+          ${lev > 0 ? `<span style="font-size:10px;font-family:var(--font-mono);
+                                     color:#f59e0b;min-width:40px">${lev.toFixed(2)}x</span>` : ''}
+          <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;
+                       background:${regColor}15;color:${regColor};border:1px solid ${regColor}30">
+            ${regime}
+          </span>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Rebalancer Status ─────────────────────────────────
+  function _renderRebalancer(data) {
+    const el = document.getElementById('rebalancer-status-card');
+    if (!el || !data) return;
+
+    const drift     = sf(safeGet(data, 'drift_threshold', 0.02)) * 100;
+    const needed    = safeGet(data, 'rebalance_needed', false);
+    const maxDrift  = sf(safeGet(data, 'max_drift', 0)) * 100;
+    const nRebal    = sf(safeGet(data, 'n_rebalances', 0));
+    const lastRebal = safeGet(data, 'last_rebalance', null);
+    const driftPct  = drift > 0 ? Math.min((maxDrift / drift) * 100, 100) : 0;
+
+    el.innerHTML = `
+      <div class="section-header">
+        <i class="fa-solid fa-rotate" style="color:#10b981"></i>
+        Portfolio Rebalancer
+        ${needed
+          ? badgeHTML('Rebalance Needed', 'orange', 'fa-triangle-exclamation')
+          : badgeHTML('Balanced', 'green', 'fa-check')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div style="background:var(--bg-primary);border:1px solid var(--border);
+                    border-radius:var(--radius-md);padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;
+                      letter-spacing:0.4px;margin-bottom:4px">Drift Threshold</div>
+          <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);
+                      color:#3b82f6">${drift.toFixed(0)}%</div>
+        </div>
+        <div style="background:var(--bg-primary);border:1px solid var(--border);
+                    border-radius:var(--radius-md);padding:12px;text-align:center">
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;
+                      letter-spacing:0.4px;margin-bottom:4px">Max Drift</div>
+          <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);
+                      color:${needed ? '#f59e0b' : '#10b981'}">${maxDrift.toFixed(2)}%</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;
+                    color:var(--text-muted);margin-bottom:5px">
+          <span>Current Drift</span>
+          <span style="font-weight:700;color:${needed ? '#f59e0b' : '#10b981'}">
+            ${maxDrift.toFixed(2)}% / ${drift.toFixed(0)}% limit
+          </span>
+        </div>
+        ${progressBar(driftPct, needed ? '#f59e0b' : '#10b981', 7)}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${badgeHTML(`${nRebal} rebalances total`, 'blue', 'fa-rotate')}
+        ${lastRebal ? badgeHTML(`Last: ${formatAge(lastRebal)}`, 'gray', 'fa-clock') : ''}
+        ${badgeHTML('Trigger: drift > 2% | 3x/day', 'gray')}
+      </div>`;
+  }
+
+  // ── Learning Insights ─────────────────────────────────
+  function _renderInsights(data) {
+    const el = document.getElementById('learning-insights-card');
+    if (!el || !data) return;
+
+    const insights = safeGet(data, 'insights', []);
+    const nTrades  = sf(safeGet(data, 'n_trades_analyzed', 0));
+    const wr       = sf(safeGet(data, 'win_rate', 0));
+    const lookback = sf(safeGet(data, 'lookback_days', 90));
+    const bestPat  = safeGet(data, 'best_patterns',  []);
+    const worstPat = safeGet(data, 'worst_patterns', []);
+
+    const isEmpty = !nTrades && !insights.length;
+
+    el.innerHTML = `
+      <div class="section-header">
+        <i class="fa-solid fa-brain" style="color:#8b5cf6"></i>
+        History Learner — ${lookback}-Day Trade Analysis
+        <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
+          <i class="fa-solid fa-clock" style="font-size:9px"></i> Daily at 02:00 UTC
+        </span>
+      </div>
+
+      ${isEmpty ? `
+        <div style="text-align:center;padding:28px">
+          <i class="fa-solid fa-hourglass-half"
+             style="font-size:28px;color:#8b5cf6;margin-bottom:12px;display:block;opacity:0.6"></i>
+          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:6px">
+            Analysis pending
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);line-height:1.7">
+            The HistoryLearner agent analyzes the last ${lookback} days of trade history.<br>
+            Results will appear after the first 02:00 UTC cycle with sufficient trade data.
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap">
+            ${badgeHTML(`Lookback: ${lookback} days`, 'blue', 'fa-calendar-days')}
+            ${badgeHTML('Next run: 02:00 UTC', 'gray', 'fa-clock')}
+          </div>
+        </div>` : `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+                    gap:10px;margin-bottom:14px">
+          <div style="background:var(--bg-primary);border:1px solid var(--border);
+                      border-radius:var(--radius-md);padding:12px;text-align:center">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">Trades Analyzed</div>
+            <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);
+                        color:#3b82f6">${nTrades}</div>
+          </div>
+          <div style="background:var(--bg-primary);border:1px solid var(--border);
+                      border-radius:var(--radius-md);padding:12px;text-align:center">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">Win Rate</div>
+            <div style="font-size:22px;font-weight:900;font-family:var(--font-mono);
+                        color:#10b981">${wr.toFixed(1)}%</div>
+          </div>
+        </div>
+
+        ${insights.length ? `
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${insights.slice(0, 5).map(ins => `
+              <div style="padding:8px 12px;background:var(--bg-primary);border-radius:var(--radius-sm);
+                          border:1px solid var(--border);font-size:12px;color:var(--text-secondary)">
+                <i class="fa-solid fa-lightbulb" style="color:#f59e0b;font-size:10px"></i>
+                ${typeof ins === 'string' ? ins : JSON.stringify(ins)}
+              </div>`).join('')}
+          </div>` : ''}
+
+        ${bestPat.length ? `
+          <div style="margin-top:12px">
+            <div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:6px">
+              <i class="fa-solid fa-arrow-trend-up" style="font-size:10px"></i>
+              Best Patterns
+            </div>
+            ${bestPat.slice(0, 3).map(p => `
+              <div style="font-size:11px;padding:5px 10px;background:rgba(16,185,129,0.06);
+                          border-radius:4px;margin-bottom:4px;color:var(--text-secondary)">
+                ${typeof p === 'string' ? p : JSON.stringify(p)}
+              </div>`).join('')}
+          </div>` : ''}
+
+        ${worstPat.length ? `
+          <div style="margin-top:10px">
+            <div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:6px">
+              <i class="fa-solid fa-arrow-trend-down" style="font-size:10px"></i>
+              Worst Patterns
+            </div>
+            ${worstPat.slice(0, 3).map(p => `
+              <div style="font-size:11px;padding:5px 10px;background:rgba(239,68,68,0.06);
+                          border-radius:4px;margin-bottom:4px;color:var(--text-secondary)">
+                ${typeof p === 'string' ? p : JSON.stringify(p)}
+              </div>`).join('')}
+          </div>` : ''}`}`;
+  }
+
+  // ── LOAD ALL ──────────────────────────────────────────
+  async function _loadAll() {
+    const [portRaw, riskRaw, pnlData, rebData, insData, modeData] = await Promise.all([
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.portfolio,  AV_CONFIG.REFRESH.portfolio),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.risk,       AV_CONFIG.REFRESH.portfolio),
+      AVApi.getPnLMonitor(),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.rebalancer, AV_CONFIG.REFRESH.static),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.insights,   AV_CONFIG.REFRESH.static),
+      AVApi.getExecutionMode(),
+    ]);
+
+    _netliq  = netliqFromPortfolio(portRaw) || _netliq;
+    _history = await AVApi.getRollingHistory(_netliq);
+
+    const sub = document.getElementById('analytics-header-sub');
+    if (sub) sub.textContent =
+      `${_history.length} history pts · NetLiq: ${formatCurrency(_netliq, 0)}`;
+
+    _renderPerfKPIs(riskRaw, pnlData);
+    await _renderNAV();
+    _renderHistoryList(_history);
+    _renderRebalancer(rebData);
+    _renderInsights(insData);
+    AVControls.updateModeBadge(modeData);
+  }
+
+  // Auto-refresh 60s
+  AVApi.startAutoRefresh({
+    portfolio: AV_CONFIG.REFRESH.portfolio,
+    risk:      AV_CONFIG.REFRESH.portfolio,
+    history:   AV_CONFIG.REFRESH.history,
+    mode:      AV_CONFIG.REFRESH.execution,
+    onUpdate: async (key, data) => {
+      if (key === 'portfolio') {
+        _netliq = netliqFromPortfolio(data) || _netliq;
+        _history = await AVApi.getRollingHistory(_netliq);
+        _renderHistoryList(_history);
+        AVCharts.destroyLWC('analytics-nav-chart');
+        await _renderNAV();
+      }
+      if (key === 'risk') _renderPerfKPIs(data, AVApi.getCached('pnl'));
+      if (key === 'mode') AVControls.updateModeBadge(data);
+      await AVApi.updateSidebarStatus();
+    },
+  });
+
+  AVCharts.onThemeChange([async () => {
+    AVCharts.destroyLWC('analytics-nav-chart');
+    await _renderNAV();
+  }]);
+
+  await _loadAll();
+}
+</script>
+</body>
+</html>
