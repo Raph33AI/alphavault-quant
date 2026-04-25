@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Market Regime — AlphaVault Quant</title>
+
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
+
+  <style>
+    .regime-top-grid {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .regime-banner {
+      padding: 28px;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .regime-big-name {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .regime-conf-value {
+      font-size: 52px;
+      font-weight: 900;
+      font-family: var(--font-mono);
+      line-height: 1;
+    }
+    .indicator-table { width: 100%; border-collapse: collapse; }
+    .indicator-table th {
+      padding: 8px 12px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid var(--border);
+      text-align: left;
+    }
+    .indicator-table td {
+      padding: 9px 12px;
+      font-size: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .indicator-table tr:last-child td { border-bottom: none; }
+    .indicator-table tr:hover td { background: var(--bg-hover); }
+    .signal-chip-bull {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: rgba(16,185,129,0.12); color: #10b981;
+      border: 1px solid rgba(16,185,129,0.25);
+    }
+    .signal-chip-bear {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: rgba(239,68,68,0.12); color: #ef4444;
+      border: 1px solid rgba(239,68,68,0.25);
+    }
+    .signal-chip-neutral {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
+      background: rgba(107,114,128,0.12); color: #6b7280;
+      border: 1px solid rgba(107,114,128,0.25);
+    }
+    .params-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .param-item {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+    .param-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .param-value { font-size: 18px; font-weight: 900; font-family: var(--font-mono); margin-top: 3px; }
+    @media (max-width: 1024px) { .regime-top-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 480px)  { .params-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">AlphaVault Quant</div>
+      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Main</div>
+      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
+      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
+      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Analysis</div>
+      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
+      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
+      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">Tools</div>
+      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
+      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
+      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
+    </div>
+    <div class="sidebar-status">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span class="status-dot" id="ibkr-dot"></span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
+      </div>
+      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="top-header">
+      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+      <div>
+        <span class="top-header-title">Market Regime</span>
+        <span class="top-header-sub" id="regime-header-sub">Loading...</span>
+      </div>
+      <div class="top-header-actions">
+        <div id="mode-badge-header"></div>
+        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
+      </div>
+    </header>
+
+    <div class="page-content">
+
+      <!-- Top Grid: Main Regime + Donut -->
+      <div class="regime-top-grid">
+
+        <!-- Main Regime Banner -->
+        <div class="card" id="regime-banner-card">
+          <div style="text-align:center;padding:32px;color:var(--text-muted)">
+            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:22px"></i>
+            <div style="margin-top:8px">Loading regime...</div>
+          </div>
+        </div>
+
+        <!-- Probabilities Donut -->
+        <div class="card">
+          <div class="section-header">
+            <i class="fa-solid fa-chart-pie" style="color:#8b5cf6"></i>
+            Regime Probabilities
+          </div>
+          <div style="height:200px;position:relative">
+            <canvas id="regime-probs-canvas"></canvas>
+          </div>
+          <div id="regime-probs-legend"
+               style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;
+                      margin-top:10px;font-size:11px"></div>
+        </div>
+      </div>
+
+      <!-- Trading Parameters + Indicators -->
+      <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;margin-bottom:16px">
+
+        <!-- Trading Parameters -->
+        <div class="card">
+          <div class="section-header">
+            <i class="fa-solid fa-sliders" style="color:#3b82f6"></i>
+            Trading Parameters
+          </div>
+          <div id="trading-params-section">
+            <div style="text-align:center;padding:16px;color:var(--text-muted)">
+              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- SPY Indicators -->
+        <div class="card">
+          <div class="section-header">
+            <i class="fa-solid fa-chart-line" style="color:#10b981"></i>
+            SPY Indicators
+            <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
+              Source: regime_detector_v5.0
+            </span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="indicator-table" id="indicators-table">
+              <thead>
+                <tr>
+                  <th>Indicator</th>
+                  <th style="text-align:right">Value</th>
+                  <th>Signal</th>
+                </tr>
+              </thead>
+              <tbody id="indicators-tbody">
+                <tr>
+                  <td colspan="3" style="text-align:center;padding:24px;color:var(--text-muted)">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+                    Loading indicators...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Risk Context -->
+      <div class="card" id="regime-risk-context">
+        <div class="section-header">
+          <i class="fa-solid fa-shield-halved" style="color:#ef4444"></i>
+          Risk Context
+        </div>
+        <div style="text-align:center;padding:16px;color:var(--text-muted)">
+          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+        </div>
+      </div>
+
+    </div><!-- /page-content -->
+  </main>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+<div id="av-toast-wrap"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-trading.js"></script>
+<script src="assets/js/av-controls.js"></script>
+
+<script>
+(function _guard() {
+  const REQUIRED = {
+    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
+    'AVApi':'assets/js/av-api.js','AVCharts':'assets/js/av-charts.js',
+    'AVControls':'assets/js/av-controls.js',
+  };
+  const missing = Object.entries(REQUIRED)
+    .filter(([n]) => typeof window[n] === 'undefined')
+    .map(([n, f]) => `${n} → ${f}`);
+  if (missing.length) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
+                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
+                   border-bottom:3px solid #ef4444;line-height:1.8">
+         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
+         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
+       </div>`);
+    return;
+  }
+  _initPage().catch(e => console.error('[Regime]', e));
+})();
+
+async function _initPage() {
+  await AVApi.init();
+  AVControls.init();
+
+  const $sb = document.getElementById('sidebar');
+  const $ov = document.getElementById('sidebar-overlay');
+  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
+    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
+  });
+  $ov?.addEventListener('click', () => {
+    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
+  });
+
+  // ══════════════════════════════════════════════════════
+  // RENDER FUNCTIONS
+  // ══════════════════════════════════════════════════════
+
+  function _renderBanner(data) {
+    const card = document.getElementById('regime-banner-card');
+    if (!card || !data) return;
+
+    const regime  = safeGet(data, 'regime',
+                    safeGet(data, 'signal',
+                    safeGet(data, 'current_regime', 'NEUTRAL')));
+    const conf    = sf(safeGet(data, 'confidence', 0));
+    const prev    = safeGet(data, 'previous_regime', '—');
+    const dur     = safeGet(data, 'regime_duration', '—');
+    const version = safeGet(data, 'version', '—');
+    const cycle   = safeGet(data, 'oracle_cycle', '—');
+    const colors  = AV_CONFIG.REGIME_COLORS[regime] || AV_CONFIG.REGIME_COLORS.NEUTRAL;
+    const ICONS   = {
+      BULL:'fa-arrow-trend-up', BEAR:'fa-arrow-trend-down',
+      NEUTRAL:'fa-minus', CRISIS:'fa-skull'
+    };
+
+    // Header subtitle
+    const sub = document.getElementById('regime-header-sub');
+    if (sub) sub.textContent = `${regime} · ${(conf * 100).toFixed(0)}% confidence · Oracle #${cycle}`;
+
+    card.innerHTML = `
+      <div class="regime-banner" style="background:${colors.bg}12;
+           border:2px solid ${colors.bg}30;border-radius:var(--radius-lg)">
+
+        <div style="width:70px;height:70px;border-radius:var(--radius-xl);
+                    background:${colors.bg};display:flex;align-items:center;
+                    justify-content:center;flex-shrink:0;
+                    box-shadow:0 8px 24px ${colors.bg}50">
+          <i class="fa-solid ${ICONS[regime] || 'fa-circle'}"
+             style="font-size:28px;color:#fff"></i>
+        </div>
+
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${colors.bg};
+                      text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">
+            Current Regime
+          </div>
+          <div class="regime-big-name" style="color:${colors.bg}">${regime}</div>
+        </div>
+
+        <div style="text-align:center;padding:0 16px">
+          <div class="regime-conf-value" style="color:${colors.bg}">
+            ${(conf * 100).toFixed(0)}%
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">confidence</div>
+        </div>
+
+        <div style="margin-left:auto;display:flex;flex-direction:column;gap:8px">
+          <div style="background:var(--bg-card);border:1px solid var(--border);
+                      border-radius:var(--radius-md);padding:8px 14px;text-align:center">
+            <div style="font-size:10px;color:var(--text-muted)">Previous</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-primary)">${prev}</div>
+          </div>
+          <div style="background:var(--bg-card);border:1px solid var(--border);
+                      border-radius:var(--radius-md);padding:8px 14px;text-align:center">
+            <div style="font-size:10px;color:var(--text-muted)">Duration</div>
+            <div style="font-size:14px;font-weight:700;color:var(--text-primary)">
+              ${dur} cycles
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        ${badgeHTML(`Oracle #${cycle}`,  'blue',   'fa-rotate')}
+        ${badgeHTML(`v${version}`,        'gray',   'fa-code-branch')}
+        ${badgeHTML(`Confidence: ${(conf*100).toFixed(0)}%`,
+                     conf > 0.7 ? 'green' : conf > 0.5 ? 'blue' : 'orange', 'fa-percent')}
+      </div>`;
+  }
+
+  function _renderDonut(data) {
+    const probs  = safeGet(data, 'probabilities', {});
+    const legend = document.getElementById('regime-probs-legend');
+
+    AVCharts.renderRegimeDonut('regime-probs-canvas', probs);
+
+    if (legend) {
+      const COLORS = {
+        BULL:'#10b981', BEAR:'#ef4444', NEUTRAL:'#6b7280', CRISIS:'#7c3aed'
+      };
+      legend.innerHTML = Object.entries(COLORS).map(([r, c]) => {
+        const p = sf(probs[r] || 0) * 100;
+        return `
+          <div style="display:flex;align-items:center;gap:5px">
+            <div style="width:10px;height:10px;border-radius:50%;background:${c}"></div>
+            <span style="font-weight:700;color:${c}">${r}</span>
+            <span style="color:var(--text-muted)">${p.toFixed(0)}%</span>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  function _renderTradingParams(data) {
+    const el = document.getElementById('trading-params-section');
+    if (!el || !data) return;
+
+    const thr     = safeGet(data, 'signal_thresholds', {});
+    const cash    = sf(safeGet(data, 'cash_reserve_pct', 0.05)) * 100;
+    const maxPos  = sf(safeGet(data, 'max_position_pct', 0.15)) * 100;
+    const exitAgg = safeGet(data, 'exit_aggression', 'normal');
+    const maxLev  = sf(safeGet(data, 'max_leverage', 1.0));
+
+    const params = [
+      { label:'Buy Threshold',   value:`${(sf(thr.buy  || 0.6)  * 100).toFixed(0)}%`, color:'#10b981' },
+      { label:'Sell Threshold',  value:`${(sf(thr.sell || 0.4)  * 100).toFixed(0)}%`, color:'#ef4444' },
+      { label:'Cash Reserve',    value:`${cash.toFixed(0)}%`,                          color:'#3b82f6' },
+      { label:'Max Position',    value:`${maxPos.toFixed(0)}%`,                        color:'#8b5cf6' },
+      { label:'Max Leverage',    value:`${maxLev.toFixed(1)}x`,                        color:'#f59e0b' },
+      { label:'Exit Aggression', value:exitAgg.toUpperCase(),                          color:'#6b7280' },
+    ];
+
+    el.innerHTML = `
+      <div class="params-grid">
+        ${params.map(p => `
+          <div class="param-item">
+            <div class="param-label">${p.label}</div>
+            <div class="param-value" style="color:${p.color}">${p.value}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  function _renderIndicators(data) {
+    const tbody = document.getElementById('indicators-tbody');
+    if (!tbody) return;
+
+    const ind     = safeGet(data, 'indicators', {});
+    const regime  = safeGet(data, 'regime', 'NEUTRAL');
+    const spyPrice= sf(ind.spy_price || ind.price || 0);
+
+    if (!spyPrice && !Object.keys(ind).length) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" style="text-align:center;padding:20px;color:var(--text-muted)">
+            <i class="fa-solid fa-circle-info" style="color:#3b82f6"></i>
+            No indicator data available yet.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    // Build indicator rows from whatever keys exist
+    const MAS = [
+      { key:'spy_ma5',  label:'SPY MA5',   period:'5' },
+      { key:'spy_ma20', label:'SPY MA20',  period:'20' },
+      { key:'spy_ma50', label:'SPY MA50',  period:'50' },
+      { key:'spy_ma200',label:'SPY MA200', period:'200' },
+    ];
+
+    const maRows = MAS.filter(m => ind[m.key]).map(m => {
+      const maVal  = sf(ind[m.key]);
+      const above  = spyPrice > maVal;
+      const pct    = maVal > 0 ? ((spyPrice - maVal) / maVal * 100) : 0;
+      return {
+        label: m.label,
+        value: `$${maVal.toFixed(2)}`,
+        signal: above ? 'BULLISH' : 'BEARISH',
+        bull: above,
+        note: `${above ? '+' : ''}${pct.toFixed(2)}% vs price`,
+      };
+    });
+
+    // Additional indicators
+    const extraRows = [];
+    if (ind.vix_level || ind.vix) {
+      const vix = sf(ind.vix_level || ind.vix);
+      extraRows.push({
+        label:'VIX', value:vix.toFixed(2),
+        signal: vix < 20 ? 'LOW FEAR' : vix < 30 ? 'ELEVATED' : 'HIGH FEAR',
+        bull: vix < 20, note:`Fear index`,
+      });
+    }
+    if (ind['5d_return'] !== undefined || ind.spy_return_5d !== undefined) {
+      const r5 = sf(ind['5d_return'] || ind.spy_return_5d || 0) * 100;
+      extraRows.push({
+        label:'SPY 5D Return', value:`${r5 >= 0 ? '+' : ''}${r5.toFixed(2)}%`,
+        signal: r5 > 0 ? 'POSITIVE' : 'NEGATIVE',
+        bull: r5 > 0, note:'5-day performance',
+      });
+    }
+    if (ind.volatility !== undefined) {
+      const vol = sf(ind.volatility) * 100;
+      extraRows.push({
+        label:'Volatility', value:`${vol.toFixed(2)}%`,
+        signal: vol < 15 ? 'LOW' : vol < 25 ? 'MEDIUM' : 'HIGH',
+        bull: vol < 15, note:'Annualized',
+      });
+    }
+    if (ind.spy_rsi !== undefined || ind.rsi !== undefined) {
+      const rsi = sf(ind.spy_rsi || ind.rsi);
+      extraRows.push({
+        label:'RSI', value:rsi.toFixed(1),
+        signal: rsi > 70 ? 'OVERBOUGHT' : rsi < 30 ? 'OVERSOLD' : 'NEUTRAL',
+        bull: rsi > 50 && rsi <= 70, note:'14-period RSI',
+      });
+    }
+
+    const allRows = [
+      { label:'SPY Price', value:`$${spyPrice.toFixed(2)}`, signal:'CURRENT', bull:true, note:'Live price' },
+      ...maRows,
+      ...extraRows,
+    ];
+
+    tbody.innerHTML = allRows.map((row, i) => `
+      <tr style="${i % 2 === 0 ? '' : 'background:var(--bg-hover)'}">
+        <td style="font-weight:600;color:var(--text-primary)">${row.label}</td>
+        <td style="text-align:right;font-family:var(--font-mono);font-weight:700;
+                   color:var(--text-primary)">${row.value}</td>
+        <td>
+          ${row.signal === 'CURRENT'
+            ? `<span style="font-size:10px;color:var(--text-muted)">${row.note}</span>`
+            : row.bull
+              ? `<span class="signal-chip-bull">
+                   <i class="fa-solid fa-arrow-up" style="font-size:8px"></i>
+                   ${row.signal}
+                 </span>
+                 <span style="font-size:10px;color:var(--text-muted);margin-left:5px">
+                   ${row.note}
+                 </span>`
+              : `<span class="signal-chip-bear">
+                   <i class="fa-solid fa-arrow-down" style="font-size:8px"></i>
+                   ${row.signal}
+                 </span>
+                 <span style="font-size:10px;color:var(--text-muted);margin-left:5px">
+                   ${row.note}
+                 </span>`}
+        </td>
+      </tr>`).join('');
+  }
+
+  function _renderRiskContext(regimeData, riskData) {
+    const el = document.getElementById('regime-risk-context');
+    if (!el) return;
+
+    const isOver  = safeGet(riskData, 'leverage.is_over_leveraged', false);
+    const lev     = sf(safeGet(riskData, 'leverage.current_leverage', 0));
+    const corrHigh= safeGet(riskData, 'correlation.is_high', false);
+    const dd      = sf(safeGet(riskData, 'drawdown.current',
+                       safeGet(riskData, 'drawdown.current_drawdown', 0))) * 100;
+    const score   = sf(safeGet(riskData, 'risk_score', 0));
+    const regime  = safeGet(regimeData, 'regime', 'NEUTRAL');
+
+    const alerts = [];
+    if (isOver)   alerts.push({ icon:'fa-weight-scale', color:'#f59e0b',
+      text:`Leverage ${lev.toFixed(2)}x exceeds max ${AV_CONFIG.THRESHOLDS.maxLeverage}x — exits triggered at market open` });
+    if (corrHigh) alerts.push({ icon:'fa-link', color:'#f59e0b',
+      text:`High portfolio correlation detected — diversification risk elevated` });
+    if (dd > 5)   alerts.push({ icon:'fa-arrow-trend-down', color:'#ef4444',
+      text:`Current drawdown ${dd.toFixed(2)}% approaching alert threshold` });
+    if (regime === 'BEAR' || regime === 'CRISIS')
+      alerts.push({ icon:'fa-triangle-exclamation', color:'#ef4444',
+        text:`${regime} regime active — defensive positioning recommended` });
+
+    const scoreColor = score <= 25 ? '#10b981' : score <= 50 ? '#3b82f6'
+                     : score <= 75 ? '#f59e0b' : '#ef4444';
+    const scoreLabel = score <= 25 ? 'Low Risk' : score <= 50 ? 'Moderate'
+                     : score <= 75 ? 'High Risk' : 'Critical';
+
+    el.innerHTML = `
+      <div class="section-header">
+        <i class="fa-solid fa-shield-halved" style="color:#ef4444"></i>
+        Risk Context
+        <span style="margin-left:auto">
+          <span style="font-size:18px;font-weight:900;font-family:var(--font-mono);
+                       color:${scoreColor}">${score.toFixed(0)}</span>
+          <span style="font-size:11px;color:var(--text-muted)">/100 — ${scoreLabel}</span>
+        </span>
+      </div>
+
+      <div style="margin-bottom:10px">${progressBar(score, scoreColor, 7)}</div>
+
+      ${alerts.length ? `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${alerts.map(a => `
+            <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;
+                        background:${a.color}08;border:1px solid ${a.color}25;
+                        border-radius:var(--radius-md)">
+              <i class="fa-solid ${a.icon}" style="color:${a.color};font-size:13px;flex-shrink:0;margin-top:1px"></i>
+              <span style="font-size:12px;color:var(--text-secondary)">${a.text}</span>
+            </div>`).join('')}
+        </div>` : `
+        <div style="display:flex;align-items:center;gap:8px;color:#10b981;font-size:13px">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>No active risk alerts — portfolio within parameters</span>
+        </div>`}
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+        ${badgeHTML(`Leverage: ${lev.toFixed(2)}x`, isOver ? 'orange' : 'green', 'fa-weight-scale')}
+        ${badgeHTML(`Drawdown: ${dd.toFixed(3)}%`, dd > 5 ? 'orange' : 'green', 'fa-arrow-trend-down')}
+        ${badgeHTML(`Correlation: ${corrHigh ? 'High' : 'Normal'}`, corrHigh ? 'orange' : 'green', 'fa-link')}
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════
+  // LOAD ALL
+  // ══════════════════════════════════════════════════════
+  async function _loadAll() {
+    const [regimeRaw, riskRaw, modeData] = await Promise.all([
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.regime, AV_CONFIG.REFRESH.regime),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.risk,   AV_CONFIG.REFRESH.portfolio),
+      AVApi.getExecutionMode(),
+    ]);
+
+    _renderBanner(regimeRaw);
+    _renderDonut(regimeRaw);
+    _renderTradingParams(regimeRaw);
+    _renderIndicators(regimeRaw);
+    _renderRiskContext(regimeRaw, riskRaw);
+    AVControls.updateModeBadge(modeData);
+  }
+
+  // Auto-refresh 60s
+  AVApi.startAutoRefresh({
+    regime: AV_CONFIG.REFRESH.regime,
+    risk:   AV_CONFIG.REFRESH.portfolio,
+    mode:   AV_CONFIG.REFRESH.execution,
+    onUpdate: async (key, data) => {
+      if (key === 'regime') {
+        _renderBanner(data);
+        _renderDonut(data);
+        _renderTradingParams(data);
+        _renderIndicators(data);
+        const risk = AVApi.getCached('risk');
+        _renderRiskContext(data, risk);
+      }
+      if (key === 'risk') {
+        const regime = AVApi.getCached('regime');
+        _renderRiskContext(regime, data);
+      }
+      if (key === 'mode') AVControls.updateModeBadge(data);
+      await AVApi.updateSidebarStatus();
+    },
+  });
+
+  // Re-render donut on theme change
+  AVCharts.onThemeChange([async () => {
+    const regimeRaw = AVApi.getCached('regime');
+    if (regimeRaw) _renderDonut(regimeRaw);
+  }]);
+
+  await _loadAll();
+}
+</script>
+</body>
+</html>
