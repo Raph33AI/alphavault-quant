@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portfolio — AlphaVault Quant</title>
 
-  <!-- ═══════════════════ FAVICONS ═══════════════════ -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -18,14 +17,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-
-  <link rel="stylesheet" href="docs/assets/css/av-global.css">
-  <link rel="stylesheet" href="docs/assets/css/av-components.css">
-  <link rel="stylesheet" href="docs/assets/css/av-charts.css">
-  <link rel="stylesheet" href="docs/assets/css/av-trading.css">
-
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/av-components.css">
+  <link rel="stylesheet" href="assets/css/av-charts.css">
+  <link rel="stylesheet" href="assets/css/av-trading.css">
 
   <style>
     .portfolio-layout {
@@ -33,16 +28,12 @@
       grid-template-columns: 1fr 300px;
       gap: 16px;
     }
-    .portfolio-main { min-width: 0; }
-    .portfolio-aside { display: flex; flex-direction: column; gap: 14px; }
-
-    .risk-gauges-section {
+    .risk-gauges-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
       margin-bottom: 16px;
     }
-
     .risk-gauge-box {
       background: var(--bg-card);
       border: 1px solid var(--border-card);
@@ -50,17 +41,10 @@
       padding: 16px 18px;
       box-shadow: var(--shadow-sm);
     }
-
-    @media (max-width: 1024px) {
-      .portfolio-layout { grid-template-columns: 1fr; }
-    }
-
-    @media (max-width: 768px) {
-      .risk-gauges-section { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 1024px) { .portfolio-layout { grid-template-columns: 1fr; } }
+    @media (max-width: 768px)  { .risk-gauges-grid { grid-template-columns: 1fr; } }
   </style>
 </head>
-
 <body>
 <div class="layout">
 
@@ -91,9 +75,9 @@
     <div class="sidebar-status">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
         <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">Loading...</span>
+        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
       </div>
-      <span id="last-sync"></span>
+      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
     </div>
   </nav>
 
@@ -103,11 +87,13 @@
       <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
       <div>
         <span class="top-header-title">Portfolio</span>
-        <span class="top-header-sub" id="portfolio-header-sub">45 positions</span>
+        <span class="top-header-sub" id="port-header-sub">Loading...</span>
       </div>
       <div class="top-header-actions">
         <div id="mode-badge-header"></div>
-        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
+        <button class="btn-icon" id="av-theme-toggle" title="Toggle theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
       </div>
     </header>
 
@@ -121,15 +107,16 @@
         <div class="kpi-card skeleton" style="min-height:90px"></div>
       </div>
 
-      <!-- PnL Monitor Cards -->
+      <!-- PnL Monitor -->
       <div id="pnl-monitor-cards" style="margin-bottom:16px">
         <div style="padding:20px;text-align:center;color:var(--text-muted)">
-          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i> Loading PnL data...
+          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          Loading PnL data...
         </div>
       </div>
 
       <!-- Risk Gauges -->
-      <div class="risk-gauges-section">
+      <div class="risk-gauges-grid">
         <div class="risk-gauge-box" id="risk-leverage">
           <div style="color:var(--text-muted);font-size:12px;padding:10px;text-align:center">
             <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
@@ -153,29 +140,26 @@
       </div>
 
       <!-- Alerts -->
-      <div class="card" style="margin-bottom:16px;padding:14px 18px" id="risk-alerts-wrap">
+      <div class="card" style="margin-bottom:16px;padding:14px 18px">
         <div class="section-header" style="margin-bottom:8px">
           <i class="fa-solid fa-bell" style="color:#f59e0b"></i> Risk Alerts
         </div>
         <div id="risk-alerts">
-          <div style="color:var(--text-muted);font-size:12px;padding:6px">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i> Loading...
-          </div>
+          <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
         </div>
       </div>
 
-      <!-- Main Layout: Positions + Top Shorts -->
+      <!-- Positions + Top Shorts -->
       <div class="portfolio-layout">
 
-        <div class="portfolio-main">
-          <!-- Positions Table -->
-          <div class="av-table-wrapper" style="margin-bottom:16px">
-
-            <!-- Filters bar -->
+        <div>
+          <div class="av-table-wrapper">
+            <!-- Filters -->
             <div class="filters-bar">
-              <span style="font-size:12px;font-weight:700;color:var(--text-primary)">Positions</span>
-              <span id="pos-count" class="badge badge-blue" style="margin-right:4px"></span>
-
+              <span style="font-size:12px;font-weight:700;color:var(--text-primary)">
+                Positions
+              </span>
+              <span id="pos-count" class="badge badge-blue"></span>
               <button class="filter-btn active" data-pos-filter="ALL">All</button>
               <button class="filter-btn" data-pos-filter="LONG">
                 <i class="fa-solid fa-arrow-up" style="font-size:9px;color:#10b981"></i> Long
@@ -189,50 +173,40 @@
               <button class="filter-btn" data-pos-filter="PNL_NEG">
                 <i class="fa-solid fa-circle-xmark" style="font-size:9px;color:#ef4444"></i> PnL-
               </button>
-
               <input type="text" class="search-input" id="pos-search"
-                     placeholder="Search symbol..." style="margin-left:auto">
+                     placeholder="Search symbol..." style="margin-left:auto;max-width:180px">
             </div>
-
             <!-- Table -->
-            <table class="av-table">
-              <thead>
-                <tr>
-                  <th data-sort-col="symbol" style="cursor:pointer">
-                    Symbol <i class="fa-solid fa-sort sort-icon"></i>
-                  </th>
-                  <th>Side</th>
-                  <th data-sort-col="quantity" style="cursor:pointer;text-align:right">
-                    Qty <i class="fa-solid fa-sort sort-icon"></i>
-                  </th>
-                  <th style="text-align:right">Price</th>
-                  <th data-sort-col="market_value" style="cursor:pointer;text-align:right">
-                    Mkt Value <i class="fa-solid fa-sort-down sort-icon"></i>
-                  </th>
-                  <th data-sort-col="pnl" style="cursor:pointer;text-align:right">
-                    PnL $ <i class="fa-solid fa-sort sort-icon"></i>
-                  </th>
-                  <th style="text-align:right">Avg Cost (R4)</th>
-                  <th>ML Signal</th>
-                </tr>
-              </thead>
-              <tbody id="positions-tbody">
-                <tr>
-                  <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">
-                    <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:16px"></i>
-                    <span style="margin-left:8px">Loading positions...</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-
-            <!-- Pagination -->
+            <div style="overflow-x:auto">
+              <table class="av-table">
+                <thead>
+                  <tr>
+                    <th data-sort-col="symbol">Symbol <i class="fa-solid fa-sort sort-icon"></i></th>
+                    <th>Side</th>
+                    <th style="text-align:right" data-sort-col="quantity">Qty <i class="fa-solid fa-sort sort-icon"></i></th>
+                    <th style="text-align:right">Price</th>
+                    <th style="text-align:right" data-sort-col="market_value">Mkt Value <i class="fa-solid fa-sort-down sort-icon"></i></th>
+                    <th style="text-align:right" data-sort-col="pnl">PnL $ <i class="fa-solid fa-sort sort-icon"></i></th>
+                    <th style="text-align:right">Avg Cost</th>
+                    <th>ML Signal</th>
+                  </tr>
+                </thead>
+                <tbody id="positions-tbody">
+                  <tr>
+                    <td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">
+                      <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:16px"></i>
+                      <span style="margin-left:8px">Loading positions...</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
             <div class="pagination-bar" id="positions-pagination"></div>
           </div>
         </div>
 
-        <!-- Aside: Top Shorts -->
-        <div class="portfolio-aside">
+        <!-- Top Shorts Aside -->
+        <div>
           <div class="card">
             <div class="section-header">
               <i class="fa-solid fa-arrow-down" style="color:#ef4444"></i>
@@ -255,75 +229,104 @@
 <div id="sdp-fullpage" style="display:none"></div>
 <div id="av-toast-wrap"></div>
 
-<script src="docs/assets/js/av-config.js"></script>
-<script src="docs/assets/js/av-utils.js"></script>
-<script src="docs/assets/js/av-api.js"></script>
-<script src="docs/assets/js/av-charts.js"></script>
-<script src="docs/assets/js/av-portfolio.js"></script>
-<script src="docs/assets/js/av-signals.js"></script>
-<script src="docs/assets/js/av-agents.js"></script>
-<script src="docs/assets/js/av-controls.js"></script>
-<script src="docs/assets/js/stock-detail.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="assets/js/av-config.js"></script>
+<script src="assets/js/av-utils.js"></script>
+<script src="assets/js/av-api.js"></script>
+<script src="assets/js/av-charts.js"></script>
+<script src="assets/js/av-portfolio.js"></script>
+<script src="assets/js/av-signals.js"></script>
+<script src="assets/js/av-agents.js"></script>
+<script src="assets/js/av-trading.js"></script>
+<script src="assets/js/av-controls.js"></script>
+<script src="assets/js/av-stock-detail.js"></script>
 
 <script>
-(async () => {
+(function _guard() {
+  const REQUIRED = {
+    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
+    'AVApi':'assets/js/av-api.js','AVPortfolio':'assets/js/av-portfolio.js',
+    'AVControls':'assets/js/av-controls.js','StockDetail':'assets/js/av-stock-detail.js',
+  };
+  const missing = Object.entries(REQUIRED)
+    .filter(([n]) => typeof window[n] === 'undefined')
+    .map(([n, f]) => `${n} → ${f}`);
+  if (missing.length) {
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
+                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
+                   border-bottom:3px solid #ef4444;line-height:1.8">
+         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
+         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
+         <br><strong>→ F12 → Network → check 404s</strong>
+       </div>`);
+    return;
+  }
+  _initPage().catch(e => { console.error('[Portfolio]', e); });
+})();
 
+async function _initPage() {
   await AVApi.init();
   AVControls.init();
 
   // Mobile sidebar
-  const hamburger = document.getElementById('hamburger-btn');
-  const sidebar   = document.getElementById('sidebar');
-  const overlay   = document.getElementById('sidebar-overlay');
-  hamburger?.addEventListener('click', () => { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('active'); });
-  overlay?.addEventListener('click',   () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('active'); });
+  const $sb = document.getElementById('sidebar');
+  const $ov = document.getElementById('sidebar-overlay');
+  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
+    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
+  });
+  $ov?.addEventListener('click', () => {
+    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
+  });
 
+  let _positions  = {};
   let _signalsMap = {};
 
-  async function loadPortfolio() {
-    const [portfolio, risk, pnl, signals] = await Promise.all([
+  async function _loadAll() {
+    // Charge en parallèle
+    const [portfolio, risk, pnl, sigRaw, modeData] = await Promise.all([
       AVApi.getPortfolio(),
       AVApi.getRisk(),
       AVApi.getPnLMonitor(),
-      AVApi.getSignals(),
+      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.signals, AV_CONFIG.REFRESH.signals),
+      AVApi.getExecutionMode(),
     ]);
 
-    // Signals map pour enrichissement
+    // Build signals map
     _signalsMap = {};
-    (signals?.signals || []).forEach(s => { if (s.symbol) _signalsMap[s.symbol] = s; });
+    const sigsArr = sigsRaw(sigRaw);
+    sigsArr.forEach(s => { if (s.symbol) _signalsMap[s.symbol] = s; });
 
-    // Header sub
-    const subEl = document.getElementById('portfolio-header-sub');
-    if (subEl && portfolio) {
-      const n = portfolio.positions_count || Object.keys(portfolio.positions || {}).length;
-      subEl.textContent = `${n} positions · NetLiq ${formatCurrency(portfolio.netliq, 0)}`;
+    // Header subtitle
+    const sub = document.getElementById('port-header-sub');
+    if (sub && portfolio) {
+      const n = portfolio.positions_count
+             || Object.keys(portfolio.positions || {}).length;
+      sub.textContent = `${n} positions · NetLiq ${formatCurrency(portfolio.netliq, 0)}`;
     }
 
-    // KPI row
-    AVPortfolio.renderKPIRow(portfolio, risk?.raw);
-
-    // PnL Monitor
-    if (pnl) AVPortfolio.renderPnLMonitor(pnl);
-
-    // Risk Gauges (R5, R6, R7)
+    // Renders
+    AVPortfolio.renderKPIRow(portfolio, risk?.raw || risk);
+    if (pnl)  AVPortfolio.renderPnLMonitor(pnl);
     if (risk) AVPortfolio.renderRiskGauges(risk);
-
-    // Mode badge
-    const modeData = await AVApi.getExecutionMode();
     AVControls.updateModeBadge(modeData);
 
-    // Positions table
-    if (portfolio?.positions) {
-      AVPortfolio.initPositionFilters(() => {
-        AVPortfolio.renderPositionsTable(portfolio.positions, _signalsMap);
-      });
-      AVPortfolio.renderPositionsTable(portfolio.positions, _signalsMap);
-    }
+    // Positions
+    _positions = portfolio?.positions || {};
+    AVPortfolio.initPositionFilters(() => {
+      AVPortfolio.renderPositionsTable(_positions, _signalsMap);
+    });
+    AVPortfolio.renderPositionsTable(_positions, _signalsMap);
+    AVPortfolio.renderTopShorts(_positions);
+  }
 
-    // Top shorts
-    if (portfolio?.positions) {
-      AVPortfolio.renderTopShorts(portfolio.positions);
-    }
+  // Normalise signals (array ou dict)
+  function sigsRaw(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw.signals)) return raw.signals;
+    if (raw.signals && typeof raw.signals === 'object')
+      return Object.entries(raw.signals).map(([sym, v]) => ({ symbol: sym, ...v }));
+    return [];
   }
 
   // Auto-refresh 30s
@@ -335,21 +338,27 @@
     onUpdate: async (key, data) => {
       if (key === 'portfolio') {
         const pf = await AVApi.getPortfolio();
-        if (pf) {
-          AVPortfolio.renderKPIRow(pf, AVApi.getCached('risk'));
-          AVPortfolio.renderPositionsTable(pf.positions, _signalsMap);
-          AVPortfolio.renderTopShorts(pf.positions);
-        }
+        if (!pf) return;
+        AVPortfolio.renderKPIRow(pf, AVApi.getCached('risk'));
+        _positions = pf.positions || {};
+        AVPortfolio.renderPositionsTable(_positions, _signalsMap);
+        AVPortfolio.renderTopShorts(_positions);
+        const sub = document.getElementById('port-header-sub');
+        if (sub) sub.textContent =
+          `${pf.positions_count} positions · NetLiq ${formatCurrency(pf.netliq, 0)}`;
       }
-      if (key === 'risk') AVPortfolio.renderRiskGauges(await AVApi.getRisk());
+      if (key === 'risk') {
+        const r = await AVApi.getRisk();
+        if (r) AVPortfolio.renderRiskGauges(r);
+      }
       if (key === 'pnl')  AVPortfolio.renderPnLMonitor(data);
       if (key === 'mode') AVControls.updateModeBadge(data);
+      await AVApi.updateSidebarStatus();
     },
   });
 
-  await loadPortfolio();
-
-})();
+  await _loadAll();
+}
 </script>
 </body>
 </html>
