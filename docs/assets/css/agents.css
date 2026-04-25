@@ -1,0 +1,734 @@
+/* ================================================================
+   agents.css — AlphaVault Quant Agents v1.0
+   Styles spécifiques à agents.html — préfixe agt-
+================================================================ */
+
+/* ── Reset overflow (même pattern que trading.css) ─────────────── */
+.av-layout *,
+.av-layout *::before,
+.av-layout *::after { box-sizing: border-box; }
+
+.av-main    { overflow-x: hidden; min-width: 0; }
+.av-content { overflow-x: hidden; min-width: 0; max-width: 100%; }
+.av-card    { min-width: 0; max-width: 100%; overflow: hidden; }
+
+/* ── KPI Grid ──────────────────────────────────────────────────── */
+.agt-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.agt-kpi-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  transition: box-shadow 0.15s, transform 0.15s;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agt-kpi-block:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.agt-kpi-icon {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.agt-kpi-content {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.agt-kpi-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.agt-kpi-val {
+  font-size: 20px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Agents Grid ───────────────────────────────────────────────── */
+.agt-agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ── Agent Card ────────────────────────────────────────────────── */
+.agt-agent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  transition: box-shadow 0.15s, transform 0.15s, border-color 0.15s;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agt-agent-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+/* Bordure gauche colorée selon statut */
+.agt-agent-card.ok  { border-left: 3px solid var(--accent-green); }
+.agt-agent-card.err { border-left: 3px solid var(--accent-red); }
+
+/* Header de la carte */
+.agt-agent-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.agt-agent-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.agt-agent-name-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.agt-agent-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.agt-agent-key {
+  font-size: 9px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* Badge statut — R2 */
+.agt-agent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.agt-agent-badge.ok {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.agt-agent-badge.err {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.agt-agent-badge.running {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-blue);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+/* Description */
+.agt-agent-desc {
+  font-size: 10px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Métriques (Cycles / Errors / Last Run) */
+.agt-agent-metrics {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  min-width: 0;
+}
+
+.agt-metric-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+
+.agt-metric-item:last-child { border-right: none; }
+
+.agt-metric-val {
+  font-size: 13px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.agt-metric-val.ok  { color: var(--accent-green); }
+.agt-metric-val.err { color: var(--accent-red); }
+
+.agt-metric-lbl {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* ── Bottom Grid ───────────────────────────────────────────────── */
+.agt-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ── ML Models ─────────────────────────────────────────────────── */
+.agt-model-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.agt-model-row:last-child { border-bottom: none; }
+
+.agt-model-left {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.agt-model-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.agt-model-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agt-model-right {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* AUC Progress Bar */
+.agt-auc-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.agt-auc-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.agt-auc-val {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 80px;
+  text-align: right;
+}
+
+/* Training Schedule */
+.agt-train-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.agt-train-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+/* ── LLM Council ───────────────────────────────────────────────── */
+.agt-llm-stats-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 18px;
+}
+
+.agt-llm-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-right: 1px solid var(--border);
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.agt-llm-stat-item:last-child { border-right: none; }
+
+.agt-llm-stat-val {
+  font-size: 18px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.agt-llm-stat-lbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Waiting state */
+.agt-llm-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+}
+
+.agt-llm-waiting-icon {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: var(--radius-md);
+  background: rgba(168, 85, 247, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.agt-llm-waiting-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.agt-llm-waiting-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+/* Models list */
+.agt-llm-models-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.agt-llm-model-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.agt-llm-model-row:last-child { border-bottom: none; }
+
+.agt-llm-model-emoji {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.agt-llm-model-name {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.agt-llm-model-bar-wrap {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.agt-llm-model-bar-track {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+  width: 100%;
+}
+
+.agt-llm-model-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+
+.agt-llm-model-stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* ── System Status ─────────────────────────────────────────────── */
+.agt-system-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+  min-width: 0;
+}
+
+.agt-system-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.agt-system-icon {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.agt-system-info { flex: 1; min-width: 0; }
+
+.agt-system-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+
+.agt-system-val {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Workers section */
+.agt-workers-section {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.agt-workers-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+
+.agt-workers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.agt-worker-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+
+.agt-worker-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Empty State ───────────────────────────────────────────────── */
+.agt-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  text-align: center;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Table wrapper (même fix que trading.css) */
+.av-table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.av-table {
+  width: 100%;
+  min-width: 360px;
+  border-collapse: collapse;
+}
+
+.av-table th,
+.av-table td { white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+
+/* ≤ 1280px */
+@media (max-width: 1280px) {
+  .agt-system-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ≤ 1100px */
+@media (max-width: 1100px) {
+  .agt-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+  .agt-agents-grid {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+}
+
+/* ≤ 960px : KPI 2×2 */
+@media (max-width: 960px) {
+  .agt-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .agt-system-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .agt-model-left {
+    flex: 0 0 140px;
+  }
+}
+
+/* ≤ 768px */
+@media (max-width: 768px) {
+  .agt-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .agt-agents-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .agt-system-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .agt-model-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .agt-model-left  { flex: none; width: 100%; }
+  .agt-model-right { width: 100%; }
+  .agt-llm-stats-bar {
+    padding: 10px 14px;
+  }
+}
+
+/* ≤ 640px */
+@media (max-width: 640px) {
+  .agt-agents-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  /* Masquer last_run dans les métriques sur petit mobile */
+  .agt-metric-item:last-child {
+    display: none;
+  }
+  .agt-system-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .agt-kpi-val {
+    font-size: 16px;
+  }
+  /* Table decisions : masquer colonnes secondaires */
+  .av-table th:nth-child(4),
+  .av-table td:nth-child(4) {
+    display: none;
+  }
+  .av-table {
+    min-width: 280px;
+  }
+}
+
+/* ≤ 480px */
+@media (max-width: 480px) {
+  .agt-kpi-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .agt-kpi-block {
+    padding: 11px 12px;
+    gap: 9px;
+  }
+  .agt-kpi-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    font-size: 12px;
+  }
+  .agt-kpi-val { font-size: 15px; }
+  /* Agents : 1 colonne sur très petit */
+  .agt-agents-grid {
+    grid-template-columns: 1fr;
+  }
+  .agt-system-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .agt-llm-stat-val { font-size: 15px; }
+  /* Restaurer last_run */
+  .agt-metric-item:last-child {
+    display: flex;
+  }
+  .agt-metric-item {
+    padding: 0 2px;
+  }
+  .agt-metric-val { font-size: 11px; }
+}
+
+/* ≤ 360px */
+@media (max-width: 360px) {
+  .agt-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .agt-system-grid {
+    grid-template-columns: 1fr;
+  }
+  .agt-agent-badge {
+    display: none; /* masquer le badge sur très petit écran */
+  }
+}

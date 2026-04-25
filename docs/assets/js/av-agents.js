@@ -1,495 +1,766 @@
 // ============================================================
-// av-agents.js — AlphaVault Quant Dashboard v1.0
-// Agents : grille 13 agents, ML models, LLM council, decisions
-// Dépend de : av-config.js, av-utils.js, av-api.js, av-charts.js
-// Règle R2 : idle + errors===0 → ✅ VERT (jamais ❌ pour idle)
+// av-agents.js — AlphaVault Quant Agents v1.0
+// Controller pour agents.html
+// Dépend : av-config.js, av-utils.js, av-api.js
 // ============================================================
 
-const AVAgents = (() => {
+(function () {
+  'use strict';
+
+  // ── State ─────────────────────────────────────────────────
+  let _health    = null;   // agent_health.json
+  let _model     = null;   // model_report.json
+  let _llm       = null;   // llm_stats.json
+  let _system    = null;   // system_status.json
+  let _decisions = null;   // agent_decisions.json
+
+  let _timers = [];
+
+  // ── Métadonnées des 13 agents ─────────────────────────────
+  const AGENT_META = {
+    market_scanner:       { icon: 'fa-magnifying-glass-chart', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',   label: 'Market Scanner'       },
+    signal:               { icon: 'fa-satellite-dish',         color: '#8b5cf6', bg: 'rgba(139,92,246,0.12)',   label: 'Signal Agent'         },
+    regime_detector:      { icon: 'fa-globe',                  color: '#10b981', bg: 'rgba(16,185,129,0.12)',   label: 'Regime Detector'      },
+    sentiment:            { icon: 'fa-face-smile',             color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',   label: 'Sentiment'            },
+    capital_allocator:    { icon: 'fa-coins',                  color: '#eab308', bg: 'rgba(234,179,8,0.12)',    label: 'Capital Allocator'    },
+    risk_manager:         { icon: 'fa-shield-halved',          color: '#ef4444', bg: 'rgba(239,68,68,0.12)',    label: 'Risk Manager'         },
+    pnl_monitor:          { icon: 'fa-chart-line',             color: '#f97316', bg: 'rgba(249,115,22,0.12)',   label: 'PnL Monitor'          },
+    llm_council:          { icon: 'fa-brain',                  color: '#a855f7', bg: 'rgba(168,85,247,0.12)',   label: 'LLM Council'          },
+    execution:            { icon: 'fa-bolt',                   color: '#10b981', bg: 'rgba(16,185,129,0.12)',   label: 'Execution Agent'      },
+    portfolio_rebalancer: { icon: 'fa-scale-balanced',         color: '#06b6d4', bg: 'rgba(6,182,212,0.12)',    label: 'Portfolio Rebalancer' },
+    history_learner:      { icon: 'fa-book-open',              color: '#84cc16', bg: 'rgba(132,204,22,0.12)',   label: 'History Learner'      },
+    model_trainer:        { icon: 'fa-dumbbell',               color: '#3b82f6', bg: 'rgba(59,130,246,0.12)',   label: 'Model Trainer'        },
+    dashboard_sync:       { icon: 'fa-cloud-arrow-up',         color: '#6366f1', bg: 'rgba(99,102,241,0.12)',   label: 'Dashboard Sync'       },
+  };
+
+  // ── Modèles ML à afficher ─────────────────────────────────
+  const ML_MODELS = [
+    { key: 'xgboost',  label: 'XGBoost',              aucField: 'xgboost_auc',  activeField: 'xgboost_active'  },
+    { key: 'lightgbm', label: 'LightGBM',             aucField: 'lightgbm_auc', activeField: 'lightgbm_active' },
+    { key: 'logistic', label: 'Logistic Regression',  aucField: 'logistic_auc', activeField: 'logistic_active' },
+    { key: 'meta',     label: 'Meta Model',           aucField: 'meta_auc',     activeField: 'meta_available'  },
+  ];
 
   // ══════════════════════════════════════════════════════════
-  // HEADER KPIs — 3 cartes globales
+  // INIT
   // ══════════════════════════════════════════════════════════
+  async function init() {
+    AVUtils.ThemeManager.init();
+    AVUtils.setSidebarActive('agents');
+    _bindThemeToggle();
+    _bindSidebar();
 
-  function renderAgentKPIs(health) {
-    const container = document.getElementById('agents-kpi-row');
-    if (!container || !health) return;
+    _showSkeleton();
+    await loadData();
+    _startRefresh();
 
-    const n_agents  = sf(health.n_agents  || 13);
-    const n_active  = sf(health.n_active  || 0);
-    const n_errors  = sf(health.n_errors  || 0);
-    const allOk     = n_errors === 0;
-
-    container.innerHTML = `
-      <div class="kpi-card" style="border-top:3px solid #3b82f6">
-        <div class="kpi-card-header">
-          <i class="fa-solid fa-robot" style="color:#3b82f6"></i>
-          <span class="kpi-label">Agents Active</span>
-        </div>
-        <div class="kpi-value" style="color:#3b82f6">${n_active}/${n_agents}</div>
-        <div class="kpi-sub">
-          ${progressBar((n_active / n_agents) * 100, '#3b82f6', 4)}
-        </div>
-      </div>
-
-      <div class="kpi-card" style="border-top:3px solid ${allOk ? '#10b981' : '#ef4444'}">
-        <div class="kpi-card-header">
-          <i class="fa-solid fa-${allOk ? 'circle-check' : 'circle-exclamation'}"
-             style="color:${allOk ? '#10b981' : '#ef4444'}"></i>
-          <span class="kpi-label">Error Count</span>
-        </div>
-        <div class="kpi-value" style="color:${allOk ? '#10b981' : '#ef4444'}">
-          ${n_errors}
-        </div>
-        <div class="kpi-sub">
-          ${allOk ? badgeHTML('All systems nominal', 'green', 'fa-check') : badgeHTML(`${n_errors} agent(s) in error`, 'red', 'fa-xmark')}
-        </div>
-      </div>
-
-      <div class="kpi-card" style="border-top:3px solid #10b981">
-        <div class="kpi-card-header">
-          <i class="fa-solid fa-cloud-arrow-up" style="color:#10b981"></i>
-          <span class="kpi-label">GitHub Sync</span>
-        </div>
-        <div class="kpi-value" style="color:#10b981;font-size:18px">
-          21/21
-        </div>
-        <div class="kpi-sub">
-          ${badgeHTML('HTTP 200', 'green', 'fa-check')} <span style="font-size:10px;color:var(--text-muted)">JSON files</span>
-        </div>
-      </div>`;
+    console.log('[av-agents] v1.0 init complete');
   }
 
   // ══════════════════════════════════════════════════════════
-  // GRILLE 13 AGENTS — Règle R2 critique
+  // DATA
   // ══════════════════════════════════════════════════════════
+  async function loadData() {
+    const URLS = AV_CONFIG.SIGNAL_URLS;
+    const [hRes, mRes, lRes, sRes, dRes] = await Promise.allSettled([
+      AVApi.fetchJSON(URLS.health,    0),
+      AVApi.fetchJSON(URLS.model,     0),
+      AVApi.fetchJSON(URLS.llm,       0),
+      AVApi.fetchJSON(URLS.system,    0),
+      AVApi.fetchJSON(URLS.decisions, 0),
+    ]);
+    const p = d => d.status === 'fulfilled' ? d.value : null;
+    _health    = p(hRes);
+    _model     = p(mRes);
+    _llm       = p(lRes);
+    _system    = p(sRes);
+    _decisions = p(dRes);
 
-  /**
-   * R2 : idle + errors===0 → ✅ vert
-   * Jamais ❌ pour status="idle" avec errors=0
-   */
-  function renderAgentGrid(health) {
-    const container = document.getElementById('agents-grid');
-    if (!container || !health) return;
+    renderAll();
+  }
 
-    const agentsMap = health.agentsMap || {};
-    const DESC      = AV_CONFIG.AGENT_DESCRIPTIONS;
+  function renderAll() {
+    renderKPIs();
+    renderAgentsGrid();
+    renderMLModels();
+    renderLLMCouncil();
+    renderSystemStatus();
+    renderDecisions();
+    _updateSidebarStatus();
+  }
 
-    // Ordre d'affichage des agents
-    const ORDER = [
-      'market_scanner', 'signal', 'regime_detector', 'sentiment',
-      'capital_allocator', 'risk_manager', 'pnl_monitor', 'llm_council',
-      'execution', 'portfolio_rebalancer', 'history_learner',
-      'model_trainer', 'dashboard_sync',
-    ];
+  // ══════════════════════════════════════════════════════════
+  // KPIs — 4 cartes header
+  // ══════════════════════════════════════════════════════════
+  function renderKPIs() {
+    const nAgents  = parseInt(_health?.n_agents  || 13);
+    const nActive  = parseInt(_health?.n_active  || 0);
+    const nErrors  = parseInt(_health?.n_errors  || 0);
+    const cycle    = _system?.oracle_cycle        || _decisions?.oracle_cycle || '—';
+    const session  = _system?.session             || '—';
 
-    // Merge agents connus + agents présents dans le JSON
-    const allKeys = [...new Set([...ORDER, ...Object.keys(agentsMap)])];
+    // Active agents
+    _setHTML('agt-kpi-active', `
+      <span class="agt-kpi-val" style="color:${nActive === nAgents
+        ? 'var(--accent-green)'
+        : 'var(--accent-orange)'}">
+        ${nActive}/${nAgents}
+      </span>`);
 
-    container.innerHTML = allKeys.map(name => {
-      const agent  = agentsMap[name] || {};
-      const desc   = DESC[name] || { label: name, desc: '--', freq: '--', icon: 'fa-robot' };
-      const isOk   = isAgentOk(agent);
-      const errors = sf(agent.errors || 0);
-      const cycles = sf(agent.cycles || 0);
-      const status = agent.status || 'idle';
-      const lastRun= agent.last_run || null;
+    // Errors
+    _setHTML('agt-kpi-errors', `
+      <span class="agt-kpi-val" style="color:${nErrors > 0
+        ? 'var(--accent-red)'
+        : 'var(--accent-green)'}">
+        ${nErrors}
+      </span>`);
 
-      // R2 — couleurs
-      const dotColor    = isOk ? '#10b981' : '#ef4444';
-      const cardBorder  = isOk ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)';
-      const cardBg      = isOk ? '' : 'rgba(239,68,68,0.03)';
-      const statusLabel = status === 'running' ? 'Running' : status === 'error' ? 'Error' : 'Idle';
-      const statusColor = status === 'running' ? '#3b82f6' : status === 'error' ? '#ef4444' : '#10b981';
+    // Oracle cycle
+    _setHTML('agt-kpi-cycle',
+      `<span class="agt-kpi-val" style="color:var(--accent-blue)">#${cycle}</span>`);
+
+    // Session badge
+    const sessionColors = {
+      us_regular:   { color: 'var(--accent-green)',  icon: 'fa-circle-play',  label: 'US Regular'   },
+      us_postmarket:{ color: 'var(--accent-orange)', icon: 'fa-moon',         label: 'Post-Market'  },
+      premarket:    { color: 'var(--accent-blue)',   icon: 'fa-sun',          label: 'Pre-Market'   },
+      closed:       { color: 'var(--text-faint)',    icon: 'fa-circle-stop',  label: 'Market Closed'},
+    };
+    const sess = sessionColors[session] || sessionColors.closed;
+    _setHTML('agt-kpi-session', `
+      <span class="agt-kpi-val" style="font-size:13px;color:${sess.color}">
+        <i class="fa-solid ${sess.icon}" style="font-size:11px"></i>
+        ${sess.label}
+      </span>`);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // AGENTS GRID — 13 cartes
+  // R2 : idle + errors === 0 → ✅ vert | errors > 0 → ❌ rouge
+  // ══════════════════════════════════════════════════════════
+  function renderAgentsGrid() {
+    const grid = document.getElementById('agt-agents-grid');
+    if (!grid) return;
+
+    const agentsData = _health?.agents || {};
+
+    grid.innerHTML = Object.entries(AGENT_META).map(([key, meta]) => {
+      const data     = agentsData[key] || {};
+      const status   = data.status     || 'idle';
+      const cycles   = parseInt(data.cycles || 0);
+      const errors   = parseInt(data.errors || 0);
+      const lastRun  = data.last_run    || null;
+      const desc     = AV_CONFIG.AGENT_DESCRIPTIONS?.[key] || '—';
+
+      // R2 : erreurs == 0 → OK peu importe status idle/running
+      const isOk      = errors === 0;
+      const isRunning = status === 'running';
 
       return `
-        <div class="agent-card" style="border-color:${cardBorder};${cardBg ? 'background:'+cardBg : ''}">
+        <div class="agt-agent-card ${isOk ? 'ok' : 'err'}">
 
-          <div class="agent-card-header">
-            <div class="agent-icon">
-              <i class="fa-solid ${desc.icon}" style="color:#3b82f6;font-size:14px"></i>
+          <!-- Header : icône + nom + badge statut -->
+          <div class="agt-agent-header">
+            <div class="agt-agent-icon"
+                 style="background:${meta.bg};color:${meta.color}">
+              <i class="fa-solid ${meta.icon}"></i>
             </div>
-            <div class="agent-name-block">
-              <div class="agent-name">${desc.label}</div>
-              <div class="agent-freq">
-                <i class="fa-solid fa-clock" style="font-size:8px"></i> ${desc.freq}
-              </div>
+            <div class="agt-agent-name-wrap">
+              <div class="agt-agent-name">${meta.label}</div>
+              <div class="agt-agent-key">${key}</div>
             </div>
-            <div class="agent-status-dot-wrap">
-              <span class="agent-status-dot" style="background:${dotColor};
-                box-shadow:0 0 6px ${dotColor}60;
-                ${status === 'running' ? 'animation:pulse 1.5s infinite' : ''}">
-              </span>
+            <div class="agt-agent-badge ${isRunning ? 'running' : isOk ? 'ok' : 'err'}">
+              <i class="fa-solid ${
+                isRunning ? 'fa-circle-notch fa-spin'
+                : isOk    ? 'fa-circle-check'
+                          : 'fa-circle-xmark'
+              }" style="font-size:9px"></i>
+              ${isRunning ? 'Running' : isOk ? 'OK' : 'Error'}
             </div>
           </div>
 
-          <div class="agent-desc">${desc.desc}</div>
+          <!-- Description -->
+          <div class="agt-agent-desc">
+            <i class="fa-solid fa-clock" style="font-size:9px;color:var(--text-faint)"></i>
+            ${desc}
+          </div>
 
-          <div class="agent-metrics">
-            <div class="agent-metric">
-              <div class="agent-metric-label">Status</div>
-              <div class="agent-metric-value" style="color:${statusColor}">
-                ${isOk
-                  ? `<i class="fa-solid fa-circle-check" style="color:#10b981;font-size:10px"></i> ${statusLabel}`
-                  : `<i class="fa-solid fa-circle-exclamation" style="color:#ef4444;font-size:10px"></i> Error`}
-              </div>
+          <!-- Métriques -->
+          <div class="agt-agent-metrics">
+            <div class="agt-metric-item">
+              <div class="agt-metric-val">${cycles.toLocaleString()}</div>
+              <div class="agt-metric-lbl">Cycles</div>
             </div>
-            <div class="agent-metric">
-              <div class="agent-metric-label">Cycles</div>
-              <div class="agent-metric-value">${cycles.toLocaleString()}</div>
+            <div class="agt-metric-item">
+              <div class="agt-metric-val ${errors > 0 ? 'err' : 'ok'}">${errors}</div>
+              <div class="agt-metric-lbl">Errors</div>
             </div>
-            <div class="agent-metric">
-              <div class="agent-metric-label">Errors</div>
-              <div class="agent-metric-value" style="color:${errors > 0 ? '#ef4444' : 'var(--text-muted)'}">
-                ${errors}
+            <div class="agt-metric-item" style="flex:2;min-width:0">
+              <div class="agt-metric-val" style="font-size:10px;white-space:nowrap;
+                                                  overflow:hidden;text-overflow:ellipsis">
+                ${lastRun ? AVUtils.formatAge(lastRun) : '—'}
               </div>
-            </div>
-            <div class="agent-metric">
-              <div class="agent-metric-label">Last Run</div>
-              <div class="agent-metric-value" style="font-size:10px">
-                ${lastRun ? formatAge(lastRun) : '--'}
-              </div>
+              <div class="agt-metric-lbl">Last Run</div>
             </div>
           </div>
 
-          ${errors > 0 ? `
-            <div style="margin-top:8px;padding:5px 8px;background:rgba(239,68,68,0.08);
-                        border-radius:5px;border:1px solid rgba(239,68,68,0.2);font-size:10px;color:#ef4444">
-              <i class="fa-solid fa-triangle-exclamation" style="font-size:9px"></i>
-              ${errors} error${errors > 1 ? 's' : ''} — check logs
-            </div>` : ''}
         </div>`;
     }).join('');
   }
 
   // ══════════════════════════════════════════════════════════
-  // ML MODELS — AUC bars + metadata
+  // ML MODELS — AUC progress bars
   // ══════════════════════════════════════════════════════════
+  function renderMLModels() {
+    const body = document.getElementById('agt-models-body');
+    if (!body) return;
 
-  function renderMLModels(modelReport) {
-    const container = document.getElementById('ml-models-section');
-    if (!container) return;
+    const r             = _model || {};
+    const version       = r.model_version   || 'v5.0';
+    const lookback      = r.lookback_days   || 252;
+    const trainDate     = r.training_date   || '—';
+    const nextTraining  = r.next_training   || '07:00 UTC (Mon)';
+    const nFeatures     = r.n_features      || 67;
+    const metaAvail     = r.meta_available  ?? false;
 
-    const d = modelReport || {};
-    const xgbAUC   = sf(safeGet(d, 'xgboost_auc',  safeGet(d, 'deployed_auc', 0)));
-    const lgbAUC   = sf(safeGet(d, 'lightgbm_auc', 0));
-    const logAUC   = sf(safeGet(d, 'logistic_auc', 0));
-    const metaAUC  = sf(safeGet(d, 'meta_auc',     0));
-    const metaOk   = safeGet(d, 'meta_available',  false) || metaAUC > 0;
-    const nFeat    = sf(safeGet(d, 'n_features',   67));
-    const lookback = sf(safeGet(d, 'lookback_days', 252));
-    const trainDate= safeGet(d, 'training_date', safeGet(d, 'trained_at', null));
-    const nextTrain= safeGet(d, 'next_training',  '07:00 UTC Mon-Fri');
+    // Méta-info
+    _setHTML('agt-models-meta', `
+      <span class="badge badge-blue"    style="font-size:9px">
+        <i class="fa-solid fa-code-branch"></i> ${version}
+      </span>
+      <span class="badge badge-gray"    style="font-size:9px">
+        <i class="fa-solid fa-calendar-days"></i> ${lookback}d lookback
+      </span>
+      <span class="badge badge-gray"    style="font-size:9px">
+        <i class="fa-solid fa-puzzle-piece"></i> ${nFeatures} features
+      </span>
+      ${!metaAvail
+        ? `<span class="badge badge-orange" style="font-size:9px">
+             <i class="fa-solid fa-triangle-exclamation"></i> Meta absent
+           </span>`
+        : ''}`);
 
-    const models = [
-      { name: 'XGBoost',          auc: xgbAUC,  icon: 'fa-tree',         active: xgbAUC > 0,  primary: true  },
-      { name: 'LightGBM',         auc: lgbAUC,  icon: 'fa-leaf',         active: lgbAUC > 0,  primary: false },
-      { name: 'Logistic Reg.',    auc: logAUC,  icon: 'fa-chart-line',   active: logAUC > 0,  primary: false },
-      { name: 'Meta Model',       auc: metaAUC, icon: 'fa-brain',        active: metaOk,      primary: false },
-    ];
+    body.innerHTML = ML_MODELS.map(m => {
+      const auc     = parseFloat(AVUtils.safeGet(r, m.aucField, 0) || 0);
+      const active  = !!(AVUtils.safeGet(r, m.activeField, false));
+      const pct     = Math.min(auc * 100, 100).toFixed(1);
+      const color   = _aucColor(auc);
+      const label   = _aucLabel(auc);
+      const trained = auc > 0;
+      const isMeta  = m.key === 'meta';
 
-    container.innerHTML = `
-      <div class="section-header">
-        <i class="fa-solid fa-microchip" style="color:#3b82f6"></i>
-        ML Models — AUC Performance
-        <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
-          Lookback: ${lookback}d · Features: ${nFeat}
-        </span>
+      return `
+        <div class="agt-model-row">
+          <div class="agt-model-left">
+            <div class="agt-model-name">
+              ${m.label}
+              ${active
+                ? `<span class="badge badge-green" style="font-size:8px;margin-left:4px">
+                     active
+                   </span>`
+                : isMeta && !metaAvail
+                  ? `<span class="badge badge-orange" style="font-size:8px;margin-left:4px">
+                       absent
+                     </span>`
+                  : `<span class="badge badge-gray" style="font-size:8px;margin-left:4px">
+                       inactive
+                     </span>`}
+            </div>
+            <div class="agt-model-sub">
+              ${isMeta && !metaAvail
+                ? `Next training: ${nextTraining}`
+                : !trained
+                  ? 'Not yet trained'
+                  : `Trained: ${trainDate}`}
+            </div>
+          </div>
+          <div class="agt-model-right">
+            <div class="agt-auc-track">
+              <div class="agt-auc-fill"
+                   style="width:${trained ? pct : 0}%;background:${color}"></div>
+            </div>
+            <span class="agt-auc-val" style="color:${trained ? color : 'var(--text-faint)'}">
+              ${trained ? `AUC ${auc.toFixed(4)}` : label}
+            </span>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Training schedule
+    _setHTML('agt-train-schedule', `
+      <div class="agt-train-row">
+        <i class="fa-solid fa-rotate" style="color:var(--accent-blue);font-size:10px"></i>
+        <span>Next training: <strong>${nextTraining}</strong></span>
       </div>
+      <div class="agt-train-row">
+        <i class="fa-solid fa-database" style="color:var(--accent-violet);font-size:10px"></i>
+        <span>${nFeatures} features · ${lookback}d lookback · Optuna 30 trials</span>
+      </div>`);
+  }
 
-      <div class="ml-models-grid">
-        ${models.map(m => `
-          <div class="ml-model-card ${m.primary ? 'primary' : ''}"
-               style="border-color:${m.active ? (m.auc >= 0.75 ? 'rgba(16,185,129,0.3)' : 'rgba(59,130,246,0.2)') : 'rgba(107,114,128,0.2)'}">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-              <i class="fa-solid ${m.icon}" style="color:${m.active ? '#3b82f6' : '#6b7280'}"></i>
-              <span style="font-weight:700;font-size:13px;color:var(--text-primary)">${m.name}</span>
-              ${m.primary ? badgeHTML('PRIMARY', 'blue') : ''}
-              ${!m.active ? badgeHTML('Absent', 'orange', 'fa-triangle-exclamation') : ''}
-            </div>
-            <div style="margin-bottom:6px">
-              ${AVCharts.aucBar(m.auc)}
-            </div>
-            <div style="font-size:10px;color:var(--text-muted)">
-              AUC: ${m.active ? m.auc.toFixed(4) : 'Not trained'}
-            </div>
-          </div>`).join('')}
-      </div>
+  function _aucColor(auc) {
+    if (auc >= 0.75) return 'var(--accent-green)';
+    if (auc >= 0.60) return 'var(--accent-blue)';
+    if (auc >= 0.50) return 'var(--accent-orange)';
+    return 'var(--text-faint)';
+  }
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;padding-top:12px;
-                  border-top:1px solid var(--border)">
-        <div style="font-size:11px;color:var(--text-muted)">
-          <i class="fa-solid fa-calendar-days" style="color:#3b82f6;font-size:10px"></i>
-          Last trained: <strong style="color:var(--text-primary)">${trainDate ? formatDate(trainDate) : '--'}</strong>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted)">
-          <i class="fa-solid fa-clock" style="color:#10b981;font-size:10px"></i>
-          Next training: <strong style="color:var(--text-primary)">${nextTrain}</strong>
-        </div>
-        ${!metaOk ? `
-          <div style="font-size:11px;color:#f59e0b">
-            <i class="fa-solid fa-triangle-exclamation" style="font-size:10px"></i>
-            Meta model absent — scheduled next Monday 07:00 UTC
-          </div>` : ''}
-      </div>`;
+  function _aucLabel(auc) {
+    if (auc >= 0.75) return 'Excellent';
+    if (auc >= 0.60) return 'Good';
+    if (auc >= 0.50) return 'Passable';
+    return 'Not trained';
   }
 
   // ══════════════════════════════════════════════════════════
   // LLM COUNCIL — 3 modèles Ollama
   // ══════════════════════════════════════════════════════════
+  function renderLLMCouncil() {
+    const body = document.getElementById('agt-llm-body');
+    if (!body) return;
 
-  function renderLLMCouncil(llmStats) {
-    const container = document.getElementById('llm-council-section');
-    if (!container) return;
+    const l             = _llm || {};
+    const totalCalls    = parseInt(l.total_calls    || 0);
+    const councilRounds = parseInt(l.council_rounds || 0);
+    const consensusRate = parseFloat(l.consensus_rate || 0);
+    const models        = l.models || {};
+    const waiting       = totalCalls === 0 && councilRounds === 0;
 
-    const d           = llmStats || {};
-    const totalCalls  = sf(safeGet(d, 'total_calls',    0));
-    const rounds      = sf(safeGet(d, 'council_rounds', 0));
-    const consensus   = sf(safeGet(d, 'consensus_rate', 0));
-    const models      = safeGet(d, 'models', {});
-    const isEmpty     = totalCalls === 0 && rounds === 0;
+    // Stats globales
+    _setHTML('agt-llm-stats', `
+      <div class="agt-llm-stat-item">
+        <div class="agt-llm-stat-val">${totalCalls.toLocaleString()}</div>
+        <div class="agt-llm-stat-lbl">Total Calls</div>
+      </div>
+      <div class="agt-llm-stat-item">
+        <div class="agt-llm-stat-val">${councilRounds.toLocaleString()}</div>
+        <div class="agt-llm-stat-lbl">Council Rounds</div>
+      </div>
+      <div class="agt-llm-stat-item">
+        <div class="agt-llm-stat-val" style="color:${
+          consensusRate >= 0.7 ? 'var(--accent-green)'
+          : consensusRate > 0  ? 'var(--accent-orange)'
+          : 'var(--text-faint)'}">
+          ${consensusRate > 0 ? `${(consensusRate * 100).toFixed(1)}%` : '—'}
+        </div>
+        <div class="agt-llm-stat-lbl">Consensus</div>
+      </div>`);
 
-    const MODELS = [
-      { key: 'llama3.2',  label: 'LLaMA 3.2',  icon: 'fa-fire',     color: '#f59e0b' },
-      { key: 'qwen2.5',   label: 'Qwen 2.5',   icon: 'fa-dragon',   color: '#8b5cf6' },
-      { key: 'mistral',   label: 'Mistral 7B',  icon: 'fa-wind',     color: '#3b82f6' },
+    // Modèles individuels
+    const llmDefs = [
+      { key: 'llama3.2',  label: 'LLaMA 3.2',   icon: '🦙', color: '#f97316' },
+      { key: 'qwen2.5',   label: 'Qwen 2.5',     icon: '🔮', color: '#8b5cf6' },
+      { key: 'mistral',   label: 'Mistral 7B',   icon: '🌬', color: '#3b82f6' },
     ];
 
-    container.innerHTML = `
-      <div class="section-header">
-        <i class="fa-solid fa-brain" style="color:#8b5cf6"></i>
-        LLM Council — 3-Model Voting (2/3 majority)
-        ${!isEmpty ? badgeHTML(`${rounds} rounds`, 'violet') : badgeHTML('Awaiting signal conf >75%', 'orange', 'fa-clock')}
-      </div>
-
-      ${isEmpty ? `
-        <div style="text-align:center;padding:28px 20px">
-          <i class="fa-solid fa-hourglass-half"
-             style="font-size:28px;color:#8b5cf6;margin-bottom:12px;display:block;opacity:0.6"></i>
-          <div style="font-size:13px;font-weight:700;color:var(--text-primary);margin-bottom:6px">
-            Council not yet activated
+    if (waiting) {
+      body.innerHTML = `
+        <div class="agt-llm-waiting">
+          <div class="agt-llm-waiting-icon">
+            <i class="fa-solid fa-brain" style="color:var(--accent-violet);font-size:20px"></i>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);line-height:1.7;max-width:340px;margin:0 auto">
-            The LLM Council activates when a signal exceeds ${(AV_CONFIG.THRESHOLDS.highConf * 100).toFixed(0)}%
-            confidence. Three Ollama models vote with a 2/3 majority rule.
-          </div>
-          <div style="display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap">
-            ${MODELS.map(m => `
-              <span style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
-                           padding:4px 10px;border-radius:8px;
-                           background:${m.color}15;color:${m.color};border:1px solid ${m.color}30">
-                <i class="fa-solid ${m.icon}" style="font-size:10px"></i> ${m.label}
-              </span>`).join('')}
-          </div>
-        </div>` : `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-          <div class="llm-stat-card">
-            <div style="font-size:11px;color:var(--text-muted)">Total API Calls</div>
-            <div style="font-size:22px;font-weight:900;color:#8b5cf6;font-family:var(--font-mono)">
-              ${totalCalls.toLocaleString()}
-            </div>
-          </div>
-          <div class="llm-stat-card">
-            <div style="font-size:11px;color:var(--text-muted)">Consensus Rate</div>
-            <div style="font-size:22px;font-weight:900;color:#10b981;font-family:var(--font-mono)">
-              ${(consensus * 100).toFixed(1)}%
+          <div>
+            <div class="agt-llm-waiting-title">Council awaiting high-confidence signals</div>
+            <div class="agt-llm-waiting-sub">
+              Activates when signal confidence &gt;
+              <strong>${((AV_CONFIG.THRESHOLDS?.highConf || 0.75) * 100).toFixed(0)}%</strong>
+              — 3 Ollama models vote (2/3 majority)
             </div>
           </div>
         </div>
-
-        <div style="display:flex;flex-direction:column;gap:10px">
-          ${MODELS.map(m => {
-            const mData   = models[m.key] || models[m.key.replace('.', '_')] || {};
-            const calls   = sf(mData.calls   || mData.total_calls || 0);
-            const success = sf(mData.success  || mData.successful || 0);
-            const rate    = calls > 0 ? (success / calls * 100) : 0;
-            return `
-              <div style="display:flex;align-items:center;gap:12px;padding:10px;
-                          background:var(--bg-secondary);border-radius:8px;
-                          border:1px solid var(--border)">
-                <i class="fa-solid ${m.icon}" style="color:${m.color};font-size:16px;width:20px;text-align:center"></i>
-                <div style="flex:1">
-                  <div style="font-weight:700;font-size:12px;color:var(--text-primary);margin-bottom:4px">
-                    ${m.label}
-                  </div>
-                  ${progressBar(rate, m.color, 5)}
-                </div>
-                <div style="text-align:right;font-family:var(--font-mono);font-size:11px;min-width:70px">
-                  <div style="color:${m.color};font-weight:700">${success}/${calls}</div>
-                  <div style="color:var(--text-muted)">${rate.toFixed(1)}%</div>
-                </div>
-              </div>`;
-          }).join('')}
-        </div>`}`;
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // SYSTEM STATUS — Cloudflare Workers + Services
-  // ══════════════════════════════════════════════════════════
-
-  function renderSystemStatus(systemData, ibkrData) {
-    const container = document.getElementById('system-status-section');
-    if (!container) return;
-
-    const sys     = systemData || {};
-    const ibkr    = ibkrData  || {};
-    const workers = safeGet(sys, 'workers', {});
-    const session = safeGet(sys, 'session', '--');
-    const cycle   = safeGet(sys, 'oracle_cycle', '--');
-    const mode    = safeGet(sys, 'mode', '--');
-    const ddHalt  = safeGet(sys, 'dd_halt', false);
-    const llmOk   = safeGet(sys, 'llm_available', false);
-    const ibkrOk  = safeGet(ibkr, 'connected', safeGet(ibkr, 'ibkr_connected', false));
-    const ibkrAuth= safeGet(ibkr, 'authenticated', false);
-
-    const SESSION_LABELS = {
-      us_regular:   { label: 'US Market Open',  color: '#10b981' },
-      us_postmarket:{ label: 'Post-Market',      color: '#f59e0b' },
-      us_premarket: { label: 'Pre-Market',       color: '#3b82f6' },
-      closed:       { label: 'Market Closed',    color: '#6b7280' },
-    };
-    const sess = SESSION_LABELS[session] || { label: session, color: '#6b7280' };
-
-    const statusRows = [
-      { label: 'Session',         value: sess.label,  color: sess.color,  icon: 'fa-clock' },
-      { label: 'Oracle Cycle',    value: `#${cycle}`, color: '#3b82f6',   icon: 'fa-rotate' },
-      { label: 'Trading Mode',    value: mode,        color: '#8b5cf6',   icon: 'fa-sliders' },
-      { label: 'DD Halt',         value: ddHalt ? 'ACTIVE' : 'Inactive',
-                                          color: ddHalt ? '#ef4444' : '#10b981', icon: 'fa-hand' },
-      { label: 'Ollama LLM',      value: llmOk ? 'Available' : 'Offline',
-                                          color: llmOk ? '#10b981' : '#ef4444',  icon: 'fa-brain' },
-      { label: 'IBKR Connected',  value: ibkrOk ? 'Connected' : 'Disconnected',
-                                          color: ibkrOk ? '#10b981' : '#ef4444', icon: 'fa-plug' },
-      { label: 'IBKR Auth',       value: ibkrAuth ? 'Authenticated' : 'Not auth',
-                                          color: ibkrAuth ? '#10b981' : '#f59e0b', icon: 'fa-key' },
-    ];
-
-    const workerRows = [
-      { key: 'finance_hub',    label: 'Finance Hub API',   url: AV_CONFIG.WORKERS.financeHub   },
-      { key: 'ai_proxy',       label: 'Gemini AI Proxy',   url: AV_CONFIG.WORKERS.geminiProxy  },
-      { key: 'economic_data',  label: 'Economic Data',     url: AV_CONFIG.WORKERS.economicData },
-      { key: 'gh_proxy',       label: 'GitHub Proxy',      url: AV_CONFIG.WORKERS.ghProxy      },
-    ];
-
-    container.innerHTML = `
-      <div class="section-header">
-        <i class="fa-solid fa-server" style="color:#3b82f6"></i>
-        System Status
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
-                      letter-spacing:0.5px;margin-bottom:10px">Oracle A1 Status</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${statusRows.map(r => `
-              <div style="display:flex;align-items:center;justify-content:space-between;
-                          padding:7px 10px;background:var(--bg-secondary);border-radius:7px;
-                          border:1px solid var(--border)">
-                <span style="font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
-                  <i class="fa-solid ${r.icon}" style="font-size:9px;color:${r.color}"></i>
-                  ${r.label}
-                </span>
-                <span style="font-size:11px;font-weight:700;color:${r.color}">${r.value}</span>
-              </div>`).join('')}
-          </div>
-        </div>
-
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;
-                      letter-spacing:0.5px;margin-bottom:10px">Cloudflare Workers</div>
-          <div style="display:flex;flex-direction:column;gap:6px">
-            ${workerRows.map(w => {
-              const ok = safeGet(workers, w.key, true);
-              return `
-                <div style="display:flex;align-items:center;justify-content:space-between;
-                            padding:7px 10px;background:var(--bg-secondary);border-radius:7px;
-                            border:1px solid var(--border)">
-                  <div>
-                    <div style="font-size:11px;color:var(--text-primary);font-weight:600">${w.label}</div>
-                    <div style="font-size:9px;color:var(--text-muted);margin-top:1px;font-family:var(--font-mono)">${w.url.replace('https://', '')}</div>
-                  </div>
-                  <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;
-                               background:${ok ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'};
-                               color:${ok ? '#10b981' : '#ef4444'};
-                               border:1px solid ${ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}">
-                    <i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-xmark'}" style="font-size:9px"></i>
-                    ${ok ? 'Online' : 'Offline'}
-                  </span>
-                </div>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>`;
-  }
-
-  // ══════════════════════════════════════════════════════════
-  // AGENT DECISIONS SAMPLE — Top 10 CONFIRM
-  // ══════════════════════════════════════════════════════════
-
-  function renderDecisionsSample(decisionsData) {
-    const container = document.getElementById('decisions-sample');
-    if (!container) return;
-
-    const decisions = safeGet(decisionsData, 'decisions', {});
-    const cycle     = safeGet(decisionsData, 'oracle_cycle', '--');
-
-    const confirms = Object.entries(decisions)
-      .filter(([, v]) => {
-        const fd = safeGet(v, 'final_decision', '');
-        return fd === 'CONFIRM' || fd === 'confirm';
-      })
-      .slice(0, 10);
-
-    if (!confirms.length) {
-      container.innerHTML = `
-        <div style="text-align:center;padding:24px;color:var(--text-muted)">
-          <i class="fa-solid fa-clock" style="margin-right:6px"></i>
-          No CONFIRM decisions yet — council pending signal conf &gt;75%
-          <div style="font-size:10px;margin-top:6px">Oracle cycle #${cycle}</div>
+        <div class="agt-llm-models-list">
+          ${llmDefs.map(m => `
+            <div class="agt-llm-model-row">
+              <span class="agt-llm-model-emoji">${m.icon}</span>
+              <div class="agt-llm-model-name" style="color:${m.color}">${m.label}</div>
+              <div style="flex:1;margin:0 10px;height:3px;border-radius:2px;
+                          background:var(--border)"></div>
+              <span class="badge badge-gray" style="font-size:9px">0 calls</span>
+            </div>`).join('')}
         </div>`;
       return;
     }
 
-    container.innerHTML = `
-      <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">
-        Oracle cycle #${cycle} · Showing last 10 CONFIRM decisions
-      </div>
-      <div style="display:flex;flex-direction:column;gap:5px">
-        ${confirms.map(([sym, v]) => {
-          const fd   = safeGet(v, 'final_decision', 'CONFIRM');
-          const conf = sf(safeGet(v, 'confidence', 0));
-          const model= safeGet(v, 'llm_model', '--');
+    body.innerHTML = `
+      <div class="agt-llm-models-list">
+        ${llmDefs.map(m => {
+          const data    = models[m.key] || {};
+          const calls   = parseInt(data.calls   || 0);
+          const success = parseInt(data.success  || 0);
+          const rate    = calls > 0 ? (success / calls * 100).toFixed(1) : '—';
           return `
-            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;
-                        background:rgba(16,185,129,0.05);border-radius:7px;
-                        border:1px solid rgba(16,185,129,0.15);cursor:pointer"
-                 onclick="if(window.StockDetail) StockDetail.open('${sym}')">
-              <span style="font-weight:700;font-size:12px;color:var(--text-primary);min-width:55px">${sym}</span>
-              ${badgeHTML('CONFIRM', 'green', 'fa-circle-check')}
-              <span style="font-size:10px;color:var(--text-muted);margin-left:auto">
-                ${conf > 0 ? `conf: ${(conf * 100).toFixed(1)}%` : ''}
-                ${model !== '--' ? ` · ${model}` : ''}
-              </span>
+            <div class="agt-llm-model-row">
+              <span class="agt-llm-model-emoji">${m.icon}</span>
+              <div class="agt-llm-model-name" style="color:${m.color}">${m.label}</div>
+              <div class="agt-llm-model-bar-wrap">
+                <div class="agt-llm-model-bar-track">
+                  <div class="agt-llm-model-bar-fill"
+                       style="width:${calls > 0 ? rate : 0}%;background:${m.color}"></div>
+                </div>
+              </div>
+              <div class="agt-llm-model-stats">
+                <span style="font-size:10px;font-family:var(--font-mono);
+                             color:var(--text-primary);font-weight:700">
+                  ${calls} calls
+                </span>
+                <span class="badge ${parseFloat(rate) >= 80
+                    ? 'badge-green'
+                    : parseFloat(rate) >= 50
+                      ? 'badge-orange'
+                      : 'badge-gray'}"
+                      style="font-size:9px">
+                  ${rate !== '—' ? `${rate}%` : '—'}
+                </span>
+              </div>
             </div>`;
         }).join('')}
       </div>`;
   }
 
   // ══════════════════════════════════════════════════════════
-  // PUBLIC API
+  // SYSTEM STATUS — Workers + Session
   // ══════════════════════════════════════════════════════════
-  return {
-    renderAgentKPIs,
-    renderAgentGrid,
-    renderMLModels,
-    renderLLMCouncil,
-    renderSystemStatus,
-    renderDecisionsSample,
+  function renderSystemStatus() {
+    const body = document.getElementById('agt-system-body');
+    if (!body) return;
+
+    const s           = _system || {};
+    const overall     = s.overall         || '—';
+    const llmOk       = s.llm_available   ?? true;
+    const ddHalt      = s.dd_halt         ?? false;
+    const mode        = s.mode            || '—';
+    const agentsAct   = s.agents_active   || 13;
+    const workers     = s.workers         || {};
+
+    const workerDefs = [
+      { key: 'finance_hub',   label: 'Finance Hub',   icon: 'fa-server'      },
+      { key: 'ai_proxy',      label: 'AI Proxy',      icon: 'fa-robot'       },
+      { key: 'economic_data', label: 'Economic Data', icon: 'fa-chart-area'  },
+    ];
+
+    body.innerHTML = `
+      <div class="agt-system-grid">
+
+        <!-- Overall status -->
+        <div class="agt-system-item">
+          <div class="agt-system-icon" style="background:rgba(16,185,129,0.1)">
+            <i class="fa-solid fa-circle-check" style="color:var(--accent-green)"></i>
+          </div>
+          <div class="agt-system-info">
+            <div class="agt-system-label">System</div>
+            <div class="agt-system-val">${overall}</div>
+          </div>
+        </div>
+
+        <!-- Agents actifs -->
+        <div class="agt-system-item">
+          <div class="agt-system-icon" style="background:rgba(59,130,246,0.1)">
+            <i class="fa-solid fa-robot" style="color:var(--accent-blue)"></i>
+          </div>
+          <div class="agt-system-info">
+            <div class="agt-system-label">Agents</div>
+            <div class="agt-system-val">${agentsAct}/13 active</div>
+          </div>
+        </div>
+
+        <!-- LLM -->
+        <div class="agt-system-item">
+          <div class="agt-system-icon"
+               style="background:rgba(${llmOk ? '168,85,247' : '239,68,68'},0.1)">
+            <i class="fa-solid fa-brain"
+               style="color:${llmOk ? 'var(--accent-violet)' : 'var(--accent-red)'}"></i>
+          </div>
+          <div class="agt-system-info">
+            <div class="agt-system-label">Ollama LLM</div>
+            <div class="agt-system-val" style="color:${
+              llmOk ? 'var(--accent-green)' : 'var(--accent-red)'}">
+              ${llmOk ? 'Available' : 'Unavailable'}
+            </div>
+          </div>
+        </div>
+
+        <!-- DD Halt -->
+        <div class="agt-system-item">
+          <div class="agt-system-icon"
+               style="background:rgba(${ddHalt ? '239,68,68' : '16,185,129'},0.1)">
+            <i class="fa-solid fa-${ddHalt ? 'ban' : 'shield-halved'}"
+               style="color:${ddHalt ? 'var(--accent-red)' : 'var(--accent-green)'}"></i>
+          </div>
+          <div class="agt-system-info">
+            <div class="agt-system-label">DD Halt</div>
+            <div class="agt-system-val" style="color:${
+              ddHalt ? 'var(--accent-red)' : 'var(--accent-green)'}">
+              ${ddHalt ? '⚠ Active' : 'Inactive'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode -->
+        <div class="agt-system-item">
+          <div class="agt-system-icon" style="background:rgba(99,102,241,0.1)">
+            <i class="fa-solid fa-sliders" style="color:#6366f1"></i>
+          </div>
+          <div class="agt-system-info">
+            <div class="agt-system-label">Exec Mode</div>
+            <div class="agt-system-val">${mode}</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Workers -->
+      <div class="agt-workers-section">
+        <div class="agt-workers-title">
+          <i class="fa-solid fa-plug" style="font-size:11px;color:var(--text-faint)"></i>
+          Cloudflare Workers
+        </div>
+        <div class="agt-workers-list">
+          ${workerDefs.map(w => {
+            const ok = !!(workers[w.key] ?? true);
+            return `
+              <div class="agt-worker-item">
+                <div class="av-status-dot ${ok ? 'green' : 'red'}"></div>
+                <i class="fa-solid ${w.icon}"
+                   style="font-size:10px;color:var(--text-faint)"></i>
+                <span class="agt-worker-label">${w.label}</span>
+                <span class="badge ${ok ? 'badge-green' : 'badge-red'}"
+                      style="font-size:9px;margin-left:auto">
+                  ${ok ? 'UP' : 'DOWN'}
+                </span>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // DECISIONS — Top 10 CONFIRM
+  // ══════════════════════════════════════════════════════════
+  function renderDecisions() {
+    const body = document.getElementById('agt-decisions-body');
+    if (!body) return;
+
+    const allDec   = _decisions?.decisions || {};
+    const cycle    = _decisions?.oracle_cycle || '—';
+    const nTotal   = Object.keys(allDec).length;
+
+    _setHTML('agt-decisions-meta', `
+      <span class="badge badge-blue" style="font-size:9px">
+        <i class="fa-solid fa-rotate"></i> Cycle #${cycle}
+      </span>
+      <span class="badge badge-gray" style="font-size:9px">
+        ${nTotal} symbols analyzed
+      </span>`);
+
+    if (nTotal === 0) {
+      body.innerHTML = `
+        <div class="agt-empty-state">
+          <i class="fa-solid fa-brain" style="font-size:26px;opacity:0.15;
+             display:block;margin-bottom:10px"></i>
+          <div style="font-size:12px;font-weight:700;color:var(--text-secondary);
+                      margin-bottom:4px">No decisions yet</div>
+          <div style="font-size:11px;color:var(--text-faint)">
+            LLM Council activates on signals with confidence &gt; 75%
+          </div>
+        </div>`;
+      return;
+    }
+
+    // Filtre : CONFIRM uniquement, top 10
+    const confirms = Object.entries(allDec)
+      .filter(([, v]) => {
+        const fd = (v?.final_decision || '').toUpperCase();
+        return fd === 'CONFIRM' || v?.decision === true;
+      })
+      .slice(0, 10);
+
+    if (confirms.length === 0) {
+      body.innerHTML = `
+        <div class="agt-empty-state">
+          <div style="font-size:12px;color:var(--text-faint);padding:20px;text-align:center">
+            ${nTotal} symbols analyzed — no CONFIRM decisions in current cycle
+          </div>
+        </div>`;
+      return;
+    }
+
+    body.innerHTML = `
+      <div class="av-table-wrapper" style="border:none;border-radius:0">
+        <table class="av-table" style="min-width:360px">
+          <thead>
+            <tr>
+              <th style="padding-left:14px">Symbol</th>
+              <th style="text-align:center;width:90px">Decision</th>
+              <th style="text-align:right">Confidence</th>
+              <th style="text-align:center;width:100px">Vote</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${confirms.map(([sym, v]) => {
+              const fd   = v?.final_decision || (v?.decision ? 'CONFIRM' : 'REJECT');
+              const conf = parseFloat(v?.confidence || 0);
+              const confPct = (conf * 100).toFixed(1);
+              const confColor = conf >= 0.9
+                ? 'var(--accent-green)'
+                : conf >= 0.75
+                  ? 'var(--accent-blue)'
+                  : 'var(--accent-orange)';
+              return `
+                <tr>
+                  <td style="padding:9px 14px;font-weight:700;font-size:13px;
+                             color:var(--text-primary)">
+                    ${sym}
+                  </td>
+                  <td style="padding:9px 8px;text-align:center">
+                    <span class="badge ${
+                      fd === 'CONFIRM' ? 'badge-green'
+                      : fd === 'REDUCE' ? 'badge-orange'
+                      : 'badge-red'}" style="font-size:9px">
+                      <i class="fa-solid fa-${
+                        fd === 'CONFIRM' ? 'check'
+                        : fd === 'REDUCE' ? 'minus'
+                        : 'xmark'}"></i>
+                      ${fd}
+                    </span>
+                  </td>
+                  <td style="padding:9px 12px;text-align:right">
+                    <span style="font-size:11px;font-weight:700;
+                                 font-family:var(--font-mono);color:${confColor}">
+                      ${conf > 0 ? `${confPct}%` : '—'}
+                    </span>
+                  </td>
+                  <td style="padding:9px 8px;text-align:center">
+                    <span style="font-size:10px;color:var(--text-faint)">
+                      ${v?.llm_model || 'council'}
+                    </span>
+                  </td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // SKELETON
+  // ══════════════════════════════════════════════════════════
+  function _showSkeleton() {
+    ['agt-kpi-active','agt-kpi-errors','agt-kpi-cycle','agt-kpi-session'].forEach(id => {
+      _setHTML(id,
+        `<span class="skeleton-line" style="width:70px;height:22px;display:block"></span>`);
+    });
+
+    const grid = document.getElementById('agt-agents-grid');
+    if (grid) {
+      grid.innerHTML = Array.from({ length: 13 }, () => `
+        <div class="agt-agent-card ok" style="opacity:0.5">
+          <div class="agt-agent-header">
+            <div class="agt-agent-icon" style="background:var(--bg-secondary)">
+              <span class="skeleton-line"
+                    style="width:16px;height:16px;display:block;border-radius:50%"></span>
+            </div>
+            <div style="flex:1;min-width:0">
+              <span class="skeleton-line" style="width:110px;height:13px;
+                                                 display:block;margin-bottom:4px"></span>
+              <span class="skeleton-line" style="width:80px;height:10px;display:block"></span>
+            </div>
+          </div>
+          <span class="skeleton-line" style="width:90%;height:11px;display:block;
+                                            margin:10px 0 6px"></span>
+          <div class="agt-agent-metrics">
+            ${['60px','40px','70px'].map(w =>
+              `<div class="agt-metric-item">
+                 <span class="skeleton-line" style="width:${w};height:16px;display:block"></span>
+               </div>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // AUTO-REFRESH (30s)
+  // ══════════════════════════════════════════════════════════
+  function _startRefresh() {
+    _timers.push(setInterval(async () => {
+      try {
+        const URLS = AV_CONFIG.SIGNAL_URLS;
+        const [hRes, mRes, lRes, sRes, dRes] = await Promise.allSettled([
+          AVApi.fetchJSON(URLS.health,    0),
+          AVApi.fetchJSON(URLS.model,     0),
+          AVApi.fetchJSON(URLS.llm,       0),
+          AVApi.fetchJSON(URLS.system,    0),
+          AVApi.fetchJSON(URLS.decisions, 0),
+        ]);
+        const p = d => d.status === 'fulfilled' ? d.value : null;
+        _health    = p(hRes) || _health;
+        _model     = p(mRes) || _model;
+        _llm       = p(lRes) || _llm;
+        _system    = p(sRes) || _system;
+        _decisions = p(dRes) || _decisions;
+        renderAll();
+      } catch (err) {
+        console.warn('[av-agents] Refresh error:', err.message);
+      }
+    }, AV_CONFIG.REFRESH.agents));
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // BINDINGS
+  // ══════════════════════════════════════════════════════════
+  function _bindThemeToggle() {
+    const btn = document.getElementById('av-theme-toggle');
+    if (!btn) return;
+    btn.addEventListener('click', () => AVUtils.ThemeManager.toggle());
+  }
+
+  function _bindSidebar() {
+    const toggler = document.getElementById('av-hamburger');
+    const sidebar = document.getElementById('av-sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (toggler && sidebar) {
+      toggler.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+        if (overlay) overlay.classList.toggle('active');
+      });
+    }
+    if (overlay && sidebar) {
+      overlay.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+    }
+  }
+
+  function _updateSidebarStatus() {
+    const dot   = document.getElementById('sb-ibkr-dot');
+    const label = document.getElementById('sb-mode-label');
+    const sync  = document.getElementById('sb-last-sync');
+    const nErr  = parseInt(_health?.n_errors || 0);
+    if (dot)   dot.className   = `av-status-dot ${nErr === 0 ? 'green' : 'red'}`;
+    if (label) label.textContent = `${_health?.n_active || 13}/13 agents`;
+    if (sync)  sync.textContent  = 'Refresh 30s';
+  }
+
+  // ── Helpers ────────────────────────────────────────────────
+  function _setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function _setHTML(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  }
+
+  // ── Boot ───────────────────────────────────────────────────
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  window._AgentsCtrl = {
+    destroy: () => _timers.forEach(clearInterval),
+    refresh: () => loadData(),
   };
 
 })();
-
-window.AVAgents = AVAgents;
-console.log('[av-agents] Loaded — 13 agents (R2) | ML models AUC | LLM council | System status');

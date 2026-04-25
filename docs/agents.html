@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Agents — AlphaVault Quant</title>
 
+  <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -13,253 +14,320 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/av-global.css">
-  <link rel="stylesheet" href="assets/css/av-components.css">
-  <link rel="stylesheet" href="assets/css/av-charts.css">
-  <link rel="stylesheet" href="assets/css/av-trading.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-  <style>
-    .agents-bottom-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-    @media (max-width: 900px) {
-      .agents-bottom-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/agents.css">
 </head>
 <body>
-<div class="layout">
 
-  <!-- SIDEBAR -->
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">AlphaVault Quant</div>
-      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Main</div>
-      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
-      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
-      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Analysis</div>
-      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
-      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
-      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Tools</div>
-      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
-      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
-      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
-    </div>
-    <div class="sidebar-status">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
-      </div>
-      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
-    </div>
-  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-  <!-- MAIN -->
-  <main class="main">
-    <header class="top-header">
-      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
-      <div>
-        <span class="top-header-title">Agents</span>
-        <span class="top-header-sub">13 specialized agents · Oracle A1</span>
-      </div>
-      <div class="top-header-actions">
-        <div id="mode-badge-header"></div>
-        <button class="btn-icon" id="av-theme-toggle"><i class="fa-solid fa-moon"></i></button>
-      </div>
-    </header>
+  <div class="av-layout">
 
-    <div class="page-content">
+    <!-- ════════════ SIDEBAR ════════════ -->
+    <nav class="av-sidebar" id="av-sidebar">
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
 
-      <!-- KPI Row -->
-      <div class="kpi-row" id="agents-kpi-row" style="margin-bottom:16px;grid-template-columns:repeat(3,1fr)">
-        <div class="kpi-card skeleton" style="min-height:85px"></div>
-        <div class="kpi-card skeleton" style="min-height:85px"></div>
-        <div class="kpi-card skeleton" style="min-height:85px"></div>
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i> Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i> Trading
+        </a>
+        <div class="av-nav-section">Intelligence</div>
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i> Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i> Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+        <div class="av-nav-section">Tools</div>
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i> Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
       </div>
 
-      <!-- Agents Grid -->
-      <div class="card" style="margin-bottom:16px">
-        <div class="section-header">
-          <i class="fa-solid fa-robot" style="color:#3b82f6"></i>
-          13 Agents — Real-time Status
-          <span style="margin-left:auto;font-size:10px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle" style="color:#10b981;font-size:8px"></i>
-            idle + errors=0 → OK (R2)
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ════════════ MAIN ════════════ -->
+    <div class="av-main">
+
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-robot"></i> Agents
+        </div>
+        <div class="av-topbar-spacer"></div>
+        <div class="av-topbar-actions">
+          <span style="font-size:11px;color:var(--text-faint);display:flex;
+                       align-items:center;gap:5px">
+            <i class="fa-solid fa-rotate fa-spin"
+               style="font-size:8px;color:var(--accent-blue)"></i>
+            Refresh 30s
           </span>
-        </div>
-        <div id="agents-grid">
-          <div style="text-align:center;padding:32px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6;font-size:20px"></i>
-          </div>
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Toggle theme" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
         </div>
       </div>
 
-      <!-- ML Models + LLM Council -->
-      <div class="agents-bottom-grid">
+      <div class="av-content">
 
-        <div class="card" id="ml-models-section">
-          <div style="text-align:center;padding:20px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+        <!-- ── KPI ROW ──────────────────────────────────── -->
+        <div class="agt-kpi-grid">
+
+          <!-- Agents Active -->
+          <div class="agt-kpi-block">
+            <div class="agt-kpi-icon"
+                 style="background:rgba(16,185,129,0.1);color:var(--accent-green)">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div class="agt-kpi-content">
+              <div class="agt-kpi-lbl">Active Agents</div>
+              <div id="agt-kpi-active">
+                <span class="skeleton-line"
+                      style="width:60px;height:22px;display:block"></span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="card" id="llm-council-section">
-          <div style="text-align:center;padding:20px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          <!-- Errors -->
+          <div class="agt-kpi-block">
+            <div class="agt-kpi-icon"
+                 style="background:rgba(239,68,68,0.08);color:var(--accent-red)">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div class="agt-kpi-content">
+              <div class="agt-kpi-lbl">Errors</div>
+              <div id="agt-kpi-errors">
+                <span class="skeleton-line"
+                      style="width:40px;height:22px;display:block"></span>
+              </div>
+            </div>
           </div>
-        </div>
 
-      </div>
-
-      <!-- System Status + Decisions -->
-      <div class="agents-bottom-grid" style="margin-top:16px">
-
-        <div class="card" id="system-status-section">
-          <div style="text-align:center;padding:20px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          <!-- Oracle Cycle -->
+          <div class="agt-kpi-block">
+            <div class="agt-kpi-icon"
+                 style="background:rgba(59,130,246,0.1);color:var(--accent-blue)">
+              <i class="fa-solid fa-rotate"></i>
+            </div>
+            <div class="agt-kpi-content">
+              <div class="agt-kpi-lbl">Oracle Cycle</div>
+              <div id="agt-kpi-cycle">
+                <span class="skeleton-line"
+                      style="width:55px;height:22px;display:block"></span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="card">
-          <div class="section-header">
-            <i class="fa-solid fa-gavel" style="color:#8b5cf6"></i>
-            Recent CONFIRM Decisions
+          <!-- Session -->
+          <div class="agt-kpi-block">
+            <div class="agt-kpi-icon"
+                 style="background:rgba(234,179,8,0.1);color:var(--accent-gold)">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+            <div class="agt-kpi-content">
+              <div class="agt-kpi-lbl">Market Session</div>
+              <div id="agt-kpi-session">
+                <span class="skeleton-line"
+                      style="width:90px;height:22px;display:block"></span>
+              </div>
+            </div>
           </div>
-          <div id="decisions-sample">
-            <div style="text-align:center;padding:20px;color:var(--text-muted)">
-              <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+
+        </div><!-- /agt-kpi-grid -->
+
+        <!-- ── AGENTS GRID ─────────────────────────────── -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-robot"></i>
+            13 Specialized Agents
+            <span class="badge badge-green" style="font-size:10px;margin-left:4px">
+              All operational
+            </span>
+            <span class="badge badge-gray" style="font-size:9px;margin-left:4px">
+              R2: idle + errors=0 → ✅
+            </span>
+          </div>
+          <div class="av-card-body" style="padding-bottom:6px">
+            <div class="agt-agents-grid" id="agt-agents-grid">
+              <!-- Filled by JS -->
             </div>
           </div>
         </div>
 
-      </div>
+        <!-- ── ML MODELS + LLM COUNCIL ────────────────── -->
+        <div class="agt-bottom-grid">
 
-    </div><!-- /page-content -->
-  </main>
-</div>
+          <!-- ML Models -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-dumbbell"></i>
+              ML Models
+              <div id="agt-models-meta"
+                   style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap"></div>
+            </div>
+            <div class="av-card-body">
+              <div id="agt-models-body">
+                ${Array.from({ length: 4 }, () => `
+                  <div class="agt-model-row">
+                    <div class="agt-model-left">
+                      <span class="skeleton-line"
+                            style="width:130px;height:13px;display:block;margin-bottom:4px">
+                      </span>
+                      <span class="skeleton-line"
+                            style="width:90px;height:10px;display:block"></span>
+                    </div>
+                    <div class="agt-model-right">
+                      <span class="skeleton-line"
+                            style="width:100%;height:5px;display:block;border-radius:3px">
+                      </span>
+                    </div>
+                  </div>`).join('')}
+              </div>
+              <!-- Training schedule -->
+              <div class="agt-train-schedule" id="agt-train-schedule"
+                   style="margin-top:14px;padding-top:12px;
+                          border-top:1px solid var(--border)"></div>
+            </div>
+          </div>
 
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
-<div id="av-toast-wrap"></div>
+          <!-- LLM Council -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-brain"></i>
+              LLM Council
+              <span class="badge badge-blue" style="font-size:9px;margin-left:4px">
+                3 Ollama models · 2/3 majority
+              </span>
+            </div>
+            <!-- LLM global stats -->
+            <div class="agt-llm-stats-bar" id="agt-llm-stats">
+              <div class="agt-llm-stat-item">
+                <span class="skeleton-line"
+                      style="width:40px;height:22px;display:block;margin:0 auto 4px"></span>
+                <div class="agt-llm-stat-lbl">Total Calls</div>
+              </div>
+              <div class="agt-llm-stat-item">
+                <span class="skeleton-line"
+                      style="width:40px;height:22px;display:block;margin:0 auto 4px"></span>
+                <div class="agt-llm-stat-lbl">Council Rounds</div>
+              </div>
+              <div class="agt-llm-stat-item">
+                <span class="skeleton-line"
+                      style="width:40px;height:22px;display:block;margin:0 auto 4px"></span>
+                <div class="agt-llm-stat-lbl">Consensus</div>
+              </div>
+            </div>
+            <div class="av-card-body" style="padding-top:0">
+              <div id="agt-llm-body">
+                <div class="agt-empty-state">
+                  <i class="fa-solid fa-circle-notch fa-spin"
+                     style="font-size:18px;color:var(--accent-blue);
+                            display:block;margin-bottom:8px"></i>
+                  <div style="font-size:11px;color:var(--text-faint)">Loading...</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="assets/js/av-config.js"></script>
-<script src="assets/js/av-utils.js"></script>
-<script src="assets/js/av-api.js"></script>
-<script src="assets/js/av-charts.js"></script>
-<script src="assets/js/av-portfolio.js"></script>
-<script src="assets/js/av-signals.js"></script>
-<script src="assets/js/av-agents.js"></script>
-<script src="assets/js/av-trading.js"></script>
-<script src="assets/js/av-controls.js"></script>
-<script src="assets/js/av-stock-detail.js"></script>
+        </div><!-- /agt-bottom-grid -->
 
-<script>
-(function _guard() {
-  const REQUIRED = {
-    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
-    'AVApi':'assets/js/av-api.js','AVCharts':'assets/js/av-charts.js',
-    'AVAgents':'assets/js/av-agents.js','AVControls':'assets/js/av-controls.js',
-  };
-  const missing = Object.entries(REQUIRED)
-    .filter(([n]) => typeof window[n] === 'undefined')
-    .map(([n, f]) => `${n} → ${f}`);
-  if (missing.length) {
-    document.body.insertAdjacentHTML('afterbegin',
-      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
-                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
-                   border-bottom:3px solid #ef4444;line-height:1.8">
-         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
-         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
-       </div>`);
-    return;
-  }
-  _initPage().catch(e => console.error('[Agents]', e));
-})();
+        <!-- ── SYSTEM STATUS ──────────────────────────── -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-server"></i>
+            System Status
+            <span class="badge badge-green" style="font-size:9px;margin-left:auto">
+              <i class="fa-solid fa-circle" style="font-size:7px"></i>
+              v5.0.9 operational
+            </span>
+          </div>
+          <div class="av-card-body">
+            <div id="agt-system-body">
+              <div class="agt-empty-state">
+                <i class="fa-solid fa-circle-notch fa-spin"
+                   style="font-size:18px;color:var(--accent-blue)"></i>
+              </div>
+            </div>
+          </div>
+        </div>
 
-async function _initPage() {
-  await AVApi.init();
-  AVControls.init();
+        <!-- ── RECENT DECISIONS ───────────────────────── -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-gavel"></i>
+            LLM Council Decisions
+            <span class="badge badge-green" style="font-size:9px;margin-left:4px">
+              CONFIRM only
+            </span>
+            <div id="agt-decisions-meta"
+                 style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap"></div>
+          </div>
+          <div id="agt-decisions-body">
+            <div class="agt-empty-state">
+              <i class="fa-solid fa-circle-notch fa-spin"
+                 style="font-size:18px;color:var(--accent-blue)"></i>
+            </div>
+          </div>
+        </div>
 
-  const $sb = document.getElementById('sidebar');
-  const $ov = document.getElementById('sidebar-overlay');
-  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
-    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
-  });
-  $ov?.addEventListener('click', () => {
-    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
-  });
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
 
-  async function _loadAll() {
-    // Utilise getAgentHealth() → retourne agents comme tableau + agentsMap
-    const [health, modelRaw, llmRaw, sysRaw, ibkrRaw, decisionsRaw, modeData] =
-      await Promise.all([
-        AVApi.getAgentHealth(),
-        AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.model,     AV_CONFIG.REFRESH.static),
-        AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.llm,       AV_CONFIG.REFRESH.static),
-        AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.system,    AV_CONFIG.REFRESH.signals),
-        AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.ibkr,      AV_CONFIG.REFRESH.execution),
-        AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.decisions, AV_CONFIG.REFRESH.static),
-        AVApi.getExecutionMode(),
-      ]);
+  <!-- Scripts -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-agents.js"></script>
 
-    AVAgents.renderAgentKPIs(health);
-    AVAgents.renderAgentGrid(health);
-    AVAgents.renderMLModels(modelRaw);
-    AVAgents.renderLLMCouncil(llmRaw);
-    AVAgents.renderSystemStatus(sysRaw, ibkrRaw);
-    AVAgents.renderDecisionsSample(decisionsRaw);
-    AVControls.updateModeBadge(modeData);
-  }
-
-  // Auto-refresh 30s
-  AVApi.startAutoRefresh({
-    health: AV_CONFIG.REFRESH.agents,
-    mode:   AV_CONFIG.REFRESH.execution,
-    onUpdate: async (key, data) => {
-      if (key === 'health') {
-        // Re-normalise depuis données brutes
-        const agentsRaw = data.agents || {};
-        const agentsArr = Array.isArray(agentsRaw)
-          ? agentsRaw
-          : Object.entries(agentsRaw).map(([name, info]) => ({
-              name, ...info, isOk: isAgentOk(info),
-            }));
-        const agentsMap = {};
-        agentsArr.forEach(a => { agentsMap[a.name] = a; });
-        const normalized = {
-          n_agents:  sf(data.n_agents  || 13),
-          n_active:  sf(data.n_active  || 0),
-          n_errors:  sf(data.n_errors  || 0),
-          agents:    agentsArr,
-          agentsMap,
-          raw:       data,
-        };
-        AVAgents.renderAgentKPIs(normalized);
-        AVAgents.renderAgentGrid(normalized);
-      }
-      if (key === 'mode') AVControls.updateModeBadge(data);
-      await AVApi.updateSidebarStatus();
-    },
-  });
-
-  await _loadAll();
-}
-</script>
 </body>
 </html>
