@@ -732,3 +732,36 @@
     display: none; /* masquer le badge sur très petit écran */
   }
 }
+
+/* ── Skeleton sizes ──────────────────────────────────── */
+.skel-kpi        { width: 70px;  height: 22px; display: block; }
+.skel-model-name { width: 130px; height: 13px; display: block; margin-bottom: 4px; }
+.skel-model-sub  { width:  90px; height: 10px; display: block; }
+.skel-model-bar  { width: 100%;  height:  5px; display: block; border-radius: 3px; }
+
+/* ── Badge size variants ─────────────────────────────── */
+.badge-sm  { font-size: 10px; }
+.badge-xs  { font-size:  9px; }
+
+/* ── Dot size inside badge ───────────────────────────── */
+.dot-xs { font-size: 7px; }
+
+/* ── System loading state ────────────────────────────── */
+.agt-system-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+/* ── Decisions body wrapper ──────────────────────────── */
+.agt-decisions-body-wrap { padding: 8px 0; }
+
+/* ── Ticker name on hover ────────────────────────────── */
+.agt-ticker-name {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.2;
+  transition: color 0.15s ease;
+}
