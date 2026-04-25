@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ML Signals — AlphaVault Quant</title>
 
+  <!-- Favicons -->
   <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
   <link rel="shortcut icon" href="favicon.ico">
@@ -13,306 +14,351 @@
   <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/av-global.css">
-  <link rel="stylesheet" href="assets/css/av-components.css">
-  <link rel="stylesheet" href="assets/css/av-charts.css">
-  <link rel="stylesheet" href="assets/css/av-trading.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
 
-  <style>
-    .signals-bottom-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-    @media (max-width: 768px) {
-      .signals-bottom-grid { grid-template-columns: 1fr; }
-    }
-  </style>
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/signals.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<div class="layout">
 
-  <!-- SIDEBAR -->
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">AlphaVault Quant</div>
-      <div class="sidebar-logo-sub">v5.0.9 — Multi-Agent</div>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Main</div>
-      <a href="dashboard.html" class="nav-item" data-page="dashboard"><i class="fa-solid fa-gauge-high"></i> Dashboard</a>
-      <a href="portfolio.html" class="nav-item" data-page="portfolio"><i class="fa-solid fa-wallet"></i> Portfolio</a>
-      <a href="signals.html"   class="nav-item" data-page="signals"><i class="fa-solid fa-wave-square"></i> ML Signals</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Analysis</div>
-      <a href="regime.html"    class="nav-item" data-page="regime"><i class="fa-solid fa-globe"></i> Regime</a>
-      <a href="analytics.html" class="nav-item" data-page="analytics"><i class="fa-solid fa-chart-area"></i> Analytics</a>
-      <a href="agents.html"    class="nav-item" data-page="agents"><i class="fa-solid fa-robot"></i> Agents</a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-section-label">Tools</div>
-      <a href="trading.html"   class="nav-item" data-page="trading"><i class="fa-solid fa-bolt"></i> Trading</a>
-      <a href="watchlist.html" class="nav-item" data-page="watchlist"><i class="fa-solid fa-eye"></i> Watchlist</a>
-      <a href="settings.html"  class="nav-item" data-page="settings"><i class="fa-solid fa-gear"></i> Settings</a>
-    </div>
-    <div class="sidebar-status">
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <span class="status-dot" id="ibkr-dot"></span>
-        <span id="mode-label" style="font-weight:700;font-size:11px;color:#94a3b8">—</span>
-      </div>
-      <span id="last-sync" style="font-size:10px;color:#64748b"></span>
-    </div>
-  </nav>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-  <!-- MAIN -->
-  <main class="main">
-    <header class="top-header">
-      <button class="hamburger-btn" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
-      <div>
-        <span class="top-header-title">ML Signals</span>
-        <span class="top-header-sub" id="sig-header-sub">Loading...</span>
+  <div class="av-layout">
+
+    <!-- ════════════ SIDEBAR ════════════ -->
+    <nav class="av-sidebar" id="av-sidebar">
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i> Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+          <span class="av-nav-badge" id="sidebar-signals-badge">—</span>
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i> Trading
+        </a>
+        <div class="av-nav-section">Intelligence</div>
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i> Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i> Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+        <div class="av-nav-section">Tools</div>
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i> Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
       </div>
-      <div class="top-header-actions">
-        <div id="mode-badge-header"></div>
-        <button class="btn-sm" id="sig-export-btn" title="Export CSV">
-          <i class="fa-solid fa-file-csv"></i> Export
+
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ════════════ MAIN ════════════ -->
+    <div class="av-main">
+
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
         </button>
-        <button class="btn-icon" id="av-theme-toggle">
-          <i class="fa-solid fa-moon"></i>
-        </button>
-      </div>
-    </header>
-
-    <div class="page-content">
-
-      <!-- Stats Bar -->
-      <div id="signals-stats-bar" style="margin-bottom:16px">
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <div class="card skeleton" style="width:140px;height:60px"></div>
-          <div class="card skeleton" style="width:120px;height:60px"></div>
-          <div class="card skeleton" style="width:120px;height:60px"></div>
-          <div class="card skeleton" style="width:120px;height:60px"></div>
-          <div class="card skeleton" style="width:160px;height:60px"></div>
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+        </div>
+        <div class="av-topbar-spacer"></div>
+        <div class="av-topbar-actions">
+          <span id="sig-regime-badge"></span>
+          <span style="font-size:11px;color:var(--text-faint);display:flex;
+                       align-items:center;gap:5px" id="sig-updated-at">
+            <i class="fa-regular fa-clock"></i> —
+          </span>
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Toggle theme" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Table Card -->
-      <div class="av-table-wrapper">
-        <!-- Filters -->
-        <div class="filters-bar" style="flex-wrap:wrap;gap:8px">
-          <button class="filter-btn active" data-sig-filter="ALL">All</button>
-          <button class="filter-btn" data-sig-filter="BUY">
-            <i class="fa-solid fa-arrow-up" style="font-size:9px;color:#10b981"></i> BUY
-          </button>
-          <button class="filter-btn" data-sig-filter="SELL">
-            <i class="fa-solid fa-arrow-down" style="font-size:9px;color:#ef4444"></i> SELL
-          </button>
-          <button class="filter-btn" data-sig-filter="HIGH_CONF">
-            <i class="fa-solid fa-star" style="font-size:9px;color:#eab308"></i>
-            High Conf &gt;75%
-          </button>
+      <div class="av-content">
 
-          <div style="display:flex;align-items:center;gap:8px;margin-left:4px">
-            <span style="font-size:11px;color:var(--text-muted)">Min conf:</span>
-            <input type="range" id="sig-conf-slider" min="0" max="100" value="0"
-                   style="width:80px;accent-color:var(--accent-blue)">
-            <span id="sig-conf-val" style="font-size:11px;font-weight:700;
-                                            font-family:var(--font-mono);
-                                            color:var(--text-primary);min-width:30px">0%</span>
+        <!-- ── STATS OVERVIEW ─────────────────────────────── -->
+        <div class="av-card sig-stats-card">
+          <div class="sig-stats-grid">
+
+            <!-- Total -->
+            <div class="sig-stat-block">
+              <div class="sig-stat-icon" style="background:rgba(59,130,246,0.1);
+                                                color:var(--accent-blue)">
+                <i class="fa-solid fa-satellite-dish"></i>
+              </div>
+              <div>
+                <div class="sig-stat-num" id="sig-n-total">—</div>
+                <div class="sig-stat-lbl">Total Signals</div>
+              </div>
+            </div>
+
+            <!-- BUY -->
+            <div class="sig-stat-block">
+              <div class="sig-stat-icon" style="background:rgba(16,185,129,0.1);
+                                                color:var(--accent-green)">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+              </div>
+              <div>
+                <div class="sig-stat-num" id="sig-n-buy"
+                     style="color:var(--accent-green)">—</div>
+                <div class="sig-stat-lbl">BUY</div>
+              </div>
+            </div>
+
+            <!-- SELL -->
+            <div class="sig-stat-block">
+              <div class="sig-stat-icon" style="background:rgba(239,68,68,0.1);
+                                                color:var(--accent-red)">
+                <i class="fa-solid fa-arrow-trend-down"></i>
+              </div>
+              <div>
+                <div class="sig-stat-num" id="sig-n-sell"
+                     style="color:var(--accent-red)">—</div>
+                <div class="sig-stat-lbl">SELL</div>
+              </div>
+            </div>
+
+            <!-- HIGH CONF -->
+            <div class="sig-stat-block">
+              <div class="sig-stat-icon" style="background:rgba(234,179,8,0.1);
+                                                color:var(--accent-gold)">
+                <i class="fa-solid fa-star"></i>
+              </div>
+              <div>
+                <div class="sig-stat-num" id="sig-n-hc"
+                     style="color:var(--accent-gold)">—</div>
+                <div class="sig-stat-lbl">High Conf</div>
+              </div>
+            </div>
+
+            <!-- Scanned -->
+            <div class="sig-stat-block sig-stat-wide">
+              <div class="sig-stat-icon" style="background:rgba(139,92,246,0.1);
+                                                color:var(--accent-violet)">
+                <i class="fa-solid fa-magnifying-glass-chart"></i>
+              </div>
+              <div>
+                <div class="sig-stat-num" id="sig-n-scanned"
+                     style="font-size:15px">—</div>
+                <div class="sig-stat-lbl">Scanned / Universe</div>
+              </div>
+            </div>
+
           </div>
 
-          <input type="text" class="search-input" id="sig-search"
-                 placeholder="Search symbol..."
-                 style="margin-left:auto;max-width:180px">
-
-          <span id="sig-results-count"
-                style="font-size:11px;color:var(--text-muted);white-space:nowrap"></span>
-        </div>
-
-        <!-- Table -->
-        <div style="overflow-x:auto">
-          <table class="av-table">
-            <thead>
-              <tr>
-                <th data-sig-sort="symbol" style="cursor:pointer">
-                  Symbol <i class="fa-solid fa-sort sort-icon"></i>
-                </th>
-                <th>Action</th>
-                <th data-sig-sort="confidence" style="cursor:pointer;min-width:140px">
-                  Confidence <i class="fa-solid fa-sort-down sort-icon"></i>
-                </th>
-                <th style="text-align:right" data-sig-sort="price">
-                  Price <i class="fa-solid fa-sort sort-icon" style="cursor:pointer"></i>
-                </th>
-                <th style="text-align:right" data-sig-sort="score">
-                  Score <i class="fa-solid fa-sort sort-icon" style="cursor:pointer"></i>
-                </th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="signals-tbody">
-              <tr>
-                <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted)">
-                  <i class="fa-solid fa-circle-notch fa-spin"
-                     style="color:#3b82f6;font-size:18px;margin-bottom:8px;display:block"></i>
-                  Loading ML signals...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="pagination-bar" id="signals-pagination"></div>
-      </div>
-
-      <!-- Bottom: Strategy Weights + Capital Allocation -->
-      <div class="signals-bottom-grid">
-
-        <div class="card" id="strategy-weights-section">
-          <div style="text-align:center;padding:20px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
-          </div>
-        </div>
-
-        <div class="card" id="capital-allocation-section">
-          <div style="text-align:center;padding:20px;color:var(--text-muted)">
-            <i class="fa-solid fa-circle-notch fa-spin" style="color:#3b82f6"></i>
+          <!-- Models + Thresholds -->
+          <div class="sig-meta-row">
+            <div id="sig-models-bar" class="sig-models-bar">
+              <span class="skeleton-line" style="width:240px;height:22px;display:block"></span>
+            </div>
+            <div id="sig-thresholds" class="sig-thresholds"></div>
           </div>
         </div>
 
-      </div>
-    </div><!-- /page-content -->
-  </main>
-</div>
+        <!-- ── SIGNALS TABLE ──────────────────────────────── -->
+        <div class="av-card" id="sig-table-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-table-list"></i>
+            Signals
+            <span class="badge badge-blue" style="font-size:10px"
+                  id="sig-filtered-count">— signals</span>
 
-<div class="sidebar-overlay" id="sidebar-overlay"></div>
-<div id="sdp-fullpage" style="display:none"></div>
-<div id="av-toast-wrap"></div>
+            <div class="sig-controls" style="margin-left:auto">
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="assets/js/av-config.js"></script>
-<script src="assets/js/av-utils.js"></script>
-<script src="assets/js/av-api.js"></script>
-<script src="assets/js/av-charts.js"></script>
-<script src="assets/js/av-portfolio.js"></script>
-<script src="assets/js/av-signals.js"></script>
-<script src="assets/js/av-agents.js"></script>
-<script src="assets/js/av-trading.js"></script>
-<script src="assets/js/av-controls.js"></script>
-<script src="assets/js/av-stock-detail.js"></script>
+              <!-- Filter Tabs -->
+              <div class="sig-filter-tabs">
+                <button class="sig-filter-tab active" data-filter="ALL">All</button>
+                <button class="sig-filter-tab" data-filter="BUY">
+                  <i class="fa-solid fa-arrow-up" style="font-size:9px;
+                     color:var(--accent-green)"></i> BUY
+                </button>
+                <button class="sig-filter-tab" data-filter="SELL">
+                  <i class="fa-solid fa-arrow-down" style="font-size:9px;
+                     color:var(--accent-red)"></i> SELL
+                </button>
+              </div>
 
-<script>
-(function _guard() {
-  const REQUIRED = {
-    'AV_CONFIG':'assets/js/av-config.js','AVUtils':'assets/js/av-utils.js',
-    'AVApi':'assets/js/av-api.js','AVSignals':'assets/js/av-signals.js',
-    'AVCharts':'assets/js/av-charts.js','AVControls':'assets/js/av-controls.js',
-    'StockDetail':'assets/js/av-stock-detail.js',
-  };
-  const missing = Object.entries(REQUIRED)
-    .filter(([n]) => typeof window[n] === 'undefined')
-    .map(([n, f]) => `${n} → ${f}`);
-  if (missing.length) {
-    document.body.insertAdjacentHTML('afterbegin',
-      `<div style="position:fixed;top:0;left:0;right:0;z-index:99999;background:#7f1d1d;
-                   color:#fecaca;font-family:monospace;font-size:12px;padding:14px 20px;
-                   border-bottom:3px solid #ef4444;line-height:1.8">
-         <strong>AlphaVault — ${missing.length} missing file(s):</strong><br>
-         ${missing.map(m => '&nbsp;• ' + m).join('<br>')}
-       </div>`);
-    return;
-  }
-  _initPage().catch(e => console.error('[Signals]', e));
-})();
+              <!-- High Conf Toggle -->
+              <button class="sig-hc-btn" id="sig-hc-btn"
+                      title="Show only High Confidence signals">
+                <i class="fa-solid fa-star" style="color:var(--accent-gold);font-size:10px"></i>
+                HC Only
+              </button>
 
-async function _initPage() {
-  await AVApi.init();
-  AVControls.init();
+              <!-- Search -->
+              <div class="sig-search-wrap">
+                <i class="fa-solid fa-magnifying-glass sig-search-icon"></i>
+                <input id="sig-search" type="text" placeholder="Symbol..."
+                       autocomplete="off" class="sig-search-input">
+              </div>
 
-  const $sb = document.getElementById('sidebar');
-  const $ov = document.getElementById('sidebar-overlay');
-  document.getElementById('hamburger-btn')?.addEventListener('click', () => {
-    $sb.classList.toggle('mobile-open'); $ov.classList.toggle('active');
-  });
-  $ov?.addEventListener('click', () => {
-    $sb.classList.remove('mobile-open'); $ov.classList.remove('active');
-  });
+              <!-- Sort Select -->
+              <select id="sig-sort-sel" class="sig-sort-sel">
+                <option value="conf_desc">Confidence ↓</option>
+                <option value="conf_asc">Confidence ↑</option>
+                <option value="score_desc">Score ↓</option>
+                <option value="price_desc">Price ↓</option>
+                <option value="price_asc">Price ↑</option>
+                <option value="symbol_asc">Symbol A-Z</option>
+              </select>
 
-  // Normalise signals
-  function _normSignals(raw) {
-    if (!raw) return [];
-    if (Array.isArray(raw.signals)) return raw.signals;
-    if (raw.signals && typeof raw.signals === 'object')
-      return Object.entries(raw.signals).map(([sym, v]) => ({ symbol: sym, ...v }));
-    return [];
-  }
+              <!-- Export CSV -->
+              <button class="btn btn-secondary btn-sm" id="sig-export-btn"
+                      title="Export filtered signals to CSV">
+                <i class="fa-solid fa-file-csv"></i>
+                Export
+              </button>
+            </div>
+          </div>
 
-  async function _loadAll() {
-    const [sigRaw, weightsRaw, allocRaw, modeData] = await Promise.all([
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.signals,    AV_CONFIG.REFRESH.signals),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.weights,    AV_CONFIG.REFRESH.static),
-      AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.allocation, AV_CONFIG.REFRESH.signals),
-      AVApi.getExecutionMode(),
-    ]);
+          <!-- Confidence Slider -->
+          <div class="sig-slider-bar">
+            <i class="fa-solid fa-sliders" style="font-size:11px;color:var(--text-faint)"></i>
+            <span style="font-size:11px;color:var(--text-muted);font-weight:600;
+                         white-space:nowrap">
+              Min confidence:
+            </span>
+            <input type="range" id="sig-conf-slider" min="0" max="95" step="5"
+                   value="0" class="sig-slider">
+            <span class="sig-slider-val" id="sig-slider-val">All</span>
+          </div>
 
-    const signals = _normSignals(sigRaw);
-    const meta    = {
-      n_signals:   safeGet(sigRaw, 'n_signals',   signals.length),
-      n_buy:       safeGet(sigRaw, 'n_buy',        signals.filter(s => s.action === 'BUY').length),
-      n_sell:      safeGet(sigRaw, 'n_sell',       signals.filter(s => s.action === 'SELL').length),
-      n_high_conf: safeGet(sigRaw, 'n_high_conf',
-                   signals.filter(s => sf(s.confidence) >= AV_CONFIG.THRESHOLDS.highConf).length),
-      n_scanned:   safeGet(sigRaw, 'n_scanned',   safeGet(sigRaw, 'universe_size', 0)),
-      universe:    safeGet(sigRaw, 'universe_size', 0),
-      updated_at:  safeGet(sigRaw, 'updated_at',  null),
-      models:      safeGet(sigRaw, 'models_active', {}),
-      thresholds: {
-        buy:       safeGet(sigRaw, 'buy_threshold',  AV_CONFIG.THRESHOLDS.buyConf),
-        sell:      safeGet(sigRaw, 'sell_threshold', AV_CONFIG.THRESHOLDS.sellConf),
-        high_conf: safeGet(sigRaw, 'high_conf_gate', AV_CONFIG.THRESHOLDS.highConf),
-      },
-    };
+          <!-- Table -->
+          <div class="av-table-wrapper" style="border:none;border-radius:0">
+            <table class="av-table">
+              <thead>
+                <tr>
+                  <th style="width:40px;text-align:center">#</th>
+                  <th class="sig-sort-th" data-sort="symbol" style="padding-left:14px">
+                    Symbol
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th style="text-align:center;width:80px">Action</th>
+                  <th class="sig-sort-th" data-sort="_conf" style="min-width:150px">
+                    Confidence
+                    <i class="sort-icon fa-solid fa-sort-down fa-xs"></i>
+                  </th>
+                  <th class="sig-sort-th" data-sort="_price" style="text-align:right">
+                    Price
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th class="sig-sort-th" data-sort="_score" style="text-align:right">
+                    Score
+                    <i class="sort-icon fa-solid fa-sort fa-xs" style="opacity:0.3"></i>
+                  </th>
+                  <th style="text-align:center;width:70px">Status</th>
+                </tr>
+              </thead>
+              <tbody id="sig-tbody">
+                <tr>
+                  <td colspan="7" style="padding:48px;text-align:center">
+                    <i class="fa-solid fa-circle-notch fa-spin"
+                       style="font-size:22px;color:var(--accent-blue)"></i>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-    // Header subtitle
-    const sub = document.getElementById('sig-header-sub');
-    if (sub) sub.textContent =
-      `${meta.n_signals} signals · ${meta.n_buy} BUY · ${meta.n_high_conf} high conf`;
+          <!-- Pagination -->
+          <div id="sig-pagination" class="sig-pagination"></div>
+        </div>
 
-    // Renders
-    AVSignals.renderStatsBar(meta);
-    AVSignals.initFilters(() => AVSignals.renderSignalsTable(signals));
-    AVSignals.renderSignalsTable(signals);
-    AVSignals.renderStrategyWeights(weightsRaw);
-    AVSignals.renderCapitalAllocation(allocRaw);
-    AVControls.updateModeBadge(modeData);
-  }
+        <!-- ── BOTTOM GRID ─────────────────────────────────── -->
+        <div class="sig-bottom-grid">
 
-  // Auto-refresh 60s
-  AVApi.startAutoRefresh({
-    signals:    AV_CONFIG.REFRESH.signals,
-    allocation: AV_CONFIG.REFRESH.signals,
-    mode:       AV_CONFIG.REFRESH.execution,
-    onUpdate: async (key, data) => {
-      if (key === 'signals') {
-        const sigs = _normSignals(data);
-        AVSignals.renderSignalsTable(sigs);
-        const sub = document.getElementById('sig-header-sub');
-        if (sub) sub.textContent =
-          `${sigs.length} signals · ${sigs.filter(s => s.action === 'BUY').length} BUY`;
-      }
-      if (key === 'allocation') AVSignals.renderCapitalAllocation(data);
-      if (key === 'mode')       AVControls.updateModeBadge(data);
-      await AVApi.updateSidebarStatus();
-    },
-  });
+          <!-- Strategy Weights -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-chart-pie"></i>
+              Strategy Weights
+              <div id="sig-weights-meta" style="margin-left:auto;display:flex;gap:5px"></div>
+            </div>
+            <div class="av-card-body">
+              <div class="sig-weights-wrap">
+                <div class="sig-weights-chart-wrap">
+                  <canvas id="sig-weights-chart" width="160" height="160"></canvas>
+                </div>
+                <div id="sig-weights-legend" class="sig-weights-legend">
+                  <div class="dash-skeleton-block" style="height:80px"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  await _loadAll();
-}
-</script>
+          <!-- Capital Allocation -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-coins"></i>
+              Capital Allocation
+              <span class="badge badge-blue" style="font-size:9px;margin-left:4px">
+                kelly_risk_parity
+              </span>
+            </div>
+            <div class="av-card-body" id="sig-alloc-body">
+              <div class="dash-skeleton-block" style="height:80px"></div>
+            </div>
+          </div>
+
+        </div><!-- /sig-bottom-grid -->
+
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
+
+  <!-- Scripts -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-stock-detail.js"></script>
+  <script src="assets/js/av-watchlist.js"></script>
+  <script src="assets/js/av-signals.js"></script>
+
 </body>
 </html>

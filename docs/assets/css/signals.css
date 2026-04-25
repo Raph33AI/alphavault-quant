@@ -1,0 +1,504 @@
+/* ================================================================
+   signals.css — AlphaVault Quant ML Signals v1.0
+================================================================ */
+
+/* ── Stats Overview Card ───────────────────────────────────────── */
+.sig-stats-card { overflow: visible; }
+
+.sig-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sig-stat-block {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  border-right: 1px solid var(--border);
+  transition: background 0.15s;
+}
+
+.sig-stat-block:last-child { border-right: none; }
+.sig-stat-block:hover { background: var(--bg-hover); }
+
+.sig-stat-wide { grid-column: span 1; }
+
+.sig-stat-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sig-stat-num {
+  font-size: 22px;
+  font-weight: 900;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+
+.sig-stat-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Meta row (models + thresholds) */
+.sig-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  flex-wrap: wrap;
+}
+
+.sig-models-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sig-model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+
+.sig-model-chip.active {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-blue);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.sig-model-chip.inactive {
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.sig-thresholds {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+/* ── Controls Bar ──────────────────────────────────────────────── */
+.sig-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Filter Tabs */
+.sig-filter-tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--bg-secondary);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+.sig-filter-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 11px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.sig-filter-tab:hover { color: var(--accent-blue); background: var(--bg-hover); }
+.sig-filter-tab.active { background: var(--gradient-brand); color: #fff; }
+
+/* High Conf Button */
+.sig-hc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.sig-hc-btn:hover {
+  border-color: #eab308;
+  color: #eab308;
+  background: rgba(234, 179, 8, 0.06);
+}
+
+.sig-hc-btn.active {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+/* Search */
+.sig-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sig-search-icon {
+  position: absolute;
+  left: 9px;
+  font-size: 10px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.sig-search-input {
+  padding: 6px 10px 6px 27px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-family: var(--font-sans);
+  outline: none;
+  width: 130px;
+  transition: border-color 0.15s, width 0.2s;
+}
+
+.sig-search-input:focus {
+  border-color: var(--accent-blue);
+  width: 160px;
+}
+
+/* Sort select */
+.sig-sort-sel {
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.sig-sort-sel:focus { border-color: var(--accent-blue); }
+
+/* ── Slider Bar ────────────────────────────────────────────────── */
+.sig-slider-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.sig-slider {
+  flex: 1;
+  max-width: 240px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--accent-blue);
+}
+
+.sig-slider-val {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-blue);
+  min-width: 28px;
+}
+
+/* ── Table Rows ────────────────────────────────────────────────── */
+.sig-row { cursor: pointer; transition: background 0.1s; }
+.sig-row:hover td { background: var(--bg-hover) !important; }
+
+.sig-row-hc {
+  background: rgba(234, 179, 8, 0.02) !important;
+}
+.sig-row-hc td:first-child {
+  border-left: 2px solid rgba(234, 179, 8, 0.5);
+}
+
+/* Sort header */
+.sig-sort-th {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.sig-sort-th:hover { color: var(--accent-blue); }
+
+/* Action Badge */
+.sig-action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sig-action-badge.buy {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-green);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.sig-action-badge.sell {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+/* Confidence bar in table */
+.sig-conf-track {
+  flex: 1;
+  height: 5px;
+  background: rgba(148, 163, 184, 0.15);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sig-conf-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+/* ── Pagination ────────────────────────────────────────────────── */
+.sig-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  flex-wrap: wrap;
+}
+
+.sig-page-btn {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sig-page-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: var(--bg-hover);
+}
+
+.sig-page-btn.active {
+  background: var(--gradient-brand);
+  color: #fff;
+  border-color: transparent;
+}
+
+.sig-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Bottom Grid ───────────────────────────────────────────────── */
+.sig-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+/* ── Strategy Weights ──────────────────────────────────────────── */
+.sig-weights-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.sig-weights-chart-wrap {
+  width: 140px;
+  height: 140px;
+  flex-shrink: 0;
+}
+
+.sig-weights-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sig-weight-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sig-weight-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.sig-weight-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sig-weight-pct {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+/* ── Capital Allocation ────────────────────────────────────────── */
+.sig-alloc-empty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+}
+
+.sig-alloc-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(59, 130, 246, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sig-alloc-empty-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.sig-alloc-empty-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+
+.sig-alloc-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.sig-alloc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sig-alloc-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 5px 0;
+}
+
+.sig-alloc-footer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .sig-stats-grid { grid-template-columns: repeat(3, 1fr); }
+  .sig-stat-wide  { grid-column: span 1; }
+}
+
+@media (max-width: 960px) {
+  .sig-bottom-grid { grid-template-columns: 1fr; }
+  .sig-controls    { gap: 4px; }
+}
+
+@media (max-width: 768px) {
+  .sig-stats-grid  { grid-template-columns: repeat(2, 1fr); }
+  .sig-controls    { flex-wrap: wrap; }
+  .sig-slider-bar  { display: none; }
+
+  /* Masquer colonnes secondaires */
+  .av-table thead th:nth-child(5),
+  .av-table thead th:nth-child(6),
+  .av-table tbody td:nth-child(5),
+  .av-table tbody td:nth-child(6) { display: none; }
+
+  .sig-search-input { width: 110px; }
+  .sig-sort-sel     { display: none; }
+}
+
+@media (max-width: 540px) {
+  .sig-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .sig-filter-tabs .sig-filter-tab:nth-child(n+3) { display: none; }
+
+  .sig-weights-wrap {
+    flex-direction: column;
+    align-items: center;
+  }
+}
