@@ -1000,12 +1000,16 @@
   }
 
   // ── Polling ───────────────────────────────────────────────
+  let _unsubPoll = null;   // Remplace pollTimer
+
   function startPollTimer() {
     clearPollTimer();
-    pollTimer = setInterval(async () => {
-      if (!currentUser) { clearPollTimer(); return; }
-      try {
-        const snap = await db.collection(QUANT_USERS_COL).doc(currentUser.uid).get();
+    if (!currentUser || !db) return;
+
+    // Firestore onSnapshot = push temps réel, 0 polling
+    _unsubPoll = db.collection(QUANT_USERS_COL)
+      .doc(currentUser.uid)
+      .onSnapshot((snap) => {
         if (!snap.exists) return;
         const { status } = snap.data();
         if (status === 'approved') {
@@ -1016,12 +1020,13 @@
           clearPollTimer();
           showRejectedScreen(snap.data());
         }
-      } catch (e) { /* silent */ }
-    }, POLL_MS);
+      }, (err) => {
+        console.warn('Snapshot error:', err.message);
+      });
   }
 
   function clearPollTimer() {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (_unsubPoll) { _unsubPoll(); _unsubPoll = null; }
   }
 
   async function manualCheckApproval() {
