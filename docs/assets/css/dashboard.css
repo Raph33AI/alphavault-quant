@@ -436,3 +436,697 @@
 @media (max-width: 400px) {
   .dash-kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ================================================================
+   RESPONSIVE — FULL MOBILE OVERHAUL + FIX SCROLL HORIZONTAL
+   Breakpoints : 1200 → 1024 → 900 → 768 → 640 → 480 → 375 → 320
+================================================================ */
+
+/* ── Fix global overflow horizontal ───────────────────────────── */
+/* Supprime le scroll horizontal et le "bulb" du header          */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Tous les enfants directs du layout ne peuvent pas dépasser */
+.layout-wrapper,
+.main-content,
+.page-content,
+.dash-page {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* Fix status bar : ne pas provoquer d'overflow sur la page */
+.dash-status-bar {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.dash-status-bar::-webkit-scrollbar { display: none; }
+
+/* Fix tables signaux */
+#dash-signals-stats,
+#dash-models-bar {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Fix wrapper de table */
+.table-responsive,
+[class*="table-wrap"],
+[class*="signals-table"] {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* ── 1200px : Tablette large ───────────────────────────────────── */
+@media (max-width: 1200px) {
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .dash-middle-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  #dash-nav-chart {
+    height: 260px;
+  }
+}
+
+/* ── 1024px : Tablette portrait ────────────────────────────────── */
+@media (max-width: 1024px) {
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .av-kpi-value {
+    font-size: 22px;
+  }
+
+  .dash-middle-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  /* Regime card */
+  .dash-regime-badge {
+    width: 48px;
+    height: 48px;
+  }
+
+  .dash-regime-name {
+    font-size: 18px;
+  }
+
+  /* Status bar compact */
+  .dash-status-item {
+    padding: 9px 10px;
+    font-size: 11px;
+    gap: 5px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 240px;
+  }
+}
+
+/* ── 900px : Tablette petite ────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dash-middle-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* KPI */
+  .av-kpi-value {
+    font-size: 21px;
+  }
+
+  .av-kpi-label {
+    font-size: 10px;
+  }
+
+  .av-kpi-sub {
+    font-size: 10px;
+  }
+
+  /* Agents */
+  .dash-agents-summary {
+    gap: 6px;
+  }
+
+  .dash-agents-stat-val {
+    font-size: 18px;
+  }
+
+  /* Exec stats */
+  .dash-exec-stat-val {
+    font-size: 16px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 220px;
+  }
+
+  /* Status bar */
+  .dash-status-item {
+    padding: 8px 10px;
+    font-size: 10.5px;
+  }
+
+  /* Chart legend */
+  .dash-chart-legend {
+    gap: 10px;
+  }
+
+  .dash-legend-item {
+    font-size: 10px;
+  }
+}
+
+/* ── 768px : Mobile large ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* KPI Grid */
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .av-kpi-card {
+    padding: 14px 14px 12px;
+    border-radius: 12px;
+  }
+
+  .av-kpi-value {
+    font-size: 20px;
+    min-height: 26px;
+  }
+
+  .av-kpi-label {
+    font-size: 10px;
+    margin-bottom: 8px;
+    gap: 5px;
+  }
+
+  .av-kpi-label i {
+    font-size: 11px;
+  }
+
+  /* Middle grid */
+  .dash-middle-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Regime */
+  .dash-regime-main {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .dash-regime-badge {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .dash-regime-name {
+    font-size: 17px;
+  }
+
+  .dash-regime-conf {
+    font-size: 11px;
+  }
+
+  /* Agents */
+  .dash-agents-summary {
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .dash-agents-stat {
+    padding: 8px 6px;
+  }
+
+  .dash-agents-stat-val {
+    font-size: 17px;
+  }
+
+  .dash-agents-stat-lbl {
+    font-size: 8px;
+  }
+
+  .dash-agent-row {
+    padding: 5px 6px;
+    gap: 6px;
+  }
+
+  .dash-agent-name {
+    font-size: 10.5px;
+  }
+
+  .dash-agent-cycles,
+  .dash-agent-age {
+    font-size: 9.5px;
+  }
+
+  /* Exec card */
+  .dash-exec-badges {
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .dash-exec-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .dash-exec-stat {
+    padding: 7px 5px;
+  }
+
+  .dash-exec-stat-val {
+    font-size: 15px;
+  }
+
+  .dash-exec-stat-lbl {
+    font-size: 8px;
+  }
+
+  .dash-exec-cap-row {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  /* Signals */
+  #dash-signals-stats {
+    padding: 6px 12px;
+    gap: 4px;
+  }
+
+  #dash-models-bar {
+    padding: 4px 12px;
+    gap: 3px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 210px;
+  }
+
+  .dash-chart-legend {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  /* Status bar */
+  .dash-status-item {
+    padding: 7px 9px;
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  .dash-status-sep {
+    height: 16px;
+  }
+
+  /* Leverage */
+  .dash-lev-progress {
+    margin-top: 6px;
+  }
+}
+
+/* ── 640px : Mobile standard ────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* KPI */
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .av-kpi-card {
+    padding: 12px 12px 10px;
+    border-radius: 10px;
+  }
+
+  .av-kpi-value {
+    font-size: 18px;
+    min-height: 22px;
+    margin-bottom: 6px;
+  }
+
+  .av-kpi-label {
+    font-size: 9.5px;
+    margin-bottom: 7px;
+    letter-spacing: 0.3px;
+  }
+
+  .av-kpi-sub {
+    font-size: 9.5px;
+    gap: 4px;
+    min-height: 14px;
+  }
+
+  /* Regime probas */
+  .dash-proba-label {
+    width: 44px;
+    font-size: 9px;
+  }
+
+  .dash-proba-val {
+    width: 26px;
+    font-size: 9px;
+  }
+
+  /* Agents */
+  .dash-agents-link {
+    font-size: 10px;
+    padding: 5px;
+  }
+
+  /* Exec conn */
+  .dash-exec-conn {
+    padding: 7px 8px;
+    gap: 6px;
+    font-size: 11px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 195px;
+    border-radius: 8px;
+  }
+
+  /* Chart legend */
+  .dash-legend-item {
+    font-size: 9.5px;
+    gap: 5px;
+  }
+
+  .dash-legend-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  /* Status bar */
+  .dash-status-item {
+    padding: 7px 8px;
+    font-size: 9.5px;
+  }
+
+  /* Signals stats bar */
+  #dash-signals-stats {
+    padding: 5px 10px;
+    gap: 3px;
+  }
+
+  #dash-models-bar {
+    padding: 4px 10px;
+    gap: 3px;
+  }
+}
+
+/* ── 480px : Petit mobile ───────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* KPI : 2 col serrées */
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px;
+  }
+
+  .av-kpi-card {
+    padding: 10px 10px 9px;
+  }
+
+  .av-kpi-value {
+    font-size: 16px;
+    word-break: break-word;
+  }
+
+  .av-kpi-label {
+    font-size: 9px;
+    margin-bottom: 6px;
+    gap: 4px;
+  }
+
+  .av-kpi-label i {
+    font-size: 10px;
+  }
+
+  .av-kpi-sub {
+    font-size: 9px;
+  }
+
+  /* Regime */
+  .dash-regime-badge {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    font-size: 20px;
+  }
+
+  .dash-regime-name {
+    font-size: 15px;
+  }
+
+  .dash-regime-conf {
+    font-size: 10px;
+  }
+
+  /* Agents */
+  .dash-agents-summary {
+    gap: 4px;
+  }
+
+  .dash-agents-stat-val {
+    font-size: 15px;
+  }
+
+  .dash-agent-name {
+    font-size: 10px;
+  }
+
+  .dash-agent-cycles,
+  .dash-agent-age {
+    font-size: 9px;
+  }
+
+  /* Exec */
+  .dash-exec-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+  }
+
+  .dash-exec-stat-val {
+    font-size: 14px;
+  }
+
+  .dash-exec-stat-lbl {
+    font-size: 7.5px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 175px;
+  }
+
+  .dash-chart-legend {
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Status bar : réduire encore */
+  .dash-status-item {
+    padding: 6px 7px;
+    font-size: 9px;
+    gap: 3px;
+  }
+
+  /* Cacher certains items secondaires sur très petit écran */
+  .dash-status-sep:nth-child(n+8) { display: none; }
+  .dash-status-item:nth-child(n+9) { display: none; }
+
+  /* Signals */
+  #dash-signals-stats,
+  #dash-models-bar {
+    padding: 4px 8px;
+    gap: 3px;
+  }
+}
+
+/* ── 375px : iPhone standard ────────────────────────────────────── */
+@media (max-width: 375px) {
+  /* KPI */
+  .dash-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  .av-kpi-card {
+    padding: 9px 9px 8px;
+    border-radius: 9px;
+  }
+
+  .av-kpi-value {
+    font-size: 15px;
+    min-height: 18px;
+    margin-bottom: 5px;
+  }
+
+  .av-kpi-label {
+    font-size: 8.5px;
+    margin-bottom: 5px;
+  }
+
+  .av-kpi-sub {
+    font-size: 8.5px;
+    min-height: 12px;
+  }
+
+  /* Middle */
+  .dash-regime-main {
+    gap: 10px;
+  }
+
+  .dash-regime-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    font-size: 18px;
+  }
+
+  .dash-regime-name {
+    font-size: 14px;
+  }
+
+  /* Agents stat */
+  .dash-agents-stat {
+    padding: 7px 5px;
+  }
+
+  .dash-agents-stat-val {
+    font-size: 14px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 160px;
+  }
+
+  /* Exec stat : empiler label/val */
+  .dash-exec-stat {
+    padding: 6px 4px;
+  }
+
+  .dash-exec-stat-val {
+    font-size: 13px;
+  }
+
+  /* Status bar */
+  .dash-status-item {
+    padding: 5px 6px;
+    font-size: 8.5px;
+  }
+
+  .dash-status-sep {
+    height: 14px;
+  }
+
+  /* Cacher davantage d'items */
+  .dash-status-sep:nth-child(n+6) { display: none; }
+  .dash-status-item:nth-child(n+7) { display: none; }
+
+  /* Proba labels */
+  .dash-proba-label {
+    width: 38px;
+    font-size: 8.5px;
+  }
+
+  .dash-proba-val {
+    width: 24px;
+    font-size: 8.5px;
+  }
+}
+
+/* ── 320px : Très petit (Galaxy Fold, etc.) ─────────────────────── */
+@media (max-width: 320px) {
+  /* KPI : 1 colonne */
+  .dash-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .av-kpi-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  /* Créer une fausse icône à gauche pour équilibrer */
+  .av-kpi-label {
+    margin-bottom: 4px;
+    font-size: 8.5px;
+  }
+
+  .av-kpi-value {
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  /* Middle */
+  .dash-middle-grid {
+    gap: 8px;
+  }
+
+  /* Chart */
+  #dash-nav-chart {
+    height: 145px;
+  }
+
+  /* Exec stats : 1 colonne */
+  .dash-exec-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+
+  /* Status bar : minimal */
+  .dash-status-bar {
+    padding: 0 2px;
+  }
+
+  .dash-status-item {
+    padding: 5px 5px;
+    font-size: 8px;
+    gap: 2px;
+  }
+
+  /* Cacher tout sauf les 3 premiers items */
+  .dash-status-sep:nth-child(n+4) { display: none; }
+  .dash-status-item:nth-child(n+5) { display: none; }
+
+  .dash-agents-summary {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Utilitaires touch ──────────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Désactive hover sticky sur mobile */
+  .av-kpi-card:hover {
+    box-shadow: var(--shadow-card);
+    transform: none;
+  }
+
+  .dash-agent-row:hover {
+    background: transparent;
+  }
+
+  .dash-agents-link:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  /* Touch areas minimum 44px */
+  .dash-agents-link {
+    min-height: 40px;
+    padding: 8px 10px;
+  }
+
+  .dash-status-item {
+    min-height: 38px;
+    cursor: default;
+  }
+}
