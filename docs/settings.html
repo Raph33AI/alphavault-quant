@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — AlphaVault Quant</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <link rel="stylesheet" href="assets/css/settings.css">
+
+  <!-- Firebase -->
+  <script src="assets/js/firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <div class="av-layout">
+
+    <!-- ════════════ SIDEBAR ════════════ -->
+    <nav class="av-sidebar" id="av-sidebar">
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i> Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i> ML Signals
+          <span class="av-nav-badge" id="sidebar-signals-badge">—</span>
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i> Trading
+        </a>
+        <div class="av-nav-section">Intelligence</div>
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i> Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i> Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i> Analytics
+        </a>
+        <div class="av-nav-section">Tools</div>
+        <a href="watchlist.html" class="av-nav-link" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i> Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link active" data-page="settings">
+          <i class="fa-solid fa-gear"></i> Settings
+        </a>
+      </div>
+
+      <!-- User -->
+      <div id="av-sidebar-user"
+           style="padding:8px 12px;border-top:1px solid var(--border,rgba(148,163,184,0.1));flex-shrink:0">
+        <div style="height:46px;border-radius:9px;background:var(--bg-secondary,#0f172a);
+                    border:1px solid var(--border);animation:_sk 1.5s ease-in-out infinite alternate"></div>
+        <style>@keyframes _sk{from{opacity:.5}to{opacity:1}}</style>
+      </div>
+
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ════════════ MAIN ════════════ -->
+    <div class="av-main">
+
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-gear"></i> Settings
+        </div>
+        <div class="av-topbar-spacer"></div>
+        <div class="av-topbar-actions">
+          <div id="mode-badge-header"></div>
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Toggle theme" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="av-content">
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 1 — ARCHITECTURE SCHEMA
+             ══════════════════════════════════════════════════════ -->
+        <div class="av-card set-arch-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-diagram-project" style="color:var(--accent-blue)"></i>
+            System Architecture &amp; Data Flow — AlphaVault Quant v5.0.9
+            <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span class="badge badge-green" style="font-size:10px">
+                <i class="fa-solid fa-circle" style="font-size:7px"></i> Operational
+              </span>
+              <span class="badge badge-blue" style="font-size:10px">13 Agents</span>
+              <span class="badge set-badge-violet" style="font-size:10px">Multi-Agent</span>
+              <span class="badge set-badge-gray" style="font-size:10px">Oracle A1 ARM64</span>
+            </div>
+          </div>
+
+          <div class="set-arch-body">
+
+            <!-- ── Step 1 : Data Sources ───────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">1</span>
+              External Data Sources — Real-Time Ingestion
+            </div>
+            <div class="set-data-sources">
+              <div class="set-ds-box">
+                <div class="set-ds-icon" style="background:rgba(16,185,129,0.1);color:#10b981">
+                  <i class="fa-solid fa-chart-candlestick"></i>
+                </div>
+                <div class="set-ds-name">yfinance</div>
+                <div class="set-ds-sub">OHLCV · 907 symbols<br>Quotes · Fundamentals<br><em>Every 5 min</em></div>
+              </div>
+              <div class="set-ds-box">
+                <div class="set-ds-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6">
+                  <i class="fa-solid fa-server"></i>
+                </div>
+                <div class="set-ds-name">IBeam / IBKR REST</div>
+                <div class="set-ds-sub">Portfolio · Positions<br>Orders · NetLiq<br><em>Live paper account</em></div>
+              </div>
+              <div class="set-ds-box">
+                <div class="set-ds-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6">
+                  <i class="fa-solid fa-brain"></i>
+                </div>
+                <div class="set-ds-name">Ollama Local LLMs</div>
+                <div class="set-ds-sub">llama3.2 · qwen2.5<br>mistral · 3-model vote<br><em>LLM Council gate</em></div>
+              </div>
+              <div class="set-ds-box">
+                <div class="set-ds-icon" style="background:rgba(234,179,8,0.1);color:#eab308">
+                  <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div class="set-ds-name">FinBERT Embeddings</div>
+                <div class="set-ds-sub">ProsusAI/finbert<br>768-dim vectors<br><em>News sentiment RAG</em></div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">All sources feed into the central orchestrator every cycle</span>
+            </div>
+
+            <!-- ── Step 2 : Orchestrator ───────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">2</span>
+              Oracle A1 ARM64 — Orchestrator Central (24/7)
+            </div>
+            <div class="set-orch-box">
+              <div class="set-orch-header">
+                <span class="set-orch-chip">
+                  <i class="fa-solid fa-microchip"></i> ARM64 · 24 GB RAM · Ubuntu 22.04
+                </span>
+                <span class="set-orch-chip" style="color:#3b82f6;border-color:rgba(59,130,246,0.25)">
+                  <i class="fa-solid fa-clock"></i> APScheduler — 11 Jobs
+                </span>
+                <span class="set-orch-chip" style="color:#8b5cf6;border-color:rgba(139,92,246,0.25)">
+                  <i class="fa-solid fa-arrows-turn-to-dots"></i> asyncio concurrent
+                </span>
+                <span class="set-orch-chip" style="color:#10b981;border-color:rgba(16,185,129,0.25)">
+                  <i class="fa-solid fa-envelope-open-text"></i> Message Bus — 8 event types
+                </span>
+              </div>
+              <div class="set-orch-body-grid">
+                <!-- Jobs -->
+                <div class="set-orch-jobs">
+                  <div class="set-orch-jobs-title">
+                    <i class="fa-solid fa-calendar-check"></i> Scheduled Jobs
+                  </div>
+                  <div class="set-orch-job"><span class="set-job-freq">5 min</span> trading_regular — Mon–Fri 00:00–22:00 UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">15 min</span> trading_late — Mon–Fri 23:00 UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">15 min</span> sunday_markets — Sun 06–15h + 23h UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">warmup</span> premarket — Mon–Fri 11, 12, 13h UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">3×/day</span> rebalance — 15h, 17h, 19h UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">daily</span> model_training — 07:00 UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">daily</span> history_learner — 02:00 UTC</div>
+                  <div class="set-orch-job"><span class="set-job-freq">10 min</span> health_check — heartbeat log</div>
+                  <div class="set-orch-job"><span class="set-job-freq">60 s</span> pnl_monitor — 8 exit rules</div>
+                  <div class="set-orch-job"><span class="set-job-freq">60 s</span> dashboard_sync — GitHub API push</div>
+                  <div class="set-orch-job"><span class="set-job-freq">5 min</span> ibeam_tickle — session keep-alive</div>
+                </div>
+                <!-- Message Bus -->
+                <div class="set-orch-bus">
+                  <div class="set-orch-jobs-title">
+                    <i class="fa-solid fa-bus"></i> asyncio Message Bus
+                  </div>
+                  <div class="set-bus-events">
+                    <span class="set-bus-evt" style="color:#10b981;border-color:rgba(16,185,129,0.2)">MARKET_DATA_READY</span>
+                    <span class="set-bus-evt" style="color:#3b82f6;border-color:rgba(59,130,246,0.2)">SIGNALS_READY</span>
+                    <span class="set-bus-evt" style="color:#8b5cf6;border-color:rgba(139,92,246,0.2)">ORDERS_EXECUTE</span>
+                    <span class="set-bus-evt" style="color:#ef4444;border-color:rgba(239,68,68,0.2)">EXIT_ORDER</span>
+                    <span class="set-bus-evt" style="color:#f59e0b;border-color:rgba(245,158,11,0.2)">RISK_ALERT</span>
+                    <span class="set-bus-evt" style="color:#eab308;border-color:rgba(234,179,8,0.2)">REGIME_UPDATE</span>
+                    <span class="set-bus-evt" style="color:#06b6d4;border-color:rgba(6,182,212,0.2)">ORDER_EXECUTED</span>
+                    <span class="set-bus-evt" style="color:#84cc16;border-color:rgba(132,204,22,0.2)">PORTFOLIO_UPDATE</span>
+                  </div>
+                  <!-- Services -->
+                  <div class="set-orch-jobs-title" style="margin-top:18px">
+                    <i class="fa-solid fa-server"></i> systemd Services (7/7)
+                  </div>
+                  <div class="set-services-chips">
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> alphavault-core</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> dashboard-api</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> ibkr-watcher</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> rag-server</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> postgresql@16</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> ollama</span>
+                    <span class="set-svc-chip"><i class="fa-solid fa-circle-check" style="color:#10b981"></i> ibeam (docker)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">Orchestrator dispatches work to 13 agents via asyncio concurrent execution</span>
+            </div>
+
+            <!-- ── Step 3 : 13 Agents ──────────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">3</span>
+              13 Specialized Agents — Parallel Pipeline
+            </div>
+            <div class="set-agents-grid">
+              <div class="set-agent-box" style="--ac:#10b981">
+                <div class="set-agent-num">01</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+                <div class="set-agent-name">MarketScanner</div>
+                <div class="set-agent-freq">5 min</div>
+                <div class="set-agent-desc">yfinance → OHLCV<br>907 symbols batch</div>
+                <div class="set-agent-out">→ ohlcv_data</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#3b82f6">
+                <div class="set-agent-num">02</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                <div class="set-agent-name">SignalAgent</div>
+                <div class="set-agent-freq">5 min</div>
+                <div class="set-agent-desc">XGB + LGB + Meta<br>255 signals/cycle</div>
+                <div class="set-agent-out">→ ml_signals + JSON</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#f59e0b">
+                <div class="set-agent-num">03</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-globe"></i></div>
+                <div class="set-agent-name">RegimeDetector</div>
+                <div class="set-agent-freq">15 min</div>
+                <div class="set-agent-desc">SPY → BULL/BEAR<br>VIX + MA indicators</div>
+                <div class="set-agent-out">→ market_regimes</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#ec4899">
+                <div class="set-agent-num">04</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-newspaper"></i></div>
+                <div class="set-agent-name">SentimentAgent</div>
+                <div class="set-agent-freq">30 min</div>
+                <div class="set-agent-desc">News → FinBERT<br>768-dim vectors RAG</div>
+                <div class="set-agent-out">→ rag_documents</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#8b5cf6">
+                <div class="set-agent-num">05</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-coins"></i></div>
+                <div class="set-agent-name">CapitalAllocator</div>
+                <div class="set-agent-freq">event-driven</div>
+                <div class="set-agent-desc">Kelly + Risk Parity<br>Conf > 0.75 gate</div>
+                <div class="set-agent-out">→ allocation JSON</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#ef4444">
+                <div class="set-agent-num">06</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="set-agent-name">RiskManager</div>
+                <div class="set-agent-freq">5 min</div>
+                <div class="set-agent-desc">VaR + DD + Corr<br>Leverage monitor</div>
+                <div class="set-agent-out">→ portfolio_snapshots</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#f97316">
+                <div class="set-agent-num">07</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="set-agent-name">PnLMonitor</div>
+                <div class="set-agent-freq">60 s</div>
+                <div class="set-agent-desc">8 exit rules<br>Trailing + hard stop</div>
+                <div class="set-agent-out">→ EXIT_ORDER msg</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#7c3aed">
+                <div class="set-agent-num">08</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-robot"></i></div>
+                <div class="set-agent-name">LLMCouncil</div>
+                <div class="set-agent-freq">event > 0.75</div>
+                <div class="set-agent-desc">3-model vote 2/3<br>CONFIRM/REDUCE/REJECT</div>
+                <div class="set-agent-out">→ agent_decisions</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#06b6d4">
+                <div class="set-agent-num">09</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-bolt"></i></div>
+                <div class="set-agent-name">ExecutionAgent</div>
+                <div class="set-agent-freq">event</div>
+                <div class="set-agent-desc">IBeam REST POST<br>MKT orders paper</div>
+                <div class="set-agent-out">→ trades + trade_log</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#84cc16">
+                <div class="set-agent-num">10</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="set-agent-name">Rebalancer</div>
+                <div class="set-agent-freq">drift > 2%</div>
+                <div class="set-agent-desc">Portfolio drift 3×/day<br>15h, 17h, 19h UTC</div>
+                <div class="set-agent-out">→ REBALANCE_ORDER</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#14b8a6">
+                <div class="set-agent-num">11</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-book-open"></i></div>
+                <div class="set-agent-name">HistoryLearner</div>
+                <div class="set-agent-freq">02:00 UTC</div>
+                <div class="set-agent-desc">90-day trade lookback<br>Pattern extraction</div>
+                <div class="set-agent-out">→ learning_insights</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#a855f7">
+                <div class="set-agent-num">12</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-flask"></i></div>
+                <div class="set-agent-name">ModelTrainer</div>
+                <div class="set-agent-freq">07:00 UTC</div>
+                <div class="set-agent-desc">XGB + LGB + Meta<br>252d · 67 features · Optuna</div>
+                <div class="set-agent-out">→ models/*.json</div>
+              </div>
+              <div class="set-agent-box" style="--ac:#3b82f6">
+                <div class="set-agent-num">13</div>
+                <div class="set-agent-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <div class="set-agent-name">DashboardSync</div>
+                <div class="set-agent-freq">60 s</div>
+                <div class="set-agent-desc">Batch Git Data API<br>0 race conditions</div>
+                <div class="set-agent-out">→ GitHub Pages</div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow set-arch-arrow-bi">
+              <i class="fa-solid fa-arrows-up-down"></i>
+              <span class="set-arrow-lbl">Agents read historical OHLCV data &amp; write signals, trades, decisions, snapshots</span>
+            </div>
+
+            <!-- ── Step 4 : PostgreSQL ─────────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">4</span>
+              PostgreSQL 16 + TimescaleDB + pgvector — 13 Tables
+            </div>
+            <div class="set-db-box">
+              <div class="set-db-header">
+                <span class="set-db-chip"><i class="fa-solid fa-database"></i> PostgreSQL 16.13</span>
+                <span class="set-db-chip"><i class="fa-solid fa-clock-rotate-left"></i> TimescaleDB 2.26.3</span>
+                <span class="set-db-chip"><i class="fa-solid fa-vector-square"></i> pgvector 0.8.2</span>
+                <span class="set-db-chip" style="color:#10b981;border-color:rgba(16,185,129,0.25);margin-left:auto">
+                  <i class="fa-solid fa-circle-check"></i> 13/13 tables populated
+                </span>
+              </div>
+              <div class="set-db-tables">
+                <div class="set-db-table" title="TimescaleDB hypertable — OHLCV bars 2021→now">
+                  <span class="set-db-ticon">⚡</span>
+                  <span class="set-db-tname">ohlcv_data</span>
+                  <span class="set-db-ttag">hypertable</span>
+                </div>
+                <div class="set-db-table" title="ML signals — action, confidence, features JSONB">
+                  <span class="set-db-ticon" style="color:#3b82f6">📡</span>
+                  <span class="set-db-tname">ml_signals</span>
+                  <span class="set-db-ttag">SignalAgent</span>
+                </div>
+                <div class="set-db-table" title="LLM Council — decision BOOLEAN + final_decision TEXT">
+                  <span class="set-db-ticon" style="color:#8b5cf6">🤖</span>
+                  <span class="set-db-tname">agent_decisions</span>
+                  <span class="set-db-ttag">LLMCouncil</span>
+                </div>
+                <div class="set-db-table" title="Executed trades — action BUY/SELL (not LONG/SHORT)">
+                  <span class="set-db-ticon" style="color:#10b981">💼</span>
+                  <span class="set-db-tname">trades</span>
+                  <span class="set-db-ttag">ExecutionAgent</span>
+                </div>
+                <div class="set-db-table" title="Order audit — slippage, ibkr_status, close_reason">
+                  <span class="set-db-ticon" style="color:#06b6d4">📋</span>
+                  <span class="set-db-tname">trade_log</span>
+                  <span class="set-db-ttag">ExecutionAgent</span>
+                </div>
+                <div class="set-db-table" title="Portfolio snapshots — equity field = NetLiq">
+                  <span class="set-db-ticon" style="color:#f97316">📊</span>
+                  <span class="set-db-tname">portfolio_snapshots</span>
+                  <span class="set-db-ttag">RiskManager</span>
+                </div>
+                <div class="set-db-table" title="Market regime — symbol NOT NULL → use 'SPY'">
+                  <span class="set-db-ticon" style="color:#eab308">🌍</span>
+                  <span class="set-db-tname">market_regimes</span>
+                  <span class="set-db-ttag">RegimeDetector</span>
+                </div>
+                <div class="set-db-table" title="Regime transitions — vix_level, duration_days">
+                  <span class="set-db-ticon" style="color:#84cc16">📜</span>
+                  <span class="set-db-tname">regime_history</span>
+                  <span class="set-db-ttag">RegimeDetector</span>
+                </div>
+                <div class="set-db-table" title="Feature store — 67 ML features per symbol">
+                  <span class="set-db-ticon" style="color:#a855f7">🧠</span>
+                  <span class="set-db-tname">ml_features</span>
+                  <span class="set-db-ttag">ModelTrainer</span>
+                </div>
+                <div class="set-db-table" title="Model registry — AUC scores, is_active flag">
+                  <span class="set-db-ticon" style="color:#ec4899">🏆</span>
+                  <span class="set-db-tname">model_registry</span>
+                  <span class="set-db-ttag">ModelTrainer</span>
+                </div>
+                <div class="set-db-table" title="FinBERT 768-dim news vectors — pgvector">
+                  <span class="set-db-ticon" style="color:#14b8a6">🔍</span>
+                  <span class="set-db-tname">rag_documents</span>
+                  <span class="set-db-ttag">SentimentAgent</span>
+                </div>
+                <div class="set-db-table" title="System events — event_type (not agent_name)">
+                  <span class="set-db-ticon" style="color:#6b7280">⚙</span>
+                  <span class="set-db-tname">system_events</span>
+                  <span class="set-db-ttag">All agents</span>
+                </div>
+                <div class="set-db-table" title="System metrics hypertable">
+                  <span class="set-db-ticon" style="color:#ef4444">📈</span>
+                  <span class="set-db-tname">system_metrics</span>
+                  <span class="set-db-ttag">hypertable</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">DashboardSyncAgent + ibkr_watcher serialize data to JSON files in signals/</span>
+            </div>
+
+            <!-- ── Step 5 : Dual Push JSON ─────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">5</span>
+              Dual Push Architecture — 21 JSON files — 0 Race Conditions
+            </div>
+            <div class="set-json-dual">
+
+              <div class="set-json-col set-json-watcher">
+                <div class="set-json-col-header">
+                  <i class="fa-solid fa-eye"></i>
+                  ibkr_watcher.py — 10 files @ 30s
+                </div>
+                <div class="set-json-files">
+                  <div class="set-json-file"><span>current_signals.json</span><em>334 KB</em></div>
+                  <div class="set-json-file"><span>pending_orders.json</span><em>7 KB</em></div>
+                  <div class="set-json-file"><span>ibkr_status.json</span><em>192 B</em></div>
+                  <div class="set-json-file"><span>execution_mode.json</span><em>428 B</em></div>
+                  <div class="set-json-file"><span>agent_decisions.json</span><em>124 KB</em></div>
+                  <div class="set-json-file"><span>strategy_weights.json</span><em>257 B</em></div>
+                  <div class="set-json-file"><span>regime.json</span><em>1 KB</em></div>
+                  <div class="set-json-file"><span>performance_metrics.json</span><em>754 B</em></div>
+                  <div class="set-json-file"><span>risk_metrics.json</span><em>2 KB</em></div>
+                  <div class="set-json-file"><span>system_status.json</span><em>1 KB</em></div>
+                </div>
+              </div>
+
+              <div class="set-json-mid">
+                <i class="fa-solid fa-circle-nodes" style="font-size:22px;color:var(--accent-green)"></i>
+                <span style="font-size:10px;font-weight:700;color:var(--accent-green)">0 race<br>conditions</span>
+                <span style="font-size:9px;color:var(--text-faint);text-align:center">Strict file<br>ownership</span>
+              </div>
+
+              <div class="set-json-col set-json-sync">
+                <div class="set-json-col-header">
+                  <i class="fa-solid fa-rotate"></i>
+                  dashboard_sync — 11 files @ 60s
+                </div>
+                <div class="set-json-files">
+                  <div class="set-json-file"><span>portfolio.json ★</span><em>15 KB</em></div>
+                  <div class="set-json-file"><span>agent_health.json</span><em>6 KB</em></div>
+                  <div class="set-json-file"><span>rolling_history.json</span><em>21 KB</em></div>
+                  <div class="set-json-file"><span>pnl_monitor.json</span><em>273 B</em></div>
+                  <div class="set-json-file"><span>execution_status.json</span><em>580 B</em></div>
+                  <div class="set-json-file"><span>model_report.json</span><em>505 B</em></div>
+                  <div class="set-json-file"><span>capital_allocation.json</span><em>425 B</em></div>
+                  <div class="set-json-file"><span>llm_stats.json</span><em>527 B</em></div>
+                  <div class="set-json-file"><span>sentiment_scores.json</span><em>388 B</em></div>
+                  <div class="set-json-file"><span>learning_insights.json</span><em>407 B</em></div>
+                  <div class="set-json-file"><span>rebalancer_status.json</span><em>378 B</em></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Note portfolio.json -->
+            <div class="set-note set-note-warn" style="margin-top:10px">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <div>
+                <strong>★ portfolio.json is the single source of truth for NetLiq.</strong>
+                performance_metrics.json.portfolio_value = $100,000 (seed value — always ignore).
+                Rule R1: always read <code>portfolio.json → net_liq</code>.
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">Git Data API — batch commit · N files = N+4 requests (vs N×2 before) · −73% API calls</span>
+            </div>
+
+            <!-- ── Step 6 : GitHub API ─────────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">6</span>
+              GitHub API — Rate-Managed Batch Push
+            </div>
+            <div class="set-gh-api-box">
+              <div class="set-gh-api-grid">
+                <div class="set-gh-api-item">
+                  <i class="fa-brands fa-github" style="color:#3b82f6;font-size:18px;flex-shrink:0"></i>
+                  <div>
+                    <div class="set-gh-api-title">Git Data API — Atomic Commits</div>
+                    <div class="set-gh-api-sub">_batch_push_git_data() · no individual SHA conflicts</div>
+                  </div>
+                </div>
+                <div class="set-gh-api-item">
+                  <i class="fa-solid fa-gauge-high" style="color:#10b981;font-size:18px;flex-shrink:0"></i>
+                  <div>
+                    <div class="set-gh-api-title">Rate Limit Strategy</div>
+                    <div class="set-gh-api-sub">~800 req/h used · Primary limit 5,000/h · SHA TTL cache 5 min · retry 409 immediately</div>
+                  </div>
+                </div>
+                <div class="set-gh-api-item">
+                  <i class="fa-solid fa-code-branch" style="color:#8b5cf6;font-size:18px;flex-shrink:0"></i>
+                  <div>
+                    <div class="set-gh-api-title">Repository — branch: main</div>
+                    <div class="set-gh-api-sub">Raph33AI/alphavault-quant · JSON files pushed to docs/signals/ → served via GitHub Pages</div>
+                  </div>
+                </div>
+                <div class="set-gh-api-item">
+                  <i class="fa-solid fa-shield-check" style="color:#eab308;font-size:18px;flex-shrink:0"></i>
+                  <div>
+                    <div class="set-gh-api-title">Conflict Prevention</div>
+                    <div class="set-gh-api-sub">Strict file ownership (WATCHER_MANAGED vs SYNC_EXCLUSIVE)</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">CDN delivery via GitHub Pages — worldwide — always HTTP 200 — no server needed</span>
+            </div>
+
+            <!-- ── Step 7 : GitHub Pages ───────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">7</span>
+              GitHub Pages CDN — 21/21 Files HTTP 200
+            </div>
+            <div class="set-ghp-box">
+              <div class="set-ghp-url-bar">
+                <i class="fa-solid fa-globe" style="color:#10b981"></i>
+                <code>https://raph33ai.github.io/alphavault-quant/signals/</code>
+                <span class="badge badge-green" style="font-size:10px;margin-left:auto">21/21 ✓</span>
+              </div>
+              <div class="set-ghp-groups">
+                <div class="set-ghp-group">
+                  <div class="set-ghp-group-label" style="color:#3b82f6">
+                    <i class="fa-solid fa-clock"></i> 30s refresh
+                  </div>
+                  <span class="set-ghp-chip">portfolio.json</span>
+                  <span class="set-ghp-chip">risk_metrics.json</span>
+                  <span class="set-ghp-chip">agent_health.json</span>
+                  <span class="set-ghp-chip">execution_status.json</span>
+                  <span class="set-ghp-chip">ibkr_status.json</span>
+                </div>
+                <div class="set-ghp-group">
+                  <div class="set-ghp-group-label" style="color:#8b5cf6">
+                    <i class="fa-solid fa-clock"></i> 60s refresh
+                  </div>
+                  <span class="set-ghp-chip">current_signals.json</span>
+                  <span class="set-ghp-chip">regime.json</span>
+                  <span class="set-ghp-chip">rolling_history.json</span>
+                  <span class="set-ghp-chip">pnl_monitor.json</span>
+                  <span class="set-ghp-chip">system_status.json</span>
+                  <span class="set-ghp-chip">execution_mode.json</span>
+                </div>
+                <div class="set-ghp-group">
+                  <div class="set-ghp-group-label" style="color:#eab308">
+                    <i class="fa-solid fa-clock"></i> 5 min refresh
+                  </div>
+                  <span class="set-ghp-chip">model_report.json</span>
+                  <span class="set-ghp-chip">agent_decisions.json</span>
+                  <span class="set-ghp-chip">llm_stats.json</span>
+                  <span class="set-ghp-chip">learning_insights.json</span>
+                  <span class="set-ghp-chip">rebalancer_status.json</span>
+                  <span class="set-ghp-chip">strategy_weights.json</span>
+                  <span class="set-ghp-chip">sentiment_scores.json</span>
+                  <span class="set-ghp-chip">capital_allocation.json</span>
+                  <span class="set-ghp-chip">pending_orders.json</span>
+                  <span class="set-ghp-chip">performance_metrics.json</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="set-arch-arrow">
+              <i class="fa-solid fa-arrow-down"></i>
+              <span class="set-arrow-lbl">Browser fetch() · cache LRU 30s · Promise.allSettled() · safeGet() fallback (Rule R9)</span>
+            </div>
+
+            <!-- ── Step 8 : Dashboard ──────────────────────────── -->
+            <div class="set-step-label">
+              <span class="set-step-num">8</span>
+              Dashboard — 10 HTML Pages — Pure Static, No Server
+            </div>
+            <div class="set-dash-pages">
+              <a href="dashboard.html" class="set-dash-page">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Dashboard</span>
+                <small>KPIs · NAV chart · Signals · Agents</small>
+              </a>
+              <a href="portfolio.html" class="set-dash-page">
+                <i class="fa-solid fa-briefcase"></i>
+                <span>Portfolio</span>
+                <small>45 positions · PnL · Risk gauges</small>
+              </a>
+              <a href="signals.html" class="set-dash-page">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <span>ML Signals</span>
+                <small>255 signals · Filters · Export CSV</small>
+              </a>
+              <a href="trading.html" class="set-dash-page">
+                <i class="fa-solid fa-bolt"></i>
+                <span>Trading</span>
+                <small>Order form · Paper/Live · SSH</small>
+              </a>
+              <a href="agents.html" class="set-dash-page">
+                <i class="fa-solid fa-robot"></i>
+                <span>Agents</span>
+                <small>13/13 · ML models · LLM stats</small>
+              </a>
+              <a href="regime.html" class="set-dash-page">
+                <i class="fa-solid fa-globe"></i>
+                <span>Regime</span>
+                <small>BULL 80% · SPY · Probabilities</small>
+              </a>
+              <a href="analytics.html" class="set-dash-page">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Analytics</span>
+                <small>NAV 100pts · Sharpe · Drawdown</small>
+              </a>
+              <a href="watchlist.html" class="set-dash-page">
+                <i class="fa-solid fa-eye"></i>
+                <span>Watchlist</span>
+                <small>localStorage · Live prices</small>
+              </a>
+              <a href="stock-detail.html" class="set-dash-page">
+                <i class="fa-solid fa-magnifying-glass-dollar"></i>
+                <span>Stock Detail</span>
+                <small>OHLCV · Signal · Position</small>
+              </a>
+              <a href="settings.html" class="set-dash-page set-dash-page-active">
+                <i class="fa-solid fa-gear"></i>
+                <span>Settings</span>
+                <small>Mode · Health · This page</small>
+              </a>
+            </div>
+
+            <!-- Cloudflare Workers note -->
+            <div class="set-note set-note-info" style="margin-top:18px">
+              <i class="fa-solid fa-cloud" style="color:#f59e0b"></i>
+              <div>
+                <strong>Cloudflare Workers (Edge Layer)</strong> — The dashboard also queries 4 Cloudflare Workers
+                for live market data (finance-hub-api), AI inference (gemini-ai-proxy), economic data
+                (economic-data-worker), and a GitHub proxy (alphavault-gh-proxy).
+                These are used by stock-detail, analytics, and chatbot pages —
+                they are independent of the Oracle → GitHub sync pipeline shown above.
+              </div>
+            </div>
+
+          </div><!-- /set-arch-body -->
+        </div><!-- /Architecture Card -->
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 2 — CONTROLS + CONNECTION (2 cols)
+             ══════════════════════════════════════════════════════ -->
+        <div class="set-two-col">
+
+          <!-- ── Trading Mode ──────────────────────────────────── -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-toggle-on" style="color:var(--accent-green)"></i>
+              Trading Mode
+              <span class="badge set-badge-gray" style="font-size:9px;margin-left:auto">
+                <i class="fa-solid fa-terminal"></i> SSH tunnel required for controls
+              </span>
+            </div>
+            <div class="av-card-body">
+
+              <!-- Paper / Live -->
+              <div class="set-ctrl-group">
+                <div class="set-ctrl-title">
+                  <i class="fa-solid fa-arrows-left-right"></i> Paper ↔ Live
+                </div>
+                <div class="set-ctrl-desc">
+                  Switch between paper and live trading.
+                  <strong style="color:#ef4444">Triple confirmation required to switch LIVE.</strong>
+                </div>
+                <div class="set-mode-toggle">
+                  <button id="toggle-paper-btn" class="set-mode-btn set-mode-btn-paper active">
+                    <i class="fa-solid fa-file-circle-check"></i> Paper
+                  </button>
+                  <button id="toggle-live-btn" class="set-mode-btn set-mode-btn-live">
+                    <i class="fa-solid fa-circle-play"></i> Live
+                  </button>
+                </div>
+              </div>
+
+              <div class="set-ctrl-divider"></div>
+
+              <!-- Auto / Manual -->
+              <div class="set-ctrl-group">
+                <div class="set-ctrl-title">
+                  <i class="fa-solid fa-robot"></i> Auto ↔ Manual
+                </div>
+                <div class="set-ctrl-desc">
+                  Auto: system processes signals and submits orders automatically.<br>
+                  Manual: signals generated but <strong>no orders submitted</strong>.
+                </div>
+                <div class="set-mode-toggle">
+                  <button id="toggle-auto-btn" class="set-mode-btn set-mode-btn-auto active">
+                    <i class="fa-solid fa-robot"></i> Auto
+                  </button>
+                  <button id="toggle-manual-btn" class="set-mode-btn set-mode-btn-manual">
+                    <i class="fa-solid fa-hand"></i> Manual
+                  </button>
+                </div>
+              </div>
+
+              <div class="set-ctrl-divider"></div>
+
+              <!-- Pause / Resume -->
+              <div class="set-ctrl-group">
+                <div class="set-ctrl-title">
+                  <i class="fa-solid fa-pause"></i> Execution Control
+                </div>
+                <div class="set-ctrl-desc">
+                  Pause/resume order execution without changing mode settings.
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button id="toggle-pause-btn" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-pause"></i> Pause
+                  </button>
+                  <button id="toggle-resume-btn" class="btn btn-secondary btn-sm" style="display:none">
+                    <i class="fa-solid fa-play"></i> Resume
+                  </button>
+                </div>
+              </div>
+
+              <!-- SSH Note -->
+              <div class="set-ssh-note">
+                <i class="fa-solid fa-terminal"></i>
+                <div>
+                  <div style="font-size:11px;font-weight:700;color:var(--text-secondary);margin-bottom:5px">
+                    Dashboard API — SSH Tunnel Required
+                  </div>
+                  <div style="font-size:10px;color:var(--text-faint);margin-top:5px">
+                    Once tunnel is active, reload this page — controls become functional.
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── Connection Status ─────────────────────────────── -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-plug" style="color:var(--accent-green)"></i>
+              Connection &amp; Execution Status
+              <span class="badge set-badge-gray" style="font-size:9px;margin-left:auto">Live data</span>
+            </div>
+            <div class="av-card-body" id="set-conn-body">
+              <div class="set-conn-skeleton">
+                <div class="skeleton-line" style="height:38px;border-radius:8px;margin-bottom:7px"></div>
+                <div class="skeleton-line" style="height:38px;border-radius:8px;margin-bottom:7px"></div>
+                <div class="skeleton-line" style="height:38px;border-radius:8px;margin-bottom:7px"></div>
+                <div class="skeleton-line" style="height:38px;border-radius:8px;margin-bottom:7px"></div>
+                <div class="skeleton-line" style="height:38px;border-radius:8px;margin-bottom:7px"></div>
+                <div class="skeleton-line" style="height:38px;border-radius:8px"></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /set-two-col Controls -->
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 3 — THRESHOLDS + ML MODELS (2 cols)
+             ══════════════════════════════════════════════════════ -->
+        <div class="set-two-col">
+
+          <!-- Thresholds — rendered by AVControls.renderThresholds() -->
+          <div class="av-card">
+            <div class="av-card-body" id="thresholds-section">
+              <div class="skeleton-line" style="height:200px;border-radius:8px"></div>
+            </div>
+          </div>
+
+          <!-- ML Models Status -->
+          <div class="av-card">
+            <div class="av-card-header">
+              <i class="fa-solid fa-brain" style="color:var(--accent-violet,#8b5cf6)"></i>
+              ML Models Status
+              <span class="badge set-badge-gray" style="font-size:9px;margin-left:auto">model_report.json</span>
+            </div>
+            <div class="av-card-body" id="set-models-body">
+              <div class="skeleton-line" style="height:200px;border-radius:8px"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 4 — SYSTEM HEALTH (full width)
+             ══════════════════════════════════════════════════════ -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-heart-pulse" style="color:var(--accent-red)"></i>
+            System Health — Services &amp; Agents
+            <span class="badge badge-green" style="font-size:10px;margin-left:auto"
+                  id="set-health-main-badge">Loading...</span>
+          </div>
+          <div class="av-card-body">
+
+            <!-- Services -->
+            <div class="set-section-sub-label">
+              <i class="fa-solid fa-server"></i> systemd Services (Oracle A1)
+            </div>
+            <div class="set-services-grid" id="set-services-grid">
+              <div class="set-svc-item" data-svc="alphavault-core">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">alphavault-core</div>
+                  <div class="set-svc-sub">13 agents · Restart=always/15s · MemoryMax=8G</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="dashboard-api">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">dashboard-api</div>
+                  <div class="set-svc-sub">Flask · 12 endpoints · /status /agents /portfolio</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="ibkr-watcher">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">ibkr-watcher</div>
+                  <div class="set-svc-sub">poll 30s · Flask · 10 WATCHER_MANAGED files</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="rag-server">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">rag-server</div>
+                  <div class="set-svc-sub">FastAPI · FinBERT 768-dim · pgvector search</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="postgresql">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">postgresql@16-main</div>
+                  <div class="set-svc-sub">TimescaleDB 2.26.3 · pgvector 0.8.2 · 13 tables</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="ollama">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">ollama</div>
+                  <div class="set-svc-sub">llama3.2:3b · qwen2.5:7b · mistral:7b</div>
+                </div>
+              </div>
+              <div class="set-svc-item" data-svc="ibeam">
+                <i class="fa-solid fa-circle-notch fa-spin set-svc-icon" style="color:var(--accent-blue)"></i>
+                <div class="set-svc-info">
+                  <div class="set-svc-name">ibeam (docker)</div>
+                  <div class="set-svc-sub">v0.5.11 ARM64 · IBKR REST API · auth OK</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Agents -->
+            <div class="set-section-sub-label" style="margin-top:20px">
+              <i class="fa-solid fa-robot"></i> Agent Health (13 agents)
+              <span id="set-agent-summary"
+                    style="margin-left:8px;font-size:11px;font-weight:700;color:var(--accent-green)">—</span>
+            </div>
+            <div id="set-agents-health-grid" class="set-agents-health-grid">
+              <div class="skeleton-line" style="height:44px;border-radius:7px;margin-bottom:5px"></div>
+              <div class="skeleton-line" style="height:44px;border-radius:7px;margin-bottom:5px"></div>
+              <div class="skeleton-line" style="height:44px;border-radius:7px;margin-bottom:5px"></div>
+              <div class="skeleton-line" style="height:44px;border-radius:7px;margin-bottom:5px"></div>
+              <div class="skeleton-line" style="height:44px;border-radius:7px"></div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 5 — SYNC STATUS (av-controls.js renders here)
+             ══════════════════════════════════════════════════════ -->
+        <div class="av-card">
+          <div class="av-card-body" id="sync-status-section">
+            <div class="skeleton-line" style="height:150px;border-radius:8px"></div>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════
+             SECTION 6 — CLOUDFLARE WORKERS
+             ══════════════════════════════════════════════════════ -->
+        <div class="av-card">
+          <div class="av-card-header">
+            <i class="fa-solid fa-cloud" style="color:#f59e0b"></i>
+            Cloudflare Workers — Edge Services
+            <span class="badge set-badge-orange" style="font-size:9px;margin-left:auto">4 workers</span>
+          </div>
+          <div class="av-card-body">
+            <div class="set-workers-grid">
+              <div class="set-worker-item">
+                <div class="set-worker-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6">
+                  <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div class="set-worker-info">
+                  <div class="set-worker-name">finance-hub-api</div>
+                  <div class="set-worker-sub">30+ endpoints · Twelve Data · FinnHub · Simulations · Portfolios</div>
+                  <div class="set-worker-url">finance-hub-api.raphnardone.workers.dev</div>
+                </div>
+                <span class="badge badge-green" style="font-size:9px;flex-shrink:0">Active</span>
+              </div>
+              <div class="set-worker-item">
+                <div class="set-worker-icon" style="background:rgba(139,92,246,0.1);color:#8b5cf6">
+                  <i class="fa-solid fa-brain"></i>
+                </div>
+                <div class="set-worker-info">
+                  <div class="set-worker-name">gemini-ai-proxy</div>
+                  <div class="set-worker-sub">Gemini 2.5 Flash · 8,192 output tokens · 4 safety filters</div>
+                  <div class="set-worker-url">gemini-ai-proxy.raphnardone.workers.dev</div>
+                </div>
+                <span class="badge badge-green" style="font-size:9px;flex-shrink:0">Active</span>
+              </div>
+              <div class="set-worker-item">
+                <div class="set-worker-icon" style="background:rgba(234,179,8,0.1);color:#eab308">
+                  <i class="fa-solid fa-chart-area"></i>
+                </div>
+                <div class="set-worker-info">
+                  <div class="set-worker-name">economic-data-worker</div>
+                  <div class="set-worker-sub">ECB XML · FRED time series · KV cache · 5 endpoints</div>
+                  <div class="set-worker-url">economic-data-worker.raphnardone.workers.dev</div>
+                </div>
+                <span class="badge badge-green" style="font-size:9px;flex-shrink:0">Active</span>
+              </div>
+              <div class="set-worker-item">
+                <div class="set-worker-icon" style="background:rgba(16,185,129,0.1);color:#10b981">
+                  <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div class="set-worker-info">
+                  <div class="set-worker-name">alphavault-gh-proxy</div>
+                  <div class="set-worker-sub">GitHub API proxy · CORS bridge · read-only repo access</div>
+                  <div class="set-worker-url">alphavault-gh-proxy.raphnardone.workers.dev</div>
+                </div>
+                <span class="badge badge-green" style="font-size:9px;flex-shrink:0">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /av-content -->
+    </div><!-- /av-main -->
+  </div><!-- /av-layout -->
+
+  <!-- Scripts -->
+  <script src="assets/js/av-auth-guard.js"></script>
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+
+  <!-- Expose globals needed by av-controls.js internals -->
+  <script>
+    window.safeGet    = AVUtils.safeGet;
+    window.badgeHTML  = AVUtils.badgeHTML;
+    window.sf         = v => parseFloat(v) || 0;
+    window.showToast  = AVUtils.showToast;
+    window.showModal  = AVUtils.showModal;
+  </script>
+
+  <script src="assets/js/av-controls.js"></script>
+
+  <script>
+  /* ─── settings.js inline ──────────────────────────────────────────── */
+  (function () {
+    'use strict';
+
+    const {
+      safeGet, formatCurrency, formatPct, formatAge,
+      showToast, isAgentOk, ThemeManager, setSidebarActive,
+    } = AVUtils;
+
+    /* helpers */
+    function el(id) { return document.getElementById(id); }
+    function si(v)  { return parseInt(v)   || 0; }
+    function sf2(v) { return parseFloat(v) || 0; }
+    function badge(text, cls, icon = '') {
+      const ic = icon ? `<i class="${icon}"></i> ` : '';
+      return `<span class="badge badge-${cls}" style="font-size:9px">${ic}${text}</span>`;
+    }
+
+    /* ── Init ──────────────────────────────────────────────────── */
+    ThemeManager.init();
+    setSidebarActive('settings');
+    AVControls.init();
+
+    /* ── Hamburger ──────────────────────────────────────────────── */
+    const hamburger = el('av-hamburger');
+    const sidebar   = el('av-sidebar');
+    const overlay   = el('sidebar-overlay');
+    function toggleSB() {
+      sidebar?.classList.toggle('open');
+      overlay?.classList.toggle('show');
+    }
+    hamburger?.addEventListener('click', toggleSB);
+    overlay?.addEventListener('click', toggleSB);
+
+    /* ── Theme ─────────────────────────────────────────────────── */
+    el('av-theme-toggle')?.addEventListener('click', () => ThemeManager.toggle());
+
+    /* ── Auth sidebar user ─────────────────────────────────────── */
+    if (typeof firebase !== 'undefined') {
+      firebase.auth().onAuthStateChanged(user => {
+        const userDiv = el('av-sidebar-user');
+        if (!userDiv || !user) return;
+        const name   = user.displayName || user.email?.split('@')[0] || 'User';
+        const email  = user.email || '';
+        const avatar = user.photoURL || '';
+        userDiv.innerHTML = `
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;
+                      border-radius:9px;background:var(--bg-hover);cursor:pointer;
+                      border:1px solid var(--border);transition:background .15s">
+            ${avatar
+              ? `<img src="${avatar}" style="width:30px;height:30px;border-radius:50%;
+                           object-fit:cover;flex-shrink:0">`
+              : `<span style="width:30px;height:30px;border-radius:50%;background:var(--accent-blue);
+                              display:flex;align-items:center;justify-content:center;
+                              color:#fff;font-size:13px;font-weight:700;flex-shrink:0">
+                   ${name.charAt(0).toUpperCase()}</span>`}
+            <div style="min-width:0;flex:1">
+              <div style="font-size:12px;font-weight:700;color:var(--text-primary);
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${name}</div>
+              <div style="font-size:10px;color:var(--text-faint);
+                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${email}</div>
+            </div>
+          </div>`;
+      });
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       RENDERERS
+       ════════════════════════════════════════════════════════════ */
+
+    /* ── Connection Status ────────────────────────────────────── */
+    function renderConnStatus(execData, ibkrData, modeData, portfolioData) {
+      const container = el('set-conn-body');
+      if (!container) return;
+
+      const connected = safeGet(execData, 'ibkr_connected', false);
+      const authed    = safeGet(ibkrData, 'authenticated',  false);
+      const mode      = safeGet(modeData, 'mode',            'paper');
+      const autoMode  = safeGet(modeData, 'auto',            false);
+      const dryRun    = safeGet(modeData, 'dry_run',         false);
+      const netliq    = AVUtils.netliqFromPortfolio(portfolioData);
+      const cash      = sf2(safeGet(portfolioData, 'cash', 0));
+      const executed  = si(safeGet(execData, 'stats.executed', 0));
+      const failed    = si(safeGet(execData, 'stats.failed',   0));
+      const skipped   = si(safeGet(execData, 'stats.skipped',  0));
+      const nPos      = si(safeGet(portfolioData, 'positions_count', 0));
+      const unPnl     = sf2(safeGet(portfolioData, 'unrealized_pnl', 0));
+
+      const rows = [
+        { icon: 'fa-plug',              ic: connected ? '#10b981' : '#ef4444',
+          label: 'IBKR Connection',
+          value: connected ? '● Connected' : '● Disconnected',
+          cls: connected ? 'set-val-green' : 'set-val-red' },
+        { icon: 'fa-key',               ic: authed ? '#10b981' : '#ef4444',
+          label: 'Authentication',
+          value: authed ? 'Authenticated ✓' : 'Not authenticated',
+          cls: authed ? 'set-val-green' : 'set-val-red' },
+        { icon: 'fa-file-invoice-dollar', ic: mode === 'live' ? '#ef4444' : '#10b981',
+          label: 'Trading Mode',
+          value: `${mode.toUpperCase()} · ${autoMode ? 'AUTO' : 'MANUAL'}${dryRun ? ' · DRY RUN' : ''}`,
+          cls: mode === 'live' ? 'set-val-red' : 'set-val-green' },
+        { icon: 'fa-wallet',            ic: '#3b82f6',
+          label: 'Net Liquidation',
+          value: netliq ? formatCurrency(netliq) : '—',
+          cls: '' },
+        { icon: 'fa-coins',             ic: '#eab308',
+          label: 'Available Cash',
+          value: cash ? formatCurrency(cash) : '—',
+          cls: '' },
+        { icon: 'fa-briefcase',         ic: '#8b5cf6',
+          label: 'Open Positions',
+          value: `${nPos} positions · PnL ${unPnl >= 0 ? '+' : ''}${formatCurrency(unPnl)}`,
+          cls: unPnl >= 0 ? 'set-val-green' : 'set-val-red' },
+        { icon: 'fa-check-double',      ic: failed > 0 ? '#ef4444' : '#10b981',
+          label: 'Order Stats',
+          value: `${executed} executed · ${failed} failed · ${skipped} skipped`,
+          cls: failed > 0 ? 'set-val-red' : '' },
+      ];
+
+      container.innerHTML = rows.map(r => `
+        <div class="set-conn-row">
+          <i class="fa-solid ${r.icon}" style="color:${r.ic};width:14px;text-align:center;flex-shrink:0"></i>
+          <span class="set-conn-lbl">${r.label}</span>
+          <span class="set-conn-val ${r.cls}">${r.value}</span>
+        </div>`).join('');
+    }
+
+    /* ── ML Models ────────────────────────────────────────────── */
+    function renderModels(modelData) {
+      const container = el('set-models-body');
+      if (!container) return;
+
+      if (!modelData) {
+        container.innerHTML = `<div class="set-empty">
+          <i class="fa-solid fa-circle-info"></i> No model data available</div>`;
+        return;
+      }
+
+      const xgbAuc   = sf2(safeGet(modelData, 'xgboost_auc',   0));
+      const lgbAuc   = sf2(safeGet(modelData, 'lightgbm_auc',  0));
+      const logAuc   = sf2(safeGet(modelData, 'logistic_auc',  0));
+      const metaAvail = safeGet(modelData, 'meta_available',   false);
+      const nFeat    = si(safeGet(modelData, 'n_features',      67));
+      const lookback = si(safeGet(modelData, 'lookback_days',   252));
+      const tDate    = safeGet(modelData, 'training_date',      '—');
+      const ver      = safeGet(modelData, 'model_version',      'v5.0');
+      const nLoaded  = si(safeGet(modelData, 'models_loaded',   3));
+
+      function aucBar(label, auc, color) {
+        const pct = (auc * 100).toFixed(1);
+        if (auc === 0) {
+          return `<div class="set-model-row">
+            <div class="set-model-lbl">${label}</div>
+            <span class="badge set-badge-gray" style="font-size:9px">Not yet trained</span>
+          </div>`;
+        }
+        const barColor = auc >= 0.75 ? '#10b981' : auc >= 0.60 ? '#3b82f6' : '#f59e0b';
+        return `<div class="set-model-row">
+          <div class="set-model-lbl">${label}</div>
+          <div class="set-model-bar-wrap">
+            <div class="set-model-bar" style="width:${pct}%;background:${barColor}"></div>
+          </div>
+          <span class="set-model-auc" style="color:${barColor}">AUC ${pct}%</span>
+        </div>`;
+      }
+
+      container.innerHTML = `
+        <div class="set-model-meta">
+          ${badge(ver,               'blue',  'fa-solid fa-tag')}
+          ${badge(`${nFeat} features`,'violet','fa-solid fa-sliders')}
+          ${badge(`${lookback}d lookback`, 'blue','fa-solid fa-calendar')}
+          ${badge(tDate,             'gray',  'fa-solid fa-clock-rotate-left')}
+          ${badge(`${nLoaded} loaded`, 'green','fa-solid fa-circle-check')}
+        </div>
+        <div class="set-model-list">
+          ${aucBar('XGBoost',            xgbAuc, '#10b981')}
+          ${aucBar('LightGBM',           lgbAuc, '#3b82f6')}
+          ${aucBar('Logistic Regression',logAuc, '#6b7280')}
+          <div class="set-model-row">
+            <div class="set-model-lbl">Meta Model</div>
+            ${metaAvail
+              ? badge('Available', 'green', 'fa-solid fa-circle-check')
+              : badge('Absent — training Mon 07:00 UTC', 'orange', 'fa-solid fa-clock')}
+          </div>
+        </div>
+        <div class="set-model-note">
+          <i class="fa-solid fa-circle-info" style="color:#3b82f6;flex-shrink:0"></i>
+          ModelTrainerAgent (Agent 12) runs Mon–Fri at 07:00 UTC via APScheduler.
+          252-day lookback · 30 Optuna trials · Walk-forward validation 189 days.
+          Min AUC threshold for deployment: 0.57. Required improvement: +0.005.
+        </div>`;
+    }
+
+    /* ── Agent Health ─────────────────────────────────────────── */
+    function renderAgentHealth(healthData) {
+      const container = el('set-agents-health-grid');
+      const summary   = el('set-agent-summary');
+      const mainBadge = el('set-health-main-badge');
+
+      if (!container || !healthData) return;
+
+      const agents  = safeGet(healthData, 'agents', {});
+      const nActive = si(safeGet(healthData, 'n_active', 0));
+      const nErrors = si(safeGet(healthData, 'n_errors', 0));
+      const nTotal  = si(safeGet(healthData, 'n_agents', 13));
+
+      if (summary) {
+        summary.textContent = `${nActive}/${nTotal} active — ${nErrors} errors`;
+        summary.style.color = nErrors === 0 ? '#10b981' : '#ef4444';
+      }
+
+      if (mainBadge) {
+        mainBadge.textContent = nErrors === 0
+          ? `7/7 Services · ${nActive}/${nTotal} Agents OK`
+          : `${nErrors} error(s) detected`;
+        mainBadge.className = `badge ${nErrors === 0 ? 'badge-green' : 'badge-red'}`;
+      }
+
+      /* Update service icons */
+      document.querySelectorAll('.set-svc-icon').forEach(ic => {
+        ic.classList.remove('fa-spin', 'fa-circle-notch');
+        ic.style.animation = 'none';
+        if (nErrors === 0) {
+          ic.classList.add('fa-circle-check');
+          ic.style.color = '#10b981';
+        } else {
+          ic.classList.add('fa-circle-exclamation');
+          ic.style.color = '#f59e0b';
+        }
+      });
+
+      if (!agents || Object.keys(agents).length === 0) {
+        container.innerHTML = `<div class="set-empty">No agent data available</div>`;
+        return;
+      }
+
+      const descs = AV_CONFIG.AGENT_DESCRIPTIONS || {};
+
+      container.innerHTML = Object.entries(agents).map(([name, agent]) => {
+        const ok      = isAgentOk(agent);
+        const cycles  = si(safeGet(agent, 'cycles',   0));
+        const errors  = si(safeGet(agent, 'errors',   0));
+        const lastRun = safeGet(agent, 'last_run', null);
+        const status  = safeGet(agent, 'status',  'idle');
+        const desc    = descs[name] || '';
+
+        return `
+          <div class="set-agent-hrow ${!ok ? 'set-agent-hrow-err' : ''}">
+            <div class="set-agent-hstatus">
+              <i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-exclamation'}"
+                 style="color:${ok ? '#10b981' : '#ef4444'};font-size:13px"></i>
+            </div>
+            <div class="set-agent-hname">${name}</div>
+            <div class="set-agent-hdesc">${desc}</div>
+            <div class="set-agent-hstats">
+              <span style="color:${status === 'running' ? '#3b82f6' : 'var(--text-faint)'}">${status}</span>
+              <span class="set-agent-hdot">·</span>
+              <span>${cycles.toLocaleString()} cycles</span>
+              ${errors > 0 ? `<span class="set-agent-hdot">·</span>
+                              <span style="color:#ef4444">${errors} err</span>` : ''}
+            </div>
+            <div class="set-agent-hage">${lastRun ? formatAge(lastRun) : '—'}</div>
+          </div>`;
+      }).join('');
+    }
+
+    /* ── Sidebar status ───────────────────────────────────────── */
+    function renderSidebarStatus(ibkrData, modeData) {
+      const dot   = el('sb-ibkr-dot');
+      const label = el('sb-mode-label');
+      const sync  = el('sb-last-sync');
+
+      if (dot) {
+        const connected = safeGet(ibkrData, 'authenticated', false);
+        dot.className = `av-status-dot ${connected ? 'green' : 'red'}`;
+      }
+      if (label) {
+        const mode = safeGet(modeData, 'mode', 'paper');
+        const auto = safeGet(modeData, 'auto', false);
+        label.textContent = `${auto ? 'AUTO' : 'MANUAL'} ${mode.toUpperCase()}`;
+        label.style.color = mode === 'live' ? '#ef4444' : '#10b981';
+      }
+      if (sync) sync.textContent = `Loaded ${formatAge(new Date().toISOString())}`;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       MAIN LOAD
+       ════════════════════════════════════════════════════════════ */
+    async function loadPage() {
+      try {
+        const data = await AVApi.loadAll();
+
+        /* Controls + mode badge */
+        if (data.mode) AVControls.updateModeBadge(data.mode);
+
+        /* Signals sidebar badge */
+        const nSig = safeGet(data.signals, 'n_signals', null);
+        if (nSig !== null) {
+          const sb = el('sidebar-signals-badge');
+          if (sb) sb.textContent = nSig;
+        }
+
+        /* All renderers */
+        renderConnStatus(data.execution, data.ibkr, data.mode, data.portfolio);
+        renderModels(data.model);
+        renderAgentHealth(data.health);
+        renderSidebarStatus(data.ibkr, data.mode);
+
+        /* Thresholds (av-controls.js) */
+        const sigsMeta = {
+          thresholds: {
+            buy:       safeGet(data.signals, 'buy_threshold',  null),
+            sell:      safeGet(data.signals, 'sell_threshold', null),
+            high_conf: safeGet(data.signals, 'high_conf_gate', null),
+          }
+        };
+        if (typeof AVControls.renderThresholds === 'function')
+          AVControls.renderThresholds(sigsMeta);
+
+        /* Sync Status (av-controls.js) */
+        if (typeof AVControls.renderSyncStatus === 'function')
+          AVControls.renderSyncStatus(data.system);
+
+      } catch (err) {
+        console.error('[settings] loadPage error:', err);
+        showToast('Failed to load system data — retrying in 30s', 'error');
+      }
+    }
+
+    /* Initial load + auto-refresh */
+    loadPage();
+    setInterval(loadPage, 30_000);
+
+  })();
+  </script>
+
+</body>
+</html>
