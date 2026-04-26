@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — AlphaVault Quant</title>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Firebase Config (Cloudflare) -->
+  <script src="assets/js/firebase-config.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    min-height: 100vh;
+    }
+
+    /* ── Loading ──────────────────────────────────────────── */
+    #admin-loading {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; flex-direction: column; gap: 16px;
+    }
+    .loading-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+    0%,100% { transform: scale(1); box-shadow: 0 8px 24px rgba(59,130,246,0.4); }
+    50%      { transform: scale(1.06); box-shadow: 0 12px 36px rgba(139,92,246,0.5); }
+    }
+    .loading-spinner {
+    width: 32px; height: 32px; margin-top: 8px;
+    border: 3px solid rgba(59,130,246,0.2);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Layout ───────────────────────────────────────────── */
+    #admin-app { display: none; }
+
+    .admin-header {
+    background: rgba(30,41,59,0.95);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(148,163,184,0.1);
+    padding: 0 32px;
+    height: 64px;
+    display: flex; align-items: center; gap: 16px;
+    position: sticky; top: 0; z-index: 100;
+    }
+    .admin-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 800;
+    background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .admin-logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    border-radius: 9px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px;
+    }
+    .admin-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(234,179,8,0.12); color: #eab308;
+    border: 1px solid rgba(234,179,8,0.25);
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    }
+    .admin-header-right {
+    margin-left: auto;
+    display: flex; align-items: center; gap: 12px;
+    }
+    .admin-user-info { text-align: right; }
+    .admin-user-name  { font-size: 12px; font-weight: 600; color: #f1f5f9; }
+    .admin-user-email { font-size: 10px; color: #64748b; }
+    .btn-logout {
+    padding: 7px 14px;
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 8px; color: #ef4444; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; gap: 6px;
+    }
+    .btn-logout:hover { background: rgba(239,68,68,0.18); }
+
+    /* ── Content ──────────────────────────────────────────── */
+    .admin-content { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+
+    .admin-title {
+    font-size: 22px; font-weight: 800; margin-bottom: 4px;
+    }
+    .admin-subtitle { font-size: 13px; color: #64748b; margin-bottom: 28px; }
+
+    /* ── Stats ────────────────────────────────────────────── */
+    .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+    }
+    .stat-card {
+    background: rgba(30,41,59,0.8);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 14px; padding: 20px;
+    display: flex; align-items: center; gap: 14px;
+    }
+    .stat-icon {
+    width: 42px; height: 42px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+    }
+    .stat-num {
+    font-size: 26px; font-weight: 900; line-height: 1;
+    }
+    .stat-lbl { font-size: 11px; color: #64748b; margin-top: 3px; font-weight: 500; }
+
+    /* ── Filters ──────────────────────────────────────────── */
+    .filter-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .filter-tab {
+    padding: 7px 16px;
+    background: transparent; border: 1px solid rgba(148,163,184,0.15);
+    border-radius: 8px; color: #64748b; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; gap: 6px;
+    }
+    .filter-tab.active {
+    background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.35);
+    color: #3b82f6;
+    }
+    .filter-tab:hover:not(.active) { border-color: rgba(148,163,184,0.3); color: #94a3b8; }
+    .filter-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    font-size: 9px; font-weight: 800; background: currentColor;
+    }
+    .filter-count span { color: #0f172a; }
+
+    /* ── Table card ───────────────────────────────────────── */
+    .table-card {
+    background: rgba(30,41,59,0.8);
+    border: 1px solid rgba(148,163,184,0.1);
+    border-radius: 16px; overflow: hidden;
+    }
+    .table-card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(148,163,184,0.08);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 700; color: #f1f5f9;
+    }
+    .table-wrap { overflow-x: auto; }
+    table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    }
+    thead th {
+    padding: 12px 16px; text-align: left;
+    font-size: 10px; font-weight: 700; color: #475569;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    background: rgba(15,23,42,0.4);
+    border-bottom: 1px solid rgba(148,163,184,0.08);
+    }
+    tbody tr {
+    border-bottom: 1px solid rgba(148,163,184,0.06);
+    transition: background 0.15s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(148,163,184,0.04); }
+    td { padding: 14px 16px; vertical-align: middle; }
+
+    /* ── Avatar ───────────────────────────────────────────── */
+    .user-cell { display: flex; align-items: center; gap: 10px; }
+    .user-avatar {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #fff; overflow: hidden;
+    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .user-name  { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+    .user-uid   { font-size: 9px; color: #475569; font-family: monospace; margin-top: 1px; }
+
+    /* ── Badges ───────────────────────────────────────────── */
+    .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 10px; font-weight: 700;
+    }
+    .badge-pending  { background: rgba(234,179,8,0.12); color: #eab308; }
+    .badge-approved { background: rgba(16,185,129,0.12); color: #10b981; }
+    .badge-rejected { background: rgba(239,68,68,0.10); color: #ef4444; }
+    .badge-google   { background: rgba(59,130,246,0.1);  color: #3b82f6; }
+    .badge-email    { background: rgba(139,92,246,0.1);  color: #8b5cf6; }
+    .blink { animation: blink 1.4s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+    /* ── Action buttons ───────────────────────────────────── */
+    .action-cell { display: flex; gap: 6px; }
+    .btn-approve, .btn-reject, .btn-sm {
+    padding: 6px 12px; border-radius: 7px; border: none;
+    font-size: 11px; font-weight: 700; cursor: pointer;
+    transition: all 0.2s; font-family: inherit;
+    display: flex; align-items: center; gap: 5px;
+    }
+    .btn-approve {
+    background: rgba(16,185,129,0.12); color: #10b981;
+    border: 1px solid rgba(16,185,129,0.3);
+    }
+    .btn-approve:hover { background: rgba(16,185,129,0.22); }
+    .btn-reject {
+    background: rgba(239,68,68,0.1); color: #ef4444;
+    border: 1px solid rgba(239,68,68,0.25);
+    }
+    .btn-reject:hover { background: rgba(239,68,68,0.18); }
+    .btn-sm {
+    background: rgba(148,163,184,0.08); color: #64748b;
+    border: 1px solid rgba(148,163,184,0.15);
+    }
+    .btn-sm:hover { color: #94a3b8; }
+    .btn-disabled { opacity: 0.4; cursor: not-allowed !important; }
+
+    /* ── Empty state ──────────────────────────────────────── */
+    .empty-state {
+    padding: 56px 24px; text-align: center;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+    .empty-text { font-size: 13px; color: #475569; }
+
+    /* ── Modal ────────────────────────────────────────────── */
+    .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .modal-box {
+    background: #1e293b;
+    border: 1px solid rgba(148,163,184,0.12);
+    border-radius: 18px; padding: 28px;
+    width: 100%; max-width: 440px;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+    }
+    .modal-title {
+    font-size: 16px; font-weight: 800; margin-bottom: 6px;
+    }
+    .modal-subtitle { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+    .modal-label {
+    display: block; font-size: 10px; font-weight: 700; color: #64748b;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .modal-input, .modal-textarea {
+    width: 100%; padding: 10px 12px;
+    background: #0f172a; border: 1px solid rgba(148,163,184,0.12);
+    border-radius: 9px; color: #f1f5f9; font-size: 13px;
+    font-family: inherit; outline: none; transition: border-color 0.2s;
+    }
+    .modal-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+    .modal-input:focus, .modal-textarea:focus {
+    border-color: rgba(239,68,68,0.5);
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+    }
+    .modal-actions {
+    display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end;
+    }
+    .btn-modal-cancel {
+    padding: 9px 18px; background: transparent;
+    border: 1px solid rgba(148,163,184,0.15); border-radius: 8px;
+    color: #64748b; font-size: 12px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .btn-modal-cancel:hover { border-color: rgba(148,163,184,0.3); color: #94a3b8; }
+    .btn-modal-reject {
+    padding: 9px 18px;
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    border: none; border-radius: 8px; color: white;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-family: inherit; transition: all 0.2s;
+    display: flex; align-items: center; gap: 6px;
+    }
+    .btn-modal-reject:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(239,68,68,0.35); }
+    .btn-modal-reject:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Toast ────────────────────────────────────────────── */
+    .toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+    display: flex; align-items: center; gap: 10px;
+    background: #1e293b; border: 1px solid rgba(148,163,184,0.15);
+    border-radius: 10px; padding: 12px 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    font-size: 13px; font-weight: 500; max-width: 340px;
+    animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn  { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+
+    /* ── Refresh btn ──────────────────────────────────────── */
+    .btn-refresh {
+    margin-left: auto; padding: 6px 12px;
+    background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 7px; color: #3b82f6; font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: inherit; transition: all 0.2s;
+    display: flex; align-items: center; gap: 5px;
+    }
+    .btn-refresh:hover { background: rgba(59,130,246,0.18); }
+
+    /* ── Reason cell ──────────────────────────────────────── */
+    .reason-text {
+    font-size: 11px; color: #64748b; font-style: italic;
+    max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    @media (max-width: 768px) {
+    .admin-header { padding: 0 16px; }
+    .admin-content { padding: 20px 16px; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .admin-user-info { display: none; }
+    }
+    </style>
+</head>
+<body>
+
+  <!-- ── LOADING ──────────────────────────────────────────── -->
+  <div id="admin-loading">
+    <div class="loading-icon">⚡</div>
+    <div style="font-size:13px;color:#94a3b8">Verifying admin access…</div>
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- ── APP (caché jusqu'à auth OK) ─────────────────────── -->
+  <div id="admin-app">
+
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="admin-logo">
+        <div class="admin-logo-icon">⚡</div>
+        AlphaVault Quant
+      </div>
+      <span class="admin-badge">👑 Admin Panel</span>
+
+      <div class="admin-header-right">
+        <div class="admin-user-info">
+          <div class="admin-user-name" id="admin-user-name">—</div>
+          <div class="admin-user-email" id="admin-user-email">—</div>
+        </div>
+        <button class="btn-logout" id="btn-logout">
+          <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <div class="admin-content">
+
+      <div class="admin-title">Access Requests</div>
+      <div class="admin-subtitle">
+        Manage user access to the AlphaVault Quant dashboard.
+        Approve or reject pending requests below.
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(234,179,8,0.1);color:#eab308">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div>
+            <div class="stat-num" id="stat-pending" style="color:#eab308">0</div>
+            <div class="stat-lbl">Pending</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.1);color:#10b981">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div>
+            <div class="stat-num" id="stat-approved" style="color:#10b981">0</div>
+            <div class="stat-lbl">Approved</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(239,68,68,0.1);color:#ef4444">
+            <i class="fa-solid fa-ban"></i>
+          </div>
+          <div>
+            <div class="stat-num" id="stat-rejected" style="color:#ef4444">0</div>
+            <div class="stat-lbl">Rejected</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div>
+            <div class="stat-num" id="stat-total" style="color:#3b82f6">0</div>
+            <div class="stat-lbl">Total Users</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters + Refresh -->
+      <div class="filter-bar">
+        <button class="filter-tab active" data-filter="all">
+          <i class="fa-solid fa-layer-group"></i> All
+          <div class="filter-count"><span id="fc-all">0</span></div>
+        </button>
+        <button class="filter-tab" data-filter="pending_approval">
+          <i class="fa-solid fa-clock" style="color:#eab308"></i> Pending
+          <div class="filter-count" style="color:#eab308"><span id="fc-pending">0</span></div>
+        </button>
+        <button class="filter-tab" data-filter="approved">
+          <i class="fa-solid fa-check" style="color:#10b981"></i> Approved
+          <div class="filter-count" style="color:#10b981"><span id="fc-approved">0</span></div>
+        </button>
+        <button class="filter-tab" data-filter="rejected">
+          <i class="fa-solid fa-ban" style="color:#ef4444"></i> Rejected
+          <div class="filter-count" style="color:#ef4444"><span id="fc-rejected">0</span></div>
+        </button>
+        <button class="btn-refresh" id="btn-refresh">
+          <i class="fa-solid fa-rotate"></i> Refresh
+        </button>
+      </div>
+
+      <!-- Table -->
+      <div class="table-card">
+        <div class="table-card-header">
+          <i class="fa-solid fa-users"></i>
+          Users
+          <span style="font-size:11px;color:#475569;font-weight:400" id="table-count">Loading...</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Email</th>
+                <th>Method</th>
+                <th>Reason</th>
+                <th>Requested</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="users-tbody">
+              <tr>
+                <td colspan="7" style="padding:48px;text-align:center;color:#475569">
+                  <i class="fa-solid fa-circle-notch fa-spin"
+                     style="font-size:22px;color:#3b82f6;display:block;margin-bottom:10px"></i>
+                  Loading users...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /admin-content -->
+  </div><!-- /admin-app -->
+
+  <!-- ── MODAL REJECT ───────────────────────────────────── -->
+  <div id="reject-modal" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+      <div class="modal-title">🚫 Reject Access Request</div>
+      <div class="modal-subtitle" id="reject-modal-subtitle">
+        Rejecting access for: —
+      </div>
+
+      <label class="modal-label">Reason (sent to user by email)</label>
+      <textarea id="reject-reason" class="modal-textarea"
+                placeholder="e.g. Access is restricted to authorized team members only."
+                rows="3"></textarea>
+
+      <div class="modal-actions">
+        <button class="btn-modal-cancel" id="reject-cancel">Cancel</button>
+        <button class="btn-modal-reject" id="reject-confirm">
+          <i class="fa-solid fa-ban"></i> Confirm Rejection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+  'use strict';
+
+  // ── Constants ────────────────────────────────────────────
+  const ADMIN_EMAIL      = 'raphnardone@gmail.com';
+  const QUANT_USERS_COL  = 'quant_users';
+  const WORKER_URL       = 'https://alphavault-gh-proxy.raphnardone.workers.dev';
+  const AUTH_URL         = 'auth.html';
+
+  // ── State ────────────────────────────────────────────────
+  let db, auth, currentAdmin;
+  let allUsers        = [];
+  let activeFilter    = 'all';
+  let rejectTargetUid = null;
+
+  // ── Init ─────────────────────────────────────────────────
+  async function init() {
+    // Attendre Cloudflare config
+    if (!window._firebaseConfigReady && window._firebaseConfigPromise) {
+      await window._firebaseConfigPromise;
+    }
+
+    const cfg = window.FIREBASE_CONFIG;
+    if (!cfg || !cfg.apiKey) {
+      showToast('error', 'Firebase config missing.');
+      return;
+    }
+
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    db   = firebase.firestore();
+    auth = firebase.auth();
+
+    // Vérifier l'auth
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) { window.location.href = AUTH_URL; return; }
+      if (user.email !== ADMIN_EMAIL) {
+        showToast('error', 'Admin access only.');
+        await auth.signOut();
+        window.location.href = AUTH_URL;
+        return;
+      }
+
+      currentAdmin = user;
+      document.getElementById('admin-user-name').textContent  = user.displayName || 'Admin';
+      document.getElementById('admin-user-email').textContent = user.email;
+
+      document.getElementById('admin-loading').style.display = 'none';
+      document.getElementById('admin-app').style.display     = 'block';
+
+      await loadUsers();
+    });
+  }
+
+  // ── Load users from Firestore ─────────────────────────────
+  async function loadUsers() {
+    try {
+      const snap = await db.collection(QUANT_USERS_COL)
+        .orderBy('createdAt', 'desc')
+        .get();
+
+      allUsers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      updateStats();
+      renderTable();
+    } catch (e) {
+      console.error('loadUsers error:', e);
+      showToast('error', 'Failed to load users: ' + e.message);
+    }
+  }
+
+  // ── Stats ─────────────────────────────────────────────────
+  function updateStats() {
+    const pending  = allUsers.filter(u => u.status === 'pending_approval').length;
+    const approved = allUsers.filter(u => u.status === 'approved').length;
+    const rejected = allUsers.filter(u => u.status === 'rejected').length;
+    const total    = allUsers.length;
+
+    document.getElementById('stat-pending').textContent  = pending;
+    document.getElementById('stat-approved').textContent = approved;
+    document.getElementById('stat-rejected').textContent = rejected;
+    document.getElementById('stat-total').textContent    = total;
+
+    document.getElementById('fc-all').textContent      = total;
+    document.getElementById('fc-pending').textContent  = pending;
+    document.getElementById('fc-approved').textContent = approved;
+    document.getElementById('fc-rejected').textContent = rejected;
+  }
+
+  // ── Render table ──────────────────────────────────────────
+  function renderTable() {
+    const filtered = activeFilter === 'all'
+      ? allUsers
+      : allUsers.filter(u => u.status === activeFilter);
+
+    document.getElementById('table-count').textContent =
+      `${filtered.length} user${filtered.length !== 1 ? 's' : ''}`;
+
+    const tbody = document.getElementById('users-tbody');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <div class="empty-icon">👥</div>
+              <div class="empty-text">No users in this category.</div>
+            </div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(user => {
+      const initials  = getInitials(user.displayName || user.email || '?');
+      const photo     = user.photoURL || '';
+      const name      = user.displayName || user.email || '—';
+      const email     = user.email || '—';
+      const method    = user.signupMethod || 'email';
+      const reason    = user.reason || '';
+      const status    = user.status || 'unknown';
+      const date      = formatDate(user.createdAt);
+      const isPending = status === 'pending_approval';
+
+      const avatarHtml = photo
+        ? `<img src="${esc(photo)}" alt="" onerror="this.parentNode.innerHTML='${initials}'">`
+        : initials;
+
+      const statusBadge = {
+        pending_approval: `<span class="badge badge-pending"><span class="blink">●</span> Pending</span>`,
+        approved:         `<span class="badge badge-approved">✓ Approved</span>`,
+        rejected:         `<span class="badge badge-rejected">✗ Rejected</span>`,
+      }[status] || `<span class="badge">${status}</span>`;
+
+      const methodBadge = method === 'google'
+        ? `<span class="badge badge-google"><i class="fa-brands fa-google" style="font-size:9px"></i> Google</span>`
+        : `<span class="badge badge-email"><i class="fa-solid fa-envelope" style="font-size:9px"></i> Email</span>`;
+
+      const actions = isPending
+        ? `<button class="btn-approve" onclick="approveUser('${user.id}', '${esc(email)}', '${esc(name)}')">
+             <i class="fa-solid fa-check"></i> Approve
+           </button>
+           <button class="btn-reject" onclick="openRejectModal('${user.id}', '${esc(email)}', '${esc(name)}')">
+             <i class="fa-solid fa-ban"></i> Reject
+           </button>`
+        : `<span style="font-size:11px;color:#334155;font-style:italic">
+             ${status === 'approved' ? '✓ Access granted' : '✗ Access denied'}
+           </span>`;
+
+      return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              <div class="user-avatar">${avatarHtml}</div>
+              <div>
+                <div class="user-name">${esc(name)}</div>
+                <div class="user-uid">${user.id?.substring(0, 16)}…</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:#94a3b8;font-size:12px">${esc(email)}</td>
+          <td>${methodBadge}</td>
+          <td>
+            <div class="reason-text" title="${esc(reason)}">
+              ${reason ? esc(reason) : '<span style="color:#334155">—</span>'}
+            </div>
+          </td>
+          <td style="color:#64748b;font-size:11px;white-space:nowrap">${date}</td>
+          <td>${statusBadge}</td>
+          <td><div class="action-cell">${actions}</div></td>
+        </tr>`;
+    }).join('');
+  }
+
+  // ── Approve user ──────────────────────────────────────────
+  async function approveUser(uid, email, name) {
+    if (!confirm(`Approve access for ${name} (${email})?`)) return;
+
+    const btn = event.target.closest('.btn-approve');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Approving…'; }
+
+    try {
+      // 1. Mettre à jour Firestore
+      await db.collection(QUANT_USERS_COL).doc(uid).update({
+        status:     'approved',
+        updatedAt:  firebase.firestore.FieldValue.serverTimestamp(),
+        reviewedBy: ADMIN_EMAIL,
+        reviewedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 2. Notifier le user par email via Worker
+      const idToken = await currentAdmin.getIdToken();
+      const res = await fetch(`${WORKER_URL}/quant/notify-approved`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          targetEmail: email,
+          targetName:  name,
+          targetUid:   uid,
+          adminNote:   '',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast('success', `✅ ${name} approved — notification email sent.`);
+      } else {
+        showToast('warning', `Approved in DB but email failed: ${data.error || res.status}`);
+      }
+
+      // Refresh
+      await loadUsers();
+
+    } catch (e) {
+      showToast('error', 'Error: ' + e.message);
+      if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-check"></i> Approve'; }
+    }
+  }
+
+  // ── Reject modal ──────────────────────────────────────────
+  function openRejectModal(uid, email, name) {
+    rejectTargetUid = uid;
+    document.getElementById('reject-modal-subtitle').textContent = `Rejecting: ${name} (${email})`;
+    document.getElementById('reject-reason').value = '';
+    document.getElementById('reject-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('reject-reason').focus(), 50);
+
+    // Stocker les infos pour la confirmation
+    document.getElementById('reject-confirm').dataset.email = email;
+    document.getElementById('reject-confirm').dataset.name  = name;
+  }
+
+  function closeRejectModal() {
+    document.getElementById('reject-modal').style.display = 'none';
+    rejectTargetUid = null;
+  }
+
+  document.getElementById('reject-cancel').addEventListener('click', closeRejectModal);
+  document.getElementById('reject-modal').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeRejectModal();
+  });
+
+  // ── Confirm rejection ─────────────────────────────────────
+  document.getElementById('reject-confirm').addEventListener('click', async () => {
+    if (!rejectTargetUid) return;
+
+    const reason = document.getElementById('reject-reason').value.trim();
+    const btn    = document.getElementById('reject-confirm');
+    const email  = btn.dataset.email;
+    const name   = btn.dataset.name;
+
+    btn.disabled    = true;
+    btn.innerHTML   = '<i class="fa-solid fa-spinner fa-spin"></i> Rejecting…';
+
+    try {
+      // 1. Mettre à jour Firestore
+      await db.collection(QUANT_USERS_COL).doc(rejectTargetUid).update({
+        status:          'rejected',
+        rejectionReason: reason || 'Access denied by administrator.',
+        updatedAt:       firebase.firestore.FieldValue.serverTimestamp(),
+        reviewedBy:      ADMIN_EMAIL,
+        reviewedAt:      firebase.firestore.FieldValue.serverTimestamp(),
+      });
+
+      // 2. Notifier le user par email via Worker
+      const idToken = await currentAdmin.getIdToken();
+      const res = await fetch(`${WORKER_URL}/quant/notify-rejected`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({
+          targetEmail: email,
+          targetName:  name,
+          targetUid:   rejectTargetUid,
+          reason:      reason || 'Access denied by administrator.',
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        showToast('success', `🚫 ${name} rejected — notification email sent.`);
+      } else {
+        showToast('warning', `Rejected in DB but email failed: ${data.error || res.status}`);
+      }
+
+      closeRejectModal();
+      await loadUsers();
+
+    } catch (e) {
+      showToast('error', 'Error: ' + e.message);
+      btn.disabled  = false;
+      btn.innerHTML = '<i class="fa-solid fa-ban"></i> Confirm Rejection';
+    }
+  });
+
+  // ── Filters ───────────────────────────────────────────────
+  document.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      activeFilter = tab.dataset.filter;
+      renderTable();
+    });
+  });
+
+  // ── Refresh ───────────────────────────────────────────────
+  document.getElementById('btn-refresh').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-refresh');
+    btn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Refreshing…';
+    btn.disabled  = true;
+    await loadUsers();
+    btn.innerHTML = '<i class="fa-solid fa-rotate"></i> Refresh';
+    btn.disabled  = false;
+    showToast('info', 'Users refreshed.');
+  });
+
+  // ── Logout ────────────────────────────────────────────────
+  document.getElementById('btn-logout').addEventListener('click', async () => {
+    await auth.signOut();
+    window.location.href = AUTH_URL;
+  });
+
+  // ── Helpers ───────────────────────────────────────────────
+  function getInitials(name) {
+    const parts = String(name).trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return (parts[0] || '?')[0].toUpperCase();
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '—';
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  }
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+      .replace(/'/g,'&#39;');
+  }
+
+  function showToast(type, message) {
+    const colors = { success:'#10b981', error:'#ef4444', info:'#3b82f6', warning:'#f59e0b' };
+    const icons  = { success:'✅', error:'❌', info:'ℹ', warning:'⚠' };
+    const toast  = document.createElement('div');
+    toast.className   = 'toast';
+    toast.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
+    toast.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+    document.getElementById('toastContainer').appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'toastOut 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 320);
+    }, 4500);
+  }
+
+  // ── Boot ──────────────────────────────────────────────────
+  init();
+  </script>
+
+</body>
+</html>
