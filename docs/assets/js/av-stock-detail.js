@@ -787,8 +787,18 @@ const StockDetail = (() => {
         .sdp-fp-price      { font-size: 14px; }
         .sdp-fp-change     { font-size: 11px; }
         .sdp-fp-back       { padding: 6px 8px; font-size: 11px; }
-        .sdp-fp-action-btn.sell { display: none; }
-        .sdp-fp-action-btn.wl   { display: none; }
+        .sdp-fp-action-btn {
+        min-height: 40px;
+        min-width: 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        padding: 0;
+        font-size: 0 !important;
+        justify-content: center;
+        align-items: center;
+      }
+      .sdp-fp-action-btn i { font-size: 14px !important; }
 
         /* Logo */
         #sdp-fp-logo { display: none; }
