@@ -72,7 +72,7 @@
     }
     const cfg = window.FIREBASE_CONFIG;
     if (!cfg || !cfg.apiKey) {
-      console.error('❌ av-auth-guard: FIREBASE_CONFIG manquant');
+      console.error('av-auth-guard: FIREBASE_CONFIG manquant');
       _redirect();
       return null;
     }
@@ -80,7 +80,7 @@
       if (!firebase.apps.length) firebase.initializeApp(cfg);
       return { auth: firebase.auth(), db: firebase.firestore() };
     } catch (e) {
-      console.error('❌ Firebase init:', e);
+      console.error('Firebase init:', e);
       _redirect();
       return null;
     }
@@ -130,7 +130,7 @@
                 }
 
             } catch (e) {
-                console.error('❌ Auth guard checkAccess:', e);
+                console.error('Auth guard checkAccess:', e);
                 _redirect();
             }
         });
@@ -182,7 +182,7 @@
                              background:rgba(234,179,8,0.12);
                              border:1px solid rgba(234,179,8,0.25);
                              padding:2px 8px;border-radius:10px">
-                  👑 Admin
+                  Admin
                 </span>
               </div>` : ''}
           </div>
@@ -248,7 +248,7 @@
               ${_esc(firstName)}
             </div>
             <div style="font-size:9px;color:var(--text-faint,#475569)">
-              ${isAdmin ? '👑 Admin' : '✓ Approved'}
+              ${isAdmin ? 'Admin' : 'Approved'}
             </div>
           </div>
 

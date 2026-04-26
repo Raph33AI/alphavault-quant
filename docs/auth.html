@@ -1,1483 +1,1432 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlphaVault Quant — Secure Access</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AlphaVault Quant — Secure Access</title>
 
-    <!-- Favicons -->
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="shortcut icon" href="favicon.ico">
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
-    <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="assets/css/auth.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Firebase Config (généré par GitHub Actions) -->
-    <script src="assets/js/firebase-config.js"></script>
+  <script src="assets/js/firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <style>
+  /* ── Reset & Base ──────────────────────────────────────── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    <style>
-    /* ── Styles critiques non inclus dans auth.css ─────────────────── */
-    .screen { min-height: 100vh; }
-    .screen.hidden { display: none !important; }
-    .hidden { display: none !important; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f8fafc;
+    color: #0f172a;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
 
-    /* Loading screen */
-    .screen-loading {
-        display: flex; align-items: center; justify-content: center;
-        background: #0f172a; flex-direction: column; gap: 24px;
-    }
-    .loading-content { text-align: center; }
-    .loading-logo-icon {
-        width: 64px; height: 64px; margin: 0 auto 16px;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        border-radius: 16px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 28px;
-        box-shadow: 0 8px 32px rgba(59,130,246,0.4);
-        animation: logoPulse 2s ease-in-out infinite;
-    }
-    @keyframes logoPulse { 0%,100%{transform:scale(1);box-shadow:0 8px 32px rgba(59,130,246,0.4);} 50%{transform:scale(1.05);box-shadow:0 12px 48px rgba(59,130,246,0.6);} }
-    .loading-logo-name { font-size: 1.4rem; font-weight: 800; color: #f1f5f9; margin-bottom: 4px; }
-    .loading-logo-sub  { font-size: 0.75rem; color: #94a3b8; letter-spacing: 2px; text-transform: uppercase; }
-    .loading-spinner {
-        width: 36px; height: 36px; margin: 20px auto 0;
-        border: 3px solid rgba(59,130,246,0.2);
-        border-top-color: #3b82f6;
-        border-radius: 50%;
-        animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── Background ────────────────────────────────────────── */
+  .auth-bg {
+    position: fixed; inset: 0; z-index: 0;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+  .auth-bg::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 12% 20%, rgba(59,130,246,0.10) 0%, transparent 45%),
+      radial-gradient(ellipse at 88% 80%, rgba(99,102,241,0.09) 0%, transparent 45%),
+      radial-gradient(ellipse at 50% 105%, rgba(139,92,246,0.07) 0%, transparent 40%);
+    animation: bgDrift 14s ease-in-out infinite alternate;
+  }
+  @keyframes bgDrift {
+    from { transform: scale(1) translateY(0); }
+    to   { transform: scale(1.04) translateY(-8px); }
+  }
+  .auth-bg-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
 
-    /* Auth background */
-    .auth-bg {
-        position: fixed; inset: 0; z-index: 0;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-        overflow: hidden;
-    }
-    .auth-bg::before {
-        content: '';
-        position: absolute; inset: -50%;
-        background:
-            radial-gradient(ellipse at 20% 50%, rgba(59,130,246,0.07) 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 55%),
-            radial-gradient(ellipse at 60% 80%, rgba(16,185,129,0.04) 0%, transparent 55%);
-        animation: bgPulse 10s ease-in-out infinite alternate;
-    }
-    @keyframes bgPulse { from{transform:scale(1);} to{transform:scale(1.04);} }
-    .auth-bg-grid {
-        position: absolute; inset: 0;
-        background-image:
-            linear-gradient(rgba(148,163,184,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(148,163,184,0.025) 1px, transparent 1px);
-        background-size: 44px 44px;
-    }
+  /* ── Screens ───────────────────────────────────────────── */
+  .screen { min-height: 100vh; }
+  .screen.hidden { display: none !important; }
+  .hidden { display: none !important; }
 
-    /* Auth container & card */
-    .auth-container {
-        position: relative; z-index: 1;
-        min-height: 100vh;
-        display: flex; align-items: center; justify-content: center;
-        flex-direction: column;
-        padding: 24px;
-        gap: 20px;
-    }
-    .auth-card {
-        width: 100%; max-width: 460px;
-        background: rgba(30,41,59,0.85);
-        backdrop-filter: blur(24px) saturate(180%);
-        border: 1px solid rgba(148,163,184,0.12);
-        border-radius: 24px;
-        padding: 40px;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03) inset;
-        animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
-    }
-    @keyframes cardIn { from{opacity:0;transform:translateY(24px) scale(0.97);} to{opacity:1;transform:translateY(0) scale(1);} }
+  /* ── Loading Screen ────────────────────────────────────── */
+  .screen-loading {
+    display: flex; align-items: center; justify-content: center;
+    background: #ffffff; flex-direction: column; gap: 20px;
+    position: relative; z-index: 10;
+  }
+  .loading-content { text-align: center; }
+  .loading-logo-wrap {
+    width: 64px; height: 64px; margin: 0 auto 14px;
+    filter: drop-shadow(0 4px 16px rgba(59,130,246,0.20));
+    animation: logoPulse 2.2s ease-in-out infinite;
+  }
+  .loading-logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+  @keyframes logoPulse {
+    0%,100% { transform: scale(1); filter: drop-shadow(0 4px 16px rgba(59,130,246,0.20)); }
+    50%     { transform: scale(1.04); filter: drop-shadow(0 6px 24px rgba(99,102,241,0.30)); }
+  }
+  .loading-logo-name {
+    font-size: 1.25rem; font-weight: 800; color: #0f172a; margin-bottom: 3px;
+  }
+  .loading-logo-sub {
+    font-size: 0.7rem; color: #94a3b8;
+    letter-spacing: 2px; text-transform: uppercase;
+  }
+  .loading-spinner {
+    width: 30px; height: 30px; margin: 18px auto 0;
+    border: 2.5px solid rgba(59,130,246,0.15);
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* Logo */
-    .auth-logo {
-        display: flex; align-items: center; gap: 14px;
-        margin-bottom: 32px; justify-content: center;
-    }
-    .auth-logo-icon {
-        width: 46px; height: 46px;
-        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 22px;
-        box-shadow: 0 4px 16px rgba(59,130,246,0.35);
-        flex-shrink: 0;
-    }
-    .auth-logo-text { display: flex; flex-direction: column; }
-    .auth-logo-name {
-        font-size: 1.05rem; font-weight: 800;
-        background: linear-gradient(135deg, #f1f5f9, #94a3b8);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        line-height: 1.15;
-    }
-    .auth-logo-sub {
-        font-size: 0.62rem; font-weight: 600;
-        color: #3b82f6; letter-spacing: 2.5px;
-        text-transform: uppercase; margin-top: 1px;
-    }
+  /* ── Auth Container ────────────────────────────────────── */
+  .auth-container {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    padding: 24px 16px;
+    gap: 18px;
+  }
 
-    /* Tabs */
-    .auth-tabs {
-        display: flex;
-        background: #0f172a;
-        border-radius: 10px; padding: 4px; margin-bottom: 24px; gap: 4px;
-    }
-    .auth-tab {
-        flex: 1; padding: 10px 8px;
-        border: none; border-radius: 7px;
-        font-size: 0.875rem; font-weight: 600; font-family: inherit;
-        cursor: pointer; transition: all 0.2s ease;
-        background: transparent; color: #64748b;
-    }
-    .auth-tab.active {
-        background: #1e293b; color: #f1f5f9;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-    }
-    .auth-tab:hover:not(.active) { color: #94a3b8; }
+  /* ── Auth Card ─────────────────────────────────────────── */
+  .auth-card {
+    width: 100%; max-width: 440px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow:
+      0 1px 3px rgba(0,0,0,0.04),
+      0 8px 32px rgba(59,130,246,0.07),
+      0 24px 56px rgba(0,0,0,0.05);
+    animation: cardIn 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
 
-    /* Subtitle & badges */
-    .auth-subtitle {
-        font-size: 0.875rem; color: #94a3b8;
-        text-align: center; margin-bottom: 22px;
-        line-height: 1.55;
-    }
-    .badge-approval {
-        display: inline-flex; align-items: center; gap: 6px;
-        background: rgba(234,179,8,0.12); color: #eab308;
-        border: 1px solid rgba(234,179,8,0.25);
-        padding: 4px 12px; border-radius: 20px;
-        font-size: 0.75rem; font-weight: 600;
-        margin-top: 6px;
-    }
-    .badge-approval::before { content: '🔒'; font-size: 0.7rem; }
+  /* ── Logo ──────────────────────────────────────────────── */
+  .auth-logo {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 30px; justify-content: center;
+  }
+  .auth-logo-img {
+    width: 42px; height: 42px;
+    object-fit: contain; flex-shrink: 0;
+    filter: drop-shadow(0 2px 8px rgba(59,130,246,0.18));
+  }
+  .auth-logo-text { display: flex; flex-direction: column; }
+  .auth-logo-name {
+    font-size: 1rem; font-weight: 800; color: #0f172a;
+    line-height: 1.2; letter-spacing: -0.3px;
+  }
+  .auth-logo-sub {
+    font-size: 0.6rem; font-weight: 700;
+    color: #3b82f6; letter-spacing: 2.5px;
+    text-transform: uppercase; margin-top: 2px;
+  }
 
-    /* Google btn */
-    .btn-google {
-        width: 100%; padding: 12px 16px;
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        background: rgba(255,255,255,0.05);
-        border: 1px solid rgba(148,163,184,0.15);
-        border-radius: 10px;
-        color: #f1f5f9; font-size: 0.875rem; font-weight: 600;
-        font-family: inherit; cursor: pointer;
-        transition: all 0.2s ease; margin-bottom: 18px;
-    }
-    .btn-google:hover {
-        background: rgba(255,255,255,0.09);
-        border-color: rgba(148,163,184,0.25);
-        transform: translateY(-1px);
-    }
+  /* ── Tabs ──────────────────────────────────────────────── */
+  .auth-tabs {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px; padding: 4px; margin-bottom: 24px; gap: 3px;
+  }
+  .auth-tab {
+    flex: 1; padding: 9px 8px;
+    border: none; border-radius: 7px;
+    font-size: 0.875rem; font-weight: 600; font-family: inherit;
+    cursor: pointer; transition: all 0.2s ease;
+    background: transparent; color: #64748b;
+  }
+  .auth-tab.active {
+    background: #ffffff; color: #0f172a;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+  }
+  .auth-tab:hover:not(.active) { color: #334155; }
 
-    /* Divider */
-    .auth-divider {
-        display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
-    }
-    .auth-divider::before,
-    .auth-divider::after {
-        content: ''; flex: 1;
-        height: 1px; background: rgba(148,163,184,0.12);
-    }
-    .auth-divider span { color: #475569; font-size: 0.78rem; white-space: nowrap; }
+  /* ── Subtitle ──────────────────────────────────────────── */
+  .auth-subtitle {
+    font-size: 0.875rem; color: #64748b;
+    text-align: center; margin-bottom: 22px;
+    line-height: 1.6;
+  }
 
-    /* Form elements */
-    .form-group { margin-bottom: 16px; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .form-label {
-        display: block; font-size: 0.78rem; font-weight: 600;
-        color: #94a3b8; margin-bottom: 7px;
-        text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .form-input {
-        width: 100%; padding: 12px 14px;
-        background: #0f172a;
-        border: 1px solid rgba(148,163,184,0.12);
-        border-radius: 10px;
-        color: #f1f5f9; font-size: 0.9rem; font-family: inherit;
-        transition: all 0.2s ease; outline: none;
-        -webkit-appearance: none;
-    }
-    .form-input::placeholder { color: #334155; }
-    .form-input:focus {
-        border-color: rgba(59,130,246,0.5);
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
-    }
-    .form-input.error { border-color: rgba(239,68,68,0.4); }
-    .form-textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+  /* ── Approval Badge ────────────────────────────────────── */
+  .badge-approval {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(234,179,8,0.08); color: #b45309;
+    border: 1px solid rgba(234,179,8,0.25);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 600;
+    margin-top: 6px;
+  }
 
-    /* Password wrapper */
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-input { padding-right: 44px; }
-    .password-toggle {
-        position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-        background: none; border: none; color: #475569; cursor: pointer;
-        padding: 4px; transition: color 0.2s;
-    }
-    .password-toggle:hover { color: #94a3b8; }
+  /* ── Google Button ─────────────────────────────────────── */
+  .btn-google {
+    width: 100%; padding: 11px 16px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    color: #374151; font-size: 0.875rem; font-weight: 600;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.2s ease; margin-bottom: 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .btn-google:hover {
+    border-color: #cbd5e1; background: #f8fafc;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
 
-    /* Strength meter */
-    .strength-meter { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-    .strength-bars { display: flex; gap: 4px; flex: 1; }
-    .strength-bar {
-        flex: 1; height: 4px; border-radius: 2px;
-        background: rgba(148,163,184,0.12);
-        transition: background 0.3s ease;
-    }
-    .strength-label { font-size: 0.72rem; color: #64748b; white-space: nowrap; min-width: 60px; text-align: right; }
+  /* ── Divider ───────────────────────────────────────────── */
+  .auth-divider {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 18px;
+  }
+  .auth-divider::before, .auth-divider::after {
+    content: ''; flex: 1; height: 1px; background: #e2e8f0;
+  }
+  .auth-divider span { color: #94a3b8; font-size: 0.78rem; white-space: nowrap; }
 
-    /* Form error */
-    .form-error {
-        display: none; color: #ef4444;
-        font-size: 0.775rem; margin-top: 5px; font-weight: 500;
-    }
-    .form-error.active { display: block; }
+  /* ── Form ──────────────────────────────────────────────── */
+  .auth-form-section {}
+  .form-group { margin-bottom: 15px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-label {
+    display: block; font-size: 0.775rem; font-weight: 600;
+    color: #374151; margin-bottom: 6px; letter-spacing: 0.2px;
+  }
+  .form-input {
+    width: 100%; padding: 11px 13px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 9px;
+    color: #0f172a; font-size: 0.9rem; font-family: inherit;
+    transition: all 0.2s ease; outline: none;
+    -webkit-appearance: none;
+  }
+  .form-input::placeholder { color: #9ca3af; }
+  .form-input:focus {
+    border-color: #3b82f6; background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+  }
+  .form-input.error { border-color: #ef4444; }
+  .form-textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
 
-    /* Form options */
-    .form-options {
-        display: flex; justify-content: flex-end;
-        margin-bottom: 18px; margin-top: -8px;
-    }
-    .forgot-link {
-        font-size: 0.8rem; color: #3b82f6; text-decoration: none; font-weight: 500;
-    }
-    .forgot-link:hover { color: #60a5fa; text-decoration: underline; }
+  /* ── Password ──────────────────────────────────────────── */
+  .password-wrapper { position: relative; }
+  .password-wrapper .form-input { padding-right: 44px; }
+  .password-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #9ca3af; cursor: pointer;
+    padding: 4px; transition: color 0.2s;
+  }
+  .password-toggle:hover { color: #64748b; }
 
-    /* Buttons */
-    .btn-primary {
-        width: 100%; padding: 13px 20px;
-        background: linear-gradient(135deg, #3b82f6, #6366f1);
-        border: none; border-radius: 10px;
-        color: white; font-size: 0.9rem; font-weight: 700;
-        font-family: inherit; cursor: pointer;
-        transition: all 0.2s ease; position: relative;
-        overflow: hidden;
-        display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .btn-primary:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(59,130,246,0.35);
-    }
-    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
-    .btn-primary .btn-text { transition: opacity 0.2s; }
-    .btn-spinner {
-        width: 18px; height: 18px;
-        border: 2px solid rgba(255,255,255,0.3);
-        border-top-color: white;
-        border-radius: 50%;
-        animation: spin 0.7s linear infinite;
-        position: absolute;
-    }
+  /* ── Strength ──────────────────────────────────────────── */
+  .strength-meter { display: flex; align-items: center; gap: 8px; margin-top: 7px; }
+  .strength-bars { display: flex; gap: 4px; flex: 1; }
+  .strength-bar {
+    flex: 1; height: 3px; border-radius: 2px;
+    background: #e2e8f0;
+    transition: background 0.3s ease;
+  }
+  .strength-label {
+    font-size: 0.7rem; color: #94a3b8;
+    white-space: nowrap; min-width: 60px; text-align: right;
+  }
 
-    .btn-secondary {
-        padding: 10px 20px;
-        background: rgba(59,130,246,0.1);
-        border: 1px solid rgba(59,130,246,0.3);
-        border-radius: 10px;
-        color: #3b82f6; font-size: 0.85rem; font-weight: 600;
-        font-family: inherit; cursor: pointer; transition: all 0.2s ease;
-        display: inline-flex; align-items: center; gap: 8px;
-    }
-    .btn-secondary:hover { background: rgba(59,130,246,0.18); }
+  /* ── Form Error ────────────────────────────────────────── */
+  .form-error {
+    display: none; color: #ef4444;
+    font-size: 0.75rem; margin-top: 4px; font-weight: 500;
+  }
+  .form-error.active { display: block; }
 
-    .btn-ghost {
-        padding: 10px 20px;
-        background: transparent;
-        border: 1px solid rgba(148,163,184,0.15);
-        border-radius: 10px;
-        color: #64748b; font-size: 0.85rem; font-weight: 600;
-        font-family: inherit; cursor: pointer; transition: all 0.2s ease;
-        display: inline-flex; align-items: center; gap: 8px;
-    }
-    .btn-ghost:hover { border-color: rgba(148,163,184,0.3); color: #94a3b8; }
+  /* ── Form Options ──────────────────────────────────────── */
+  .form-options {
+    display: flex; justify-content: flex-end;
+    margin-bottom: 16px; margin-top: -6px;
+  }
+  .forgot-link {
+    font-size: 0.8rem; color: #3b82f6; text-decoration: none; font-weight: 500;
+  }
+  .forgot-link:hover { color: #2563eb; text-decoration: underline; }
 
-    /* Info banner */
-    .info-banner {
-        display: flex; align-items: flex-start; gap: 12px;
-        background: rgba(59,130,246,0.06);
-        border: 1px solid rgba(59,130,246,0.15);
-        border-radius: 10px; padding: 14px 16px;
-        margin-bottom: 18px; margin-top: 4px;
-    }
-    .info-banner i { color: #3b82f6; margin-top: 2px; flex-shrink: 0; }
-    .info-banner strong { display: block; color: #f1f5f9; font-size: 0.85rem; margin-bottom: 2px; }
-    .info-banner p { color: #94a3b8; font-size: 0.8rem; margin: 0; line-height: 1.45; }
-    .info-banner-blue { /* identique, alias */ }
+  /* ── Buttons ───────────────────────────────────────────── */
+  .btn-primary {
+    width: 100%; padding: 12px 20px;
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    border: none; border-radius: 10px;
+    color: white; font-size: 0.9rem; font-weight: 700;
+    font-family: inherit; cursor: pointer;
+    transition: all 0.2s ease; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 4px 14px rgba(59,130,246,0.25);
+  }
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(59,130,246,0.35);
+  }
+  .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+  .btn-primary .btn-text { transition: opacity 0.2s; }
+  .btn-spinner {
+    width: 17px; height: 17px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    position: absolute;
+  }
+  .btn-secondary {
+    padding: 9px 18px;
+    background: rgba(59,130,246,0.08);
+    border: 1px solid rgba(59,130,246,0.20);
+    border-radius: 9px;
+    color: #3b82f6; font-size: 0.85rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-secondary:hover { background: rgba(59,130,246,0.14); }
+  .btn-ghost {
+    padding: 9px 18px;
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    color: #64748b; font-size: 0.85rem; font-weight: 600;
+    font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .btn-ghost:hover { border-color: #cbd5e1; color: #374151; background: #f8fafc; }
 
-    /* Form footer */
-    .form-footer-text {
-        text-align: center; color: #64748b;
-        font-size: 0.82rem; margin-top: 18px;
-    }
-    .form-footer-text a { color: #3b82f6; text-decoration: none; font-weight: 600; }
-    .form-footer-text a:hover { text-decoration: underline; }
+  /* ── Info Banner ───────────────────────────────────────── */
+  .info-banner {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: rgba(59,130,246,0.05);
+    border: 1px solid rgba(59,130,246,0.15);
+    border-radius: 10px; padding: 13px 15px;
+    margin-bottom: 16px; margin-top: 4px;
+  }
+  .info-banner i { color: #3b82f6; margin-top: 1px; flex-shrink: 0; font-size: 13px; }
+  .info-banner strong { display: block; color: #0f172a; font-size: 0.84rem; margin-bottom: 2px; }
+  .info-banner p { color: #64748b; font-size: 0.79rem; margin: 0; line-height: 1.5; }
 
-    /* System badges */
-    .system-badges {
-        display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-        max-width: 460px;
-    }
-    .sys-badge {
-        display: flex; align-items: center; gap: 6px;
-        background: rgba(30,41,59,0.7);
-        border: 1px solid rgba(148,163,184,0.1);
-        border-radius: 20px; padding: 6px 14px;
-        font-size: 0.75rem; color: #94a3b8; font-weight: 500;
-    }
-    .dot {
-        width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
-    }
-    .dot-green  { background: #10b981; box-shadow: 0 0 6px #10b981; }
-    .dot-blue   { background: #3b82f6; box-shadow: 0 0 6px #3b82f6; }
-    .dot-yellow { background: #eab308; box-shadow: 0 0 6px #eab308; }
-    .dot-red    { background: #ef4444; box-shadow: 0 0 6px #ef4444; }
-    .blink { animation: blink 1.4s ease-in-out infinite; }
-    @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  /* ── Form Footer ───────────────────────────────────────── */
+  .form-footer-text {
+    text-align: center; color: #64748b;
+    font-size: 0.82rem; margin-top: 16px;
+  }
+  .form-footer-text a { color: #3b82f6; text-decoration: none; font-weight: 600; }
+  .form-footer-text a:hover { text-decoration: underline; }
 
-    /* Status cards (pending, rejected) */
-    .status-card { text-align: center; }
-    .status-icon { font-size: 4rem; margin-bottom: 16px; display: block; }
-    .status-detail-box {
-        background: rgba(15,23,42,0.5);
-        border: 1px solid rgba(148,163,184,0.1);
-        border-radius: 12px; padding: 20px;
-        margin: 20px 0; text-align: left;
-    }
-    .status-row {
-        display: flex; justify-content: space-between; align-items: flex-start;
-        padding: 9px 0;
-        border-bottom: 1px solid rgba(148,163,184,0.06);
-        gap: 12px;
-    }
-    .status-row:last-child { border-bottom: none; }
-    .status-label { color: #64748b; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0; }
-    .status-value { color: #f1f5f9; font-size: 0.875rem; font-weight: 500; text-align: right; word-break: break-all; }
-    .status-pending-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        color: #eab308; font-weight: 600;
-    }
+  /* ── System Badges ─────────────────────────────────────── */
+  .system-badges {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    justify-content: center; max-width: 440px;
+  }
+  .sys-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.85);
+    border: 1px solid #e2e8f0;
+    border-radius: 20px; padding: 5px 12px;
+    font-size: 0.72rem; color: #64748b; font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    backdrop-filter: blur(6px);
+  }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-green  { background: #10b981; box-shadow: 0 0 5px rgba(16,185,129,0.6); }
+  .dot-blue   { background: #3b82f6; box-shadow: 0 0 5px rgba(59,130,246,0.6); }
+  .dot-yellow { background: #eab308; box-shadow: 0 0 5px rgba(234,179,8,0.6); }
+  .blink { animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 
-    .pending-actions {
-        display: flex; gap: 12px; justify-content: center;
-        margin-top: 24px; flex-wrap: wrap;
-    }
+  /* ── Status Cards (Pending / Rejected) ────────────────── */
+  .status-card { text-align: center; }
+  .status-icon-wrap {
+    width: 72px; height: 72px; margin: 0 auto 20px;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem;
+  }
+  .status-icon-pending {
+    background: rgba(234,179,8,0.09);
+    color: #d97706;
+    box-shadow: 0 4px 20px rgba(234,179,8,0.15);
+  }
+  .status-icon-rejected {
+    background: rgba(239,68,68,0.08);
+    color: #dc2626;
+    box-shadow: 0 4px 20px rgba(239,68,68,0.12);
+  }
+  .auth-title {
+    font-size: 1.5rem; font-weight: 800; color: #0f172a;
+    text-align: center; margin-bottom: 8px;
+  }
+  .status-detail-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px; padding: 18px;
+    margin: 18px 0; text-align: left;
+  }
+  .status-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 9px 0;
+    border-bottom: 1px solid #f1f5f9;
+    gap: 12px;
+  }
+  .status-row:last-child { border-bottom: none; }
+  .status-label {
+    color: #64748b; font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 0.3px; flex-shrink: 0;
+  }
+  .status-value {
+    color: #0f172a; font-size: 0.875rem; font-weight: 500;
+    text-align: right; word-break: break-all;
+  }
+  .status-pending-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #d97706; font-weight: 600;
+  }
+  .pending-actions {
+    display: flex; gap: 12px; justify-content: center;
+    margin-top: 22px; flex-wrap: wrap;
+  }
 
-    .rejected-icon { filter: grayscale(20%); }
-    .auth-title {
-        font-size: 1.55rem; font-weight: 800; color: #f1f5f9;
-        text-align: center; margin-bottom: 8px;
-    }
+  /* ── Modal ─────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(15,23,42,0.3); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px; padding: 30px;
+    width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    animation: cardIn 0.3s ease forwards;
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .modal-header h3 { font-size: 1.1rem; font-weight: 700; color: #0f172a; }
+  .modal-close {
+    background: none; border: none; color: #94a3b8;
+    font-size: 1.3rem; cursor: pointer; padding: 0 4px;
+    line-height: 1; transition: color 0.2s;
+  }
+  .modal-close:hover { color: #374151; }
 
-    /* Modal */
-    .modal-overlay {
-        position: fixed; inset: 0; z-index: 1000;
-        background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
-        display: flex; align-items: center; justify-content: center;
-        padding: 24px;
-    }
-    .modal-card {
-        background: #1e293b;
-        border: 1px solid rgba(148,163,184,0.12);
-        border-radius: 20px; padding: 32px;
-        width: 100%; max-width: 420px;
-        box-shadow: 0 24px 64px rgba(0,0,0,0.5);
-        animation: cardIn 0.3s ease forwards;
-    }
-    .modal-header {
-        display: flex; justify-content: space-between; align-items: center;
-        margin-bottom: 12px;
-    }
-    .modal-header h3 { font-size: 1.15rem; font-weight: 700; color: #f1f5f9; }
-    .modal-close {
-        background: none; border: none; color: #64748b;
-        font-size: 1.4rem; cursor: pointer; padding: 0 4px;
-        line-height: 1; transition: color 0.2s;
-    }
-    .modal-close:hover { color: #f1f5f9; }
+  /* ── Reset Success ─────────────────────────────────────── */
+  .reset-success { text-align: center; padding: 12px 0; }
+  .success-icon-sm {
+    font-size: 2.5rem; margin-bottom: 12px;
+    color: #10b981;
+  }
+  .reset-success p { color: #64748b; font-size: 0.9rem; margin-bottom: 20px; }
 
-    .reset-success { text-align: center; padding: 12px 0; }
-    .success-icon-sm { font-size: 2.5rem; margin-bottom: 12px; }
-    .reset-success p { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+  /* ── Toast ─────────────────────────────────────────────── */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px;
+    z-index: 9999;
+    display: flex; flex-direction: column; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    display: flex; align-items: center; gap: 10px;
+    background: #ffffff; color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px; padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+    font-size: 0.875rem; font-weight: 500;
+    pointer-events: auto;
+    max-width: 340px; min-width: 220px;
+    animation: toastIn 0.3s ease forwards;
+  }
+  .toast i { flex-shrink: 0; font-size: 14px; }
+  @keyframes toastIn  { from{transform:translateX(110%);opacity:0;} to{transform:translateX(0);opacity:1;} }
+  @keyframes toastOut { from{transform:translateX(0);opacity:1;} to{transform:translateX(110%);opacity:0;} }
 
-    /* Toast container */
-    .toast-container {
-        position: fixed; bottom: 24px; right: 24px;
-        z-index: 9999;
-        display: flex; flex-direction: column; gap: 10px;
-        pointer-events: none;
-    }
-    .toast {
-        display: flex; align-items: center; gap: 10px;
-        background: #1e293b; color: #f1f5f9;
-        border: 1px solid rgba(148,163,184,0.15);
-        border-radius: 10px; padding: 14px 18px;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-        font-size: 0.875rem; font-weight: 500;
-        pointer-events: auto;
-        max-width: 360px; min-width: 240px;
-        animation: toastIn 0.3s ease forwards;
-    }
-    @keyframes toastIn  { from{transform:translateX(120%);opacity:0;} to{transform:translateX(0);opacity:1;} }
-    @keyframes toastOut { from{transform:translateX(0);opacity:1;} to{transform:translateX(120%);opacity:0;} }
-
-    /* Responsive */
-    @media (max-width: 480px) {
-        .auth-card { padding: 28px 24px; }
-        .form-row  { grid-template-columns: 1fr; gap: 0; }
-        .system-badges { display: none; }
-    }
-    </style>
+  /* ── Responsive ────────────────────────────────────────── */
+  @media (max-width: 480px) {
+    .auth-card { padding: 28px 20px; }
+    .form-row  { grid-template-columns: 1fr; gap: 0; }
+    .system-badges { display: none; }
+    .auth-container { padding: 16px 12px; }
+  }
+  @media (max-width: 360px) {
+    .auth-card { padding: 22px 16px; border-radius: 16px; }
+  }
+  </style>
 </head>
 
 <body>
 
-    <!-- BACKGROUND -->
-    <div class="auth-bg"><div class="auth-bg-grid"></div></div>
+  <!-- Background -->
+  <div class="auth-bg"><div class="auth-bg-grid"></div></div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         SCREEN 1 — LOADING
-         ═══════════════════════════════════════════════════════════ -->
-    <div id="screen-loading" class="screen screen-loading">
-        <div class="loading-content">
-            <div class="loading-logo-icon">⚡</div>
-            <div class="loading-logo-name">AlphaVault Quant</div>
-            <div class="loading-logo-sub">v5.0.9 — Verifying access</div>
-            <div class="loading-spinner"></div>
-        </div>
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 1 — LOADING
+       ══════════════════════════════════════════════════ -->
+  <div id="screen-loading" class="screen screen-loading">
+    <div class="loading-content">
+      <div class="loading-logo-wrap">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault Quant"
+             onerror="this.parentNode.style.background='linear-gradient(135deg,#3b82f6,#6366f1)';this.style.display='none'">
+      </div>
+      <div class="loading-logo-name">AlphaVault Quant</div>
+      <div class="loading-logo-sub">v5.0.9 — Verifying access</div>
+      <div class="loading-spinner"></div>
     </div>
+  </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         SCREEN 2 — AUTH FORMS
-         ═══════════════════════════════════════════════════════════ -->
-    <div id="screen-auth" class="screen auth-container hidden">
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 2 — AUTH FORMS
+       ══════════════════════════════════════════════════ -->
+  <div id="screen-auth" class="screen auth-container hidden">
 
-        <div class="auth-card">
+    <div class="auth-card">
 
-            <!-- Logo -->
-            <div class="auth-logo">
-                <div class="auth-logo-icon">⚡</div>
-                <div class="auth-logo-text">
-                    <span class="auth-logo-name">AlphaVault Quant</span>
-                    <span class="auth-logo-sub">Private Dashboard</span>
-                </div>
-            </div>
-
-            <!-- Tabs -->
-            <div class="auth-tabs" role="tablist">
-                <button class="auth-tab active" id="tab-login"  role="tab" aria-selected="true"  onclick="switchTab('login')">Sign In</button>
-                <button class="auth-tab"        id="tab-signup" role="tab" aria-selected="false" onclick="switchTab('signup')">Request Access</button>
-            </div>
-
-            <!-- ─── LOGIN ──────────────────────────────────────── -->
-            <div id="form-login" class="auth-form-section">
-
-                <p class="auth-subtitle">Access the AlphaVault Quant trading dashboard.</p>
-
-                <!-- Google -->
-                <button type="button" class="btn-google" id="googleLoginBtn">
-                    <svg width="18" height="18" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Continue with Google
-                </button>
-
-                <div class="auth-divider"><span>or with email</span></div>
-
-                <form id="loginForm" novalidate>
-
-                    <div class="form-group">
-                        <label class="form-label" for="loginEmail">Email</label>
-                        <input type="email" id="loginEmail" class="form-input" placeholder="your@email.com" autocomplete="email" required>
-                        <span class="form-error" id="loginEmailError"></span>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="loginPassword">Password</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
-                            <button type="button" class="password-toggle" onclick="togglePwd('loginPassword', this)" aria-label="Toggle password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <span class="form-error" id="loginPasswordError"></span>
-                    </div>
-
-                    <div class="form-options">
-                        <a href="#" class="forgot-link" onclick="showResetModal(); return false;">Forgot password?</a>
-                    </div>
-
-                    <button type="submit" class="btn-primary" id="loginBtn">
-                        <span class="btn-text"><i class="fas fa-sign-in-alt"></i> &nbsp;Sign In</span>
-                        <div class="btn-spinner hidden"></div>
-                    </button>
-
-                </form>
-
-                <p class="form-footer-text">
-                    No account? <a href="#" onclick="switchTab('signup'); return false;">Request access →</a>
-                </p>
-
-            </div>
-
-            <!-- ─── SIGNUP ─────────────────────────────────────── -->
-            <div id="form-signup" class="auth-form-section hidden">
-
-                <p class="auth-subtitle">
-                    Request access to the private trading dashboard.<br>
-                    <span class="badge-approval">Manual approval required</span>
-                </p>
-
-                <!-- Google -->
-                <button type="button" class="btn-google" id="googleSignupBtn">
-                    <svg width="18" height="18" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                    Request access with Google
-                </button>
-
-                <div class="auth-divider"><span>or with email</span></div>
-
-                <form id="signupForm" novalidate>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label" for="signupFirstName">First name</label>
-                            <input type="text" id="signupFirstName" class="form-input" placeholder="John" autocomplete="given-name" required>
-                            <span class="form-error" id="signupFirstNameError"></span>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="signupLastName">Last name</label>
-                            <input type="text" id="signupLastName" class="form-input" placeholder="Doe" autocomplete="family-name" required>
-                            <span class="form-error" id="signupLastNameError"></span>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="signupEmail">Email</label>
-                        <input type="email" id="signupEmail" class="form-input" placeholder="your@email.com" autocomplete="email" required>
-                        <span class="form-error" id="signupEmailError"></span>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="signupPassword">Password</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="signupPassword" class="form-input" placeholder="••••••••" autocomplete="new-password" required>
-                            <button type="button" class="password-toggle" onclick="togglePwd('signupPassword', this)" aria-label="Toggle password">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </div>
-                        <div class="strength-meter">
-                            <div class="strength-bars">
-                                <div class="strength-bar" id="sb1"></div>
-                                <div class="strength-bar" id="sb2"></div>
-                                <div class="strength-bar" id="sb3"></div>
-                                <div class="strength-bar" id="sb4"></div>
-                            </div>
-                            <span class="strength-label" id="strengthLabel">—</span>
-                        </div>
-                        <span class="form-error" id="signupPasswordError"></span>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="signupReason">Why do you need access? <span style="color:#475569;font-weight:400;">(optional)</span></label>
-                        <textarea id="signupReason" class="form-input form-textarea" placeholder="Brief description of your use case..." rows="2"></textarea>
-                    </div>
-
-                    <div class="info-banner">
-                        <i class="fas fa-shield-alt"></i>
-                        <div>
-                            <strong>Access requires admin approval</strong>
-                            <p>Your request will be reviewed by raphnardone@gmail.com before access is granted. You'll be notified automatically.</p>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-primary" id="signupBtn">
-                        <span class="btn-text"><i class="fas fa-paper-plane"></i> &nbsp;Send Access Request</span>
-                        <div class="btn-spinner hidden"></div>
-                    </button>
-
-                </form>
-
-                <p class="form-footer-text">
-                    Already have an account? <a href="#" onclick="switchTab('login'); return false;">Sign in →</a>
-                </p>
-
-            </div>
-
+      <!-- Logo -->
+      <div class="auth-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault" class="auth-logo-img"
+             onerror="this.style.display='none'">
+        <div class="auth-logo-text">
+          <span class="auth-logo-name">AlphaVault Quant</span>
+          <span class="auth-logo-sub">Private Dashboard</span>
         </div>
+      </div>
 
-        <!-- System info badges -->
-        <div class="system-badges">
-            <div class="sys-badge"><span class="dot dot-green"></span>Oracle A1 — Online</div>
-            <div class="sys-badge"><span class="dot dot-blue"></span>13/13 Agents</div>
-            <div class="sys-badge"><span class="dot dot-yellow"></span>BULL 80%</div>
-            <div class="sys-badge"><span class="dot dot-green"></span>NetLiq ~$1.02M</div>
-        </div>
+      <!-- Tabs -->
+      <div class="auth-tabs" role="tablist">
+        <button class="auth-tab active" id="tab-login" role="tab"
+                aria-selected="true" onclick="switchTab('login')">
+          Sign In
+        </button>
+        <button class="auth-tab" id="tab-signup" role="tab"
+                aria-selected="false" onclick="switchTab('signup')">
+          Request Access
+        </button>
+      </div>
 
-    </div>
+      <!-- LOGIN -->
+      <div id="form-login" class="auth-form-section">
+        <p class="auth-subtitle">Access the AlphaVault Quant trading dashboard.</p>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         SCREEN 3 — PENDING APPROVAL
-         ═══════════════════════════════════════════════════════════ -->
-    <div id="screen-pending" class="screen auth-container hidden">
+        <button type="button" class="btn-google" id="googleLoginBtn">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Continue with Google
+        </button>
 
-        <div class="auth-card status-card">
+        <div class="auth-divider"><span>or with email</span></div>
 
-            <div class="auth-logo" style="margin-bottom:24px;">
-                <div class="auth-logo-icon">⚡</div>
-                <div class="auth-logo-text">
-                    <span class="auth-logo-name">AlphaVault Quant</span>
-                    <span class="auth-logo-sub">Access Request</span>
-                </div>
+        <form id="loginForm" novalidate>
+          <div class="form-group">
+            <label class="form-label" for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" class="form-input"
+                   placeholder="you@example.com" autocomplete="email" required>
+            <span class="form-error" id="loginEmailError"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="loginPassword">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="loginPassword" class="form-input"
+                     placeholder="••••••••" autocomplete="current-password" required>
+              <button type="button" class="password-toggle"
+                      onclick="togglePwd('loginPassword', this)"
+                      aria-label="Toggle password visibility">
+                <i class="fas fa-eye"></i>
+              </button>
             </div>
+            <span class="form-error" id="loginPasswordError"></span>
+          </div>
+          <div class="form-options">
+            <a href="#" class="forgot-link"
+               onclick="showResetModal(); return false;">Forgot password?</a>
+          </div>
+          <button type="submit" class="btn-primary" id="loginBtn">
+            <span class="btn-text">
+              <i class="fas fa-arrow-right-to-bracket"></i>&nbsp; Sign In
+            </span>
+            <div class="btn-spinner hidden"></div>
+          </button>
+        </form>
 
-            <div class="status-icon">⏳</div>
-            <h2 class="auth-title">Request Pending</h2>
-            <p class="auth-subtitle">
-                Your access request has been submitted and is awaiting administrator approval.
-            </p>
+        <p class="form-footer-text">
+          No account?
+          <a href="#" onclick="switchTab('signup'); return false;">Request access &rarr;</a>
+        </p>
+      </div>
 
-            <div class="status-detail-box">
-                <div class="status-row">
-                    <span class="status-label">Email</span>
-                    <span class="status-value" id="pendingEmail">—</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Name</span>
-                    <span class="status-value" id="pendingName">—</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Status</span>
-                    <span class="status-value status-pending-badge">
-                        <span class="dot dot-yellow blink"></span>
-                        Pending Approval
-                    </span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Submitted</span>
-                    <span class="status-value" id="pendingDate">—</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Reviewer</span>
-                    <span class="status-value" style="color:#3b82f6;">raphnardone@gmail.com</span>
-                </div>
+      <!-- SIGNUP -->
+      <div id="form-signup" class="auth-form-section hidden">
+        <p class="auth-subtitle">
+          Request access to the private trading dashboard.<br>
+          <span class="badge-approval">
+            <i class="fa-solid fa-lock" style="font-size:10px"></i>
+            Manual approval required
+          </span>
+        </p>
+
+        <button type="button" class="btn-google" id="googleSignupBtn">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Request access with Google
+        </button>
+
+        <div class="auth-divider"><span>or with email</span></div>
+
+        <form id="signupForm" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="signupFirstName">First name</label>
+              <input type="text" id="signupFirstName" class="form-input"
+                     placeholder="John" autocomplete="given-name" required>
+              <span class="form-error" id="signupFirstNameError"></span>
             </div>
-
-            <div class="info-banner info-banner-blue">
-                <i class="fas fa-sync-alt fa-spin" style="font-size:0.85rem;color:#3b82f6;"></i>
-                <div>
-                    <strong>Checking automatically every 30 seconds</strong>
-                    <p>You'll be redirected to the dashboard as soon as access is granted.</p>
-                </div>
+            <div class="form-group">
+              <label class="form-label" for="signupLastName">Last name</label>
+              <input type="text" id="signupLastName" class="form-input"
+                     placeholder="Doe" autocomplete="family-name" required>
+              <span class="form-error" id="signupLastNameError"></span>
             </div>
-
-            <div class="pending-actions">
-                <button class="btn-secondary" onclick="manualCheckApproval()">
-                    <i class="fas fa-sync-alt"></i> Check Now
-                </button>
-                <button class="btn-ghost" onclick="handleLogout()">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </button>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" class="form-input"
+                   placeholder="you@example.com" autocomplete="email" required>
+            <span class="form-error" id="signupEmailError"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signupPassword">Password</label>
+            <div class="password-wrapper">
+              <input type="password" id="signupPassword" class="form-input"
+                     placeholder="••••••••" autocomplete="new-password" required>
+              <button type="button" class="password-toggle"
+                      onclick="togglePwd('signupPassword', this)"
+                      aria-label="Toggle password visibility">
+                <i class="fas fa-eye"></i>
+              </button>
             </div>
+            <div class="strength-meter">
+              <div class="strength-bars">
+                <div class="strength-bar" id="sb1"></div>
+                <div class="strength-bar" id="sb2"></div>
+                <div class="strength-bar" id="sb3"></div>
+                <div class="strength-bar" id="sb4"></div>
+              </div>
+              <span class="strength-label" id="strengthLabel">—</span>
+            </div>
+            <span class="form-error" id="signupPasswordError"></span>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="signupReason">
+              Reason for access
+              <span style="color:#94a3b8;font-weight:400;">(optional)</span>
+            </label>
+            <textarea id="signupReason" class="form-input form-textarea"
+                      placeholder="Brief description of your use case…" rows="2"></textarea>
+          </div>
+          <div class="info-banner">
+            <i class="fas fa-shield-halved"></i>
+            <div>
+              <strong>Admin approval required</strong>
+              <p>Your request will be reviewed before access is granted. You will be notified by email.</p>
+            </div>
+          </div>
+          <button type="submit" class="btn-primary" id="signupBtn">
+            <span class="btn-text">
+              <i class="fas fa-paper-plane"></i>&nbsp; Send Access Request
+            </span>
+            <div class="btn-spinner hidden"></div>
+          </button>
+        </form>
 
-        </div>
+        <p class="form-footer-text">
+          Already have an account?
+          <a href="#" onclick="switchTab('login'); return false;">Sign in &rarr;</a>
+        </p>
+      </div>
 
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         SCREEN 4 — REJECTED
-         ═══════════════════════════════════════════════════════════ -->
-    <div id="screen-rejected" class="screen auth-container hidden">
-
-        <div class="auth-card status-card">
-
-            <div class="auth-logo" style="margin-bottom:24px;">
-                <div class="auth-logo-icon">⚡</div>
-                <div class="auth-logo-text">
-                    <span class="auth-logo-name">AlphaVault Quant</span>
-                    <span class="auth-logo-sub">Access Request</span>
-                </div>
-            </div>
-
-            <div class="status-icon rejected-icon">🚫</div>
-            <h2 class="auth-title">Access Denied</h2>
-            <p class="auth-subtitle">Your access request has been declined by the administrator.</p>
-
-            <div class="status-detail-box">
-                <div class="status-row">
-                    <span class="status-label">Decision</span>
-                    <span class="status-value" style="color:#ef4444;font-weight:700;">Rejected</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Reason</span>
-                    <span class="status-value" id="rejectionReason">No reason provided.</span>
-                </div>
-                <div class="status-row">
-                    <span class="status-label">Reviewed by</span>
-                    <span class="status-value" style="color:#3b82f6;">raphnardone@gmail.com</span>
-                </div>
-            </div>
-
-            <div class="pending-actions">
-                <button class="btn-ghost" onclick="handleLogout()">
-                    <i class="fas fa-sign-out-alt"></i> Sign Out
-                </button>
-            </div>
-
-        </div>
-
+    <!-- System status -->
+    <div class="system-badges">
+      <div class="sys-badge">
+        <span class="dot dot-green blink"></span>
+        Oracle A1 — Online
+      </div>
+      <div class="sys-badge">
+        <span class="dot dot-blue"></span>
+        13/13 Agents
+      </div>
+      <div class="sys-badge">
+        <span class="dot dot-yellow"></span>
+        BULL 80%
+      </div>
+      <div class="sys-badge">
+        <span class="dot dot-green"></span>
+        NetLiq ~$1.02M
+      </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
-         MODAL — RESET PASSWORD
-         ═══════════════════════════════════════════════════════════ -->
-    <div id="resetModal" class="modal-overlay hidden" onclick="if(event.target===this) hideResetModal()">
-        <div class="modal-card">
-            <div class="modal-header">
-                <h3>Reset Password</h3>
-                <button class="modal-close" onclick="hideResetModal()" aria-label="Close">×</button>
-            </div>
-            <p style="color:#94a3b8;font-size:0.875rem;margin-bottom:20px;line-height:1.5;">
-                Enter your email address and we'll send a password reset link.
-            </p>
-            <form id="resetForm" novalidate>
-                <div class="form-group">
-                    <label class="form-label" for="resetEmail">Email</label>
-                    <input type="email" id="resetEmail" class="form-input" placeholder="your@email.com" required>
-                    <span class="form-error" id="resetEmailError"></span>
-                </div>
-                <button type="submit" class="btn-primary" id="resetBtn">
-                    <span class="btn-text"><i class="fas fa-paper-plane"></i> &nbsp;Send Reset Link</span>
-                    <div class="btn-spinner hidden"></div>
-                </button>
-            </form>
-            <div id="resetSuccess" class="reset-success hidden">
-                <div class="success-icon-sm">✅</div>
-                <p>Check your inbox! A reset link has been sent.</p>
-                <button class="btn-secondary" onclick="hideResetModal()">Close</button>
-            </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 3 — PENDING APPROVAL
+       ══════════════════════════════════════════════════ -->
+  <div id="screen-pending" class="screen auth-container hidden">
+    <div class="auth-card status-card">
+
+      <div class="auth-logo" style="margin-bottom:24px; justify-content:center;">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault" class="auth-logo-img"
+             onerror="this.style.display='none'">
+        <div class="auth-logo-text">
+          <span class="auth-logo-name">AlphaVault Quant</span>
+          <span class="auth-logo-sub">Access Request</span>
         </div>
+      </div>
+
+      <div class="status-icon-wrap status-icon-pending">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+      </div>
+
+      <h2 class="auth-title">Request Pending</h2>
+      <p class="auth-subtitle">
+        Your access request has been submitted and is awaiting administrator approval.
+      </p>
+
+      <div class="status-detail-box">
+        <div class="status-row">
+          <span class="status-label">Email</span>
+          <span class="status-value" id="pendingEmail">—</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Name</span>
+          <span class="status-value" id="pendingName">—</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Status</span>
+          <span class="status-value status-pending-badge">
+            <span class="dot dot-yellow blink"></span>
+            Pending Approval
+          </span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Submitted</span>
+          <span class="status-value" id="pendingDate">—</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Reviewer</span>
+          <span class="status-value" style="color:#3b82f6;font-weight:600;">
+            raphnardone@gmail.com
+          </span>
+        </div>
+      </div>
+
+      <div class="info-banner">
+        <i class="fas fa-rotate fa-spin" style="font-size:12px;color:#3b82f6;"></i>
+        <div>
+          <strong>Checking automatically every 30 seconds</strong>
+          <p>You will be redirected to the dashboard as soon as access is granted.</p>
+        </div>
+      </div>
+
+      <div class="pending-actions">
+        <button class="btn-secondary" onclick="manualCheckApproval()">
+          <i class="fas fa-rotate"></i> Check Now
+        </button>
+        <button class="btn-ghost" onclick="handleLogout()">
+          <i class="fas fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
+
     </div>
+  </div>
 
-    <!-- TOAST CONTAINER -->
-    <div id="toastContainer" class="toast-container"></div>
+  <!-- ══════════════════════════════════════════════════
+       SCREEN 4 — REJECTED
+       ══════════════════════════════════════════════════ -->
+  <div id="screen-rejected" class="screen auth-container hidden">
+    <div class="auth-card status-card">
 
-    <!-- ═══════════════════════════════════════════════════════════
-         JAVASCRIPT — AlphaVault Quant Auth System
-         ═══════════════════════════════════════════════════════════ -->
-    <script>
-    'use strict';
+      <div class="auth-logo" style="margin-bottom:24px; justify-content:center;">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault" class="auth-logo-img"
+             onerror="this.style.display='none'">
+        <div class="auth-logo-text">
+          <span class="auth-logo-name">AlphaVault Quant</span>
+          <span class="auth-logo-sub">Access Request</span>
+        </div>
+      </div>
 
-    // ────────────────────────────────────────────────────────────────────
-    // 0. FIREBASE CONFIG — Chargée depuis assets/js/firebase-config.js
-    //    (généré par GitHub Actions à partir des Repository Secrets)
-    //    En local : crée docs/assets/js/firebase-config.js manuellement
-    //    et ajoute-le dans .gitignore
-    // ────────────────────────────────────────────────────────────────────
-    let FIREBASE_CONFIG = null;
+      <div class="status-icon-wrap status-icon-rejected">
+        <i class="fa-solid fa-ban"></i>
+      </div>
 
-    // ── Constants ────────────────────────────────────────────────────────
-    const ADMIN_EMAIL      = "raphnardone@gmail.com";
-    const QUANT_USERS_COL  = "quant_users";
-    const APPROVAL_COL     = "quant_approval_requests";
-    const DASHBOARD_URL    = "dashboard.html";
-    const POLL_MS          = 30_000;
+      <h2 class="auth-title">Access Denied</h2>
+      <p class="auth-subtitle">
+        Your access request has been declined by the administrator.
+      </p>
 
-    // ────────────────────────────────────────────────────────────────────
-    // 1. FIREBASE INIT
-    // ────────────────────────────────────────────────────────────────────
-    // APRÈS — initFirebase attend la config Cloudflare ET met à jour FIREBASE_CONFIG
-    let db, auth, googleProvider;
+      <div class="status-detail-box">
+        <div class="status-row">
+          <span class="status-label">Decision</span>
+          <span class="status-value" style="color:#dc2626;font-weight:700;">Rejected</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Reason</span>
+          <span class="status-value" id="rejectionReason">No reason provided.</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Reviewed by</span>
+          <span class="status-value" style="color:#3b82f6;font-weight:600;">
+            raphnardone@gmail.com
+          </span>
+        </div>
+      </div>
 
-    async function initFirebase() {
-        // Attendre que Cloudflare serve la config (Option B)
-        if (!window._firebaseConfigReady && window._firebaseConfigPromise) {
-            await window._firebaseConfigPromise;
-        }
+      <div class="pending-actions">
+        <button class="btn-ghost" onclick="handleLogout()">
+          <i class="fas fa-right-from-bracket"></i> Sign Out
+        </button>
+      </div>
 
-        // Mettre à jour FIREBASE_CONFIG après le fetch Cloudflare
-        FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+    </div>
+  </div>
 
-        if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
-            console.error('❌ FIREBASE_CONFIG manquant après chargement Cloudflare');
-            showToast('error', 'Firebase config missing. Check Cloudflare Worker.');
-            return false;
-        }
+  <!-- ══════════════════════════════════════════════════
+       MODAL — RESET PASSWORD
+       ══════════════════════════════════════════════════ -->
+  <div id="resetModal" class="modal-overlay hidden"
+       onclick="if(event.target===this) hideResetModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Reset Password</h3>
+        <button class="modal-close" onclick="hideResetModal()" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <p style="color:#64748b;font-size:0.875rem;margin-bottom:20px;line-height:1.55;">
+        Enter your email address and we will send you a password reset link.
+      </p>
+      <form id="resetForm" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="resetEmail">Email</label>
+          <input type="email" id="resetEmail" class="form-input"
+                 placeholder="you@example.com" required>
+          <span class="form-error" id="resetEmailError"></span>
+        </div>
+        <button type="submit" class="btn-primary" id="resetBtn">
+          <span class="btn-text">
+            <i class="fas fa-paper-plane"></i>&nbsp; Send Reset Link
+          </span>
+          <div class="btn-spinner hidden"></div>
+        </button>
+      </form>
+      <div id="resetSuccess" class="reset-success hidden">
+        <div class="success-icon-sm">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <p>Check your inbox — a reset link has been sent.</p>
+        <button class="btn-secondary" onclick="hideResetModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
-        try {
-            if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-            db             = firebase.firestore();
-            auth           = firebase.auth();
-            googleProvider = new firebase.auth.GoogleAuthProvider();
-            googleProvider.addScope('email');
-            googleProvider.addScope('profile');
-            console.log('%c✅ Firebase initialized', 'color:#10b981;font-weight:bold;');
-            return true;
-        } catch (err) {
-            console.error('❌ Firebase init failed:', err);
-            showToast('error', 'Service unavailable. Please try again later.');
-            return false;
-        }
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- ══════════════════════════════════════════════════
+       JAVASCRIPT
+       ══════════════════════════════════════════════════ -->
+  <script>
+  'use strict';
+
+  let FIREBASE_CONFIG = null;
+
+  const ADMIN_EMAIL     = 'raphnardone@gmail.com';
+  const QUANT_USERS_COL = 'quant_users';
+  const APPROVAL_COL    = 'quant_approval_requests';
+  const DASHBOARD_URL   = 'dashboard.html';
+  const POLL_MS         = 30_000;
+
+  let db, auth, googleProvider;
+  let currentUser  = null;
+  let pollTimer    = null;
+  let isProcessing = false;
+
+  // ── Firebase Init ─────────────────────────────────────────
+  async function initFirebase() {
+    if (!window._firebaseConfigReady && window._firebaseConfigPromise) {
+      await window._firebaseConfigPromise;
     }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 2. STATE
-    // ────────────────────────────────────────────────────────────────────
-    let currentUser  = null;
-    let pollTimer    = null;
-    let isProcessing = false;
-
-    // ────────────────────────────────────────────────────────────────────
-    // 3. SCREEN MANAGEMENT
-    // ────────────────────────────────────────────────────────────────────
-    const ALL_SCREENS = ['screen-loading','screen-auth','screen-pending','screen-rejected'];
-
-    function showScreen(id) {
-        ALL_SCREENS.forEach(s => {
-            const el = document.getElementById(s);
-            if (el) el.classList.toggle('hidden', s !== id);
-        });
-        console.log('📺 Screen →', id);
+    FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
+      showToast('error', 'Firebase configuration error. Please try again.');
+      return false;
     }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 4. AUTH STATE LISTENER
-    // ────────────────────────────────────────────────────────────────────
-    function startAuthListener() {
-        auth.onAuthStateChanged(async (user) => {
-            clearPollTimer();
-            if (!user) {
-                currentUser = null;
-                showScreen('screen-auth');
-                return;
-            }
-            currentUser = user;
-            console.log('👤 Authenticated:', user.email);
-            await checkUserAccess(user);
-        });
+    try {
+      if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+      db             = firebase.firestore();
+      auth           = firebase.auth();
+      googleProvider = new firebase.auth.GoogleAuthProvider();
+      googleProvider.addScope('email');
+      googleProvider.addScope('profile');
+      return true;
+    } catch (err) {
+      console.error('Firebase init failed:', err);
+      showToast('error', 'Service unavailable. Please try again later.');
+      return false;
     }
+  }
 
-    // ────────────────────────────────────────────────────────────────────
-    // 5. CHECK USER ACCESS → quant_users collection
-    // ────────────────────────────────────────────────────────────────────
-    async function checkUserAccess(user) {
-        try {
+  // ── Screens ───────────────────────────────────────────────
+  const ALL_SCREENS = [
+    'screen-loading','screen-auth','screen-pending','screen-rejected'
+  ];
+  function showScreen(id) {
+    ALL_SCREENS.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.classList.toggle('hidden', s !== id);
+    });
+  }
 
-            // ── ADMIN : accès immédiat, bypass pending ────────────────────
-            if (user.email === ADMIN_EMAIL) {
-                console.log('%c👑 Admin detected — auto-approving access',
-                    'background:#eab308;color:#000;padding:3px 8px;border-radius:4px;font-weight:bold;');
+  // ── Auth Listener ─────────────────────────────────────────
+  function startAuthListener() {
+    auth.onAuthStateChanged(async (user) => {
+      clearPollTimer();
+      if (!user) { currentUser = null; showScreen('screen-auth'); return; }
+      currentUser = user;
+      await checkUserAccess(user);
+    });
+  }
 
-                await db.collection(QUANT_USERS_COL).doc(user.uid).set({
-                    uid:          user.uid,
-                    email:        user.email,
-                    displayName:  user.displayName || 'Admin',
-                    firstName:    user.displayName?.split(' ')[0] || 'Admin',
-                    lastName:     user.displayName?.split(' ').slice(1).join(' ') || '',
-                    photoURL:     user.photoURL || '',
-                    status:       'approved',
-                    role:         'admin',
-                    signupMethod: 'admin',
-                    createdAt:    firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt:    firebase.firestore.FieldValue.serverTimestamp(),
-                    lastLoginAt:  firebase.firestore.FieldValue.serverTimestamp()
-                }, { merge: true });
-
-                showToast('success', '👑 Admin access granted. Redirecting...');
-                setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
-                return;
-            }
-
-            // ── USER NORMAL : vérifier quant_users ───────────────────────
-            const snap = await db.collection(QUANT_USERS_COL).doc(user.uid).get();
-
-            if (!snap.exists) {
-                // Firebase Auth existe mais pas de doc quant_users
-                // → créer le doc pending (cas Google ou user existant)
-                console.log('⚠ No quant_users doc found → creating pending request');
-                await createQuantUser(user, {
-                    signupMethod: user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email'
-                }, 'pending_approval');
-                showPendingScreen(user, { createdAt: { toDate: () => new Date() } });
-                startPollTimer();
-                return;
-            }
-
-            const data   = snap.data();
-            const status = data.status;
-            console.log('📊 quant_users status:', status);
-
-            switch (status) {
-                case 'approved':
-                    showToast('success', `Welcome, ${user.displayName || user.email}! Redirecting...`);
-                    await db.collection(QUANT_USERS_COL).doc(user.uid).update({
-                        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
-                    break;
-
-                case 'pending_approval':
-                    showPendingScreen(user, data);
-                    startPollTimer();
-                    break;
-
-                case 'rejected':
-                    showRejectedScreen(data);
-                    break;
-
-                default:
-                    console.warn('⚠ Unknown status:', status);
-                    showPendingScreen(user, data);
-                    startPollTimer();
-            }
-
-        } catch (err) {
-            console.error('❌ checkUserAccess error:', err);
-            showToast('error', 'Unable to verify access. Please try again.');
-            showScreen('screen-auth');
-        }
-    }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 6. PENDING / REJECTED SCREENS
-    // ────────────────────────────────────────────────────────────────────
-    function showPendingScreen(user, data = {}) {
-        const emailEl = document.getElementById('pendingEmail');
-        const nameEl  = document.getElementById('pendingName');
-        const dateEl  = document.getElementById('pendingDate');
-
-        if (emailEl) emailEl.textContent = user.email || '—';
-        if (nameEl)  nameEl.textContent  = user.displayName || data.displayName || '—';
-        if (dateEl) {
-            const ts = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
-            dateEl.textContent = ts.toLocaleString('en-US', {
-                year:'numeric', month:'short', day:'numeric',
-                hour:'2-digit', minute:'2-digit'
-            });
-        }
-        showScreen('screen-pending');
-    }
-
-    function showRejectedScreen(data = {}) {
-        const el = document.getElementById('rejectionReason');
-        if (el) el.textContent = data.rejectionReason || 'No reason provided.';
-        showScreen('screen-rejected');
-    }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 7. POLLING — Auto-check every 30s
-    // ────────────────────────────────────────────────────────────────────
-    function startPollTimer() {
-        clearPollTimer();
-        pollTimer = setInterval(async () => {
-            if (!currentUser) { clearPollTimer(); return; }
-            console.log('🔄 Polling approval status...');
-            try {
-                const snap = await db.collection(QUANT_USERS_COL).doc(currentUser.uid).get();
-                if (!snap.exists) return;
-                const { status } = snap.data();
-                if (status === 'approved') {
-                    clearPollTimer();
-                    showToast('success', '🎉 Access granted! Redirecting to dashboard...');
-                    setTimeout(() => { window.location.href = DASHBOARD_URL; }, 1200);
-                } else if (status === 'rejected') {
-                    clearPollTimer();
-                    showRejectedScreen(snap.data());
-                }
-            } catch (e) { /* silent */ }
-        }, POLL_MS);
-    }
-
-    function clearPollTimer() {
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-    }
-
-    async function manualCheckApproval() {
-        if (!currentUser) return;
-        showToast('info', 'Checking approval status...');
-        try {
-            const snap = await db.collection(QUANT_USERS_COL).doc(currentUser.uid).get();
-            if (!snap.exists) { showToast('info', 'Request not found.'); return; }
-            const { status } = snap.data();
-            if (status === 'approved') {
-                clearPollTimer();
-                showToast('success', '🎉 Access granted! Redirecting...');
-                setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
-            } else if (status === 'rejected') {
-                clearPollTimer();
-                showRejectedScreen(snap.data());
-            } else {
-                showToast('info', 'Still pending. The admin will review your request shortly.');
-            }
-        } catch (e) {
-            showToast('error', 'Error checking status. Try again.');
-        }
-    }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 8. CREATE QUANT USER
-    // ────────────────────────────────────────────────────────────────────
-    async function createQuantUser(user, extra = {}, status = 'pending_approval') {
-        const now      = firebase.firestore.FieldValue.serverTimestamp();
-        const fullName = `${extra.firstName || ''} ${extra.lastName || ''}`.trim()
-                        || user.displayName || user.email;
-
-        const userData = {
-            uid:          user.uid,
-            email:        user.email,
-            displayName:  fullName,
-            firstName:    extra.firstName || user.displayName?.split(' ')[0] || '',
-            lastName:     extra.lastName  || user.displayName?.split(' ').slice(1).join(' ') || '',
-            photoURL:     user.photoURL   || '',
-            reason:       extra.reason    || '',
-            status,
-            createdAt:    now,
-            updatedAt:    now,
-            lastLoginAt:  now,
-            signupMethod: extra.signupMethod || 'email',
-            metadata: {
-                userAgent: navigator.userAgent,
-                language:  navigator.language,
-                timezone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
-                origin:    window.location.origin
-            }
-        };
-
-        await db.collection(QUANT_USERS_COL).doc(user.uid).set(userData, { merge: true });
-        console.log('✅ quant_users document written');
-
-        await db.collection(APPROVAL_COL).doc(user.uid).set({
-            uid:          user.uid,
-            email:        user.email,
-            displayName:  fullName,
-            reason:       extra.reason    || '',
-            signupMethod: extra.signupMethod || 'email',
-            requestedAt:  now,
-            status:       'pending',
-            reviewedBy:   null,
-            reviewedAt:   null,
-            notes:        ''
+  // ── Check Access ──────────────────────────────────────────
+  async function checkUserAccess(user) {
+    try {
+      if (user.email === ADMIN_EMAIL) {
+        await db.collection(QUANT_USERS_COL).doc(user.uid).set({
+          uid: user.uid, email: user.email,
+          displayName: user.displayName || 'Admin',
+          firstName: user.displayName?.split(' ')[0] || 'Admin',
+          lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+          photoURL: user.photoURL || '',
+          status: 'approved', role: 'admin', signupMethod: 'admin',
+          createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+          updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+          lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
-        console.log('✅ quant_approval_requests document written');
+        showToast('success', 'Admin access granted. Redirecting…');
+        setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
+        return;
+      }
 
-        await notifyAdmin(userData);
-        return userData;
+      const snap = await db.collection(QUANT_USERS_COL).doc(user.uid).get();
+      if (!snap.exists) {
+        await createQuantUser(user, {
+          signupMethod: user.providerData?.[0]?.providerId === 'google.com'
+            ? 'google' : 'email'
+        }, 'pending_approval');
+        showPendingScreen(user, { createdAt: { toDate: () => new Date() } });
+        startPollTimer();
+        return;
+      }
+
+      const data   = snap.data();
+      const status = data.status;
+
+      switch (status) {
+        case 'approved':
+          showToast('success', `Welcome, ${user.displayName || user.email}! Redirecting…`);
+          await db.collection(QUANT_USERS_COL).doc(user.uid).update({
+            lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
+          break;
+        case 'pending_approval':
+          showPendingScreen(user, data);
+          startPollTimer();
+          break;
+        case 'rejected':
+          showRejectedScreen(data);
+          break;
+        default:
+          showPendingScreen(user, data);
+          startPollTimer();
+      }
+    } catch (err) {
+      console.error('checkUserAccess error:', err);
+      showToast('error', 'Unable to verify access. Please try again.');
+      showScreen('screen-auth');
     }
+  }
 
-    // ────────────────────────────────────────────────────────────────────
-    // 9. NOTIFY ADMIN
-    // ────────────────────────────────────────────────────────────────────
-    async function notifyAdmin(userData) {
-        console.log('%c📬 ADMIN NOTIFICATION — Calling Worker...',
-            'background:#3b82f6;color:white;padding:4px 10px;border-radius:4px;font-weight:bold;');
-        console.log('   Email  :', userData.email);
-        console.log('   Name   :', userData.displayName);
-        console.log('   UID    :', userData.uid);
-
-        try {
-            // Récupérer le Firebase ID Token de l'utilisateur courant
-            const user = auth.currentUser;
-            if (!user) {
-                console.warn('⚠ notifyAdmin: no currentUser → skip email');
-                return;
-            }
-
-            const idToken = await user.getIdToken(/* forceRefresh */ false);
-
-            const workerUrl = 'https://alphavault-gh-proxy.raphnardone.workers.dev/quant/notify-new-signup';
-
-            const res = await fetch(workerUrl, {
-                method:  'POST',
-                headers: {
-                    'Content-Type':  'application/json',
-                    'Authorization': `Bearer ${idToken}`,
-                },
-                body: JSON.stringify({
-                    uid:          userData.uid,
-                    email:        userData.email,
-                    firstName:    userData.firstName  || '',
-                    lastName:     userData.lastName   || '',
-                    signupMethod: userData.signupMethod || 'email',
-                }),
-            });
-
-            const result = await res.json().catch(() => ({}));
-
-            if (res.ok && result.success) {
-                console.log('%c✅ Admin email dispatched via Worker',
-                    'color:#10b981;font-weight:bold;');
-                console.log('   Worker response:', result.message);
-            } else {
-                console.warn('⚠ Worker returned error:', result.error || res.status);
-            }
-
-        } catch (err) {
-            // Non-bloquant : l'inscription continue même si l'email échoue
-            console.warn('⚠ Admin email failed (non-blocking):', err.message);
-        }
+  // ── Pending / Rejected Screens ────────────────────────────
+  function showPendingScreen(user, data = {}) {
+    const emailEl = document.getElementById('pendingEmail');
+    const nameEl  = document.getElementById('pendingName');
+    const dateEl  = document.getElementById('pendingDate');
+    if (emailEl) emailEl.textContent = user.email || '—';
+    if (nameEl)  nameEl.textContent  = user.displayName || data.displayName || '—';
+    if (dateEl) {
+      const ts = data.createdAt?.toDate ? data.createdAt.toDate() : new Date();
+      dateEl.textContent = ts.toLocaleString('en-US', {
+        year:'numeric', month:'short', day:'numeric',
+        hour:'2-digit', minute:'2-digit'
+      });
     }
+    showScreen('screen-pending');
+  }
 
-    // ────────────────────────────────────────────────────────────────────
-    // 10. LOGIN FORM
-    // ────────────────────────────────────────────────────────────────────
-    document.getElementById('loginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (isProcessing) return;
+  function showRejectedScreen(data = {}) {
+    const el = document.getElementById('rejectionReason');
+    if (el) el.textContent = data.rejectionReason || 'No reason provided.';
+    showScreen('screen-rejected');
+  }
 
-        const email    = document.getElementById('loginEmail').value.trim();
-        const password = document.getElementById('loginPassword').value;
-
-        clearErrors();
-
-        if (!isValidEmail(email)) { showFieldError('loginEmailError',    'Invalid email address'); return; }
-        if (!password)            { showFieldError('loginPasswordError', 'Password required');      return; }
-
-        setLoading('loginBtn', true);
-        isProcessing = true;
-
-        try {
-            await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-            await auth.signInWithEmailAndPassword(email, password);
-        } catch (err) {
-            console.error('❌ Login error:', err.code);
-            const msg = getErrorMessage(err.code);
-            if (['auth/user-not-found','auth/invalid-email','auth/invalid-credential'].includes(err.code)) {
-                showFieldError('loginEmailError', msg);
-            } else {
-                showFieldError('loginPasswordError', msg);
-            }
-            showToast('error', msg);
-        } finally {
-            setLoading('loginBtn', false);
-            isProcessing = false;
+  // ── Polling ───────────────────────────────────────────────
+  function startPollTimer() {
+    clearPollTimer();
+    pollTimer = setInterval(async () => {
+      if (!currentUser) { clearPollTimer(); return; }
+      try {
+        const snap = await db.collection(QUANT_USERS_COL).doc(currentUser.uid).get();
+        if (!snap.exists) return;
+        const { status } = snap.data();
+        if (status === 'approved') {
+          clearPollTimer();
+          showToast('success', 'Access granted! Redirecting to dashboard…');
+          setTimeout(() => { window.location.href = DASHBOARD_URL; }, 1200);
+        } else if (status === 'rejected') {
+          clearPollTimer();
+          showRejectedScreen(snap.data());
         }
-    });
+      } catch (e) { /* silent */ }
+    }, POLL_MS);
+  }
 
-    // ────────────────────────────────────────────────────────────────────
-    // 11. SIGNUP FORM — avec gestion email-already-in-use
-    // ────────────────────────────────────────────────────────────────────
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (isProcessing) return;
+  function clearPollTimer() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
 
-        const firstName = document.getElementById('signupFirstName').value.trim();
-        const lastName  = document.getElementById('signupLastName').value.trim();
-        const email     = document.getElementById('signupEmail').value.trim();
-        const password  = document.getElementById('signupPassword').value;
-        const reason    = document.getElementById('signupReason').value.trim();
-
-        clearErrors();
-
-        let hasErr = false;
-        if (!firstName)           { showFieldError('signupFirstNameError', 'Required');           hasErr = true; }
-        if (!lastName)            { showFieldError('signupLastNameError',  'Required');           hasErr = true; }
-        if (!isValidEmail(email)) { showFieldError('signupEmailError',     'Invalid email');      hasErr = true; }
-        if (password.length < 6)  { showFieldError('signupPasswordError',  'Min. 6 characters'); hasErr = true; }
-        if (hasErr) return;
-
-        setLoading('signupBtn', true);
-        isProcessing = true;
-
-        try {
-            const cred = await auth.createUserWithEmailAndPassword(email, password);
-            const user = cred.user;
-
-            await user.updateProfile({ displayName: `${firstName} ${lastName}` });
-            user.sendEmailVerification().catch(() => {});
-
-            await createQuantUser(user, {
-                firstName, lastName, reason, signupMethod: 'email'
-            }, 'pending_approval');
-
-            showToast('success', 'Request submitted! Waiting for admin approval.');
-            showPendingScreen(user, { createdAt: { toDate: () => new Date() } });
-            startPollTimer();
-
-        } catch (error) {
-              console.error('❌ Signup error:', error.code);
-
-              if (error.code === 'auth/email-already-in-use') {
-                  // ── Ce projet Firebase est partagé avec AlphaVault AI ──────
-                  // → L'email existe déjà dans Firebase Auth
-                  showFieldError('signupEmailError',
-                      'This email is already registered. Please sign in instead.');
-
-                  showToast('warning',
-                      'Account exists — switching to Sign In tab...');
-
-                  // Pré-remplir l'email dans le formulaire de login
-                  setTimeout(() => {
-                      switchTab('login');
-                      const loginEmailEl = document.getElementById('loginEmail');
-                      if (loginEmailEl) {
-                          loginEmailEl.value =
-                              document.getElementById('signupEmail').value;
-                          loginEmailEl.focus();
-                      }
-                  }, 1500);
-
-              } else if (error.code === 'auth/weak-password') {
-                  showFieldError('signupPasswordError',
-                      'Password must be at least 6 characters.');
-                  showToast('error', 'Password too weak.');
-
-              } else {
-                  showToast('error', getErrorMessage(error.code));
-              }
-          } finally {
-            setLoading('signupBtn', false);
-            isProcessing = false;
-        }
-    });
-
-    // ────────────────────────────────────────────────────────────────────
-    // 12. GOOGLE AUTH — avec admin auto-approval
-    // ────────────────────────────────────────────────────────────────────
-    async function handleGoogleAuth() {
-        if (isProcessing) return;
-        isProcessing = true;
-        try {
-            const result = await auth.signInWithPopup(googleProvider);
-            const user   = result.user;
-            const isNew  = result.additionalUserInfo?.isNewUser;
-
-            // Admin → onAuthStateChanged → checkUserAccess gère l'auto-approval
-            if (user.email === ADMIN_EMAIL) {
-                showToast('info', '👑 Admin detected. Checking access...');
-                // checkUserAccess sera appelé par onAuthStateChanged
-                return;
-            }
-
-            if (isNew) {
-                const profile = result.additionalUserInfo?.profile || {};
-                await createQuantUser(user, {
-                    firstName:    profile.given_name  || user.displayName?.split(' ')[0] || '',
-                    lastName:     profile.family_name || user.displayName?.split(' ').slice(1).join(' ') || '',
-                    signupMethod: 'google'
-                }, 'pending_approval');
-                showToast('success', 'Request submitted! Waiting for admin approval.');
-            } else {
-                showToast('info', 'Checking your access status...');
-            }
-            // onAuthStateChanged → checkUserAccess handle routing
-
-        } catch (err) {
-            if      (err.code === 'auth/popup-closed-by-user') showToast('info',  'Login cancelled.');
-            else if (err.code === 'auth/popup-blocked')        showToast('error', 'Popup blocked. Please allow popups.');
-            else                                               showToast('error', getErrorMessage(err.code));
-        } finally {
-            isProcessing = false;
-        }
-    }
-
-    // ────────────────────────────────────────────────────────────────────
-    // 13. LOGOUT
-    // ────────────────────────────────────────────────────────────────────
-    async function handleLogout() {
+  async function manualCheckApproval() {
+    if (!currentUser) return;
+    showToast('info', 'Checking approval status…');
+    try {
+      const snap = await db.collection(QUANT_USERS_COL).doc(currentUser.uid).get();
+      if (!snap.exists) { showToast('info', 'Request not found.'); return; }
+      const { status } = snap.data();
+      if (status === 'approved') {
         clearPollTimer();
-        try {
-            await auth.signOut();
-            currentUser = null;
-            showScreen('screen-auth');
-            switchTab('login');
-            showToast('info', 'Signed out successfully.');
-        } catch (err) {
-            console.error('❌ Logout error:', err);
+        showToast('success', 'Access granted! Redirecting…');
+        setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
+      } else if (status === 'rejected') {
+        clearPollTimer();
+        showRejectedScreen(snap.data());
+      } else {
+        showToast('info', 'Still pending. The admin will review your request shortly.');
+      }
+    } catch (e) {
+      showToast('error', 'Error checking status. Try again.');
+    }
+  }
+
+  // ── Create Quant User ─────────────────────────────────────
+  async function createQuantUser(user, extra = {}, status = 'pending_approval') {
+    const now      = firebase.firestore.FieldValue.serverTimestamp();
+    const fullName = `${extra.firstName || ''} ${extra.lastName || ''}`.trim()
+                   || user.displayName || user.email;
+    const userData = {
+      uid: user.uid, email: user.email,
+      displayName: fullName,
+      firstName: extra.firstName || user.displayName?.split(' ')[0] || '',
+      lastName:  extra.lastName  || user.displayName?.split(' ').slice(1).join(' ') || '',
+      photoURL:  user.photoURL   || '',
+      reason:    extra.reason    || '',
+      status,
+      createdAt:    now, updatedAt:   now, lastLoginAt: now,
+      signupMethod: extra.signupMethod || 'email',
+      metadata: {
+        userAgent: navigator.userAgent,
+        language:  navigator.language,
+        timezone:  Intl.DateTimeFormat().resolvedOptions().timeZone,
+        origin:    window.location.origin
+      }
+    };
+
+    await db.collection(QUANT_USERS_COL).doc(user.uid).set(userData, { merge: true });
+    await db.collection(APPROVAL_COL).doc(user.uid).set({
+      uid: user.uid, email: user.email, displayName: fullName,
+      reason: extra.reason || '', signupMethod: extra.signupMethod || 'email',
+      requestedAt: now, status: 'pending',
+      reviewedBy: null, reviewedAt: null, notes: ''
+    }, { merge: true });
+
+    await notifyAdmin(userData);
+    return userData;
+  }
+
+  // ── Notify Admin ──────────────────────────────────────────
+  async function notifyAdmin(userData) {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+      const idToken = await user.getIdToken(false);
+      const res = await fetch(
+        'https://alphavault-gh-proxy.raphnardone.workers.dev/quant/notify-new-signup',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            uid:          userData.uid,
+            email:        userData.email,
+            firstName:    userData.firstName  || '',
+            lastName:     userData.lastName   || '',
+            signupMethod: userData.signupMethod || 'email'
+          })
         }
+      );
+      const result = await res.json().catch(() => ({}));
+      if (res.ok && result.success) {
+        console.log('%c Admin notification sent', 'color:#10b981;font-weight:bold');
+      }
+    } catch (err) {
+      console.warn('Admin email failed (non-blocking):', err.message);
     }
+  }
 
-    // ────────────────────────────────────────────────────────────────────
-    // 14. PASSWORD RESET
-    // ────────────────────────────────────────────────────────────────────
-    document.getElementById('resetForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('resetEmail').value.trim();
-        if (!isValidEmail(email)) { showFieldError('resetEmailError', 'Invalid email address'); return; }
+  // ── Login Form ────────────────────────────────────────────
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isProcessing) return;
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    clearErrors();
+    if (!isValidEmail(email)) { showFieldError('loginEmailError', 'Invalid email address'); return; }
+    if (!password)             { showFieldError('loginPasswordError', 'Password required');  return; }
 
-        setLoading('resetBtn', true);
-        try {
-            await auth.sendPasswordResetEmail(email, {
-                url: window.location.origin + '/auth.html'
-            });
-            document.getElementById('resetForm').classList.add('hidden');
-            document.getElementById('resetSuccess').classList.remove('hidden');
-        } catch (err) {
-            showFieldError('resetEmailError', getErrorMessage(err.code));
-        } finally {
-            setLoading('resetBtn', false);
-        }
-    });
-
-    function showResetModal() {
-        document.getElementById('resetModal').classList.remove('hidden');
-        document.getElementById('resetForm').classList.remove('hidden');
-        document.getElementById('resetSuccess').classList.add('hidden');
-        document.getElementById('resetEmail').value = '';
-        document.getElementById('resetEmailError').textContent = '';
+    setLoading('loginBtn', true);
+    isProcessing = true;
+    try {
+      await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+      const msg = getErrorMessage(err.code);
+      if (['auth/user-not-found','auth/invalid-email','auth/invalid-credential']
+           .includes(err.code)) {
+        showFieldError('loginEmailError', msg);
+      } else {
+        showFieldError('loginPasswordError', msg);
+      }
+      showToast('error', msg);
+    } finally {
+      setLoading('loginBtn', false);
+      isProcessing = false;
     }
-    function hideResetModal() {
-        document.getElementById('resetModal').classList.add('hidden');
-    }
+  });
 
-    // ────────────────────────────────────────────────────────────────────
-    // 15. UI HELPERS
-    // ────────────────────────────────────────────────────────────────────
-    function switchTab(tab) {
-        const showLogin = tab === 'login';
-        document.getElementById('form-login').classList.toggle('hidden', !showLogin);
-        document.getElementById('form-signup').classList.toggle('hidden',  showLogin);
-        document.getElementById('tab-login').classList.toggle('active',   showLogin);
-        document.getElementById('tab-login').setAttribute('aria-selected', String(showLogin));
-        document.getElementById('tab-signup').classList.toggle('active',  !showLogin);
-        document.getElementById('tab-signup').setAttribute('aria-selected', String(!showLogin));
-        clearErrors();
-    }
+  // ── Signup Form ───────────────────────────────────────────
+  document.getElementById('signupForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (isProcessing) return;
+    const firstName = document.getElementById('signupFirstName').value.trim();
+    const lastName  = document.getElementById('signupLastName').value.trim();
+    const email     = document.getElementById('signupEmail').value.trim();
+    const password  = document.getElementById('signupPassword').value;
+    const reason    = document.getElementById('signupReason').value.trim();
+    clearErrors();
+    let hasErr = false;
+    if (!firstName)           { showFieldError('signupFirstNameError','Required');          hasErr=true; }
+    if (!lastName)            { showFieldError('signupLastNameError','Required');           hasErr=true; }
+    if (!isValidEmail(email)) { showFieldError('signupEmailError','Invalid email');         hasErr=true; }
+    if (password.length < 6)  { showFieldError('signupPasswordError','Min. 6 characters'); hasErr=true; }
+    if (hasErr) return;
 
-    function togglePwd(inputId, btn) {
-        const input = document.getElementById(inputId);
-        const icon  = btn.querySelector('i');
-        const isHidden = input.type === 'password';
-        input.type = isHidden ? 'text' : 'password';
-        icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-    }
-
-    function setLoading(btnId, loading) {
-        const btn = document.getElementById(btnId);
-        if (!btn) return;
-        btn.disabled = loading;
-        const text    = btn.querySelector('.btn-text');
-        const spinner = btn.querySelector('.btn-spinner');
-        if (text)    text.style.opacity = loading ? '0' : '1';
-        if (spinner) spinner.classList.toggle('hidden', !loading);
-    }
-
-    function showFieldError(id, msg) {
-        const el = document.getElementById(id);
-        if (el) { el.textContent = msg; el.classList.add('active'); }
-    }
-
-    function clearErrors() {
-        document.querySelectorAll('.form-error').forEach(el => {
-            el.textContent = ''; el.classList.remove('active');
-        });
-        document.querySelectorAll('.form-input.error').forEach(el => el.classList.remove('error'));
-    }
-
-    // Password strength
-    document.getElementById('signupPassword')?.addEventListener('input', (e) => {
-        const v = e.target.value;
-        let score = 0;
-        if (v.length >= 6)  score++;
-        if (v.length >= 10) score++;
-        if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
-        if (/[0-9]/.test(v)) score++;
-        if (/[^a-zA-Z0-9]/.test(v)) score++;
-
-        const colors = ['','#ef4444','#f59e0b','#3b82f6','#10b981','#10b981'];
-        const labels = ['—','Weak','Fair','Good','Strong','Very strong'];
-
-        for (let i = 1; i <= 4; i++) {
-            const bar = document.getElementById('sb' + i);
-            if (bar) bar.style.background = i <= score
-                ? (colors[score] || '#334155')
-                : 'rgba(148,163,184,0.12)';
-        }
-        const lbl = document.getElementById('strengthLabel');
-        if (lbl) { lbl.textContent = labels[score] || '—'; lbl.style.color = colors[score] || '#64748b'; }
-    });
-
-    // ────────────────────────────────────────────────────────────────────
-    // 16. TOAST
-    // ────────────────────────────────────────────────────────────────────
-    function showToast(type, message) {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const icons  = { success:'✅', error:'❌', info:'ℹ', warning:'⚠' };
-        const colors = { success:'#10b981', error:'#ef4444', info:'#3b82f6', warning:'#f59e0b' };
-
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
-        toast.innerHTML = `<span style="flex-shrink:0;">${icons[type] || 'ℹ'}</span><span>${message}</span>`;
-        container.appendChild(toast);
-
+    setLoading('signupBtn', true);
+    isProcessing = true;
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const user = cred.user;
+      await user.updateProfile({ displayName: `${firstName} ${lastName}` });
+      user.sendEmailVerification().catch(() => {});
+      await createQuantUser(user, { firstName, lastName, reason, signupMethod: 'email' },
+                            'pending_approval');
+      showToast('success', 'Request submitted! Waiting for admin approval.');
+      showPendingScreen(user, { createdAt: { toDate: () => new Date() } });
+      startPollTimer();
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        showFieldError('signupEmailError',
+          'This email is already registered. Please sign in instead.');
+        showToast('warning', 'Account exists — switching to Sign In…');
         setTimeout(() => {
-            toast.style.animation = 'toastOut 0.3s ease forwards';
-            setTimeout(() => toast.remove(), 320);
-        }, 4500);
+          switchTab('login');
+          const el = document.getElementById('loginEmail');
+          if (el) { el.value = email; el.focus(); }
+        }, 1500);
+      } else if (error.code === 'auth/weak-password') {
+        showFieldError('signupPasswordError', 'Password must be at least 6 characters.');
+      } else {
+        showToast('error', getErrorMessage(error.code));
+      }
+    } finally {
+      setLoading('signupBtn', false);
+      isProcessing = false;
     }
+  });
 
-    // ────────────────────────────────────────────────────────────────────
-    // 17. UTILITIES
-    // ────────────────────────────────────────────────────────────────────
-    function isValidEmail(email) {
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  // ── Google Auth ───────────────────────────────────────────
+  async function handleGoogleAuth() {
+    if (isProcessing) return;
+    isProcessing = true;
+    try {
+      const result = await auth.signInWithPopup(googleProvider);
+      const user   = result.user;
+      const isNew  = result.additionalUserInfo?.isNewUser;
+      if (user.email === ADMIN_EMAIL) {
+        showToast('info', 'Admin detected. Checking access…');
+        return;
+      }
+      if (isNew) {
+        const profile = result.additionalUserInfo?.profile || {};
+        await createQuantUser(user, {
+          firstName:    profile.given_name  || user.displayName?.split(' ')[0] || '',
+          lastName:     profile.family_name || user.displayName?.split(' ').slice(1).join(' ') || '',
+          signupMethod: 'google'
+        }, 'pending_approval');
+        showToast('success', 'Request submitted! Waiting for admin approval.');
+      } else {
+        showToast('info', 'Checking your access status…');
+      }
+    } catch (err) {
+      if      (err.code === 'auth/popup-closed-by-user') showToast('info',  'Login cancelled.');
+      else if (err.code === 'auth/popup-blocked')        showToast('error', 'Popup blocked. Please allow popups.');
+      else                                               showToast('error', getErrorMessage(err.code));
+    } finally {
+      isProcessing = false;
     }
+  }
 
-    function getErrorMessage(code) {
-        const map = {
-            'auth/user-not-found':             'No account found with this email.',
-            'auth/wrong-password':             'Incorrect password. Please try again.',
-            'auth/email-already-in-use':       'An account already exists with this email.',
-            'auth/weak-password':              'Password must be at least 6 characters.',
-            'auth/invalid-email':              'Invalid email address.',
-            'auth/invalid-credential':         'Invalid credentials. Check your email and password.',
-            'auth/too-many-requests':          'Too many attempts. Please wait a moment.',
-            'auth/network-request-failed':     'Network error. Check your connection.',
-            'auth/popup-closed-by-user':       'Login window was closed.',
-            'auth/popup-blocked':              'Popup blocked. Please allow popups.',
-            'auth/account-exists-with-different-credential':
-                                              'Account exists with a different sign-in method.'
-        };
-        return map[code] || 'An error occurred. Please try again.';
+  // ── Logout ────────────────────────────────────────────────
+  async function handleLogout() {
+    clearPollTimer();
+    try {
+      await auth.signOut();
+      currentUser = null;
+      showScreen('screen-auth');
+      switchTab('login');
+      showToast('info', 'Signed out successfully.');
+    } catch (err) { console.error('Logout error:', err); }
+  }
+
+  // ── Password Reset ────────────────────────────────────────
+  document.getElementById('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('resetEmail').value.trim();
+    if (!isValidEmail(email)) {
+      showFieldError('resetEmailError', 'Invalid email address');
+      return;
     }
+    setLoading('resetBtn', true);
+    try {
+      await auth.sendPasswordResetEmail(email, {
+        url: window.location.origin + '/auth.html'
+      });
+      document.getElementById('resetForm').classList.add('hidden');
+      document.getElementById('resetSuccess').classList.remove('hidden');
+    } catch (err) {
+      showFieldError('resetEmailError', getErrorMessage(err.code));
+    } finally {
+      setLoading('resetBtn', false);
+    }
+  });
 
-    // ────────────────────────────────────────────────────────────────────
-    // 18. BOOT
-    // ────────────────────────────────────────────────────────────────────
-    // APRÈS — callback async + await initFirebase()
-    document.addEventListener('DOMContentLoaded', async () => {
-        console.log('%c⚡ AlphaVault Quant — Auth System v5.0.9',
-            'background:#0f172a;color:#3b82f6;padding:6px 12px;border-radius:6px;font-weight:bold;');
+  function showResetModal() {
+    document.getElementById('resetModal').classList.remove('hidden');
+    document.getElementById('resetForm').classList.remove('hidden');
+    document.getElementById('resetSuccess').classList.add('hidden');
+    document.getElementById('resetEmail').value = '';
+    document.getElementById('resetEmailError').textContent = '';
+  }
+  function hideResetModal() {
+    document.getElementById('resetModal').classList.add('hidden');
+  }
 
-        const ok = await initFirebase();    // ← await ajouté
-        if (!ok) { showScreen('screen-auth'); return; }
+  // ── UI Helpers ────────────────────────────────────────────
+  function switchTab(tab) {
+    const showLogin = tab === 'login';
+    document.getElementById('form-login').classList.toggle('hidden', !showLogin);
+    document.getElementById('form-signup').classList.toggle('hidden',  showLogin);
+    document.getElementById('tab-login').classList.toggle('active',   showLogin);
+    document.getElementById('tab-login').setAttribute('aria-selected', String(showLogin));
+    document.getElementById('tab-signup').classList.toggle('active',  !showLogin);
+    document.getElementById('tab-signup').setAttribute('aria-selected', String(!showLogin));
+    clearErrors();
+  }
 
-        startAuthListener();
+  function togglePwd(inputId, btn) {
+    const input  = document.getElementById(inputId);
+    const icon   = btn.querySelector('i');
+    const hidden = input.type === 'password';
+    input.type     = hidden ? 'text'          : 'password';
+    icon.className = hidden ? 'fas fa-eye-slash' : 'fas fa-eye';
+  }
 
-        document.getElementById('googleLoginBtn')?.addEventListener('click', handleGoogleAuth);
-        document.getElementById('googleSignupBtn')?.addEventListener('click', handleGoogleAuth);
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.disabled = loading;
+    const text    = btn.querySelector('.btn-text');
+    const spinner = btn.querySelector('.btn-spinner');
+    if (text)    text.style.opacity  = loading ? '0' : '1';
+    if (spinner) spinner.classList.toggle('hidden', !loading);
+  }
 
-        setTimeout(() => {
-            const loading = document.getElementById('screen-loading');
-            if (loading && !loading.classList.contains('hidden')) {
-                console.warn('⚠ Loading timeout → showing auth form');
-                showScreen('screen-auth');
-            }
-        }, 6000);
+  function showFieldError(id, msg) {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = msg; el.classList.add('active'); }
+  }
+
+  function clearErrors() {
+    document.querySelectorAll('.form-error').forEach(el => {
+      el.textContent = ''; el.classList.remove('active');
     });
-    </script>
+    document.querySelectorAll('.form-input.error').forEach(el =>
+      el.classList.remove('error')
+    );
+  }
+
+  // ── Password Strength ─────────────────────────────────────
+  document.getElementById('signupPassword')?.addEventListener('input', (e) => {
+    const v = e.target.value;
+    let score = 0;
+    if (v.length >= 6)  score++;
+    if (v.length >= 10) score++;
+    if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^a-zA-Z0-9]/.test(v)) score++;
+
+    const colors = ['','#ef4444','#f59e0b','#3b82f6','#10b981','#10b981'];
+    const labels = ['—','Weak','Fair','Good','Strong','Very strong'];
+
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('sb'+i);
+      if (bar) bar.style.background = i <= score
+        ? (colors[score] || '#e2e8f0') : '#e2e8f0';
+    }
+    const lbl = document.getElementById('strengthLabel');
+    if (lbl) {
+      lbl.textContent   = labels[score] || '—';
+      lbl.style.color   = colors[score] || '#94a3b8';
+    }
+  });
+
+  // ── Toast ─────────────────────────────────────────────────
+  function showToast(type, message) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const colors = { success:'#10b981', error:'#ef4444', info:'#3b82f6', warning:'#f59e0b' };
+    const icons  = {
+      success: 'fa-circle-check',
+      error:   'fa-circle-xmark',
+      info:    'fa-circle-info',
+      warning: 'fa-triangle-exclamation'
+    };
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
+    toast.innerHTML = `
+      <i class="fa-solid ${icons[type] || icons.info}"
+         style="color:${colors[type] || colors.info};font-size:14px;flex-shrink:0"></i>
+      <span>${message}</span>`;
+    container.appendChild(toast);
+    setTimeout(() => {
+      toast.style.animation = 'toastOut 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 320);
+    }, 4500);
+  }
+
+  // ── Utilities ─────────────────────────────────────────────
+  function isValidEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function getErrorMessage(code) {
+    const map = {
+      'auth/user-not-found':      'No account found with this email.',
+      'auth/wrong-password':      'Incorrect password. Please try again.',
+      'auth/email-already-in-use':'An account already exists with this email.',
+      'auth/weak-password':       'Password must be at least 6 characters.',
+      'auth/invalid-email':       'Invalid email address.',
+      'auth/invalid-credential':  'Invalid credentials. Check your email and password.',
+      'auth/too-many-requests':   'Too many attempts. Please wait a moment.',
+      'auth/network-request-failed':'Network error. Check your connection.',
+      'auth/popup-closed-by-user':'Login window was closed.',
+      'auth/popup-blocked':       'Popup blocked. Please allow popups.',
+      'auth/account-exists-with-different-credential':
+        'Account exists with a different sign-in method.'
+    };
+    return map[code] || 'An error occurred. Please try again.';
+  }
+
+  // ── Boot ──────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', async () => {
+    const ok = await initFirebase();
+    if (!ok) { showScreen('screen-auth'); return; }
+
+    startAuthListener();
+
+    document.getElementById('googleLoginBtn')
+      ?.addEventListener('click', handleGoogleAuth);
+    document.getElementById('googleSignupBtn')
+      ?.addEventListener('click', handleGoogleAuth);
+
+    setTimeout(() => {
+      const loading = document.getElementById('screen-loading');
+      if (loading && !loading.classList.contains('hidden')) {
+        showScreen('screen-auth');
+      }
+    }, 6000);
+  });
+  </script>
 
 </body>
 </html>
