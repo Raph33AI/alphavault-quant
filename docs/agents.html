@@ -145,6 +145,12 @@
       .agt-col-size  { display: none; }
     }
   </style>
+
+  <!-- Firebase Config & SDK — Auth Guard -->
+  <script src="assets/js/firebase-config.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -201,6 +207,25 @@
           <i class="fa-solid fa-gear"></i> Settings
         </a>
 
+      </div>
+
+      <!-- ── User Dropdown ─────────────────────────────── -->
+      <div id="av-sidebar-user"
+           style="padding:8px 12px;
+                  border-top:1px solid var(--border,rgba(148,163,184,0.1));
+                  flex-shrink:0">
+        <!-- Skeleton pendant le chargement auth -->
+        <div style="height:46px;border-radius:9px;
+                    background:var(--bg-secondary,#0f172a);
+                    border:1px solid var(--border,rgba(148,163,184,0.1));
+                    animation:_sk 1.5s ease-in-out infinite alternate">
+        </div>
+        <style>
+          @keyframes _sk {
+            from { opacity: 0.5; }
+            to   { opacity: 1;   }
+          }
+        </style>
       </div>
 
       <div class="av-sidebar-status">
