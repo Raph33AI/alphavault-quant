@@ -865,6 +865,8 @@ const StockDetail = (() => {
           grid-template-columns: 1fr;
         }
       }
+
+
     `;
     document.head.appendChild(style);
   }
@@ -1958,29 +1960,49 @@ const StockDetail = (() => {
           </div>
         </div>
 
-        <div class="sdp-ta-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
-          <div>
+        <div class="sdp-ta-grid"
+            style="display:grid;
+                    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+                    gap:12px;margin-bottom:12px">
+
+          <!-- RSI -->
+          <div style="min-width:0">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted,#64748b);
                         text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;
-                        display:flex;justify-content:space-between">
-              <span><i class="fa-solid fa-gauge" style="color:#3b82f6"></i> RSI (14)</span>
-              <span id="sdp-rsi-val">—</span>
+                        display:flex;justify-content:space-between;align-items:center;
+                        flex-wrap:nowrap;gap:4px;overflow:hidden">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">
+                <i class="fa-solid fa-gauge" style="color:#3b82f6"></i> RSI (14)
+              </span>
+              <span id="sdp-rsi-val"
+                    style="flex-shrink:0;font-family:var(--font-mono,monospace);
+                          font-size:12px;font-weight:900">—</span>
             </div>
-            <div style="height:80px;position:relative;overflow:hidden">
+            <div style="height:100px;min-height:80px;position:relative;overflow:hidden;
+                        border-radius:6px;background:var(--bg-primary,#f1f5f9)">
               <canvas id="sdp-rsi-canvas"></canvas>
             </div>
           </div>
-          <div>
+
+          <!-- MACD -->
+          <div style="min-width:0">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted,#64748b);
                         text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;
-                        display:flex;justify-content:space-between">
-              <span><i class="fa-solid fa-wave-square" style="color:#8b5cf6"></i> MACD (12,26,9)</span>
-              <span id="sdp-macd-val">—</span>
+                        display:flex;justify-content:space-between;align-items:center;
+                        flex-wrap:nowrap;gap:4px;overflow:hidden">
+              <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">
+                <i class="fa-solid fa-wave-square" style="color:#8b5cf6"></i> MACD (12,26,9)
+              </span>
+              <span id="sdp-macd-val"
+                    style="flex-shrink:0;font-family:var(--font-mono,monospace);
+                          font-size:11px;font-weight:900;white-space:nowrap">—</span>
             </div>
-            <div style="height:80px;position:relative;overflow:hidden">
+            <div style="height:100px;min-height:80px;position:relative;overflow:hidden;
+                        border-radius:6px;background:var(--bg-primary,#f1f5f9)">
               <canvas id="sdp-macd-canvas"></canvas>
             </div>
           </div>
+
         </div>
 
         <div style="margin-bottom:12px">
@@ -2987,39 +3009,111 @@ const StockDetail = (() => {
             Option Chain — ATM ± 15% (Historical Vol)
           </div>
           ${bs.map(exp=>`
-            <div style="margin-bottom:12px">
-              <div style="font-size:10px;font-weight:700;color:#8b5cf6;margin-bottom:6px;
-                          text-transform:uppercase;letter-spacing:0.5px">
-                ${exp.label} (T=${exp.T.toFixed(4)}y)
-              </div>
-              <table class="sdp-bs-table">
-                <thead>
-                  <tr>
-                    <th>Strike</th><th>Moneyness</th>
-                    <th>Call</th><th>Put</th>
-                    <th>Δ Call</th><th>Δ Put</th>
-                    <th>Γ</th><th>Θ/day</th><th>Vega/1%</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${exp.rows.map(row=>`
-                    <tr style="${Math.abs(row.K-S)/S<0.01?
-                        'background:rgba(59,130,246,0.08);font-weight:800':''}">
-                      <td>${fC(row.K)}</td>
-                      <td style="color:${parseFloat(row.moneyness)>0?'#10b981':'#ef4444'}">
-                        ${row.moneyness}%
-                      </td>
-                      <td style="color:#10b981">${fC(row.call)}</td>
-                      <td style="color:#ef4444">${fC(row.put)}</td>
-                      <td>${row.delta_c.toFixed(3)}</td>
-                      <td style="color:#ef4444">${row.delta_p.toFixed(3)}</td>
-                      <td>${row.gamma.toFixed(5)}</td>
-                      <td style="color:#ef4444">${row.theta_c.toFixed(4)}</td>
-                      <td>${row.vega.toFixed(4)}</td>
-                    </tr>`).join('')}
-                </tbody>
-              </table>
-            </div>`).join('')}
+          <div style="margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:#8b5cf6;margin-bottom:6px;
+                        text-transform:uppercase;letter-spacing:0.5px">
+              ${exp.label} (T=${exp.T.toFixed(4)}y)
+            </div>
+            <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;
+                        scrollbar-width:thin;scrollbar-color:rgba(139,92,246,0.3) transparent;
+                        border-radius:8px;margin:0 -2px;padding:0 2px">
+            <table class="sdp-bs-table"
+                  style="min-width:560px;font-size:10px;width:100%;border-collapse:collapse">
+              <thead>
+                <tr>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Strike</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Money</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:#10b981;text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Call</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:#ef4444;text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Put</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Δ Call</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Δ Put</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Γ</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Θ/d</th>
+                  <th style="padding:6px 8px;text-align:right;font-size:9px;font-weight:700;
+                            color:var(--text-muted,#64748b);text-transform:uppercase;
+                            letter-spacing:0.4px;border-bottom:2px solid var(--border,rgba(0,0,0,0.08));
+                            white-space:nowrap">Vega</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${exp.rows.map(row=>`
+                  <tr style="${Math.abs(row.K-S)/S<0.01?
+                      'background:rgba(59,130,246,0.08);font-weight:800':''}">
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              color:var(--text-primary,#0f172a);white-space:nowrap;font-size:10px">
+                      ${fC(row.K)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;
+                              color:${parseFloat(row.moneyness)>0?'#10b981':'#ef4444'}">
+                      ${row.moneyness}%
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:#10b981">
+                      ${fC(row.call)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:#ef4444">
+                      ${fC(row.put)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:var(--text-primary,#0f172a)">
+                      ${row.delta_c.toFixed(3)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:#ef4444">
+                      ${row.delta_p.toFixed(3)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:var(--text-primary,#0f172a)">
+                      ${row.gamma.toFixed(5)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:#ef4444">
+                      ${row.theta_c.toFixed(4)}
+                    </td>
+                    <td style="padding:5px 8px;text-align:right;font-family:var(--font-mono,monospace);
+                              font-weight:600;border-bottom:1px solid var(--border,rgba(0,0,0,0.05));
+                              white-space:nowrap;font-size:10px;color:var(--text-primary,#0f172a)">
+                      ${row.vega.toFixed(4)}
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            </div>
+          </div>`).join('')}
         </div>
 
         <!-- Greeks -->
