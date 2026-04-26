@@ -300,28 +300,39 @@
 
   <!-- Init -->
   <script>
-    (async () => {
-      // Init watchlist (charge GitHub → localStorage → render)
-      await WatchlistManager.init();
-      WatchlistManager.render({});
+  (async () => {
+    // 1. Init watchlist (charge GitHub → localStorage)
+    await WatchlistManager.init();
 
-      // Populate datalist (autocomplete sur 907 symboles)
-      const dl = document.getElementById('wl-universe-datalist');
-      if (dl) {
-        WatchlistManager.getAllSymbols().forEach(sym => {
-          const opt   = document.createElement('option');
-          opt.value   = sym;
-          const meta  = WatchlistManager.getSymbolMeta(sym);
-          opt.label   = meta?.sector || '';
-          dl.appendChild(opt);
-        });
-      }
+    // 2. Charge les signals ML pour afficher Score / Buy Prob / Regime
+    let sigData = null;
+    try {
+      sigData = await AVApi.loadOne('signals', true);
+    } catch (e) {}
 
-      // Refresh button
-      document.getElementById('wl-refresh-btn')
-        ?.addEventListener('click', () => WatchlistManager.render({}));
-    })();
-  </script>
+    // 3. Premier rendu avec les signals
+    WatchlistManager.render(sigData || {});
+
+    // 4. Populate datalist (autocomplete 907 symboles)
+    const dl = document.getElementById('wl-universe-datalist');
+    if (dl) {
+      WatchlistManager.getAllSymbols().forEach(sym => {
+        const opt  = document.createElement('option');
+        opt.value  = sym;
+        const meta = WatchlistManager.getSymbolMeta(sym);
+        opt.label  = meta?.sector || '';
+        dl.appendChild(opt);
+      });
+    }
+
+    // 5. Refresh button
+    document.getElementById('wl-refresh-btn')
+      ?.addEventListener('click', async () => {
+        const fresh = await AVApi.loadOne('signals', true);
+        WatchlistManager.render(fresh || {});
+      });
+  })();
+</script>
 
 </body>
 </html>

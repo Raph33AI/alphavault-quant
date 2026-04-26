@@ -145,51 +145,40 @@ const WatchlistManager = (() => {
   async function _fetchPricesForVisible(syms) {
     if (!syms || !syms.length) return;
 
+    // Yahoo Finance disponible via av-stock-detail.js (chargé avant)
+    if (typeof window.YahooFinance === 'undefined') {
+      console.warn('[watchlist] YahooFinance non disponible');
+      return;
+    }
+
     // Filtre les symboles dont le cache est périmé (> 60s)
     const toFetch = syms.filter(s =>
       !_priceCache[s] || (Date.now() - (_priceCache[s]._ts || 0)) > 60_000
     );
+
     if (!toFetch.length) {
-      // Cache encore frais → juste re-render pour afficher
       render(_signalData);
       return;
     }
 
-    // Fetch par batch de 10 (parallèle)
-    const WORKER = AV_CONFIG.WORKERS.financeHub;
-    const batches = [];
-    for (let i = 0; i < toFetch.length; i += 10) {
-      batches.push(toFetch.slice(i, i + 10));
-    }
-
     let updated = false;
-    for (const batch of batches) {
-      await Promise.allSettled(batch.map(async sym => {
-        try {
-          const url  = `${WORKER}/api/quote?symbol=${sym}`;
-          const ctrl = new AbortController();
-          const t    = setTimeout(() => ctrl.abort(), 7000);
-          const resp = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
-          clearTimeout(t);
-          if (!resp.ok) return;
 
-          const json  = await resp.json();
-          // Finance Hub peut retourner { quote: {...} } ou directement les données
-          const quote = json?.quote || json?.data || json;
-
-          const price  = parseFloat(quote?.close ?? quote?.price ?? 0);
-          const chgPct = parseFloat(
-            quote?.percent_change ?? quote?.change_pct ??
-            quote?.change ?? 0
-          );
-
-          if (price > 0) {
-            _priceCache[sym] = { price, change_pct: chgPct, _ts: Date.now() };
-            updated = true;
-          }
-        } catch (e) {}
-      }));
-    }
+    // Fetch via Yahoo Finance (gratuit, aucun crédit Twelve Data / Finnhub)
+    // Tout en parallèle — Yahoo proxy supporte la concurrence
+    await Promise.allSettled(toFetch.map(async sym => {
+      try {
+        const quote = await YahooFinance.getQuote(sym);
+        const price = parseFloat(quote?.price || 0);
+        if (price > 0) {
+          _priceCache[sym] = {
+            price,
+            change_pct: parseFloat(quote.change_pct || 0),
+            _ts:        Date.now(),
+          };
+          updated = true;
+        }
+      } catch (e) { /* silencieux */ }
+    }));
 
     if (updated) render(_signalData);
   }

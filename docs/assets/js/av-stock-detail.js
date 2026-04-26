@@ -863,27 +863,51 @@ const StockDetail = (() => {
     const signal  = _sig(sym);
 
     const kstats = [
-      { l:'Open',         v: _f(q.open   || detail.open?.raw,     '$') },
-      { l:'Day High',     v: _f(q.high   || detail.dayHigh?.raw,  '$') },
-      { l:'Day Low',      v: _f(q.low    || detail.dayLow?.raw,   '$') },
-      { l:'Prev Close',   v: _f(q.prev_close || detail.previousClose?.raw, '$') },
-      { l:'Volume',       v: _fmtNum(q.volume || detail.volume?.raw) },
-      { l:'Market Cap',   v: _fmtMCap(q.market_cap || fhM.marketCapitalization * 1e6) },
-      { l:'P/E (TTM)',    v: _f(detail.trailingPE?.raw || fhM.peBasicExclExtraTTM, '', 2) },
-      { l:'Fwd P/E',      v: _f(detail.forwardPE?.raw  || fhM.forwardPE,           '', 2) },
-      { l:'EPS (TTM)',    v: _f(stats.trailingEps?.raw  || fhM.epsNormalizedAnnual, '$', 2) },
-      { l:'Beta',         v: _f(detail.beta?.raw        || fhM.beta,                '', 2) },
-      { l:'52W High',     v: _f(q['52w_high'] || fhM['52WeekHigh'], '$') },
-      { l:'52W Low',      v: _f(q['52w_low']  || fhM['52WeekLow'],  '$') },
-      { l:'50D Avg',      v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw,      '$') },
-      { l:'200D Avg',     v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
-      { l:'Profit Margin',v: _f(fin.profitMargins?.raw != null
-                                  ? fin.profitMargins.raw * 100
-                                  : fhM.netMarginAnnual, '', 2, '%') },
-      { l:'ROE',          v: _f(fin.returnOnEquity?.raw != null
-                                  ? fin.returnOnEquity.raw * 100
-                                  : fhM.roeTTM, '', 2, '%') },
-      { l:'Revenue (TTM)',v: _fmtMCap(fin.totalRevenue?.raw) },
+
+      // ── TOUJOURS DISPONIBLES : données quote /chart ──────────────────
+      // Ces champs viennent de meta.fiftyTwoWeekHigh, meta.fiftyDayAverage, etc.
+      // Garantis si le graphique s'affiche (même endpoint Yahoo)
+      { l:'52W High',        v: _f(q['52w_high'] || fhM['52WeekHigh'],           '$') },
+      { l:'52W Low',         v: _f(q['52w_low']  || fhM['52WeekLow'],            '$') },
+      { l:'50D Avg',         v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw, '$') },
+      { l:'200D Avg',        v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
+      { l:'Volume',          v: _fmtNum(q.volume || detail.volume?.raw) },
+      { l:'Market Cap',      v: _fmtMCap(q.market_cap || _rv(detail.marketCap?.raw)) },
+
+      // ── VALORISATION (Yahoo summary + Twelve Data fallback) ──────────
+      { l:'P/E (TTM)',       v: peUse    != null ? sf(peUse).toFixed(2)             : '--' },
+      { l:'Forward P/E',     v: fwdPE    != null ? sf(fwdPE).toFixed(2)             : '--' },
+      { l:'EPS (TTM)',       v: epsUse   != null ? `$${sf(epsUse).toFixed(2)}`       : '--' },
+      { l:'Forward EPS',     v: fwdEPS   != null ? `$${sf(fwdEPS).toFixed(2)}`       : '--' },
+      { l:'Beta',            v: _rv(detail.beta?.raw, fhM.beta) != null
+                                ? sf(_rv(detail.beta?.raw, fhM.beta)).toFixed(2)      : '--' },
+
+      // ── MARGES & RENTABILITÉ (Yahoo summary + fhM Twelve Data) ───────
+      { l:'Revenue (TTM)',   v: _fmtMCap(_rv(fin.totalRevenue?.raw,    fhM.revenueAnnual))   },
+      { l:'Gross Margin',    v: perc(fin.grossMargins?.raw,    fhM.grossMarginAnnual)         },
+      { l:'Op. Margin',      v: perc(fin.operatingMargins?.raw,fhM.operatingMarginAnnual)     },
+      { l:'Profit Margin',   v: perc(fin.profitMargins?.raw,   fhM.netMarginAnnual)           },
+      { l:'ROE',             v: perc(fin.returnOnEquity?.raw,
+                                fhM.roeTTM  ? fhM.roeTTM  / 100 : null)                      },
+      { l:'ROA',             v: perc(fin.returnOnAssets?.raw,
+                                fhM.roaRfy  ? fhM.roaRfy  / 100 : null)                      },
+
+      // ── BILAN (Yahoo summary + fhM Twelve Data) ───────────────────────
+      { l:'Total Cash',      v: _fmtMCap(_rv(fin.totalCash?.raw,    fhM.cashAndEquivalents))  },
+      { l:'Total Debt',      v: _fmtMCap(_rv(fin.totalDebt?.raw,    fhM.totalDebt))           },
+      { l:'Free Cash Flow',  v: _fmtMCap(_rv(fin.freeCashflow?.raw, fhM.freeCashFlowAnnual))  },
+      { l:'Debt/Equity',     v: _rv(fin.debtToEquity?.raw)  != null
+                                ? sf(_rv(fin.debtToEquity?.raw)).toFixed(2)                    : '--' },
+      { l:'Current Ratio',   v: _rv(fin.currentRatio?.raw)  != null
+                                ? sf(_rv(fin.currentRatio?.raw)).toFixed(2)                    : '--' },
+
+      // ── STRUCTURE ACTIONNARIAT (Yahoo summary uniquement) ─────────────
+      { l:'Short % Float',   v: perc(stats.shortPercentOfFloat?.raw)                           },
+      { l:'Insider Own.',    v: _rv(stats.heldPercentInsiders?.raw) != null
+                                ? `${(sf(_rv(stats.heldPercentInsiders?.raw)) * 100).toFixed(2)}%`    : '--' },
+      { l:'Institution Own.',v: _rv(stats.heldPercentInstitutions?.raw) != null
+                                ? `${(sf(_rv(stats.heldPercentInstitutions?.raw)) * 100).toFixed(2)}%`: '--' },
+
     ].filter(i => i.v && i.v !== '--');
 
     const sigBg = signal
@@ -1171,11 +1195,14 @@ const StockDetail = (() => {
         <div class="sdp-fp-stat-title">
           <i class="fa-solid fa-table" style="color:#3b82f6"></i> Key Statistics &amp; Financials
           <div style="margin-left:auto">
-            ${kstats.length > 10
-              ? '<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Full Data</span>'
-              : kstats.length > 3
-              ? '<span class="badge badge-blue"><i class="fa-solid fa-circle-half-stroke"></i> Partial</span>'
-              : '<span class="badge badge-orange"><i class="fa-solid fa-triangle-exclamation"></i> Limited</span>'}
+            ${kstats.length >= 15
+              ? '<span class="badge badge-green" style="font-size:10px"><i class="fa-solid fa-circle-check"></i> Full Data</span>'
+              : kstats.length >= 6
+              ? '<span class="badge badge-blue" style="font-size:10px"><i class="fa-solid fa-circle-half-stroke"></i> Partial</span>'
+              : kstats.length >= 1
+              ? '<span class="badge badge-orange" style="font-size:10px"><i class="fa-solid fa-triangle-exclamation"></i> Quote Data Only</span>'
+              : '<span class="badge badge-red" style="font-size:10px"><i class="fa-solid fa-xmark"></i> No Data</span>'
+            }
           </div>
         </div>
         ${kstats.length ? `
