@@ -38,6 +38,9 @@
     await loadData();
     _startRefresh();
 
+    // ── Pré-remplit le formulaire depuis ?symbol=AAPL ──────────
+    _prefillFromURL();
+
     console.log('[av-trading] v1.0 init complete — API available:', _apiAvail);
   }
 
@@ -831,6 +834,39 @@
         console.warn('[av-trading] Refresh error:', err.message);
       }
     }, AV_CONFIG.REFRESH.execution));
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // PRE-FILL FROM URL — ?symbol=AAPL (depuis watchlist)
+  // ══════════════════════════════════════════════════════════
+  function _prefillFromURL() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sym    = (params.get('symbol') || '').trim().toUpperCase();
+      if (!sym) return;
+
+      const symEl = document.getElementById('trd-sym-input');
+      if (symEl) {
+        symEl.value = sym;
+
+        // Met le focus sur la quantité pour faciliter la saisie
+        const qtyEl = document.getElementById('trd-qty-input');
+        if (qtyEl) {
+          qtyEl.focus();
+          qtyEl.select();
+        }
+
+        AVUtils.showToast(
+          `Symbol pre-filled: <strong>${sym}</strong> — enter quantity to trade`,
+          'info',
+          4000
+        );
+
+        // Nettoie l'URL pour éviter le re-prefill au refresh
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    } catch (e) {}
   }
 
   // ══════════════════════════════════════════════════════════

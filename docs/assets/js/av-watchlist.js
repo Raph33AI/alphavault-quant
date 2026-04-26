@@ -15,15 +15,18 @@ const WatchlistManager = (() => {
   const PAGE_SIZE    = 50;
 
   // ── State ─────────────────────────────────────────────────
-  let _watchlist     = [];
-  let _starred       = [];
-  let _signalData    = {};
-  let _currentPage   = 1;
-  let _currentSector = 'All';
-  let _currentSearch = '';
-  let _syncStatus    = 'local';
-  let _syncTimestamp = 0;
-  let _saveTimeout   = null;
+  let _watchlist      = [];
+  let _starred        = [];
+  let _signalData     = {};
+  let _currentPage    = 1;
+  let _currentSector  = 'All';
+  let _currentSearch  = '';
+  let _syncStatus     = 'local';
+  let _syncTimestamp  = 0;
+  let _saveTimeout    = null;
+  let _priceCache     = {};   // sym → { price, change_pct, _ts }
+  let _decisionsCache = {};   // sym → { final_decision, decision }
+  let _priceRefTimer  = null;
 
   // ══════════════════════════════════════════════════════════
   // UNIVERSE — 907 symboles organisés par secteur
@@ -123,6 +126,75 @@ const WatchlistManager = (() => {
   }
 
   // ══════════════════════════════════════════════════════════
+  // DECISIONS CACHE — agent_decisions.json
+  // ══════════════════════════════════════════════════════════
+  async function _loadDecisions() {
+    try {
+      const data = await AVApi.fetchJSON(AV_CONFIG.SIGNAL_URLS.decisions, 300_000);
+      const decisions = data?.decisions || {};
+      _decisionsCache = {};
+      Object.entries(decisions).forEach(([sym, dec]) => {
+        _decisionsCache[sym] = dec;
+      });
+    } catch (e) {}
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // PRICE FETCH — Finance Hub Worker (Twelve Data)
+  // ══════════════════════════════════════════════════════════
+  async function _fetchPricesForVisible(syms) {
+    if (!syms || !syms.length) return;
+
+    // Filtre les symboles dont le cache est périmé (> 60s)
+    const toFetch = syms.filter(s =>
+      !_priceCache[s] || (Date.now() - (_priceCache[s]._ts || 0)) > 60_000
+    );
+    if (!toFetch.length) {
+      // Cache encore frais → juste re-render pour afficher
+      render(_signalData);
+      return;
+    }
+
+    // Fetch par batch de 10 (parallèle)
+    const WORKER = AV_CONFIG.WORKERS.financeHub;
+    const batches = [];
+    for (let i = 0; i < toFetch.length; i += 10) {
+      batches.push(toFetch.slice(i, i + 10));
+    }
+
+    let updated = false;
+    for (const batch of batches) {
+      await Promise.allSettled(batch.map(async sym => {
+        try {
+          const url  = `${WORKER}/api/quote?symbol=${sym}`;
+          const ctrl = new AbortController();
+          const t    = setTimeout(() => ctrl.abort(), 7000);
+          const resp = await fetch(url, { signal: ctrl.signal, cache: 'no-store' });
+          clearTimeout(t);
+          if (!resp.ok) return;
+
+          const json  = await resp.json();
+          // Finance Hub peut retourner { quote: {...} } ou directement les données
+          const quote = json?.quote || json?.data || json;
+
+          const price  = parseFloat(quote?.close ?? quote?.price ?? 0);
+          const chgPct = parseFloat(
+            quote?.percent_change ?? quote?.change_pct ??
+            quote?.change ?? 0
+          );
+
+          if (price > 0) {
+            _priceCache[sym] = { price, change_pct: chgPct, _ts: Date.now() };
+            updated = true;
+          }
+        } catch (e) {}
+      }));
+    }
+
+    if (updated) render(_signalData);
+  }
+
+  // ══════════════════════════════════════════════════════════
   // SYNC GITHUB — via Cloudflare Worker (PAT serveur)
   // ══════════════════════════════════════════════════════════
   async function _loadFromGitHub() {
@@ -219,10 +291,28 @@ const WatchlistManager = (() => {
       _syncStatus = 'local';
     }
 
+    // 3. Charge les décisions LLM (council column)
+    await _loadDecisions();
+
     _buildSectorTabs();
     _buildAddForm();
     _buildSearchBinding();
     _buildSyncBar();
+
+    // 4. Fetch initial des prix après 600ms (non-bloquant)
+    setTimeout(() => {
+      const filtered = _getFiltered();
+      const visible  = filtered.slice(0, PAGE_SIZE);
+      _fetchPricesForVisible(visible);
+    }, 600);
+
+    // 5. Refresh prix toutes les 60s pour les symboles visibles
+    _priceRefTimer = setInterval(() => {
+      const filtered = _getFiltered();
+      const start    = (_currentPage - 1) * PAGE_SIZE;
+      const visible  = filtered.slice(start, start + PAGE_SIZE);
+      _fetchPricesForVisible(visible);
+    }, 60_000);
 
     // Auto-sync si l'onglet devient visible
     document.addEventListener('visibilitychange', () => {
@@ -380,27 +470,68 @@ const WatchlistManager = (() => {
           </td>
         </tr>`;
       _renderPagination(pages, total);
+      // ── Déclenche le fetch des prix pour les symboles visibles ──
+      // (non-bloquant, met à jour _priceCache puis re-rend)
+      if (display.length > 0) {
+        // Utilise setTimeout pour ne pas bloquer le paint
+        setTimeout(() => _fetchPricesForVisible([...display]), 0);
+      }
       return;
     }
 
     tbody.innerHTML = display.map(sym => {
       const s       = sigs[sym] || {};
       const meta    = SYMBOL_META[sym] || { sector: 'Custom' };
-      const price   = parseFloat(s.price       || 0);
-      const chg     = parseFloat(s.change_pct  || s.change  || 0);
-      const score   = parseFloat(s.final_score || s.score   || 0);
-      const bp      = parseFloat(s.buy_prob    || 0.5);
-      const dir     = s.direction || (s.action === 'BUY' ? 'buy'
-                    : s.action === 'SELL' ? 'sell' : 'neutral');
-      const council = s.council || (price > 0 ? 'wait' : '');
-      const regime  = (s.regime || '').replace(/_/g, ' ');
+
+      // ── Prix : cache live > signal JSON (R9 — jamais crasher) ──
+      const pcache  = _priceCache[sym] || {};
+      const price   = parseFloat(pcache.price      || s.price || 0);
+      const chg     = parseFloat(pcache.change_pct || s.change_pct || s.change || 0);
+
+      // ── Champs ML signal (current_signals.json réel) ────────────
+      const conf    = parseFloat(s.confidence || 0);
+      const action  = (s.action || '').toUpperCase();   // "BUY" | "SELL"
+
+      // score : essaie plusieurs champs possibles, fallback sur confidence
+      const score   = parseFloat(
+        s.score ?? s.meta_score ?? s.final_score ?? conf ?? 0
+      );
+
+      // direction dérivée de action (s.direction n'existe pas dans les signaux réels)
+      const dir     = action === 'BUY'  ? 'buy'
+                    : action === 'SELL' ? 'sell' : 'neutral';
+
+      // buy_prob : confidence si BUY, inverse si SELL (approximation)
+      const bp      = action === 'BUY'  ? conf
+                    : action === 'SELL' ? Math.max(0, 1 - conf)
+                    : 0.5;
+
+      // regime : champ réel = regime_at_signal (schéma ml_signals PostgreSQL)
+      const regime  = (
+        s.regime_at_signal || s.regime || ''
+      ).replace(/_/g, ' ').toUpperCase();
+
+      // council : depuis agent_decisions.json.decisions[sym]
+      const dec     = _decisionsCache[sym] || null;
+      let council   = '';
+      if (dec) {
+        if (dec.final_decision && typeof dec.final_decision === 'string') {
+          council = dec.final_decision;                    // "CONFIRM" | "REDUCE" | "REJECT"
+        } else if (dec.decision === true) {
+          council = 'CONFIRM';
+        } else if (dec.decision === false) {
+          council = 'REJECT';
+        }
+      }
+
       const starred = isStarred(sym);
       const cls     = chg > 0 ? 'color:#10b981' : chg < 0 ? 'color:#ef4444' : '';
 
       const sColor  = score > 0.65 ? '#10b981'
                     : score > 0.40 ? '#f59e0b' : '#64748b';
-      const cColor  = council.includes('execute') ? '#10b981'
-                    : council === 'veto'           ? '#ef4444' : '#f59e0b';
+      const cColor  = council === 'CONFIRM'       ? '#10b981'
+                    : council === 'REJECT'         ? '#ef4444'
+                    : council === 'REDUCE'         ? '#f59e0b' : '#94a3b8';
 
       // Direction badge
       const dirBadge = dir === 'buy'
@@ -540,10 +671,8 @@ const WatchlistManager = (() => {
   }
 
   function _quickTrade(sym) {
-    const selEl = document.getElementById('order-symbol');
-    if (selEl) selEl.value = sym;
-    const tradingPage = document.querySelector('[data-page="trading"]');
-    if (tradingPage) window.location.href = 'trading.html?symbol=' + sym;
+    // Navigation vers trading.html avec le symbol en paramètre URL
+    window.location.href = 'trading.html?symbol=' + encodeURIComponent(sym.toUpperCase());
   }
 
   // ══════════════════════════════════════════════════════════
