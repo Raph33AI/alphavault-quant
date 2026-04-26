@@ -1196,54 +1196,37 @@
             startPollTimer();
 
         } catch (error) {
-            console.error('❌ Signup error:', error.code);
+              console.error('❌ Signup error:', error.code);
 
-            if (error.code === 'auth/email-already-in-use') {
-                // ── Cas : email déjà dans Firebase Auth ──────────────────
-                showFieldError('signupEmailError', 'Account already exists.');
+              if (error.code === 'auth/email-already-in-use') {
+                  // ── Ce projet Firebase est partagé avec AlphaVault AI ──────
+                  // → L'email existe déjà dans Firebase Auth
+                  showFieldError('signupEmailError',
+                      'This email is already registered. Please sign in instead.');
 
-                // Tenter de vérifier si un doc quant_users existe
-                try {
-                    // On essaie de se connecter pour récupérer l'uid
-                    const cred2 = await auth.signInWithEmailAndPassword(email, password);
-                    const user2 = cred2.user;
+                  showToast('warning',
+                      'Account exists — switching to Sign In tab...');
 
-                    const snap = await db.collection(QUANT_USERS_COL).doc(user2.uid).get();
+                  // Pré-remplir l'email dans le formulaire de login
+                  setTimeout(() => {
+                      switchTab('login');
+                      const loginEmailEl = document.getElementById('loginEmail');
+                      if (loginEmailEl) {
+                          loginEmailEl.value =
+                              document.getElementById('signupEmail').value;
+                          loginEmailEl.focus();
+                      }
+                  }, 1500);
 
-                    if (!snap.exists) {
-                        // Firebase Auth OK mais pas de doc quant_users → créer pending
-                        console.log('📝 Existing Firebase Auth user → creating quant_users pending doc');
-                        await createQuantUser(user2, {
-                            firstName, lastName, reason, signupMethod: 'email'
-                        }, 'pending_approval');
-                        showToast('success', 'Access request submitted! Waiting for admin approval.');
-                        showPendingScreen(user2, { createdAt: { toDate: () => new Date() } });
-                        startPollTimer();
-                    } else {
-                        // Doc existe déjà → checkUserAccess prend le relais via onAuthStateChanged
-                        showToast('info', 'Account found. Checking your access status...');
-                    }
+              } else if (error.code === 'auth/weak-password') {
+                  showFieldError('signupPasswordError',
+                      'Password must be at least 6 characters.');
+                  showToast('error', 'Password too weak.');
 
-                } catch (loginErr) {
-                    // Mauvais mot de passe ou autre erreur
-                    if (loginErr.code === 'auth/wrong-password' || loginErr.code === 'auth/invalid-credential') {
-                        showFieldError('signupEmailError', 'This email is already registered. Use Sign In tab.');
-                        showToast('warning', 'Account exists. Please sign in instead.');
-                        // Basculer sur l'onglet login après 2s
-                        setTimeout(() => {
-                            switchTab('login');
-                            document.getElementById('loginEmail').value = email;
-                        }, 2000);
-                    } else {
-                        showToast('error', getErrorMessage(loginErr.code));
-                    }
-                }
-
-            } else {
-                showToast('error', getErrorMessage(error.code));
-            }
-
-        } finally {
+              } else {
+                  showToast('error', getErrorMessage(error.code));
+              }
+          } finally {
             setLoading('signupBtn', false);
             isProcessing = false;
         }
