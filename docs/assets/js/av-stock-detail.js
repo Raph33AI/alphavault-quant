@@ -557,6 +557,174 @@ const StockDetail = (() => {
         from { opacity:0; transform:scale(0.95); }
         to   { opacity:1; transform:scale(1); }
       }
+
+      /* ═══════════════════════════════════════════════════
+         RESPONSIVE — Stock Detail Full Page
+         ═══════════════════════════════════════════════════ */
+      @media (max-width: 900px) {
+        .sdp-ov-grid { grid-template-columns: 1fr !important; }
+        .sdp-q-grid-3 { grid-template-columns: 1fr 1fr !important; }
+      }
+      @media (max-width: 768px) {
+        .sdp-fp-header       { padding: 10px 12px; gap: 6px; flex-wrap: wrap; }
+        .sdp-fp-sym          { font-size: 14px; }
+        .sdp-fp-price        { font-size: 17px; }
+        .sdp-fp-name         { display: none; }
+        #sdp-fp-sector       { display: none; }
+        #sdp-fp-vol          { display: none; }
+        #sdp-fp-cap          { display: none; }
+        .sdp-fp-actions      { gap: 4px; flex-shrink: 0; }
+        .sdp-fp-action-btn   { padding: 6px 9px; font-size: 11px; gap: 3px; }
+        .sdp-fp-action-btn.sell { display: none; }
+        .sdp-fp-tabs         { overflow-x: auto; flex-wrap: nowrap;
+                                padding: 8px 12px 0; scrollbar-width: none; }
+        .sdp-fp-tabs::-webkit-scrollbar { display: none; }
+        .sdp-fp-tab          { white-space: nowrap; padding: 8px 10px;
+                                font-size: 11px; flex-shrink: 0; }
+        .sdp-fp-body         { padding: 10px; gap: 10px; }
+        .sdp-fp-stats        { grid-template-columns: 1fr 1fr; gap: 6px; }
+        .sdp-fp-stat-section { padding: 12px 14px; }
+        .sdp-ta-grid         { grid-template-columns: 1fr !important; }
+        .sdp-q-grid-3        { grid-template-columns: 1fr !important; }
+        .sdp-q-grid-2        { grid-template-columns: 1fr !important; }
+        .sdp-tv-container    { height: 380px !important; }
+      }
+      @media (max-width: 480px) {
+        .sdp-fp-stats        { grid-template-columns: 1fr 1fr; }
+        .sdp-bs-form         { grid-template-columns: 1fr 1fr !important; }
+        .sdp-greeks-grid     { grid-template-columns: repeat(3,1fr) !important; }
+        .sdp-tv-container    { height: 300px !important; }
+        .sdp-mc-container    { height: 200px !important; }
+        .sdp-rd-container    { height: 160px !important; }
+      }
+
+      /* ══ QUANT TAB ══════════════════════════════════════════ */
+      .sdp-q-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+      }
+      .sdp-q-grid-2 {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+      @media (max-width: 1000px) {
+        .sdp-q-grid-3 { grid-template-columns: 1fr 1fr; }
+      }
+      @media (max-width: 700px) {
+        .sdp-q-grid-3, .sdp-q-grid-2 { grid-template-columns: 1fr; }
+      }
+
+      .sdp-q-metric {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--border, rgba(0,0,0,0.05));
+      }
+      .sdp-q-lbl {
+        font-size: 10px; color: var(--text-muted, #64748b); font-weight: 600;
+      }
+      .sdp-q-val {
+        font-size: 12px; font-weight: 800;
+        font-family: var(--font-mono, monospace);
+        color: var(--text-primary, #0f172a);
+      }
+
+      .sdp-tv-container {
+        height: 500px; min-height: 500px;
+        overflow: hidden;
+      }
+
+      .sdp-hurst-bar {
+        height: 8px;
+        background: linear-gradient(90deg, #8b5cf6, #6b7280, #10b981);
+        border-radius: 4px; position: relative;
+      }
+      .sdp-hurst-marker {
+        position: absolute; top: -4px;
+        width: 16px; height: 16px; border-radius: 50%;
+        background: white; border: 2px solid #3b82f6;
+        transform: translateX(-50%);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      }
+
+      .sdp-bs-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 10px; margin-bottom: 14px;
+        padding: 14px;
+        background: var(--bg-primary, #f1f5f9);
+        border-radius: 10px;
+      }
+      .sdp-bs-label {
+        font-size: 9px; font-weight: 700;
+        color: var(--text-muted, #64748b);
+        text-transform: uppercase; letter-spacing: 0.5px;
+        display: block; margin-bottom: 4px;
+      }
+      .sdp-bs-input {
+        width: 100%; height: 34px; padding: 0 10px;
+        background: var(--bg-card, #fff);
+        border: 1px solid var(--border, rgba(0,0,0,0.1));
+        border-radius: 6px;
+        font-size: 13px; font-weight: 600;
+        color: var(--text-primary, #0f172a);
+        font-family: var(--font-mono, monospace);
+        outline: none; box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .sdp-bs-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+      }
+
+      .sdp-bs-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      .sdp-bs-table th {
+        padding: 6px 8px; text-align: right;
+        font-size: 9px; font-weight: 700;
+        color: var(--text-muted, #64748b);
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--border, rgba(0,0,0,0.08));
+      }
+      .sdp-bs-table th:first-child, .sdp-bs-table td:first-child,
+      .sdp-bs-table th:nth-child(2), .sdp-bs-table td:nth-child(2) {
+        text-align: left;
+      }
+      .sdp-bs-table td {
+        padding: 5px 8px; text-align: right;
+        font-family: var(--font-mono, monospace); font-weight: 600;
+        border-bottom: 1px solid var(--border, rgba(0,0,0,0.05));
+        color: var(--text-primary, #0f172a);
+      }
+      .sdp-bs-table tr:hover td {
+        background: var(--bg-hover, rgba(59,130,246,0.04));
+      }
+
+      .sdp-greeks-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+      @media (max-width: 700px) {
+        .sdp-greeks-grid { grid-template-columns: repeat(3, 1fr); }
+      }
+      .sdp-greek-card {
+        background: var(--bg-primary, #f1f5f9);
+        border-radius: 8px; padding: 10px; text-align: center;
+        border: 1px solid var(--border, rgba(0,0,0,0.06));
+      }
+      .sdp-greek-sym  { font-size: 20px; font-weight: 900; color: #3b82f6; font-family: serif; margin-bottom: 2px; }
+      .sdp-greek-name { font-size: 9px; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px; }
+      .sdp-greek-c    { font-size: 11px; font-weight: 700; color: #10b981; font-family: var(--font-mono, monospace); }
+      .sdp-greek-p    { font-size: 11px; font-weight: 700; color: #ef4444; font-family: var(--font-mono, monospace); }
+
+      .sdp-mc-container { height: 300px; min-height: 300px; position: relative; margin-bottom: 12px; }
+      .sdp-mc-targets {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 8px; margin-top: 10px;
+      }
+      .sdp-rd-container { height: 220px; min-height: 220px; position: relative; }
     `;
     document.head.appendChild(style);
   }
@@ -611,6 +779,9 @@ const StockDetail = (() => {
           </button>
           <button class="sdp-fp-tab" data-tab="news">
             <i class="fa-solid fa-newspaper"></i> News
+          </button>
+          <button class="sdp-fp-tab" data-tab="quant">
+            <i class="fa-solid fa-square-root-variable"></i> Quant
           </button>
         </div>
 
@@ -819,6 +990,7 @@ const StockDetail = (() => {
       case 'overview':   _renderOverview();           break;
       case 'financials': _renderFinancialsEarnings();  break;
       case 'news':       _renderNews();               break;
+      case 'quant':      _renderQuant();              break;
     }
     setTimeout(_fixChartHeights, 50);
   }
@@ -920,7 +1092,7 @@ const StockDetail = (() => {
 
     _bodyHtml(`
       <!-- ML Signal + Mini chart -->
-      <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;align-items:start">
+      <div class="sdp-ov-grid" style="display:grid;grid-template-columns:1fr 300px;gap:12px;align-items:start">
 
         <div class="sdp-fp-stat-section"
              style="background:${sigBg};border-color:${sigBorder}">
@@ -1584,7 +1756,7 @@ const StockDetail = (() => {
           </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="sdp-ta-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--text-muted,#64748b);
                         text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;
@@ -1773,6 +1945,1200 @@ const StockDetail = (() => {
       const el = document.getElementById('sdp-ta-loading');
       if (el) el.innerHTML = `<span style="color:#ef4444"><i class="fa-solid fa-xmark"></i> ${err.message}</span>`;
     }
+  }
+
+  // ════════════════════════════════════════════════════════
+  // QUANTITATIVE FINANCE LIBRARY — _QF
+  // ════════════════════════════════════════════════════════
+  const _QF = {
+
+    simpleReturns: prices => {
+      const r = [];
+      for (let i = 1; i < prices.length; i++)
+        r.push((prices[i] - prices[i-1]) / prices[i-1]);
+      return r;
+    },
+
+    logReturns: prices => {
+      const r = [];
+      for (let i = 1; i < prices.length; i++)
+        r.push(Math.log(prices[i] / prices[i-1]));
+      return r;
+    },
+
+    normCDF: x => {
+      const a1=0.254829592,a2=-0.284496736,a3=1.421413741,
+            a4=-1.453152027,a5=1.061405429,p=0.3275911;
+      const sign = x < 0 ? -1 : 1;
+      const t    = 1 / (1 + p * Math.abs(x));
+      const y    = 1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-x*x/2);
+      return 0.5 * (1 + sign * y);
+    },
+
+    normPDF: x => Math.exp(-0.5*x*x) / Math.sqrt(2*Math.PI),
+
+    pct: (arr, p) => {
+      if (!arr || arr.length === 0) return null;
+      const sorted = [...arr].sort((a,b) => a-b);
+      const idx    = (p/100) * (sorted.length-1);
+      const lo = Math.floor(idx), hi = Math.ceil(idx);
+      return sorted[lo] + (sorted[hi]-sorted[lo]) * (idx-lo);
+    },
+
+    _mean: arr => arr.reduce((a,b) => a+b, 0) / arr.length,
+
+    _std: (arr, mu) => {
+      const m = mu ?? arr.reduce((a,b)=>a+b,0)/arr.length;
+      return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length);
+    },
+
+    _randNorm: () => {
+      let u=0,v=0;
+      while(u===0) u=Math.random();
+      while(v===0) v=Math.random();
+      return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+    },
+
+    // ── Risk Metrics ─────────────────────────────────────
+    riskMetrics: (prices, returns) => {
+      const n   = returns.length;
+      const mu  = _QF._mean(returns);
+      const sig = _QF._std(returns, mu);
+      const annVol  = sig * Math.sqrt(252);
+      const years   = n / 252;
+      const totRet  = (prices[prices.length-1] - prices[0]) / prices[0];
+      const annRet  = years > 0 ? Math.pow(1+totRet, 1/years)-1 : totRet;
+
+      // Period volatilities
+      const pVol = d => {
+        if (returns.length < d) return null;
+        const sl = returns.slice(-d);
+        return _QF._std(sl, _QF._mean(sl)) * Math.sqrt(252);
+      };
+
+      // VaR / CVaR
+      const sorted = [...returns].sort((a,b)=>a-b);
+      const varH95  = _QF.pct(returns, 5);
+      const varH99  = _QF.pct(returns, 1);
+      const varP95  = -(mu - 1.645*sig);
+      const n95     = Math.max(1, Math.floor(n*0.05));
+      const n99     = Math.max(1, Math.floor(n*0.01));
+      const cvar95  = sorted.slice(0,n95).reduce((a,b)=>a+b,0)/n95;
+      const cvar99  = sorted.slice(0,n99).reduce((a,b)=>a+b,0)/n99;
+
+      // Max Drawdown
+      let peak=prices[0], maxDD=0, ddDays=0, ddStart=0, tmpStart=0;
+      for (let i=1;i<prices.length;i++) {
+        if (prices[i]>peak) { peak=prices[i]; tmpStart=i; }
+        const dd=(prices[i]-peak)/peak;
+        if (dd<maxDD) { maxDD=dd; ddDays=i-tmpStart; }
+      }
+
+      return {
+        annRet, annVol, volFull: annVol,
+        vol1m: pVol(21), vol3m: pVol(63),
+        vol6m: pVol(126), vol1y: pVol(252),
+        varH95, varH99, varP95, cvar95, cvar99,
+        maxDD, ddDays,
+      };
+    },
+
+    // ── Performance Ratios ───────────────────────────────
+    performance: (prices, returns) => {
+      const n      = returns.length;
+      const mu     = _QF._mean(returns);
+      const sig    = _QF._std(returns, mu);
+      const annVol = sig * Math.sqrt(252);
+      const years  = n/252;
+      const totRet = (prices[prices.length-1]-prices[0])/prices[0];
+      const annRet = years > 0 ? Math.pow(1+totRet,1/years)-1 : totRet;
+      const rf     = 0.0525;
+      const sharpe = annVol>0 ? (annRet-rf)/annVol : null;
+
+      const downRet = returns.filter(r=>r<0);
+      const downDev = downRet.length>0
+        ? Math.sqrt(downRet.reduce((a,b)=>a+b*b,0)/downRet.length)*Math.sqrt(252)
+        : annVol;
+      const sortino = downDev>0 ? (annRet-rf)/downDev : null;
+
+      let peak2=prices[0], mdd2=0;
+      for (let i=1;i<prices.length;i++) {
+        if(prices[i]>peak2) peak2=prices[i];
+        const dd=(prices[i]-peak2)/peak2;
+        if(dd<mdd2) mdd2=dd;
+      }
+      const calmar = mdd2<0 ? annRet/Math.abs(mdd2) : null;
+
+      const gains  = returns.filter(r=>r>0).reduce((a,b)=>a+b,0);
+      const losses = Math.abs(returns.filter(r=>r<0).reduce((a,b)=>a+b,0));
+      const omega  = losses>0 ? gains/losses : gains>0 ? 999 : 1;
+
+      const hitRate = returns.filter(r=>r>0).length/n;
+      const posRet  = returns.filter(r=>r>0);
+      const negRet  = returns.filter(r=>r<0);
+      const avgGain = posRet.length ? posRet.reduce((a,b)=>a+b,0)/posRet.length*100 : 0;
+      const avgLoss = negRet.length ? Math.abs(negRet.reduce((a,b)=>a+b,0)/negRet.length)*100 : 0;
+
+      let num=0,den=0;
+      for(let i=1;i<n;i++) num+=(returns[i]-mu)*(returns[i-1]-mu);
+      for(let i=0;i<n;i++) den+=(returns[i]-mu)**2;
+      const autocorr1 = den>0?num/den:0;
+
+      return { sharpe, sortino, calmar, omega, annVol, hitRate, avgGain, avgLoss, autocorr1 };
+    },
+
+    // ── Statistics ───────────────────────────────────────
+    statistics: returns => {
+      const n = returns.length;
+      if (n<4) return {sk:0,ku:0,jb:0,normal:true,ac1:0,ac5:0,ac21:0};
+      const mu  = _QF._mean(returns);
+      const sig = _QF._std(returns, mu);
+      const sk  = returns.reduce((a,b)=>a+((b-mu)/sig)**3,0)/n;
+      const ku  = returns.reduce((a,b)=>a+((b-mu)/sig)**4,0)/n - 3;
+      const jb  = n/6*(sk**2 + ku**2/4);
+      const acf = lag => {
+        let num=0,den=0;
+        for(let i=lag;i<n;i++) num+=(returns[i]-mu)*(returns[i-lag]-mu);
+        for(let i=0;i<n;i++) den+=(returns[i]-mu)**2;
+        return den>0?num/den:0;
+      };
+      return { sk, ku, jb, normal: jb<5.991, ac1:acf(1), ac5:acf(5), ac21:acf(21) };
+    },
+
+    // ── Hurst Exponent (R/S) ─────────────────────────────
+    hurst: prices => {
+      if (prices.length<20) return 0.5;
+      const logP = prices.map(p=>Math.log(p));
+      const n    = logP.length;
+      const res  = [];
+      for (const size of [8,16,32,64,128].filter(s=>s<n/2)) {
+        const chunks = Math.floor(n/size);
+        let RSsum=0, cnt=0;
+        for (let c=0;c<chunks;c++) {
+          const chunk = logP.slice(c*size,(c+1)*size);
+          const m     = _QF._mean(chunk);
+          const cumDev = chunk.map((_,i)=>chunk.slice(0,i+1).reduce((a,b)=>a+(b-m),0));
+          const R = Math.max(...cumDev)-Math.min(...cumDev);
+          const S = _QF._std(chunk,m);
+          if(S>0){RSsum+=R/S;cnt++;}
+        }
+        if(cnt>0) res.push([Math.log(size),Math.log(RSsum/cnt)]);
+      }
+      if(res.length<2) return 0.5;
+      const sx=_QF._mean(res.map(([x])=>x));
+      const sy=_QF._mean(res.map(([,y])=>y));
+      let num=0,den=0;
+      for(const [x,y] of res){num+=(x-sx)*(y-sy);den+=(x-sx)**2;}
+      return Math.min(Math.max(den>0?num/den:0.5, 0.1), 0.9);
+    },
+
+    // ── Ornstein-Uhlenbeck Calibration ───────────────────
+    ornsteinUhlenbeck: prices => {
+      if (prices.length<30) return null;
+      const x  = prices.slice(0,-1);
+      const y  = prices.slice(1);
+      const mx = _QF._mean(x), my = _QF._mean(y);
+      let cov=0,varX=0;
+      for(let i=0;i<x.length;i++){cov+=(x[i]-mx)*(y[i]-my);varX+=(x[i]-mx)**2;}
+      const b     = varX>0?cov/varX:0;
+      const a     = my-b*mx;
+      const kappa = -Math.log(Math.max(b,1e-10))*252;
+      const theta = (1-b)>1e-10 ? a/(1-b) : mx;
+      const resid = y.map((yi,i)=>yi-(a+b*x[i]));
+      const sigma = _QF._std(resid,0)*Math.sqrt(252);
+      const halfLife = Math.log(2)/Math.max(kappa,0.001)*252;
+      const lastP  = prices[prices.length-1];
+      const zScore = sigma>0 ? (lastP-theta)/(sigma/Math.sqrt(Math.max(kappa,0.001)*252)) : 0;
+      return { kappa, theta, sigma, halfLife, zScore };
+    },
+
+    // ── Momentum ─────────────────────────────────────────
+    momentum: prices => {
+      const last = prices[prices.length-1];
+      const ret  = d => {
+        if(prices.length<=d) return null;
+        const s = prices[prices.length-1-d];
+        return s>0?(last/s-1)*100:null;
+      };
+      const m12m = ret(252), m1m = ret(21);
+      const end12  = prices[Math.max(0,prices.length-1-21)];
+      const sta12  = prices[Math.max(0,prices.length-1-252)];
+      const jt = sta12>0&&end12>0?(end12/sta12-1)*100:null;
+      return { m1m, m3m:ret(63), m6m:ret(126), m12m, jt };
+    },
+
+    // ── Black-Scholes Option Chain ────────────────────────
+    blackScholesAll: (S, vol) => {
+      const r       = 0.0525;
+      const strikes = [-0.15,-0.10,-0.05,0,0.05,0.10,0.15].map(d=>Math.round(S*(1+d)));
+      const expiries = [
+        {label:'1M',T:30/365},{label:'3M',T:90/365},
+        {label:'6M',T:180/365},{label:'1Y',T:365/365},
+      ];
+      const NC=_QF.normCDF, NP=_QF.normPDF;
+      return expiries.map(({label,T})=>({
+        label, T,
+        rows: strikes.map(K=>{
+          if(T<=0||vol<=0||S<=0||K<=0) return null;
+          const d1=(Math.log(S/K)+(r+0.5*vol**2)*T)/(vol*Math.sqrt(T));
+          const d2=d1-vol*Math.sqrt(T);
+          const eRT=Math.exp(-r*T), nd1=NP(d1);
+          return {
+            K,
+            moneyness: ((K-S)/S*100).toFixed(1),
+            call:      S*NC(d1)-K*eRT*NC(d2),
+            put:       K*eRT*NC(-d2)-S*NC(-d1),
+            delta_c:   NC(d1),
+            delta_p:   NC(d1)-1,
+            gamma:     nd1/(S*vol*Math.sqrt(T)),
+            theta_c:   (-S*nd1*vol/(2*Math.sqrt(T))-r*K*eRT*NC(d2))/365,
+            vega:      S*nd1*Math.sqrt(T)/100,
+          };
+        }).filter(Boolean),
+      }));
+    },
+
+    // ── Monte Carlo GBM ──────────────────────────────────
+    monteCarlo: (S0, mu, sigma, days, paths) => {
+      const dt      = 1/252;
+      const sampled = [0,21,63,126,189,252].filter(d=>d<=days);
+      const bands   = [5,25,50,75,95].map(p=>({p,vals:[]}));
+      const allFinal = [];
+
+      const allPaths = Array.from({length:paths},()=>{
+        let price=S0;
+        const path=[S0];
+        for(let d=1;d<=days;d++){
+          price*=Math.exp((mu-0.5*sigma**2)*dt+sigma*Math.sqrt(dt)*_QF._randNorm());
+          if(sampled.includes(d)) path.push(price);
+        }
+        allFinal.push(price);
+        return path;
+      });
+
+      sampled.forEach((_,idx)=>{
+        const vals=allPaths.map(p=>p[idx]??S0);
+        bands.forEach(band=>band.vals.push(_QF.pct(vals,band.p)));
+      });
+
+      const targets=[0.8,0.9,1.0,1.1,1.2,1.3].map(mult=>{
+        const price=(S0*mult).toFixed(0);
+        const probUp=((allFinal.filter(f=>f>=parseFloat(price)).length/paths)*100).toFixed(1);
+        return {price,probUp};
+      });
+
+      return {bands,daysSampled:sampled,targets};
+    },
+
+    // ── Histogram ────────────────────────────────────────
+    histogram: (returns, bins) => {
+      if(!returns.length) return {bins:[],mu:0,sg:0};
+      const mu  = _QF._mean(returns);
+      const sg  = _QF._std(returns,mu);
+      const min = Math.min(...returns), max = Math.max(...returns);
+      const w   = (max-min)/bins;
+      const counts = Array(bins).fill(0);
+      returns.forEach(r=>{
+        const idx=Math.min(bins-1,Math.floor((r-min)/w));
+        if(idx>=0) counts[idx]++;
+      });
+      return {
+        bins: Array.from({length:bins},(_,i)=>({
+          x:    min+(i+0.5)*w,
+          y:    counts[i],
+          y_density: counts[i]/(returns.length*w),
+        })),
+        mu, sg,
+      };
+    },
+  };
+
+  // ════════════════════════════════════════════════════════
+  // QUANT TAB — TradingView + Quantitative Analytics
+  // ════════════════════════════════════════════════════════
+
+  function _tvExchange(ex) {
+    ex=(ex||'').toLowerCase();
+    if(ex.includes('nasdaq'))                        return 'NASDAQ';
+    if(ex.includes('nyse')||ex.includes('new york')) return 'NYSE';
+    if(ex.includes('amex')||ex.includes('american')) return 'AMEX';
+    if(ex.includes('bats')||ex.includes('cboe'))     return 'CBOE';
+    if(ex.includes('tsx')||ex.includes('toronto'))   return 'TSX';
+    if(ex.includes('lse')||ex.includes('london'))    return 'LSE';
+    return '';
+  }
+
+  async function _loadTVWidget(containerId, sym, exchange) {
+    const ex   = _tvExchange(exchange);
+    const tvSym = ex ? `${ex}:${sym}` : sym;
+    const dark  = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    if (!window.TradingView) {
+      await new Promise(res => {
+        const s  = document.createElement('script');
+        s.src    = 'https://s3.tradingview.com/tv.js';
+        s.onload = res; s.onerror = res;
+        document.head.appendChild(s);
+      });
+    }
+
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (!window.TradingView) {
+      el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;
+        height:100%;gap:8px;color:var(--text-muted,#64748b);font-size:12px">
+        <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
+        TradingView unavailable
+      </div>`;
+      return;
+    }
+
+    try {
+      new TradingView.widget({
+        autosize:            true,
+        symbol:              tvSym,
+        interval:            'D',
+        timezone:            'America/New_York',
+        theme:               dark ? 'dark' : 'light',
+        style:               '1',
+        locale:              'en',
+        toolbar_bg:          dark ? '#1e293b' : '#f8fafc',
+        enable_publishing:   false,
+        allow_symbol_change: false,
+        save_image:          true,
+        container_id:        containerId,
+        studies: ['RSI@tv-basicstudies','MACD@tv-basicstudies','BB@tv-basicstudies'],
+        withdateranges:      true,
+        hide_side_toolbar:   false,
+      });
+    } catch(e) {
+      console.warn('[SDP] TradingView:', e.message);
+    }
+  }
+
+  // ── Render Quant Tab ─────────────────────────────────────
+  async function _renderQuant() {
+    const sym  = _sym;
+    const q    = _data[sym]?.quote || {};
+    const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    _bodyHtml(`
+      <!-- TradingView -->
+      <div class="sdp-fp-stat-section" style="padding:0;overflow:hidden;border-radius:12px">
+        <div class="sdp-fp-stat-title"
+             style="padding:14px 20px;margin-bottom:0;
+                    border-bottom:1px solid var(--border,rgba(0,0,0,0.08))">
+          <i class="fa-solid fa-chart-candlestick" style="color:#3b82f6"></i>
+          TradingView Advanced Chart
+          <span style="margin-left:auto;font-size:10px;font-weight:400;color:var(--text-muted)">
+            RSI · MACD · Bollinger Bands
+          </span>
+        </div>
+        <div class="sdp-tv-container" id="sdp-tv-widget"></div>
+      </div>
+
+      <div id="sdp-q-loading"
+           style="text-align:center;padding:40px 20px;color:var(--text-muted,#64748b)">
+        <i class="fa-solid fa-circle-notch fa-spin"
+           style="color:#3b82f6;font-size:24px;display:block;margin-bottom:14px"></i>
+        <div style="font-size:13px;font-weight:600">
+          Computing quantitative analytics for
+          <span style="color:#3b82f6">${sym}</span>
+        </div>
+        <div style="font-size:11px;margin-top:6px;opacity:0.7">
+          Monte Carlo GBM · Black-Scholes Greeks · Hurst Exponent ·
+          Ornstein-Uhlenbeck · VaR/CVaR · Risk-Adjusted Performance
+        </div>
+      </div>
+
+      <div id="sdp-q-content" style="display:none;flex-direction:column;gap:16px"></div>
+    `);
+
+    _loadTVWidget('sdp-tv-widget', sym, q.exchange || '');
+
+    const candles = await YahooFinance.getChart(sym, '1d', '2y');
+    const loadEl  = document.getElementById('sdp-q-loading');
+    const contEl  = document.getElementById('sdp-q-content');
+    if (!contEl) return;
+
+    if (!candles || candles.length < 60) {
+      if (loadEl) loadEl.innerHTML = `
+        <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b;font-size:20px"></i>
+        <div style="margin-top:8px;font-size:13px">
+          Insufficient data (need 60+ daily bars)
+        </div>`;
+      return;
+    }
+
+    const prices  = candles.map(c => c.close);
+    const volumes = candles.map(c => c.volume);
+    const returns = _QF.simpleReturns(prices);
+    const logRet  = _QF.logReturns(prices);
+    const S       = prices[prices.length - 1];
+
+    const risk  = _QF.riskMetrics(prices, returns);
+    const perf  = _QF.performance(prices, returns);
+    const stats = _QF.statistics(returns);
+    const H     = _QF.hurst(prices);
+    const ou    = _QF.ornsteinUhlenbeck(prices);
+    const mom   = _QF.momentum(prices);
+    const bs    = _QF.blackScholesAll(S, risk.volFull);
+    const mc    = _QF.monteCarlo(S, risk.annRet, risk.volFull, 252, 400);
+    const hist  = _QF.histogram(returns, 35);
+
+    if (loadEl) loadEl.style.display = 'none';
+    contEl.style.display = 'flex';
+
+    const fP  = (v,d=2) => v!=null&&!isNaN(v)?`${v>=0?'+':''}${(v*100).toFixed(d)}%`:'—';
+    const fR  = (v,d=3) => v!=null&&!isNaN(v)?v.toFixed(d):'—';
+    const fC  = v       => v!=null&&!isNaN(v)?`$${Math.abs(v).toFixed(2)}`:'—';
+    const clr = (v,inv=false) => {
+      if(v==null||isNaN(v)) return 'var(--text-muted)';
+      return (inv?v<0:v>0)?'#10b981':'#ef4444';
+    };
+
+    const hLabel = H>0.6 ? {txt:'Trending (persistent)',c:'#10b981'}
+                 : H<0.4 ? {txt:'Mean-reverting (anti-persistent)',c:'#8b5cf6'}
+                 :          {txt:'Random Walk (efficient)',c:'#6b7280'};
+    const hPct = Math.min(95, Math.max(5, Math.round(H*100)));
+
+    contEl.innerHTML = `
+
+      <!-- ── ROW 1 : Risk + Performance + Statistics ── -->
+      <div class="sdp-q-grid-3">
+
+        <!-- Risk -->
+        <div class="sdp-fp-stat-section">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-shield-halved" style="color:#ef4444"></i>
+            Risk Analytics
+          </div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:9px;font-weight:700;color:var(--text-muted);
+                        text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+              Historical Volatility (annualized)
+            </div>
+            ${[['1M',risk.vol1m],['3M',risk.vol3m],['6M',risk.vol6m],['1Y',risk.vol1y]]
+              .map(([l,v])=>`
+              <div class="sdp-q-metric">
+                <span class="sdp-q-lbl">σ ${l}</span>
+                <span class="sdp-q-val"
+                      style="color:${v?v>0.4?'#ef4444':v>0.25?'#f59e0b':'#10b981':'var(--text-muted)'}">
+                  ${v?`${(v*100).toFixed(1)}%`:'—'}
+                </span>
+              </div>`).join('')}
+          </div>
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);
+                      text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px">
+            Value at Risk (1-day)
+          </div>
+          ${[
+            ['VaR 95% Hist.', risk.varH95,true],
+            ['VaR 99% Hist.', risk.varH99,true],
+            ['VaR 95% Param.',risk.varP95,true],
+            ['CVaR 95%',      risk.cvar95,true],
+            ['CVaR 99%',      risk.cvar99,true],
+          ].map(([l,v,inv])=>`
+            <div class="sdp-q-metric">
+              <span class="sdp-q-lbl">${l}</span>
+              <span class="sdp-q-val" style="color:${clr(v,inv)}">${fP(v)}</span>
+            </div>`).join('')}
+          <div class="sdp-q-metric" style="margin-top:8px">
+            <span class="sdp-q-lbl">Max Drawdown</span>
+            <span class="sdp-q-val" style="color:#ef4444">${fP(risk.maxDD)}</span>
+          </div>
+          <div class="sdp-q-metric">
+            <span class="sdp-q-lbl">DD Duration</span>
+            <span class="sdp-q-val">${risk.ddDays} days</span>
+          </div>
+          <div class="sdp-q-metric">
+            <span class="sdp-q-lbl">Ann. Return</span>
+            <span class="sdp-q-val" style="color:${clr(risk.annRet)}">${fP(risk.annRet)}</span>
+          </div>
+        </div>
+
+        <!-- Performance -->
+        <div class="sdp-fp-stat-section">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-trophy" style="color:#f59e0b"></i>
+            Performance Analytics
+            <span style="font-size:9px;font-weight:400;margin-left:auto;color:var(--text-muted)">
+              Rf=5.25%
+            </span>
+          </div>
+          ${[
+            ['Sharpe Ratio', perf.sharpe,
+              perf.sharpe>1.5?'Excellent':perf.sharpe>1?'Good':perf.sharpe>0.5?'Fair':'Poor',
+              perf.sharpe>1?'#10b981':perf.sharpe>0.5?'#f59e0b':'#ef4444'],
+            ['Sortino Ratio',perf.sortino,
+              perf.sortino>2?'Excellent':perf.sortino>1?'Good':perf.sortino>0.5?'Fair':'Poor',
+              perf.sortino>1?'#10b981':perf.sortino>0.5?'#f59e0b':'#ef4444'],
+            ['Calmar Ratio', perf.calmar,
+              perf.calmar>1?'Good':perf.calmar>0.5?'Fair':'Poor',
+              perf.calmar>0.5?'#10b981':'#ef4444'],
+            ['Omega Ratio',  perf.omega,
+              perf.omega>2?'Excellent':perf.omega>1.5?'Good':'Fair',
+              perf.omega>1.5?'#10b981':perf.omega>1?'#f59e0b':'#ef4444'],
+          ].map(([lbl,v,txt,c])=>`
+            <div class="sdp-q-metric">
+              <span class="sdp-q-lbl">${lbl}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:10px;padding:1px 6px;border-radius:4px;
+                             background:${c}18;color:${c};font-weight:700">${txt}</span>
+                <span class="sdp-q-val" style="color:${c}">${fR(v)}</span>
+              </div>
+            </div>`).join('')}
+          <div style="height:1px;background:var(--border,rgba(0,0,0,0.06));margin:10px 0"></div>
+          ${[
+            ['Ann. Volatility', perf.annVol!=null?perf.annVol*100:null,'%'],
+            ['Hit Rate',        perf.hitRate!=null?perf.hitRate*100:null,'%'],
+            ['Avg Daily Gain',  perf.avgGain,  '%'],
+            ['Avg Daily Loss',  perf.avgLoss,  '%'],
+            ['Autocorr Lag-1',  perf.autocorr1,''],
+          ].map(([lbl,v,sfx])=>`
+            <div class="sdp-q-metric">
+              <span class="sdp-q-lbl">${lbl}</span>
+              <span class="sdp-q-val"
+                    style="color:${lbl==='Avg Daily Loss'?'#ef4444':
+                                   lbl==='Avg Daily Gain'?'#10b981':'var(--text-primary)'}">
+                ${v!=null?`${v.toFixed(2)}${sfx}`:'—'}
+              </span>
+            </div>`).join('')}
+        </div>
+
+        <!-- Statistics -->
+        <div class="sdp-fp-stat-section">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-wave-square" style="color:#8b5cf6"></i>
+            Statistical Properties
+          </div>
+          <div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:11px;font-weight:700;color:var(--text-primary)">
+                Hurst Exponent
+              </span>
+              <span style="font-size:13px;font-weight:900;
+                           font-family:var(--font-mono);color:${hLabel.c}">
+                ${H.toFixed(3)}
+              </span>
+            </div>
+            <div class="sdp-hurst-bar">
+              <div class="sdp-hurst-marker" style="left:${hPct}%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;
+                        font-size:9px;color:var(--text-muted);margin-top:4px">
+              <span>Mean Rev.</span><span>Random</span><span>Trending</span>
+            </div>
+            <div style="text-align:center;font-size:10px;font-weight:700;
+                        color:${hLabel.c};margin-top:4px">
+              ${hLabel.txt}
+            </div>
+          </div>
+          ${[
+            ['Skewness',    stats.sk, stats.sk>0?'Right tail':'Left tail',
+              Math.abs(stats.sk)>1?'#ef4444':'#6b7280'],
+            ['Exc. Kurtosis',stats.ku,stats.ku>0?'Leptokurtic':'Platykurtic',
+              stats.ku>3?'#ef4444':stats.ku>1?'#f59e0b':'#10b981'],
+            ['Jarque-Bera', stats.jb,stats.normal?'Normal (p>5%)':'Non-normal (p<5%)',
+              stats.normal?'#10b981':'#ef4444'],
+          ].map(([lbl,v,txt,c])=>`
+            <div class="sdp-q-metric">
+              <span class="sdp-q-lbl">${lbl}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:9px;padding:1px 5px;border-radius:3px;
+                             background:${c}18;color:${c};font-weight:700">${txt}</span>
+                <span class="sdp-q-val">${fR(v)}</span>
+              </div>
+            </div>`).join('')}
+          <div style="font-size:9px;font-weight:700;color:var(--text-muted);
+                      text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 6px">
+            Autocorrelation
+          </div>
+          ${[['Lag 1d',stats.ac1],['Lag 5d',stats.ac5],['Lag 21d',stats.ac21]]
+            .map(([lbl,v])=>`
+            <div class="sdp-q-metric">
+              <span class="sdp-q-lbl">${lbl}</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end">
+                <div style="width:60px;height:5px;background:rgba(148,163,184,0.2);
+                            border-radius:3px;overflow:hidden">
+                  <div style="width:${Math.min(100,Math.abs(v||0)*300)}%;height:100%;
+                              background:${Math.abs(v||0)>0.1?'#f59e0b':'#6b7280'};
+                              border-radius:3px"></div>
+                </div>
+                <span class="sdp-q-val">${fR(v)}</span>
+              </div>
+            </div>`).join('')}
+          <div class="sdp-q-metric" style="margin-top:8px">
+            <span class="sdp-q-lbl">N observations</span>
+            <span class="sdp-q-val">${returns.length}d</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ROW 2 : Mean Reversion + Momentum ── -->
+      <div class="sdp-q-grid-2">
+
+        <!-- Ornstein-Uhlenbeck -->
+        <div class="sdp-fp-stat-section">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-rotate" style="color:#8b5cf6"></i>
+            Ornstein-Uhlenbeck Process
+            <span style="font-size:9px;margin-left:4px;font-weight:400;color:var(--text-muted)">
+              Mean Reversion
+            </span>
+          </div>
+          ${ou ? `
+            <div style="background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);
+                        border-radius:8px;padding:12px;margin-bottom:12px">
+              <div style="font-size:11px;font-weight:700;color:#8b5cf6;margin-bottom:8px">
+                dP = κ(θ−P)dt + σdW
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                ${[
+                  ['κ (Speed)',   ou.kappa.toFixed(2)+'/yr','#3b82f6'],
+                  ['θ (Mean)',   '$'+ou.theta.toFixed(2),   '#6b7280'],
+                  ['Half-Life',  ou.halfLife.toFixed(1)+' days','#f59e0b'],
+                  ['σ (Noise)',  '$'+ou.sigma.toFixed(3),   '#6b7280'],
+                ].map(([l,v,c])=>`
+                  <div style="background:var(--bg-card,#fff);border:1px solid var(--border);
+                              border-radius:6px;padding:6px 10px">
+                    <div style="font-size:9px;color:var(--text-muted);
+                                font-weight:700;margin-bottom:2px">${l}</div>
+                    <div style="font-size:14px;font-weight:800;
+                                font-family:var(--font-mono);color:${c}">${v}</div>
+                  </div>`).join('')}
+              </div>
+            </div>
+            <div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                <span style="font-size:11px;font-weight:700;color:var(--text-primary)">
+                  Z-Score vs Long-term Mean
+                </span>
+                <span style="font-size:14px;font-weight:900;font-family:var(--font-mono);
+                             color:${Math.abs(ou.zScore)>2?'#ef4444':
+                                    Math.abs(ou.zScore)>1?'#f59e0b':'#10b981'}">
+                  ${ou.zScore.toFixed(2)}σ
+                </span>
+              </div>
+              <div style="height:8px;background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981,#f59e0b,#ef4444);
+                          border-radius:4px;position:relative;margin-bottom:4px">
+                <div style="position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;
+                            background:white;border:2px solid #3b82f6;
+                            transform:translateX(-50%);box-shadow:0 2px 6px rgba(0,0,0,0.2);
+                            left:${Math.min(95,Math.max(5,50+ou.zScore*12))}%"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;
+                          font-size:9px;color:var(--text-muted)">
+                <span>−3σ</span><span>−1σ</span><span>Mean</span><span>+1σ</span><span>+3σ</span>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.5">
+                ${Math.abs(ou.zScore)>2
+                  ? `<span style="color:#ef4444;font-weight:700">
+                       ⚠ Strong ${ou.zScore>0?'overvalued':'undervalued'} signal
+                     </span> — price ${Math.abs(ou.zScore).toFixed(1)}σ from $${ou.theta.toFixed(2)}`
+                  : Math.abs(ou.zScore)>1
+                  ? `<span style="color:#f59e0b;font-weight:700">
+                       Mild ${ou.zScore>0?'overvalued':'undervalued'}
+                     </span> — model suggests reversion toward $${ou.theta.toFixed(2)}`
+                  : `<span style="color:#10b981;font-weight:700">Near fair value</span>
+                     — price close to long-term mean $${ou.theta.toFixed(2)}`}
+              </div>
+            </div>
+          ` : '<div style="color:var(--text-muted);font-size:12px">Insufficient data for OU calibration</div>'}
+        </div>
+
+        <!-- Momentum -->
+        <div class="sdp-fp-stat-section">
+          <div class="sdp-fp-stat-title">
+            <i class="fa-solid fa-arrow-trend-up" style="color:#10b981"></i>
+            Momentum Analysis
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+            ${[
+              ['1 Month',   mom.m1m,   21],
+              ['3 Months',  mom.m3m,   63],
+              ['6 Months',  mom.m6m,  126],
+              ['12 Months', mom.m12m, 252],
+            ].map(([lbl,v])=>{
+              const pctW = v!=null?Math.min(100,Math.abs(v)*3):0;
+              const c    = v!=null?v>0?'#10b981':'#ef4444':'#6b7280';
+              return `
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                  <span style="font-size:11px;font-weight:600;color:var(--text-muted)">${lbl}</span>
+                  <span style="font-size:12px;font-weight:800;
+                               font-family:var(--font-mono);color:${c}">
+                    ${v!=null?`${v>=0?'+':''}${v.toFixed(2)}%`:'—'}
+                  </span>
+                </div>
+                <div style="height:6px;background:rgba(148,163,184,0.15);border-radius:3px;overflow:hidden">
+                  <div style="width:${pctW}%;height:100%;background:${c};
+                              border-radius:3px;transition:width 0.5s ease;
+                              margin-left:${v!=null&&v<0?`${100-pctW}%`:'0'}"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);
+                      border-radius:8px;padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:#3b82f6;margin-bottom:4px">
+              Jegadeesh-Titman (12-1 Month)
+            </div>
+            <div style="font-size:18px;font-weight:900;font-family:var(--font-mono);
+                        color:${mom.jt!=null?mom.jt>0?'#10b981':'#ef4444':'#6b7280'}">
+              ${mom.jt!=null?`${mom.jt>=0?'+':''}${mom.jt.toFixed(2)}%`:'—'}
+            </div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:2px">
+              11-month return lagged 1 month — institutional momentum factor
+            </div>
+          </div>
+          ${(()=>{
+            const sc = [mom.m1m,mom.m3m,mom.m6m,mom.m12m].filter(v=>v!=null);
+            const pos = sc.filter(v=>v>0).length;
+            const tot = sc.length||1;
+            const score = pos/tot;
+            const label = score>=0.75?'Strong Bullish':score>=0.5?'Mild Bullish':
+                          score<=0.25?'Strong Bearish':'Mixed / Neutral';
+            const c = score>=0.5?'#10b981':'#ef4444';
+            return `
+              <div>
+                <div style="font-size:10px;font-weight:700;color:var(--text-muted);
+                            text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px">
+                  Momentum Score
+                </div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="flex:1;height:8px;background:rgba(148,163,184,0.15);
+                              border-radius:4px;overflow:hidden">
+                    <div style="width:${score*100}%;height:100%;background:${c};border-radius:4px"></div>
+                  </div>
+                  <span style="font-size:11px;font-weight:700;color:${c};white-space:nowrap">
+                    ${pos}/${tot} — ${label}
+                  </span>
+                </div>
+              </div>`;
+          })()}
+        </div>
+      </div>
+
+      <!-- ── BLACK-SCHOLES ── -->
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-function" style="color:#3b82f6"></i>
+          Black-Scholes Option Pricing
+          <span style="font-size:9px;margin-left:4px;font-weight:400;color:var(--text-muted)">
+            European · Continuous dividends=0
+          </span>
+          <div style="margin-left:auto;font-size:11px;color:var(--text-muted);font-weight:400">
+            Spot: <strong style="color:var(--text-primary)">${fC(S)}</strong> ·
+            σ: <strong style="color:#3b82f6">${(risk.volFull*100).toFixed(1)}%</strong> ·
+            Rf: <strong>5.25%</strong>
+          </div>
+        </div>
+
+        <div class="sdp-bs-form" id="sdp-bs-form">
+          <div>
+            <label class="sdp-bs-label">Spot Price ($)</label>
+            <input class="sdp-bs-input" id="sdp-bs-spot" type="number"
+                   value="${S.toFixed(2)}" step="0.01" min="0.01">
+          </div>
+          <div>
+            <label class="sdp-bs-label">Implied Vol (σ %)</label>
+            <input class="sdp-bs-input" id="sdp-bs-vol" type="number"
+                   value="${(risk.volFull*100).toFixed(1)}" step="0.5" min="1" max="500">
+          </div>
+          <div>
+            <label class="sdp-bs-label">Risk-Free Rate (%)</label>
+            <input class="sdp-bs-input" id="sdp-bs-rfr" type="number"
+                   value="5.25" step="0.25" min="0" max="20">
+          </div>
+          <div>
+            <label class="sdp-bs-label">Expiry (days)</label>
+            <input class="sdp-bs-input" id="sdp-bs-expiry" type="number"
+                   value="30" step="1" min="1" max="730">
+          </div>
+          <div>
+            <label class="sdp-bs-label">Strike ($)</label>
+            <input class="sdp-bs-input" id="sdp-bs-strike" type="number"
+                   value="${Math.round(S)}" step="0.5" min="0.01">
+          </div>
+          <div style="display:flex;align-items:flex-end">
+            <button id="sdp-bs-calc"
+                    style="width:100%;height:36px;
+                           background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+                           color:white;border:none;border-radius:8px;
+                           font-weight:700;font-size:12px;cursor:pointer;
+                           font-family:var(--font-sans,'Inter',sans-serif)">
+              <i class="fa-solid fa-calculator"></i> Calculate
+            </button>
+          </div>
+        </div>
+
+        <div id="sdp-bs-results">
+          ${_buildBSResults(S, risk.volFull, 0.0525, 30/365, Math.round(S))}
+        </div>
+
+        <!-- Option Chain -->
+        <div style="margin-top:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:10px">
+            <i class="fa-solid fa-table" style="color:#8b5cf6;margin-right:6px"></i>
+            Option Chain — ATM ± 15% (Historical Vol)
+          </div>
+          ${bs.map(exp=>`
+            <div style="margin-bottom:12px">
+              <div style="font-size:10px;font-weight:700;color:#8b5cf6;margin-bottom:6px;
+                          text-transform:uppercase;letter-spacing:0.5px">
+                ${exp.label} (T=${exp.T.toFixed(4)}y)
+              </div>
+              <table class="sdp-bs-table">
+                <thead>
+                  <tr>
+                    <th>Strike</th><th>Moneyness</th>
+                    <th>Call</th><th>Put</th>
+                    <th>Δ Call</th><th>Δ Put</th>
+                    <th>Γ</th><th>Θ/day</th><th>Vega/1%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${exp.rows.map(row=>`
+                    <tr style="${Math.abs(row.K-S)/S<0.01?
+                        'background:rgba(59,130,246,0.08);font-weight:800':''}">
+                      <td>${fC(row.K)}</td>
+                      <td style="color:${parseFloat(row.moneyness)>0?'#10b981':'#ef4444'}">
+                        ${row.moneyness}%
+                      </td>
+                      <td style="color:#10b981">${fC(row.call)}</td>
+                      <td style="color:#ef4444">${fC(row.put)}</td>
+                      <td>${row.delta_c.toFixed(3)}</td>
+                      <td style="color:#ef4444">${row.delta_p.toFixed(3)}</td>
+                      <td>${row.gamma.toFixed(5)}</td>
+                      <td style="color:#ef4444">${row.theta_c.toFixed(4)}</td>
+                      <td>${row.vega.toFixed(4)}</td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>`).join('')}
+        </div>
+
+        <!-- Greeks -->
+        <div style="margin-top:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-primary);margin-bottom:8px">
+            <i class="fa-solid fa-atom" style="color:#3b82f6;margin-right:4px"></i>
+            Greeks — ATM ${fC(Math.round(S))} · 1M
+          </div>
+          <div class="sdp-greeks-grid" id="sdp-greeks-grid">
+            ${_buildGreeksHTML(S, risk.volFull, 0.0525, 30/365, Math.round(S))}
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MONTE CARLO ── -->
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-dice" style="color:#3b82f6"></i>
+          Monte Carlo Simulation — GBM (400 paths, 1Y horizon)
+          <span style="margin-left:auto;font-size:9px;font-weight:400;color:var(--text-muted)">
+            μ=${(risk.annRet*100).toFixed(1)}% · σ=${(risk.volFull*100).toFixed(1)}%
+          </span>
+        </div>
+        <div class="sdp-mc-container">
+          <canvas id="sdp-mc-canvas"></canvas>
+        </div>
+        <div class="sdp-mc-targets">
+          ${mc.targets.map(t=>`
+            <div style="background:var(--bg-primary,#f1f5f9);border-radius:8px;
+                        padding:8px 10px;text-align:center">
+              <div style="font-size:9px;color:var(--text-muted);font-weight:700;margin-bottom:2px">
+                P(≥$${t.price})
+              </div>
+              <div style="font-size:14px;font-weight:900;font-family:var(--font-mono);
+                          color:${parseFloat(t.probUp)>50?'#10b981':'#ef4444'}">
+                ${t.probUp}%
+              </div>
+              <div style="font-size:9px;color:var(--text-muted);margin-top:1px">
+                ${parseFloat(t.price)>S?'↑ target':'↓ floor'}
+              </div>
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--text-muted);line-height:1.6">
+          <strong>GBM:</strong> dS = μS dt + σS dW —
+          Percentile bands: P5 (dark red) · P25 (orange) · P50 median (blue) ·
+          P75 (light green) · P95 (dark green)
+        </div>
+      </div>
+
+      <!-- ── RETURN DISTRIBUTION ── -->
+      <div class="sdp-fp-stat-section">
+        <div class="sdp-fp-stat-title">
+          <i class="fa-solid fa-chart-bar" style="color:#8b5cf6"></i>
+          Daily Return Distribution
+          <span style="margin-left:auto;font-size:9px;font-weight:400;color:var(--text-muted)">
+            μ=${(hist.mu*100).toFixed(3)}% · σ=${(hist.sg*100).toFixed(3)}%
+          </span>
+        </div>
+        <div class="sdp-rd-container">
+          <canvas id="sdp-rd-canvas"></canvas>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px">
+          ${[
+            ['Skewness',     stats.sk.toFixed(3), Math.abs(stats.sk)>0.5?'Asymmetric':'Near symmetric',
+              Math.abs(stats.sk)>1?'#ef4444':Math.abs(stats.sk)>0.5?'#f59e0b':'#10b981'],
+            ['Exc. Kurtosis',stats.ku.toFixed(3), stats.ku>0?'Fat tails (leptokurtic)':'Thin tails',
+              stats.ku>3?'#ef4444':stats.ku>1?'#f59e0b':'#10b981'],
+            ['Normality (JB)',stats.jb.toFixed(1), stats.normal?'H0: Normal':'H1: Non-normal',
+              stats.normal?'#10b981':'#ef4444'],
+            ['Best day',  `+${(_QF.pct(returns, 99) * 100).toFixed(2)}%`, 'P99', '#10b981'],
+            ['Worst day', `${(_QF.pct(returns, 1)   * 100).toFixed(2)}%`, 'P01', '#ef4444'],
+          ].map(([lbl, v, txt, c]) => `
+            <div style="background:var(--bg-primary,#f1f5f9);border-radius:8px;padding:8px 10px">
+              <div style="font-size:9px;color:var(--text-muted);font-weight:600;margin-bottom:2px">
+                ${lbl}
+              </div>
+              <div style="font-size:13px;font-weight:900;font-family:var(--font-mono);color:${c}">
+                ${v}
+              </div>
+              <div style="font-size:9px;color:${c};font-weight:700">${txt}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    `;  // ← fermeture de contEl.innerHTML
+
+    // ── Monte Carlo Canvas ────────────────────────────────
+    setTimeout(() => {
+      const mcCanvas = document.getElementById('sdp-mc-canvas');
+      if (!mcCanvas || typeof Chart === 'undefined') return;
+      if (_sdCJ['sdp-mc']) { try { _sdCJ['sdp-mc'].destroy(); } catch(e) {} }
+
+      const dayLabels   = mc.daysSampled.map(d => `${d}d`);
+      const bandColors  = [
+        'rgba(239,68,68,0.9)',
+        'rgba(249,115,22,0.8)',
+        'rgba(59,130,246,1)',
+        'rgba(34,197,94,0.8)',
+        'rgba(16,185,129,0.9)',
+      ];
+      const bandWidths  = [1.5, 1.5, 2.5, 1.5, 1.5];
+      const tc = dark ? '#9db3d8' : '#64748b';
+      const gc = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+
+      _sdCJ['sdp-mc'] = new Chart(mcCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: dayLabels,
+          datasets: mc.bands.map((band, i) => ({
+            label:           `P${band.p}`,
+            data:            band.vals,
+            borderColor:     bandColors[i],
+            backgroundColor: 'transparent',
+            borderWidth:     bandWidths[i],
+            pointRadius:     3,
+            pointHoverRadius:5,
+            tension:         0.35,
+          })),
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: {
+            legend: { display: true, position: 'top',
+                      labels: { boxWidth: 12, font: { size: 10 }, color: tc } },
+            tooltip: {
+              backgroundColor: dark ? '#0f172a' : '#fff', bodyColor: tc,
+              borderColor: dark ? '#1e293b' : '#dde3f0', borderWidth: 1,
+              callbacks: {
+                label: ctx =>
+                  ` P${mc.bands[ctx.datasetIndex].p}: $${(ctx.parsed.y ?? 0).toFixed(2)}`,
+              },
+            },
+          },
+          scales: {
+            x: { ticks: { color: tc, font: { size: 9 } }, grid: { color: gc } },
+            y: {
+              ticks: { color: tc, font: { size: 9 },
+                       callback: v => `$${parseFloat(v).toFixed(0)}` },
+              grid: { color: gc },
+            },
+          },
+        },
+      });
+    }, 120);
+
+    // ── Return Distribution Canvas ────────────────────────
+    setTimeout(() => {
+      const rdCanvas = document.getElementById('sdp-rd-canvas');
+      if (!rdCanvas || typeof Chart === 'undefined') return;
+      if (_sdCJ['sdp-rd']) { try { _sdCJ['sdp-rd'].destroy(); } catch(e) {} }
+
+      const tc = dark ? '#9db3d8' : '#64748b';
+      const gc = dark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)';
+
+      const normalY = hist.bins.map(b => {
+        const z = (b.x - hist.mu) / Math.max(hist.sg, 1e-10);
+        return _QF.normPDF(z) / Math.max(hist.sg, 1e-10);
+      });
+
+      _sdCJ['sdp-rd'] = new Chart(rdCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: hist.bins.map(b => `${(b.x * 100).toFixed(2)}%`),
+          datasets: [
+            {
+              type: 'bar', label: 'Observed',
+              data: hist.bins.map(b => b.y_density),
+              backgroundColor: hist.bins.map(b =>
+                b.x < 0 ? 'rgba(239,68,68,0.55)' : 'rgba(16,185,129,0.55)'),
+              borderWidth: 0, borderRadius: 2,
+            },
+            {
+              type: 'line', label: 'Normal fit',
+              data: normalY,
+              borderColor: '#3b82f6', backgroundColor: 'transparent',
+              borderWidth: 2, pointRadius: 0, tension: 0.4,
+            },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: {
+            legend: { display: true, position: 'top',
+                      labels: { boxWidth: 12, font: { size: 10 }, color: tc } },
+            tooltip: {
+              backgroundColor: dark ? '#0f172a' : '#fff', bodyColor: tc,
+              borderColor: dark ? '#1e293b' : '#dde3f0', borderWidth: 1,
+            },
+          },
+          scales: {
+            x: { ticks: { color: tc, font: { size: 8 }, maxTicksLimit: 10 },
+                 grid: { display: false } },
+            y: { ticks: { color: tc, font: { size: 9 } }, grid: { color: gc } },
+          },
+        },
+      });
+    }, 160);
+
+    // ── Black-Scholes Calculator binding ──────────────────
+    setTimeout(() => {
+      document.getElementById('sdp-bs-calc')?.addEventListener('click', () => {
+        const spot   = parseFloat(document.getElementById('sdp-bs-spot')?.value   || S);
+        const volPct = parseFloat(document.getElementById('sdp-bs-vol')?.value    || risk.volFull * 100);
+        const rfrPct = parseFloat(document.getElementById('sdp-bs-rfr')?.value    || 5.25);
+        const days   = parseFloat(document.getElementById('sdp-bs-expiry')?.value || 30);
+        const strike = parseFloat(document.getElementById('sdp-bs-strike')?.value || Math.round(S));
+        const vol    = volPct / 100;
+        const r      = rfrPct / 100;
+        const T      = days / 365;
+
+        const resEl  = document.getElementById('sdp-bs-results');
+        const grkEl  = document.getElementById('sdp-greeks-grid');
+        if (resEl) resEl.innerHTML = _buildBSResults(spot, vol, r, T, strike);
+        if (grkEl) grkEl.innerHTML = _buildGreeksHTML(spot, vol, r, T, strike);
+      });
+    }, 200);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // BS RESULTS BUILDER
+  // ══════════════════════════════════════════════════════
+  function _buildBSResults(S, vol, r, T, K) {
+    if (T <= 0 || vol <= 0 || S <= 0 || K <= 0)
+      return '<div style="color:#f59e0b;font-size:12px;padding:10px">Invalid parameters</div>';
+
+    const NC  = _QF.normCDF;
+    const NP  = _QF.normPDF;
+    const sqT = Math.sqrt(T);
+    const d1  = (Math.log(S / K) + (r + 0.5 * vol ** 2) * T) / (vol * sqT);
+    const d2  = d1 - vol * sqT;
+    const eRT = Math.exp(-r * T);
+
+    const call = S * NC(d1) - K * eRT * NC(d2);
+    const put  = K * eRT * NC(-d2) - S * NC(-d1);
+
+    return `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);
+                    border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:10px;font-weight:700;color:#10b981;margin-bottom:6px;
+                      text-transform:uppercase;letter-spacing:0.5px">
+            <i class="fa-solid fa-arrow-up"></i> Call Option
+          </div>
+          <div style="font-size:30px;font-weight:900;font-family:var(--font-mono);color:#10b981">
+            $${call.toFixed(3)}
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+            Δ = ${NC(d1).toFixed(4)} · Intrinsic = $${Math.max(0, S - K).toFixed(2)}
+          </div>
+        </div>
+        <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.3);
+                    border-radius:10px;padding:16px;text-align:center">
+          <div style="font-size:10px;font-weight:700;color:#ef4444;margin-bottom:6px;
+                      text-transform:uppercase;letter-spacing:0.5px">
+            <i class="fa-solid fa-arrow-down"></i> Put Option
+          </div>
+          <div style="font-size:30px;font-weight:900;font-family:var(--font-mono);color:#ef4444">
+            $${put.toFixed(3)}
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+            Δ = ${(NC(d1) - 1).toFixed(4)} · Intrinsic = $${Math.max(0, K - S).toFixed(2)}
+          </div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px">
+        ${[
+          ['d₁', d1.toFixed(4),    '#3b82f6'],
+          ['d₂', d2.toFixed(4),    '#8b5cf6'],
+          ['N(d₁)', NC(d1).toFixed(4),'#10b981'],
+          ['N(d₂)', NC(d2).toFixed(4),'#6b7280'],
+        ].map(([l, v, c]) => `
+          <div style="background:var(--bg-primary,#f1f5f9);border-radius:7px;
+                      padding:6px 8px;text-align:center">
+            <div style="font-size:9px;color:var(--text-muted);margin-bottom:2px">${l}</div>
+            <div style="font-size:11px;font-weight:800;font-family:var(--font-mono);
+                        color:${c}">${v}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  // ══════════════════════════════════════════════════════
+  // GREEKS BUILDER
+  // ══════════════════════════════════════════════════════
+  function _buildGreeksHTML(S, vol, r, T, K) {
+    if (T <= 0 || vol <= 0 || S <= 0 || K <= 0) return '';
+
+    const NC  = _QF.normCDF;
+    const NP  = _QF.normPDF;
+    const sqT = Math.sqrt(T);
+    const d1  = (Math.log(S / K) + (r + 0.5 * vol ** 2) * T) / (vol * sqT);
+    const d2  = d1 - vol * sqT;
+    const eRT = Math.exp(-r * T);
+    const nd1 = NP(d1);
+
+    const delta_c =  NC(d1);
+    const delta_p =  NC(d1) - 1;
+    const gamma   =  nd1 / (S * vol * sqT);
+    const theta_c = (-S * nd1 * vol / (2 * sqT) - r * K * eRT * NC(d2))  / 365;
+    const theta_p = (-S * nd1 * vol / (2 * sqT) + r * K * eRT * NC(-d2)) / 365;
+    const vega    =  S * nd1 * sqT / 100;
+    const rho_c   =  K * T * eRT * NC(d2)  / 100;
+    const rho_p   = -K * T * eRT * NC(-d2) / 100;
+
+    return [
+      { n:'Δ Delta Call',  v:delta_c, d:'Change per $1 spot',     c:'#10b981', i:'fa-arrow-up'       },
+      { n:'Δ Delta Put',   v:delta_p, d:'Change per $1 spot',     c:'#ef4444', i:'fa-arrow-down'     },
+      { n:'Γ Gamma',       v:gamma,   d:'Δ change per $1 spot',   c:'#3b82f6', i:'fa-arrows-up-down' },
+      { n:'Θ Theta Call',  v:theta_c, d:'Time decay per day ($)', c:'#f59e0b', i:'fa-clock'          },
+      { n:'Θ Theta Put',   v:theta_p, d:'Time decay per day ($)', c:'#f59e0b', i:'fa-clock'          },
+      { n:'V Vega',        v:vega,    d:'Change per 1% vol',      c:'#8b5cf6', i:'fa-wave-square'    },
+      { n:'ρ Rho Call',    v:rho_c,   d:'Change per 1% rate',     c:'#06b6d4', i:'fa-percent'        },
+      { n:'ρ Rho Put',     v:rho_p,   d:'Change per 1% rate',     c:'#06b6d4', i:'fa-percent'        },
+    ].map(g => `
+      <div style="background:var(--bg-primary,#f1f5f9);border-radius:8px;padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px">
+          <i class="fa-solid ${g.i}" style="color:${g.c};font-size:9px"></i>
+          <span style="font-size:10px;font-weight:700;color:${g.c}">${g.n}</span>
+        </div>
+        <div style="font-size:17px;font-weight:900;font-family:var(--font-mono);
+                    color:var(--text-primary)">${g.v.toFixed(4)}</div>
+        <div style="font-size:9px;color:var(--text-muted);margin-top:2px">${g.d}</div>
+      </div>`).join('');
   }
 
   // ════════════════════════════════════════════════════════
