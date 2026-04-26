@@ -862,6 +862,24 @@ const StockDetail = (() => {
     const fhProf  = _data[sym]?.fhProfile       || {};
     const signal  = _sig(sym);
 
+    // ── Variables de valorisation — MANQUANTES, à définir avant kstats ──
+    const epsUse = _rv(stats.trailingEps?.raw,  fhM.epsNormalizedAnnual);
+    const peUse  = _rv(
+      detail.trailingPE?.raw,
+      fhM.peBasicExclExtraTTM,
+      fhM.peTTM,
+      (epsUse && q.price > 0) ? q.price / sf(epsUse) : null
+    );
+    const fwdPE  = _rv(detail.forwardPE?.raw,   fhM.forwardPE);
+    const fwdEPS = _rv(stats.forwardEps?.raw);
+
+    // Formatage % : gère Yahoo décimal (0.42) ET Twelve Data pct (42.5)
+    const perc = (raw, ...fb) => {
+      const v = _rv(raw, ...fb);
+      if (v == null) return '--';
+      return `${(Math.abs(sf(v)) < 5 ? sf(v) * 100 : sf(v)).toFixed(2)}%`;
+    };
+
     const kstats = [
 
       // ── TOUJOURS DISPONIBLES : données quote /chart ──────────────────
@@ -872,7 +890,7 @@ const StockDetail = (() => {
       { l:'50D Avg',         v: _f(q['50d_avg']  || detail.fiftyDayAverage?.raw, '$') },
       { l:'200D Avg',        v: _f(q['200d_avg'] || detail.twoHundredDayAverage?.raw, '$') },
       { l:'Volume',          v: _fmtNum(q.volume || detail.volume?.raw) },
-      { l:'Market Cap',      v: _fmtMCap(q.market_cap || _rv(detail.marketCap?.raw)) },
+      { l:'Market Cap',      v: _fmtMCap(q.market_cap || _rv(stats.marketCap)) },
 
       // ── VALORISATION (Yahoo summary + Twelve Data fallback) ──────────
       { l:'P/E (TTM)',       v: peUse    != null ? sf(peUse).toFixed(2)             : '--' },
@@ -1830,6 +1848,28 @@ const StockDetail = (() => {
       WatchlistManager.addSymbol(_sym);
     }
     _updateWLBtn();
+  }
+
+  // ── Safe value picker — Yahoo .raw wrapper + fallbacks (null/0 ignorés) ──
+  // Utilisé par _renderOverview ET _renderFinancialsEarnings
+  function _rv(y, ...fb) {
+    const v = y?.raw ?? y;
+    if (v != null && !isNaN(parseFloat(v)) && v !== 0) return v;
+    for (const f of fb) {
+      const fv = f?.raw ?? f;
+      if (fv != null && !isNaN(parseFloat(fv)) && fv !== 0) return fv;
+    }
+    return null;
+  }
+
+  // ── Safe number depuis plusieurs sources (skip NaN/0) ────────────────────
+  // Utilisé par _renderFinancialsEarnings
+  function _n(...vals) {
+    for (const v of vals) {
+      const n = parseFloat(v?.raw ?? v);
+      if (!isNaN(n) && n !== 0) return n;
+    }
+    return null;
   }
 
   function _f(val, prefix = '', dec = 2, suffix = '') {
