@@ -141,23 +141,65 @@ const FinanceHub = (() => {
     }
   }
 
+  // ── Remplace getBasicFinancials (inexistant) par /api/statistics ──
+  // Mappe Twelve Data statistics → format metric attendu par les renders
   async function getBasicFinancials(sym) {
-    return _get(`/api/finnhub/basic-financials?symbol=${sym}&metric=all`);
+    const data = await _get(`/api/statistics?symbol=${sym}`);
+    if (!data?.statistics) return null;
+
+    const s   = data.statistics;
+    const v   = s.valuations_metrics  || {};
+    const inc = (s.financials?.income_statement) || {};
+    const bal = (s.financials?.balance_sheet)    || {};
+    const cf  = (s.financials?.cash_flow)        || {};
+    const st  = s.stock_statistics               || {};
+
+    const pct = (num, denom) =>
+      (num != null && denom != null && denom !== 0)
+        ? (parseFloat(num) / parseFloat(denom) * 100) : null;
+
+    return {
+      metric: {
+        peBasicExclExtraTTM:  v.trailing_pe     ?? null,
+        forwardPE:             v.forward_pe      ?? null,
+        peTTM:                 v.trailing_pe     ?? null,
+        pbAnnual:              v.price_to_book   ?? null,
+        beta:                  st.beta           ?? null,
+        '52WeekHigh':          st['52_week_high']?? null,
+        '52WeekLow':           st['52_week_low'] ?? null,
+        grossMarginAnnual:     pct(inc.gross_profit_ttm,    inc.revenue_ttm),
+        operatingMarginAnnual: pct(inc.operating_income_ttm,inc.revenue_ttm),
+        netMarginAnnual:       pct(inc.net_income_ttm,      inc.revenue_ttm),
+        revenueAnnual:         inc.revenue_ttm   ?? null,
+        freeCashFlowAnnual:    cf.free_cash_flow_ttm ?? null,
+        totalDebt:             bal.total_debt    ?? null,
+        cashAndEquivalents:    bal.total_cash    ?? null,
+        marketCapitalization:  null,   // calculé via quote
+        epsNormalizedAnnual:   null,   // calculé via PE et price
+        roeTTM:                null,
+        roaRfy:                null,
+      }
+    };
   }
+
   async function getEarnings(sym) {
     return _get(`/api/finnhub/earnings?symbol=${sym}`);
   }
-  async function getEarningsCalendar(sym) {
-    const from = new Date().toISOString().split('T')[0];
-    const to   = new Date(Date.now() + 180 * 864e5).toISOString().split('T')[0];
-    return _get(`/api/finnhub/earnings-calendar?symbol=${sym}&from=${from}&to=${to}`);
+
+  // ── getEarningsCalendar : endpoint inexistant dans le worker
+  // Yahoo Finance summary (calendarEvents) est utilisé comme fallback
+  async function getEarningsCalendar(_sym) {
+    return null;  // Données disponibles via Yahoo summary.calendarEvents
   }
+
   async function getCompanyProfile(sym) {
     return _get(`/api/finnhub/company-profile?symbol=${sym}`);
   }
+
   async function getStatistics(sym) {
     return _get(`/api/statistics?symbol=${sym}`);
   }
+
   function clearCache(sym) {
     for (const key of _mem.keys()) {
       if (key.includes(sym)) _mem.delete(key);
@@ -171,6 +213,39 @@ const FinanceHub = (() => {
 })();
 
 window.FinanceHub = FinanceHub;
+
+// ════════════════════════════════════════════════════════════
+// DYNAMIC CHART LIBS LOADER
+// Charge LightweightCharts et Chart.js si absents de la page
+// ════════════════════════════════════════════════════════════
+async function _ensureChartLibs() {
+  const tasks = [];
+
+  if (typeof LightweightCharts === 'undefined') {
+    tasks.push(new Promise((res, rej) => {
+      const s   = document.createElement('script');
+      s.src     = 'https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js';
+      s.onload  = res;
+      s.onerror = () => { console.warn('[SDP] LightweightCharts load failed'); res(); };
+      document.head.appendChild(s);
+    }));
+  }
+
+  if (typeof Chart === 'undefined') {
+    tasks.push(new Promise((res, rej) => {
+      const s   = document.createElement('script');
+      s.src     = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+      s.onload  = res;
+      s.onerror = () => { console.warn('[SDP] Chart.js load failed'); res(); };
+      document.head.appendChild(s);
+    }));
+  }
+
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
+    console.log('[SDP] Chart libs loaded dynamically');
+  }
+}
 
 // ════════════════════════════════════════════════════════════
 // HELPERS
@@ -487,6 +562,30 @@ const StockDetail = (() => {
         .sdp-fp-body    { padding: 12px; }
         .sdp-fp-stats   { grid-template-columns: 1fr 1fr; }
       }
+
+      /* Regime chip (manquant — utilisé dans _renderOverview & _renderFinancialsEarnings) */
+      .regime-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        padding: 2px 9px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 700;
+        border: 1px solid rgba(59,130,246,0.2);
+        background: rgba(59,130,246,0.07);
+        color: #3b82f6;
+        white-space: nowrap;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes scaleIn {
+        from { opacity:0; transform:scale(0.95); }
+        to   { opacity:1; transform:scale(1); }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -562,21 +661,15 @@ const StockDetail = (() => {
     });
 
     document.getElementById('sdp-fp-buy')?.addEventListener('click', () => {
-      if (window.AVTrading) { AVTrading.setSymbol(_sym); AVTrading.setSide('BUY'); }
-      const sel = document.getElementById('order-symbol');
-      if (sel) sel.value = _sym;
       close();
-      if (window.location.pathname.includes('trading')) return;
-      window.location.href = 'trading.html';
+      window.location.href =
+        `trading.html?symbol=${encodeURIComponent(_sym)}&side=BUY`;
     });
 
     document.getElementById('sdp-fp-sell')?.addEventListener('click', () => {
-      if (window.AVTrading) { AVTrading.setSymbol(_sym); AVTrading.setSide('SELL'); }
-      const sel = document.getElementById('order-symbol');
-      if (sel) sel.value = _sym;
       close();
-      if (window.location.pathname.includes('trading')) return;
-      window.location.href = 'trading.html';
+      window.location.href =
+        `trading.html?symbol=${encodeURIComponent(_sym)}&side=SELL`;
     });
 
     document.getElementById('sdp-fp-wl')?.addEventListener('click', _toggleWL);
@@ -596,6 +689,9 @@ const StockDetail = (() => {
     _tab   = 'overview';
     _iv    = '1d';
     _range = '1y';
+
+    // Charge LightweightCharts et Chart.js si absents (pages sans ces libs)
+    await _ensureChartLibs();
 
     _build();
 
@@ -653,7 +749,7 @@ const StockDetail = (() => {
 
     const [quoteRes, summaryRes, newsRes,
            fhBasicRes, fhEarnRes, fhCalRes,
-           fhProfileRes, fhStatsRes] = await Promise.allSettled([
+           fhProfileRes] = await Promise.allSettled([
       YahooFinance.getQuote(sym),
       YahooFinance.getFinancials(sym),
       YahooFinance.getNews(sym, 50),
@@ -661,29 +757,71 @@ const StockDetail = (() => {
       FinanceHub.getEarnings(sym),
       FinanceHub.getEarningsCalendar(sym),
       FinanceHub.getCompanyProfile(sym),
-      FinanceHub.getStatistics(sym),
     ]);
 
-    _data[sym].quote      = quoteRes.status      === 'fulfilled' ? quoteRes.value      : null;
-    _data[sym].summary    = summaryRes.status     === 'fulfilled' ? summaryRes.value    : null;
-    _data[sym].news       = newsRes.status        === 'fulfilled' ? newsRes.value       : [];
-    _data[sym].fhBasic    = fhBasicRes.status     === 'fulfilled' ? fhBasicRes.value    : null;
-    _data[sym].fhEarnings = fhEarnRes.status      === 'fulfilled' ? fhEarnRes.value     : null;
-    _data[sym].fhCal      = fhCalRes.status       === 'fulfilled' ? fhCalRes.value      : null;
-    _data[sym].fhProfile  = fhProfileRes.status   === 'fulfilled' ? fhProfileRes.value  : null;
-    _data[sym].fhStats    = fhStatsRes.status     === 'fulfilled' ? fhStatsRes.value    : null;
+    const p = r => r.status === 'fulfilled' ? r.value : null;
+    _data[sym].quote      = p(quoteRes);
+    _data[sym].summary    = p(summaryRes);
+    _data[sym].news       = p(newsRes)    ?? [];
+    _data[sym].fhBasic    = p(fhBasicRes);
+    _data[sym].fhEarnings = p(fhEarnRes);
+    _data[sym].fhCal      = p(fhCalRes);
+    _data[sym].fhProfile  = p(fhProfileRes);
 
+    // ── Charge les signals ML (AVApi cache ou fetch direct) ──────
+    try {
+      let signalData = (typeof AVApi !== 'undefined')
+        ? AVApi.getCached('signals') : null;
+
+      if (!signalData && typeof AVApi !== 'undefined') {
+        signalData = await AVApi.loadOne('signals', true);
+      }
+
+      const sigsArr = signalData?.signals;
+      _data[sym].signal = null;
+
+      if (Array.isArray(sigsArr)) {
+        _data[sym].signal = sigsArr.find(s => s.symbol === sym) || null;
+      } else if (sigsArr && typeof sigsArr === 'object') {
+        _data[sym].signal = sigsArr[sym] || null;
+      }
+    } catch (e) {
+      _data[sym].signal = null;
+    }
+
+    // ── Charge la décision LLM pour ce symbole ───────────────────
+    try {
+      let decData = (typeof AVApi !== 'undefined')
+        ? AVApi.getCached('decisions') : null;
+
+      if (!decData && typeof AVApi !== 'undefined') {
+        decData = await AVApi.loadOne('decisions', false);
+      }
+
+      const dec = decData?.decisions?.[sym] || null;
+      _data[sym].decision = dec;
+
+      // Injecte la décision dans le signal si présent
+      if (_data[sym].signal && dec) {
+        const finalDec = dec.final_decision || (dec.decision === true ? 'CONFIRM'
+                       : dec.decision === false ? 'REJECT' : '');
+        _data[sym].signal._council = finalDec;
+      }
+    } catch (e) {
+      _data[sym].decision = null;
+    }
+
+    // ── Met à jour le header avec les données de quote ───────────
     const q = _data[sym].quote;
     if (q?.price > 0) {
-      // Symbol meta from WatchlistManager
-      const meta = window.WatchlistManager?.getSymbolMeta?.(_sym) || { name: _sym, sector: '—' };
-      _t('sdp-fp-name',   meta.name    || _sym);
-      _t('sdp-fp-sector', meta.sector  || '—');
+      const meta = window.WatchlistManager?.getSymbolMeta?.(_sym) || {};
+      _t('sdp-fp-name',   meta.name   || _sym);
+      _t('sdp-fp-sector', meta.sector || q.exchange || '—');
       _t('sdp-fp-price',  `$${q.price.toFixed(2)}`);
       _t('sdp-fp-vol',    `Vol: ${_fmtNum(q.volume)}`);
       _t('sdp-fp-cap',    `Cap: ${_fmtMCap(q.market_cap)}`);
 
-      const chgPct = sf(q.change_pct || 0);
+      const chgPct = parseFloat(q.change_pct || 0);
       const chgEl  = document.getElementById('sdp-fp-change');
       if (chgEl) {
         chgEl.textContent = `${chgPct >= 0 ? '+' : ''}${chgPct.toFixed(2)}%`;
@@ -848,48 +986,70 @@ const StockDetail = (() => {
   }
 
   function _renderSignalBlock(signal) {
-    const action  = signal.action || (signal.direction === 'buy' ? 'BUY' : signal.direction === 'sell' ? 'SELL' : 'NEUTRAL');
-    const conf    = sf(signal.confidence || 0);
-    const score   = sf(signal.score || signal.final_score || conf);
-    const bp      = sf(signal.buy_prob || 0.5);
-    const council = signal.council || 'wait';
-    const regime  = (signal.regime || '').replace(/_/g, ' ');
+    const action  = (signal.action || '').toUpperCase();
+    const conf    = parseFloat(signal.confidence || 0);
+    const score   = parseFloat(signal.score || signal.meta_score || signal.final_score || conf || 0);
 
-    const ac = action === 'BUY' ? '#10b981' : action === 'SELL' ? '#ef4444' : '#6b7280';
-    const ai = action === 'BUY' ? 'fa-arrow-up' : action === 'SELL' ? 'fa-arrow-down' : 'fa-minus';
+    // Buy prob : confidence si BUY, inverse si SELL
+    const bp = action === 'BUY'  ? conf
+             : action === 'SELL' ? Math.max(0, 1 - conf)
+             : 0.5;
+
+    // Council : depuis signal._council (injecté par _fetchAll) ou decision
+    const dec     = _data[_sym]?.decision;
+    let council   = signal._council || '';
+    if (!council && dec) {
+      council = dec.final_decision || (dec.decision === true ? 'CONFIRM'
+              : dec.decision === false ? 'REJECT' : '');
+    }
+
+    // Regime depuis signal
+    const regime  = (signal.regime_at_signal || signal.regime || '').replace(/_/g, ' ').toUpperCase();
+
+    const ac = action === 'BUY'  ? '#10b981'
+             : action === 'SELL' ? '#ef4444' : '#6b7280';
+    const ai = action === 'BUY'  ? 'fa-arrow-up'
+             : action === 'SELL' ? 'fa-arrow-down' : 'fa-minus';
+
+    const councilColor = council === 'CONFIRM' ? '#10b981'
+                       : council === 'REJECT'  ? '#ef4444'
+                       : council === 'REDUCE'  ? '#f59e0b' : '#94a3b8';
 
     return `
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span style="font-size:14px;font-weight:800;padding:6px 14px;border-radius:6px;
-                     background:${ac}15;color:${ac};border:1px solid ${ac}30">
-          <i class="fa-solid ${ai}" style="font-size:10px"></i> ${action}
+                     background:${ac}18;color:${ac};border:1px solid ${ac}35">
+          <i class="fa-solid ${ai}" style="font-size:10px"></i> ${action || 'NEUTRAL'}
         </span>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex:1;min-width:200px">
           <div style="background:var(--bg-card,#fff);border:1px solid var(--border,rgba(0,0,0,0.08));
                       border-radius:7px;padding:7px 10px">
-            <div style="font-size:9px;color:var(--text-muted,#64748b);margin-bottom:2px">Score</div>
+            <div style="font-size:9px;color:var(--text-muted,#64748b);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px">Score</div>
             <div style="font-size:14px;font-weight:800;font-family:var(--font-mono,monospace);
                         color:#3b82f6">${score.toFixed(3)}</div>
           </div>
           <div style="background:var(--bg-card,#fff);border:1px solid var(--border,rgba(0,0,0,0.08));
                       border-radius:7px;padding:7px 10px">
-            <div style="font-size:9px;color:var(--text-muted,#64748b);margin-bottom:2px">Confidence</div>
+            <div style="font-size:9px;color:var(--text-muted,#64748b);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px">Confidence</div>
             <div style="font-size:14px;font-weight:800;font-family:var(--font-mono,monospace)">
               ${(conf * 100).toFixed(1)}%
             </div>
           </div>
           <div style="background:var(--bg-card,#fff);border:1px solid var(--border,rgba(0,0,0,0.08));
                       border-radius:7px;padding:7px 10px">
-            <div style="font-size:9px;color:var(--text-muted,#64748b);margin-bottom:2px">Buy Prob</div>
+            <div style="font-size:9px;color:var(--text-muted,#64748b);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px">Buy Prob</div>
             <div style="font-size:14px;font-weight:800;font-family:var(--font-mono,monospace);
                         color:#10b981">${(bp * 100).toFixed(1)}%</div>
           </div>
           <div style="background:var(--bg-card,#fff);border:1px solid var(--border,rgba(0,0,0,0.08));
                       border-radius:7px;padding:7px 10px">
-            <div style="font-size:9px;color:var(--text-muted,#64748b);margin-bottom:2px">Council</div>
-            <div style="font-size:12px;font-weight:800;
-                        color:${council.includes('execute') ? '#10b981' : '#f59e0b'}">
-              ${council.toUpperCase()}
+            <div style="font-size:9px;color:var(--text-muted,#64748b);
+                        text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px">Council</div>
+            <div style="font-size:12px;font-weight:800;color:${councilColor}">
+              ${council || '—'}
             </div>
           </div>
         </div>
@@ -1609,14 +1769,18 @@ const StockDetail = (() => {
 
   // ── R1 — Signal from AVApi cache ────────────────────────
   function _sig(sym) {
-    // Use AVApi cache if available (new architecture)
+    // 1. Priorité : données chargées dans _fetchAll()
+    if (_data[sym] && _data[sym].signal !== undefined) {
+      return _data[sym].signal;
+    }
+
+    // 2. Fallback : cache AVApi
     if (typeof AVApi !== 'undefined') {
       const cached = AVApi.getCached('signals');
       if (cached?.signals) {
         if (Array.isArray(cached.signals)) {
           return cached.signals.find(s => s.symbol === sym) || null;
         }
-        // If object/dict keyed by symbol
         return cached.signals[sym] || null;
       }
     }

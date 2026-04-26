@@ -843,30 +843,40 @@
     try {
       const params = new URLSearchParams(window.location.search);
       const sym    = (params.get('symbol') || '').trim().toUpperCase();
+      const side   = (params.get('side')   || 'BUY').toUpperCase();
       if (!sym) return;
 
+      // Pré-remplit le symbole
       const symEl = document.getElementById('trd-sym-input');
-      if (symEl) {
-        symEl.value = sym;
+      if (!symEl) return;
+      symEl.value = sym;
 
-        // Met le focus sur la quantité pour faciliter la saisie
-        const qtyEl = document.getElementById('trd-qty-input');
-        if (qtyEl) {
-          qtyEl.focus();
-          qtyEl.select();
-        }
+      // Sélectionne BUY ou SELL
+      const validSide = (side === 'SELL') ? 'SELL' : 'BUY';
+      _selectedSide   = validSide;
+      document.querySelectorAll('.trd-side-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.side === _selectedSide);
+      });
+      _refreshSubmitBtn();
 
-        AVUtils.showToast(
-          `Symbol pre-filled: <strong>${sym}</strong> — enter quantity to trade`,
-          'info',
-          4000
-        );
+      // Focus sur la quantité
+      const qtyEl = document.getElementById('trd-qty-input');
+      if (qtyEl) { qtyEl.focus(); qtyEl.select(); }
 
-        // Nettoie l'URL pour éviter le re-prefill au refresh
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, '', cleanUrl);
-      }
-    } catch (e) {}
+      // Toast informatif
+      const sideColor = validSide === 'BUY' ? '#10b981' : '#ef4444';
+      AVUtils.showToast(
+        `<span style="color:${sideColor};font-weight:800">${validSide}</span>
+         order pre-filled: <strong>${sym}</strong>`,
+        'info',
+        4500
+      );
+
+      // Nettoie l'URL pour éviter le re-prefill au refresh
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch (e) {
+      console.warn('[av-trading] _prefillFromURL error:', e.message);
+    }
   }
 
   // ══════════════════════════════════════════════════════════
