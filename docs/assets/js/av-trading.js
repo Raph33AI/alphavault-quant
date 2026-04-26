@@ -188,10 +188,10 @@
            style="color:var(--accent-orange);font-size:16px;flex-shrink:0;margin-top:2px"></i>
         <div style="flex:1;min-width:0">
           <div class="trd-ssh-title">
-            SSH Tunnel Required — Order Submission Disabled
+            
           </div>
           <code class="trd-ssh-code">
-            ssh -i ~/ssh-key-2026-04-18.key -L 5002:localhost:5002 ubuntu@141.253.101.68
+             
           </code>
           <div class="trd-ssh-hint">
             Run this command locally, then reload the page to enable order submission.
