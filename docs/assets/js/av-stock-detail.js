@@ -142,48 +142,19 @@ const FinanceHub = (() => {
   }
 
   // ── Remplace getBasicFinancials (inexistant) par /api/statistics ──
-  // Mappe Twelve Data statistics → format metric attendu par les renders
   async function getBasicFinancials(sym) {
-    const data = await _get(`/api/statistics?symbol=${sym}`);
-    if (!data?.statistics) return null;
-
-    const s   = data.statistics;
-    const v   = s.valuations_metrics  || {};
-    const inc = (s.financials?.income_statement) || {};
-    const bal = (s.financials?.balance_sheet)    || {};
-    const cf  = (s.financials?.cash_flow)        || {};
-    const st  = s.stock_statistics               || {};
-
-    const pct = (num, denom) =>
-      (num != null && denom != null && denom !== 0)
-        ? (parseFloat(num) / parseFloat(denom) * 100) : null;
-
-    return {
-      metric: {
-        peBasicExclExtraTTM:  v.trailing_pe     ?? null,
-        forwardPE:             v.forward_pe      ?? null,
-        peTTM:                 v.trailing_pe     ?? null,
-        pbAnnual:              v.price_to_book   ?? null,
-        beta:                  st.beta           ?? null,
-        '52WeekHigh':          st['52_week_high']?? null,
-        '52WeekLow':           st['52_week_low'] ?? null,
-        grossMarginAnnual:     pct(inc.gross_profit_ttm,    inc.revenue_ttm),
-        operatingMarginAnnual: pct(inc.operating_income_ttm,inc.revenue_ttm),
-        netMarginAnnual:       pct(inc.net_income_ttm,      inc.revenue_ttm),
-        revenueAnnual:         inc.revenue_ttm   ?? null,
-        freeCashFlowAnnual:    cf.free_cash_flow_ttm ?? null,
-        totalDebt:             bal.total_debt    ?? null,
-        cashAndEquivalents:    bal.total_cash    ?? null,
-        marketCapitalization:  null,   // calculé via quote
-        epsNormalizedAnnual:   null,   // calculé via PE et price
-        roeTTM:                null,
-        roaRfy:                null,
-      }
-    };
+    // Retour à l'endpoint Finnhub original (metric object natif)
+    return _get(`/api/finnhub/basic-financials?symbol=${sym}&metric=all`);
   }
 
   async function getEarnings(sym) {
-    return _get(`/api/finnhub/earnings?symbol=${sym}`);
+    const data = await _get(`/api/finnhub/earnings?symbol=${sym}`);
+    if (!data) return [];
+    // Finnhub retourne un tableau direct OU le worker peut envelopper
+    if (Array.isArray(data))           return data;
+    if (Array.isArray(data.earnings))  return data.earnings;
+    if (Array.isArray(data.data))      return data.data;
+    return [];
   }
 
   // ── getEarningsCalendar : endpoint inexistant dans le worker
@@ -764,7 +735,12 @@ const StockDetail = (() => {
     _data[sym].summary    = p(summaryRes);
     _data[sym].news       = p(newsRes)    ?? [];
     _data[sym].fhBasic    = p(fhBasicRes);
-    _data[sym].fhEarnings = p(fhEarnRes);
+    // Normalise en tableau (getEarnings renvoie déjà un array, double sécurité)
+    const rawEarnings     = p(fhEarnRes);
+    _data[sym].fhEarnings = Array.isArray(rawEarnings) ? rawEarnings
+                          : Array.isArray(rawEarnings?.earnings) ? rawEarnings.earnings
+                          : Array.isArray(rawEarnings?.data)     ? rawEarnings.data
+                          : [];
     _data[sym].fhCal      = p(fhCalRes);
     _data[sym].fhProfile  = p(fhProfileRes);
 

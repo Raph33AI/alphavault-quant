@@ -603,10 +603,10 @@ const WatchlistManager = (() => {
             : '<span style="color:var(--text-faint);font-size:11px">—</span>'}
           </td>
 
-          <!-- Buy Prob -->
-          <td style="padding:8px 10px;font-family:var(--font-mono);font-size:11px;
-                     color:var(--text-primary)">
-            ${score > 0 ? `${(bp * 100).toFixed(1)}%` : '—'}
+          <!-- Confidence -->
+          <td style="padding:8px 10px;font-family:var(--font-mono,monospace);font-size:11px;
+                     font-weight:700;color:${conf > 0.75 ? '#10b981' : conf > 0.5 ? '#f59e0b' : 'var(--text-muted,#64748b)'}">
+            ${conf > 0 ? `${(conf * 100).toFixed(1)}%` : '—'}
           </td>
 
           <!-- Regime -->
