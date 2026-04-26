@@ -880,11 +880,43 @@
     // ────────────────────────────────────────────────────────────────────
     async function checkUserAccess(user) {
         try {
+
+            // ── ADMIN : accès immédiat, bypass pending ────────────────────
+            if (user.email === ADMIN_EMAIL) {
+                console.log('%c👑 Admin detected — auto-approving access',
+                    'background:#eab308;color:#000;padding:3px 8px;border-radius:4px;font-weight:bold;');
+
+                await db.collection(QUANT_USERS_COL).doc(user.uid).set({
+                    uid:          user.uid,
+                    email:        user.email,
+                    displayName:  user.displayName || 'Admin',
+                    firstName:    user.displayName?.split(' ')[0] || 'Admin',
+                    lastName:     user.displayName?.split(' ').slice(1).join(' ') || '',
+                    photoURL:     user.photoURL || '',
+                    status:       'approved',
+                    role:         'admin',
+                    signupMethod: 'admin',
+                    createdAt:    firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt:    firebase.firestore.FieldValue.serverTimestamp(),
+                    lastLoginAt:  firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                showToast('success', '👑 Admin access granted. Redirecting...');
+                setTimeout(() => { window.location.href = DASHBOARD_URL; }, 900);
+                return;
+            }
+
+            // ── USER NORMAL : vérifier quant_users ───────────────────────
             const snap = await db.collection(QUANT_USERS_COL).doc(user.uid).get();
 
             if (!snap.exists) {
-                await createQuantUser(user, {}, 'pending_approval');
-                showPendingScreen(user, {});
+                // Firebase Auth existe mais pas de doc quant_users
+                // → créer le doc pending (cas Google ou user existant)
+                console.log('⚠ No quant_users doc found → creating pending request');
+                await createQuantUser(user, {
+                    signupMethod: user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email'
+                }, 'pending_approval');
+                showPendingScreen(user, { createdAt: { toDate: () => new Date() } });
                 startPollTimer();
                 return;
             }
@@ -1124,7 +1156,7 @@
     });
 
     // ────────────────────────────────────────────────────────────────────
-    // 11. SIGNUP FORM
+    // 11. SIGNUP FORM — avec gestion email-already-in-use
     // ────────────────────────────────────────────────────────────────────
     document.getElementById('signupForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1139,9 +1171,9 @@
         clearErrors();
 
         let hasErr = false;
-        if (!firstName)           { showFieldError('signupFirstNameError', 'Required');         hasErr = true; }
-        if (!lastName)            { showFieldError('signupLastNameError',  'Required');         hasErr = true; }
-        if (!isValidEmail(email)) { showFieldError('signupEmailError',     'Invalid email');    hasErr = true; }
+        if (!firstName)           { showFieldError('signupFirstNameError', 'Required');           hasErr = true; }
+        if (!lastName)            { showFieldError('signupLastNameError',  'Required');           hasErr = true; }
+        if (!isValidEmail(email)) { showFieldError('signupEmailError',     'Invalid email');      hasErr = true; }
         if (password.length < 6)  { showFieldError('signupPasswordError',  'Min. 6 characters'); hasErr = true; }
         if (hasErr) return;
 
@@ -1165,9 +1197,52 @@
 
         } catch (error) {
             console.error('❌ Signup error:', error.code);
-            const msg = getErrorMessage(error.code);
-            if (error.code === 'auth/email-already-in-use') showFieldError('signupEmailError', msg);
-            showToast('error', msg);
+
+            if (error.code === 'auth/email-already-in-use') {
+                // ── Cas : email déjà dans Firebase Auth ──────────────────
+                showFieldError('signupEmailError', 'Account already exists.');
+
+                // Tenter de vérifier si un doc quant_users existe
+                try {
+                    // On essaie de se connecter pour récupérer l'uid
+                    const cred2 = await auth.signInWithEmailAndPassword(email, password);
+                    const user2 = cred2.user;
+
+                    const snap = await db.collection(QUANT_USERS_COL).doc(user2.uid).get();
+
+                    if (!snap.exists) {
+                        // Firebase Auth OK mais pas de doc quant_users → créer pending
+                        console.log('📝 Existing Firebase Auth user → creating quant_users pending doc');
+                        await createQuantUser(user2, {
+                            firstName, lastName, reason, signupMethod: 'email'
+                        }, 'pending_approval');
+                        showToast('success', 'Access request submitted! Waiting for admin approval.');
+                        showPendingScreen(user2, { createdAt: { toDate: () => new Date() } });
+                        startPollTimer();
+                    } else {
+                        // Doc existe déjà → checkUserAccess prend le relais via onAuthStateChanged
+                        showToast('info', 'Account found. Checking your access status...');
+                    }
+
+                } catch (loginErr) {
+                    // Mauvais mot de passe ou autre erreur
+                    if (loginErr.code === 'auth/wrong-password' || loginErr.code === 'auth/invalid-credential') {
+                        showFieldError('signupEmailError', 'This email is already registered. Use Sign In tab.');
+                        showToast('warning', 'Account exists. Please sign in instead.');
+                        // Basculer sur l'onglet login après 2s
+                        setTimeout(() => {
+                            switchTab('login');
+                            document.getElementById('loginEmail').value = email;
+                        }, 2000);
+                    } else {
+                        showToast('error', getErrorMessage(loginErr.code));
+                    }
+                }
+
+            } else {
+                showToast('error', getErrorMessage(error.code));
+            }
+
         } finally {
             setLoading('signupBtn', false);
             isProcessing = false;
@@ -1175,7 +1250,7 @@
     });
 
     // ────────────────────────────────────────────────────────────────────
-    // 12. GOOGLE AUTH
+    // 12. GOOGLE AUTH — avec admin auto-approval
     // ────────────────────────────────────────────────────────────────────
     async function handleGoogleAuth() {
         if (isProcessing) return;
@@ -1185,6 +1260,13 @@
             const user   = result.user;
             const isNew  = result.additionalUserInfo?.isNewUser;
 
+            // Admin → onAuthStateChanged → checkUserAccess gère l'auto-approval
+            if (user.email === ADMIN_EMAIL) {
+                showToast('info', '👑 Admin detected. Checking access...');
+                // checkUserAccess sera appelé par onAuthStateChanged
+                return;
+            }
+
             if (isNew) {
                 const profile = result.additionalUserInfo?.profile || {};
                 await createQuantUser(user, {
@@ -1193,7 +1275,11 @@
                     signupMethod: 'google'
                 }, 'pending_approval');
                 showToast('success', 'Request submitted! Waiting for admin approval.');
+            } else {
+                showToast('info', 'Checking your access status...');
             }
+            // onAuthStateChanged → checkUserAccess handle routing
+
         } catch (err) {
             if      (err.code === 'auth/popup-closed-by-user') showToast('info',  'Login cancelled.');
             else if (err.code === 'auth/popup-blocked')        showToast('error', 'Popup blocked. Please allow popups.');
@@ -1202,9 +1288,6 @@
             isProcessing = false;
         }
     }
-
-    document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleAuth);
-    document.getElementById('googleSignupBtn').addEventListener('click', handleGoogleAuth);
 
     // ────────────────────────────────────────────────────────────────────
     // 13. LOGOUT
