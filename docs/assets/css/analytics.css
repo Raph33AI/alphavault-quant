@@ -627,3 +627,671 @@
   .anl-model-qual       { display: none; }
   .anl-model-label      { min-width: 100px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — FULL MOBILE OVERHAUL
+   Breakpoints : 1100 → 900 → 768 → 600 → 480 → 375 → 320
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── 1100px : Tablette large ───────────────────────────────── */
+@media (max-width: 1100px) {
+  .anl-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .anl-strategy-layout {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .anl-strategy-chart-wrap {
+    width: 160px;
+    height: 160px;
+  }
+
+  .anl-strategy-rows {
+    width: 100%;
+  }
+
+  .anl-strat-label {
+    min-width: 110px;
+  }
+}
+
+/* ── 900px : Tablette portrait ─────────────────────────────── */
+@media (max-width: 900px) {
+  .anl-mid-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .anl-bottom-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .anl-dd-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .anl-dd-circle {
+    width: 90px;
+    height: 90px;
+    align-self: center;
+  }
+
+  .anl-dd-stats {
+    width: 100%;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .anl-perf-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .anl-kpi-val {
+    font-size: 20px;
+  }
+
+  .anl-nav-chart-container {
+    height: 280px;
+  }
+
+  .anl-model-label {
+    min-width: 110px;
+  }
+
+  .anl-insights-stats {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── 768px : Mobile large / petite tablette ────────────────── */
+@media (max-width: 768px) {
+  /* KPI */
+  .anl-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .anl-kpi-card {
+    padding: 14px 14px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  .anl-kpi-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 16px;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+
+  .anl-kpi-val {
+    font-size: 18px;
+    min-height: 24px;
+  }
+
+  .anl-kpi-lbl {
+    font-size: 10px;
+  }
+
+  .anl-kpi-sub {
+    font-size: 10px;
+    gap: 4px;
+  }
+
+  /* NAV Chart */
+  .anl-nav-chart-container {
+    height: 250px;
+  }
+
+  .anl-tf-btns {
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+
+  /* Topbar */
+  .topbar-refresh-label {
+    display: none;
+  }
+
+  /* Strategy */
+  .anl-strategy-layout {
+    align-items: stretch;
+  }
+
+  .anl-strategy-chart-wrap {
+    width: 140px;
+    height: 140px;
+    align-self: center;
+  }
+
+  .anl-strat-row {
+    gap: 8px;
+  }
+
+  .anl-strat-label {
+    min-width: 90px;
+    font-size: 11px;
+  }
+
+  .anl-strat-pct {
+    min-width: 34px;
+    font-size: 11px;
+  }
+
+  /* Performance grid */
+  .anl-perf-stat {
+    padding: 12px 12px;
+  }
+
+  .anl-perf-val {
+    font-size: 17px;
+  }
+
+  /* Model */
+  .anl-model-row {
+    gap: 8px;
+  }
+
+  .anl-model-label {
+    min-width: 95px;
+    font-size: 11px;
+  }
+
+  .anl-model-auc {
+    font-size: 12px;
+    min-width: 50px;
+  }
+
+  .anl-model-qual {
+    min-width: 58px;
+    font-size: 9px;
+  }
+
+  /* Rebalancer */
+  .anl-rebal-status {
+    font-size: 12px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .anl-rebal-status i {
+    font-size: 18px;
+  }
+
+  /* Insights */
+  .anl-insights-stat-val {
+    font-size: 17px;
+  }
+
+  /* DD circle */
+  .anl-dd-circle {
+    width: 84px;
+    height: 84px;
+  }
+
+  .anl-dd-circle-val {
+    font-size: 16px;
+  }
+}
+
+/* ── 600px : Mobile standard ───────────────────────────────── */
+@media (max-width: 600px) {
+  /* KPI : 2 colonnes serrées */
+  .anl-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .anl-kpi-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 12px;
+    border-radius: 10px;
+  }
+
+  .anl-kpi-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .anl-kpi-val {
+    font-size: 16px;
+    min-height: 20px;
+    margin-bottom: 3px;
+  }
+
+  .anl-kpi-sub {
+    font-size: 9.5px;
+  }
+
+  /* NAV Chart */
+  .anl-nav-chart-container {
+    height: 210px;
+  }
+
+  /* Insights stats : 1 colonne */
+  .anl-insights-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .anl-insights-stat {
+    padding: 10px 12px;
+  }
+
+  .anl-insights-stat-val {
+    font-size: 16px;
+  }
+
+  /* Rebalancer stats : 1 colonne */
+  .anl-rebal-stats {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  /* Drawdown stats : 1 colonne */
+  .anl-dd-stats {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .anl-dd-stat {
+    padding: 8px 10px;
+  }
+
+  .anl-dd-stat-val {
+    font-size: 13px;
+  }
+
+  /* Model : cacher la qualité */
+  .anl-model-qual {
+    display: none;
+  }
+
+  .anl-model-label {
+    min-width: 90px;
+    font-size: 11px;
+  }
+
+  .anl-model-auc {
+    min-width: 46px;
+    font-size: 11px;
+  }
+
+  .anl-model-auc-header {
+    font-size: 9px;
+  }
+
+  /* Performance */
+  .anl-perf-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .anl-perf-val {
+    font-size: 15px;
+  }
+
+  /* Strategy : compact */
+  .anl-strategy-chart-wrap {
+    width: 130px;
+    height: 130px;
+  }
+
+  .anl-strat-label {
+    min-width: 80px;
+    font-size: 10.5px;
+  }
+
+  /* Badges */
+  .badge-xs {
+    font-size: 8px;
+  }
+
+  /* Card header meta */
+  .card-header-meta {
+    gap: 4px;
+  }
+
+  /* Blocks info/warning */
+  .anl-warning-block,
+  .anl-info-block {
+    font-size: 11px;
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  /* Insuff badge */
+  .anl-insuff-badge {
+    font-size: 10px;
+    padding: 8px 12px;
+  }
+}
+
+/* ── 480px : Petit mobile ──────────────────────────────────── */
+@media (max-width: 480px) {
+  /* KPI : 1 colonne sur très petit écran */
+  .anl-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .anl-kpi-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .anl-kpi-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+
+  .anl-kpi-val {
+    font-size: 17px;
+  }
+
+  /* NAV chart */
+  .anl-nav-chart-container {
+    height: 190px;
+  }
+
+  /* Strategy : empilé */
+  .anl-strategy-layout {
+    gap: 14px;
+  }
+
+  .anl-strategy-chart-wrap {
+    width: 120px;
+    height: 120px;
+  }
+
+  .anl-strat-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+    border-radius: 6px;
+  }
+
+  .anl-strat-label {
+    min-width: 75px;
+    font-size: 10px;
+  }
+
+  .anl-strat-pct {
+    font-size: 10px;
+    min-width: 30px;
+  }
+
+  /* Performance : 1 colonne */
+  .anl-perf-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .anl-perf-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+  }
+
+  .anl-perf-lbl {
+    margin-bottom: 0;
+  }
+
+  .anl-perf-val {
+    font-size: 16px;
+  }
+
+  /* Drawdown */
+  .anl-dd-main {
+    align-items: center;
+  }
+
+  .anl-dd-circle {
+    width: 80px;
+    height: 80px;
+    border-width: 3px;
+  }
+
+  .anl-dd-circle-val {
+    font-size: 15px;
+  }
+
+  .anl-dd-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  /* Insights : 2 colonnes */
+  .anl-insights-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Rebalancer status : compact */
+  .anl-rebal-status {
+    font-size: 11px;
+    padding: 10px 12px;
+    gap: 8px;
+    border-radius: 10px;
+  }
+
+  .anl-rebal-status i {
+    font-size: 16px;
+  }
+
+  /* Model : simplifier */
+  .anl-model-row {
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .anl-model-dot {
+    width: 7px;
+    height: 7px;
+  }
+
+  .anl-model-label {
+    min-width: 80px;
+    font-size: 10.5px;
+    gap: 5px;
+  }
+
+  .anl-model-auc {
+    font-size: 11px;
+    min-width: 42px;
+  }
+
+  .anl-model-legend {
+    gap: 10px;
+    font-size: 9px;
+  }
+
+  /* Sections mini titre */
+  .anl-section-mini-title {
+    font-size: 10px;
+  }
+}
+
+/* ── 375px : iPhone standard ───────────────────────────────── */
+@media (max-width: 375px) {
+  .anl-kpi-card {
+    padding: 10px 12px;
+    gap: 10px;
+    border-radius: 9px;
+  }
+
+  .anl-kpi-val {
+    font-size: 15px;
+  }
+
+  .anl-kpi-lbl {
+    font-size: 9px;
+  }
+
+  .anl-kpi-sub {
+    font-size: 9px;
+  }
+
+  .anl-kpi-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+
+  .anl-nav-chart-container {
+    height: 170px;
+  }
+
+  .anl-strategy-chart-wrap {
+    width: 110px;
+    height: 110px;
+  }
+
+  .anl-strat-label {
+    min-width: 65px;
+    font-size: 9.5px;
+  }
+
+  .anl-perf-val {
+    font-size: 14px;
+  }
+
+  .anl-dd-circle {
+    width: 72px;
+    height: 72px;
+  }
+
+  .anl-dd-circle-val {
+    font-size: 13px;
+  }
+
+  .anl-dd-stat-val {
+    font-size: 12px;
+  }
+
+  .anl-insights-stat-val {
+    font-size: 14px;
+  }
+
+  .anl-rebal-stat-val {
+    font-size: 12px;
+  }
+
+  .anl-model-label {
+    min-width: 70px;
+    font-size: 10px;
+  }
+
+  .anl-model-auc {
+    font-size: 10px;
+    min-width: 38px;
+  }
+
+  .anl-model-bar-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .anl-warning-block,
+  .anl-info-block {
+    font-size: 10.5px;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .anl-insuff-badge {
+    font-size: 9.5px;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── 320px : Très petit mobile (Galaxy Fold, etc.) ─────────── */
+@media (max-width: 320px) {
+  .anl-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .anl-kpi-card {
+    padding: 9px 10px;
+  }
+
+  .anl-kpi-val {
+    font-size: 14px;
+  }
+
+  .anl-insights-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .anl-dd-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .anl-rebal-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .anl-perf-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .anl-strategy-chart-wrap {
+    width: 100px;
+    height: 100px;
+  }
+
+  .anl-nav-chart-container {
+    height: 150px;
+  }
+
+  .anl-model-bar-wrap {
+    display: none;
+  }
+
+  .anl-model-label {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+/* ── Utilitaires touch ─────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Désactive les effets hover sur mobile (évite le sticky) */
+  .anl-kpi-card:hover {
+    box-shadow: var(--shadow-sm);
+    transform: none;
+  }
+
+  /* Zone de tap minimum 44px (recommandation Apple/Google) */
+  .anl-tf-btns > * {
+    min-height: 36px;
+    min-width: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .anl-rebal-status {
+    cursor: default;
+  }
+}
