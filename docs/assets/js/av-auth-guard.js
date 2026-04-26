@@ -10,36 +10,91 @@
   const ADMIN_EMAIL     = 'raphnardone@gmail.com';
 
   // ── 1. Overlay de chargement immédiat (évite le flash) ────
-  const _overlay = document.createElement('div');
-  _overlay.id = 'av-guard-overlay';
-  _overlay.style.cssText = [
+    const _overlay = document.createElement('div');
+    _overlay.id = 'av-guard-overlay';
+    _overlay.style.cssText = [
     'position:fixed;inset:0;z-index:99999',
-    'background:#0f172a',
+    'background:#ffffff',
     'display:flex;align-items:center;justify-content:center',
-    'flex-direction:column;gap:16px',
+    'flex-direction:column;gap:14px',
     'transition:opacity 0.25s ease',
-  ].join(';');
-  _overlay.innerHTML = `
+    ].join(';');
+    _overlay.innerHTML = `
     <div style="
-      width:44px;height:44px;
-      background:linear-gradient(135deg,#3b82f6,#8b5cf6);
-      border-radius:11px;
-      display:flex;align-items:center;justify-content:center;
-      font-size:22px;
-      box-shadow:0 8px 24px rgba(59,130,246,0.4);
-      animation:_avSpin 2s ease-in-out infinite alternate;
-    ">⚡</div>
-    <div style="font-size:12px;color:#94a3b8;font-family:Inter,sans-serif;
-                letter-spacing:0.5px">
-      Verifying access…
+        position:absolute;inset:0;pointer-events:none;
+        background:
+        radial-gradient(ellipse at 15% 25%, rgba(59,130,246,0.08) 0%, transparent 45%),
+        radial-gradient(ellipse at 85% 75%, rgba(99,102,241,0.07) 0%, transparent 45%);
+    "></div>
+
+    <img src="assets/images/alpha-logo.png"
+        alt="AlphaVault"
+        style="
+            width:56px;height:56px;
+            object-fit:contain;
+            position:relative;z-index:1;
+            filter:drop-shadow(0 4px 16px rgba(59,130,246,0.20));
+            animation:_avPulse 2.2s ease-in-out infinite;
+        "
+        onerror="
+            this.style.display='none';
+            this.nextElementSibling.style.display='flex';
+        ">
+
+    <div style="
+        display:none;
+        width:52px;height:52px;
+        background:linear-gradient(135deg,#3b82f6,#6366f1);
+        border-radius:14px;
+        align-items:center;justify-content:center;
+        position:relative;z-index:1;
+        box-shadow:0 4px 16px rgba(59,130,246,0.25);
+        animation:_avPulse 2.2s ease-in-out infinite;
+    ">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none"
+            xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z"
+                fill="white" stroke="white" stroke-width="0.5"
+                stroke-linejoin="round"/>
+        </svg>
     </div>
+
+    <div style="
+        font-size:12px;
+        color:#64748b;
+        font-family:Inter,-apple-system,sans-serif;
+        font-weight:500;
+        letter-spacing:0.3px;
+        position:relative;z-index:1;
+    ">
+        Verifying access…
+    </div>
+
+    <div style="
+        width:28px;height:28px;
+        border:2.5px solid rgba(59,130,246,0.15);
+        border-top-color:#3b82f6;
+        border-radius:50%;
+        position:relative;z-index:1;
+        animation:_avSpin 0.8s linear infinite;
+    "></div>
+
     <style>
-      @keyframes _avSpin {
-        from { transform: scale(1);   box-shadow: 0 8px 24px rgba(59,130,246,0.4); }
-        to   { transform: scale(1.08);box-shadow: 0 12px 36px rgba(139,92,246,0.5); }
-      }
+        @keyframes _avPulse {
+        0%,100% {
+            transform: scale(1);
+            filter: drop-shadow(0 4px 16px rgba(59,130,246,0.20));
+        }
+        50% {
+            transform: scale(1.05);
+            filter: drop-shadow(0 6px 24px rgba(99,102,241,0.30));
+        }
+        }
+        @keyframes _avSpin {
+        to { transform: rotate(360deg); }
+        }
     </style>
-  `;
+    `;
 
   // Injecter dès que le body est disponible
   function _injectOverlay() {
