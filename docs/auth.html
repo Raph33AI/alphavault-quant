@@ -1086,37 +1086,53 @@
     // 9. NOTIFY ADMIN
     // ────────────────────────────────────────────────────────────────────
     async function notifyAdmin(userData) {
-        console.log('%c📬 ADMIN NOTIFICATION — New access request',
+        console.log('%c📬 ADMIN NOTIFICATION — Calling Worker...',
             'background:#3b82f6;color:white;padding:4px 10px;border-radius:4px;font-weight:bold;');
         console.log('   Email  :', userData.email);
         console.log('   Name   :', userData.displayName);
         console.log('   UID    :', userData.uid);
-        console.log('%c   → Firebase Console → quant_users →', 'color:#94a3b8;', userData.uid);
-        console.log('%c   → Change status to "approved"', 'color:#10b981;font-weight:bold;');
 
-        /* ── Email via Cloudflare Worker (décommenter si disponible) ──────
         try {
-            await fetch('https://finance-hub-api.raphnardone.workers.dev/send-notification-email', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            // Récupérer le Firebase ID Token de l'utilisateur courant
+            const user = auth.currentUser;
+            if (!user) {
+                console.warn('⚠ notifyAdmin: no currentUser → skip email');
+                return;
+            }
+
+            const idToken = await user.getIdToken(/* forceRefresh */ false);
+
+            const workerUrl = 'https://alphavault-gh-proxy.raphnardone.workers.dev/quant/notify-new-signup';
+
+            const res = await fetch(workerUrl, {
+                method:  'POST',
+                headers: {
+                    'Content-Type':  'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                },
                 body: JSON.stringify({
-                    to:      ADMIN_EMAIL,
-                    subject: `[AlphaVault Quant] New access request — ${userData.email}`,
-                    html: `<h2>New Access Request</h2>
-                          <p><b>Email:</b> ${userData.email}</p>
-                          <p><b>Name:</b> ${userData.displayName}</p>
-                          <p><b>Reason:</b> ${userData.reason || '—'}</p>
-                          <p><b>UID:</b> <code>${userData.uid}</code></p>
-                          <hr>
-                          <p>Approve → Firebase Console →
-                          <code>quant_users/${userData.uid}/status = "approved"</code></p>`
-                })
+                    uid:          userData.uid,
+                    email:        userData.email,
+                    firstName:    userData.firstName  || '',
+                    lastName:     userData.lastName   || '',
+                    signupMethod: userData.signupMethod || 'email',
+                }),
             });
-            console.log('✅ Admin email sent');
+
+            const result = await res.json().catch(() => ({}));
+
+            if (res.ok && result.success) {
+                console.log('%c✅ Admin email dispatched via Worker',
+                    'color:#10b981;font-weight:bold;');
+                console.log('   Worker response:', result.message);
+            } else {
+                console.warn('⚠ Worker returned error:', result.error || res.status);
+            }
+
         } catch (err) {
+            // Non-bloquant : l'inscription continue même si l'email échoue
             console.warn('⚠ Admin email failed (non-blocking):', err.message);
         }
-        ── */
     }
 
     // ────────────────────────────────────────────────────────────────────
@@ -1446,6 +1462,11 @@
         if (!ok) { showScreen('screen-auth'); return; }
 
         startAuthListener();
+
+        // ── FIX : Connecter les boutons Google ──────────────────────────
+        document.getElementById('googleLoginBtn')?.addEventListener('click', handleGoogleAuth);
+        document.getElementById('googleSignupBtn')?.addEventListener('click', handleGoogleAuth);
+        // ────────────────────────────────────────────────────────────────
 
         // Safety timeout — 6s max on loading screen
         setTimeout(() => {
