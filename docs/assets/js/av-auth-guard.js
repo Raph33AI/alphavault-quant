@@ -65,7 +65,11 @@
   }
 
   // ── 4. Init Firebase ──────────────────────────────────────
-  function _initFirebase() {
+  async function _initFirebase() {
+    // Attendre Cloudflare si config pas encore prête
+    if (!window._firebaseConfigReady && window._firebaseConfigPromise) {
+        await window._firebaseConfigPromise;
+    }
     const cfg = window.FIREBASE_CONFIG;
     if (!cfg || !cfg.apiKey) {
       console.error('❌ av-auth-guard: FIREBASE_CONFIG manquant');

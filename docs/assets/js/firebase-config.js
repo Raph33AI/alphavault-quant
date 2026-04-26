@@ -1,11 +1,24 @@
 // docs/assets/js/firebase-config.js
-// Firebase Web Config — public by design (not a secret)
-// Sécurité assurée par Firestore Security Rules + Firebase Auth
-window.FIREBASE_CONFIG = {
-  apiKey:            "AIzaSyD9kQ3nyYbYMU--_PsMOtuqtMKlt3gmjRM",
-  authDomain:        "financepro-220ba.firebaseapp.com",
-  projectId:         "financepro-220ba",
-  storageBucket:     "financepro-220ba.firebasestorage.app",
-  messagingSenderId: "917725259549",
-  appId:             "1:917725259549:web:5fd909bb04fcf1e4a763f4"
-};
+// Charge la config Firebase depuis Cloudflare Worker (aucun secret côté GitHub)
+window.FIREBASE_CONFIG       = null;
+window._firebaseConfigReady  = false;
+window._firebaseConfigPromise = fetch(
+  'https://alphavault-gh-proxy.raphnardone.workers.dev/firebase-config',
+  { cache: 'force-cache' }
+)
+.then(r => {
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.text();
+})
+.then(js => {
+  // Exécuter le JS retourné → définit window.FIREBASE_CONFIG
+  // eslint-disable-next-line no-new-func
+  new Function(js)();
+  window._firebaseConfigReady = true;
+  console.log('%c✅ Firebase config loaded from Cloudflare',
+    'color:#10b981;font-weight:bold');
+})
+.catch(err => {
+  console.error('❌ Firebase config fetch failed:', err);
+  window.FIREBASE_CONFIG = null;
+});
