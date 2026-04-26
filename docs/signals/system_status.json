@@ -1,63 +1,26 @@
 {
-  "timestamp": "2026-04-25T08:54:21.460332+00:00",
-  "overall": "v5.0_active",
+  "timestamp": "2026-04-26T06:01:08.157864Z",
+  "overall": "healthy",
   "llm_available": true,
   "llm_providers": {
     "available_providers": [],
     "primary": "none",
     "gemini_ok": true,
-    "ollama_ok": true
+    "groq_ok": true,
+    "ollama_ok": false,
+    "deterministic_always": true
   },
   "workers": {
     "finance_hub": true,
     "ai_proxy": true,
     "economic_data": true
   },
-  "mode": "simulation",
+  "mode": "deterministic",
   "dry_run": false,
-  "session": "weekend_dry_run",
-  "n_universe": 508,
+  "session": "me_regular",
+  "n_universe": 372,
   "agents_active": 13,
   "dd_halt": false,
-  "oracle_cycle": 157,
-  "pushed_from": "weekend_simulation",
-  "dashboard_sync": {
-    "active": true,
-    "sync_stats": {
-      "total_syncs": 0,
-      "files_pushed": 0,
-      "files_failed": 0,
-      "files_skipped": 0,
-      "last_sync": null
-    },
-    "watcher_managed_files": 11,
-    "sync_exclusive_files": 10,
-    "version": "5.0",
-    "last_cycle": "2026-04-26T06:00:06.566465+00:00"
-  },
-  "updated_at": "2026-04-26T06:00:06.566485+00:00",
-  "source": "dashboard_sync_v5.0",
-  "version": "5.0",
-  "orchestrator": {
-    "running": true,
-    "trading_paused": false,
-    "agent_statuses": {
-      "market_scanner": "idle",
-      "signal": "idle",
-      "regime_detector": "idle",
-      "sentiment": "idle",
-      "capital_allocator": "idle",
-      "risk_manager": "idle",
-      "pnl_monitor": "idle",
-      "llm_council": "idle",
-      "execution": "idle",
-      "portfolio_rebalancer": "idle",
-      "history_learner": "idle",
-      "model_trainer": "idle",
-      "dashboard_sync": "idle"
-    },
-    "uptime_h": 20.37,
-    "version": "5.0"
-  },
-  "pushed_at": "2026-04-26T06:00:59.211862+00:00"
+  "oracle_cycle": 166,
+  "pushed_from": "oracle_a1_full_pipeline"
 }
