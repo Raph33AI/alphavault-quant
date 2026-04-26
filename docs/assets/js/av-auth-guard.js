@@ -87,59 +87,54 @@
   }
 
   // ── 5. Guard principal ────────────────────────────────────
-  function _startGuard() {
-    const fb = _initFirebase();
-    if (!fb) return;
-    const { auth, db } = fb;
+  // APRÈS — _startGuard async + await _initFirebase()
+    async function _startGuard() {
+        const fb = await _initFirebase();   // ← await ajouté
+        if (!fb) return;
+        const { auth, db } = fb;
 
-    // Timeout de sécurité : 8s max sur l'overlay
-    const safetyTimer = setTimeout(() => {
-      console.warn('⚠ Auth guard timeout → redirect');
-      _redirect();
-    }, 8000);
+        const safetyTimer = setTimeout(() => {
+            console.warn('⚠ Auth guard timeout → redirect');
+            _redirect();
+        }, 8000);
 
-    auth.onAuthStateChanged(async (user) => {
-      clearTimeout(safetyTimer);
+        auth.onAuthStateChanged(async (user) => {
+            clearTimeout(safetyTimer);
 
-      if (!user) {
-        _redirect();
-        return;
-      }
+            if (!user) {
+                _redirect();
+                return;
+            }
 
-      try {
-        const snap = await db.collection(QUANT_USERS_COL).doc(user.uid).get();
+            try {
+                const snap = await db.collection(QUANT_USERS_COL).doc(user.uid).get();
 
-        if (!snap.exists) {
-          await auth.signOut();
-          _redirect();
-          return;
-        }
+                if (!snap.exists) {
+                    await auth.signOut();
+                    _redirect();
+                    return;
+                }
 
-        const data   = snap.data();
-        const status = data.status;
+                const data   = snap.data();
+                const status = data.status;
 
-        if (status === 'approved') {
-          // ✅ Accès accordé
-          _removeOverlay();
-          _injectUserDropdown(user, data, auth);
+                if (status === 'approved') {
+                    _removeOverlay();
+                    _injectUserDropdown(user, data, auth);
+                    db.collection(QUANT_USERS_COL).doc(user.uid)
+                        .update({ lastLoginAt: firebase.firestore.FieldValue.serverTimestamp() })
+                        .catch(() => {});
+                } else {
+                    await auth.signOut();
+                    _redirect();
+                }
 
-          // Mettre à jour lastLoginAt (non-bloquant)
-          db.collection(QUANT_USERS_COL).doc(user.uid)
-            .update({ lastLoginAt: firebase.firestore.FieldValue.serverTimestamp() })
-            .catch(() => {});
-
-        } else {
-          // pending ou rejected → retour à auth
-          await auth.signOut();
-          _redirect();
-        }
-
-      } catch (e) {
-        console.error('❌ Auth guard checkAccess:', e);
-        _redirect();
-      }
-    });
-  }
+            } catch (e) {
+                console.error('❌ Auth guard checkAccess:', e);
+                _redirect();
+            }
+        });
+    }
 
   // ── 6. Injection du dropdown utilisateur dans la sidebar ──
   function _injectUserDropdown(user, data, auth) {

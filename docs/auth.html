@@ -794,18 +794,7 @@
     //    En local : crée docs/assets/js/firebase-config.js manuellement
     //    et ajoute-le dans .gitignore
     // ────────────────────────────────────────────────────────────────────
-    // Attendre que la config Cloudflare soit chargée
-    await (window._firebaseConfigPromise || Promise.resolve());
-    const FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
-
-    if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
-        console.error([
-            '❌ FIREBASE_CONFIG manquant ou invalide.',
-            '   → En production : vérifier le workflow GitHub Actions.',
-            '   → En local      : créer docs/assets/js/firebase-config.js',
-            '     avec window.FIREBASE_CONFIG = { apiKey: "...", ... };'
-        ].join('\n'));
-    }
+    let FIREBASE_CONFIG = null;
 
     // ── Constants ────────────────────────────────────────────────────────
     const ADMIN_EMAIL      = "raphnardone@gmail.com";
@@ -817,17 +806,24 @@
     // ────────────────────────────────────────────────────────────────────
     // 1. FIREBASE INIT
     // ────────────────────────────────────────────────────────────────────
+    // APRÈS — initFirebase attend la config Cloudflare ET met à jour FIREBASE_CONFIG
     let db, auth, googleProvider;
 
     async function initFirebase() {
-        // Attendre Cloudflare si config pas encore prête
+        // Attendre que Cloudflare serve la config (Option B)
         if (!window._firebaseConfigReady && window._firebaseConfigPromise) {
             await window._firebaseConfigPromise;
         }
+
+        // Mettre à jour FIREBASE_CONFIG après le fetch Cloudflare
+        FIREBASE_CONFIG = window.FIREBASE_CONFIG || null;
+
         if (!FIREBASE_CONFIG || !FIREBASE_CONFIG.apiKey) {
-            showToast('error', 'Firebase config missing. Check deployment settings.');
+            console.error('❌ FIREBASE_CONFIG manquant après chargement Cloudflare');
+            showToast('error', 'Firebase config missing. Check Cloudflare Worker.');
             return false;
         }
+
         try {
             if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
             db             = firebase.firestore();
@@ -1460,21 +1456,19 @@
     // ────────────────────────────────────────────────────────────────────
     // 18. BOOT
     // ────────────────────────────────────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', () => {
+    // APRÈS — callback async + await initFirebase()
+    document.addEventListener('DOMContentLoaded', async () => {
         console.log('%c⚡ AlphaVault Quant — Auth System v5.0.9',
             'background:#0f172a;color:#3b82f6;padding:6px 12px;border-radius:6px;font-weight:bold;');
 
-        const ok = initFirebase();
+        const ok = await initFirebase();    // ← await ajouté
         if (!ok) { showScreen('screen-auth'); return; }
 
         startAuthListener();
 
-        // ── FIX : Connecter les boutons Google ──────────────────────────
         document.getElementById('googleLoginBtn')?.addEventListener('click', handleGoogleAuth);
         document.getElementById('googleSignupBtn')?.addEventListener('click', handleGoogleAuth);
-        // ────────────────────────────────────────────────────────────────
 
-        // Safety timeout — 6s max on loading screen
         setTimeout(() => {
             const loading = document.getElementById('screen-loading');
             if (loading && !loading.classList.contains('hidden')) {
