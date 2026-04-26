@@ -1,0 +1,752 @@
+/* ================================================================
+   watchlist.css — AlphaVault Quant Watchlist v1.0
+   Prefix : wl-
+   Dépend de : av-global.css
+================================================================ */
+
+/* ══════════════════════════════════════════════════════════════
+   TOOLBAR
+   ══════════════════════════════════════════════════════════════ */
+.wl-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Stats pill ─────────────────────────────────────────────── */
+.wl-stats-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wl-stats-pill i {
+  font-size: 12px;
+  color: var(--accent-blue);
+}
+
+.wl-stats-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wl-stats-sep {
+  width: 1px;
+  height: 12px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.wl-stats-universe {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Search bar ─────────────────────────────────────────────── */
+.wl-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 160px;
+  max-width: 300px;
+}
+
+.wl-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.wl-search-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 30px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+
+.wl-search-input::placeholder {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.wl-search-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ── Add form ───────────────────────────────────────────────── */
+.wl-add-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.wl-add-input-wrap {
+  position: relative;
+}
+
+.wl-add-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.wl-add-input {
+  height: 34px;
+  width: 130px;
+  padding: 0 10px 0 26px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+
+.wl-add-input::placeholder {
+  color: var(--text-faint);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.wl-add-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.wl-add-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SECTOR TABS
+   ══════════════════════════════════════════════════════════════ */
+.wl-sector-outer {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 14px;
+  padding-bottom: 2px;
+}
+
+.wl-sector-outer::-webkit-scrollbar { display: none; }
+
+.wl-sector-tabs {
+  display: flex;
+  gap: 6px;
+  width: max-content;
+  min-width: 100%;
+  padding: 0 2px;
+}
+
+/* Les boutons sont générés par JS avec style inline, mais on
+   peut surcharger via la classe .sector-tab */
+.sector-tab {
+  transition: all 0.15s ease !important;
+}
+.sector-tab:hover {
+  border-color: var(--accent-blue) !important;
+  color: var(--accent-blue) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CARD HEADER
+   ══════════════════════════════════════════════════════════════ */
+.wl-main-card {
+  margin-bottom: 0;
+}
+
+.wl-card-count {
+  font-size: 10px;
+}
+
+.wl-card-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   SYNC BAR  (injecté par JS)
+   ══════════════════════════════════════════════════════════════ */
+.wl-sync-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* Dot indicateur */
+.wl-sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: background 0.3s;
+}
+
+.wl-sync-dot.synced  { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+.wl-sync-dot.loading { background: var(--accent-blue); animation: wl-pulse 1s infinite; }
+.wl-sync-dot.error   { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+.wl-sync-dot.local   { background: #94a3b8; }
+
+@keyframes wl-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.35; }
+}
+
+/* Boutons dans la sync bar */
+.wl-sync-bar .btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.wl-sync-bar .btn-sm:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(59,130,246,0.06);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TABLE OVERRIDES
+   ══════════════════════════════════════════════════════════════ */
+.wl-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: none !important;
+  border-radius: 0 !important;
+}
+
+/* Headers */
+.wl-th-star {
+  width: 38px;
+  padding: 8px 6px !important;
+  text-align: center !important;
+}
+.wl-th-sym    { padding-left: 10px !important; min-width: 130px; }
+.wl-th-price  { min-width: 80px; }
+.wl-th-chg    { min-width: 68px; }
+.wl-th-score  { min-width: 140px; }
+.wl-th-dir    { min-width: 80px; }
+.wl-th-prob   { min-width: 68px; }
+.wl-th-regime { min-width: 90px; }
+.wl-th-council{ min-width: 80px; }
+.wl-th-actions{ width: 110px; }
+
+/* Row hover */
+.av-table tbody tr[data-sym]:hover td {
+  background: var(--bg-hover);
+}
+
+/* ── Loading / empty cells ──────────────────────────────────── */
+.wl-loading-cell {
+  text-align: center !important;
+  padding: 52px 20px !important;
+  color: var(--text-muted);
+}
+
+.wl-loading-icon {
+  font-size: 24px;
+  color: var(--accent-blue);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.wl-loading-text {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ACTION BUTTONS (dans les lignes du tableau)
+   ══════════════════════════════════════════════════════════════ */
+.btn-xs {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn-xs:hover {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(59,130,246,0.06);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   PAGINATION
+   ══════════════════════════════════════════════════════════════ */
+.wl-pagination-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  flex-wrap: wrap;
+}
+
+.page-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: rgba(59,130,246,0.07);
+}
+
+.page-btn.active {
+  background: var(--gradient-brand);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.35);
+}
+
+.page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   RESPONSIVE — FULL MOBILE OVERHAUL
+   Breakpoints : 1100 → 900 → 768 → 640 → 480 → 375 → 320
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Fix scroll horizontal global ──────────────────────────── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+.av-layout,
+.av-main,
+.av-content,
+#sec-watchlist {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
+/* La table elle-même scroll en interne */
+.wl-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── 1100px ─────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .wl-th-council  { display: none; }
+  .av-table tbody td:nth-child(9) { display: none; }
+}
+
+/* ── 900px ──────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .wl-toolbar {
+    gap: 8px;
+  }
+
+  .wl-search-wrap {
+    max-width: 100%;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .wl-add-input {
+    width: 110px;
+  }
+
+  .wl-th-regime { display: none; }
+  .av-table tbody td:nth-child(8) { display: none; }
+}
+
+/* ── 768px : Mobile large ───────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Toolbar : wrap sur 2 lignes */
+  .wl-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .wl-stats-pill {
+    order: 1;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wl-stats-universe {
+    display: none;
+  }
+
+  .wl-search-wrap {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .wl-add-form {
+    order: 2;
+    flex-shrink: 0;
+  }
+
+  .wl-add-input {
+    width: 100px;
+  }
+
+  /* Cacher Buy Prob sur mobile */
+  .wl-th-prob { display: none; }
+  .av-table tbody td:nth-child(7) { display: none; }
+
+  /* Sync bar */
+  .wl-sync-bar {
+    gap: 8px;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+  }
+
+  .wl-sync-bar > div:first-of-type {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .wl-sync-bar > div:last-of-type {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* Sector tabs */
+  .wl-sector-outer {
+    margin-bottom: 10px;
+  }
+
+  /* Pagination */
+  .wl-pagination-wrap {
+    padding: 10px 12px;
+    gap: 3px;
+  }
+
+  .page-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+
+  /* Card header */
+  .wl-card-count {
+    display: none;
+  }
+}
+
+/* ── 640px : Mobile standard ────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Score : cacher le texte, garder la barre */
+  .wl-th-score {
+    min-width: 90px;
+  }
+
+  /* Table : réduire padding */
+  .av-table thead th {
+    padding: 8px 7px !important;
+    font-size: 10px;
+  }
+
+  .av-table tbody td {
+    padding: 7px 7px !important;
+  }
+
+  /* Actions : réduire */
+  .wl-th-actions {
+    width: 80px;
+  }
+
+  /* Add input */
+  .wl-add-input {
+    width: 90px;
+    font-size: 11px;
+  }
+
+  .wl-add-btn {
+    padding: 0 10px;
+  }
+
+  .wl-add-btn-label {
+    display: none;
+  }
+
+  /* Stats pill */
+  .wl-stats-pill {
+    padding: 7px 10px;
+    gap: 5px;
+  }
+
+  .wl-stats-count {
+    font-size: 11px;
+  }
+}
+
+/* ── 480px : Petit mobile ───────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Cacher Direction + Score sur très petit écran */
+  .wl-th-dir    { display: none; }
+  .wl-th-score  { display: none; }
+  .av-table tbody td:nth-child(5) { display: none; }
+  .av-table tbody td:nth-child(6) { display: none; }
+
+  /* Toolbar */
+  .wl-toolbar {
+    gap: 6px;
+  }
+
+  .wl-stats-pill {
+    padding: 6px 9px;
+    gap: 4px;
+  }
+
+  .wl-stats-pill i {
+    font-size: 11px;
+  }
+
+  .wl-stats-count {
+    font-size: 10.5px;
+  }
+
+  .wl-add-input {
+    width: 80px;
+  }
+
+  /* Sync bar : empilée */
+  .wl-sync-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .wl-sync-bar > div:last-of-type {
+    width: auto;
+  }
+
+  /* Sync bar buttons */
+  .wl-sync-bar .btn-sm {
+    height: 26px;
+    padding: 0 8px;
+    font-size: 10.5px;
+  }
+
+  /* Pagination */
+  .page-btn {
+    min-width: 26px;
+    height: 26px;
+    font-size: 10.5px;
+    padding: 0 6px;
+  }
+
+  .wl-pagination-wrap {
+    padding: 8px 10px;
+    gap: 3px;
+  }
+
+  /* Actions dans le tableau : garder 2 boutons max */
+  .wl-th-actions {
+    width: 70px;
+  }
+}
+
+/* ── 375px : iPhone standard ────────────────────────────────── */
+@media (max-width: 375px) {
+  /* Chg % : cacher aussi */
+  .wl-th-chg { display: none; }
+  .av-table tbody td:nth-child(4) { display: none; }
+
+  /* Symbol cell : compact */
+  .wl-th-sym {
+    min-width: 100px;
+  }
+
+  .wl-add-input {
+    width: 72px;
+    font-size: 10.5px;
+    padding-left: 22px;
+  }
+
+  .wl-add-icon {
+    font-size: 9px;
+    left: 8px;
+  }
+
+  .wl-search-input {
+    font-size: 11.5px;
+  }
+
+  /* Card header compact */
+  .av-card-header {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+    gap: 6px !important;
+  }
+
+  .wl-card-actions .btn-xs {
+    height: 24px;
+    font-size: 10px;
+    padding: 0 7px;
+  }
+
+  .wl-btn-label {
+    display: none;
+  }
+}
+
+/* ── 320px : Très petit mobile ──────────────────────────────── */
+@media (max-width: 320px) {
+  /* Toolbar sur 3 lignes */
+  .wl-stats-pill { order: 1; flex: 1; }
+  .wl-add-form   { order: 2; width: 100%; }
+  .wl-search-wrap{ order: 3; flex: 1 1 100%; }
+
+  .wl-add-form {
+    width: 100%;
+  }
+
+  .wl-add-input-wrap {
+    flex: 1;
+  }
+
+  .wl-add-input {
+    width: 100%;
+  }
+
+  /* Table : star + symbol + price + actions seulement */
+  .wl-th-chg     { display: none; }
+  .wl-th-price   { min-width: 60px; }
+
+  .av-table thead th,
+  .av-table tbody td {
+    padding: 6px 5px !important;
+    font-size: 10px !important;
+  }
+
+  /* Pagination minimal */
+  .page-btn {
+    min-width: 24px;
+    height: 24px;
+    font-size: 10px;
+    padding: 0 5px;
+  }
+}
+
+/* ── Touch devices ──────────────────────────────────────────── */
+@media (hover: none) and (pointer: coarse) {
+  /* Tap targets min 44px */
+  .wl-search-input,
+  .wl-add-input {
+    height: 40px;
+  }
+
+  .wl-add-btn {
+    height: 40px;
+    min-width: 44px;
+  }
+
+  .page-btn {
+    min-width: 36px;
+    height: 36px;
+  }
+
+  .btn-xs {
+    height: 32px;
+    min-width: 32px;
+  }
+
+  /* Pas de hover sticky */
+  .av-table tbody tr[data-sym]:hover td {
+    background: transparent;
+  }
+
+  .sector-tab:hover {
+    border-color: var(--border) !important;
+    color: var(--text-muted) !important;
+  }
+
+  .sector-tab.active:hover {
+    color: #fff !important;
+  }
+}

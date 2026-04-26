@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Watchlist — AlphaVault Quant</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+  <link rel="shortcut icon" href="favicon.ico">
+  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+  <link rel="mask-icon" href="safari-pinned-tab.svg" color="#667eea">
+  <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Global CSS -->
+  <link rel="stylesheet" href="assets/css/av-global.css">
+  <!-- Watchlist CSS -->
+  <link rel="stylesheet" href="assets/css/watchlist.css">
+</head>
+<body>
+
+  <!-- Mobile sidebar overlay -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       LAYOUT
+       ══════════════════════════════════════════════════════════ -->
+  <div class="av-layout" id="av-layout">
+
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <nav class="av-sidebar" id="av-sidebar">
+
+      <a href="dashboard.html" class="av-sidebar-logo">
+        <img src="assets/images/alpha-logo.png" alt="AlphaVault"
+             onerror="this.style.display='none'">
+        <div class="av-sidebar-logo-text">
+          <span class="av-sidebar-logo-name">AlphaVault</span>
+          <span class="av-sidebar-logo-sub">Quant v5.0.9</span>
+        </div>
+      </a>
+
+      <div class="av-sidebar-nav">
+        <div class="av-nav-section">Trading</div>
+
+        <a href="dashboard.html" class="av-nav-link" data-page="dashboard">
+          <i class="fa-solid fa-chart-pie"></i>
+          Dashboard
+        </a>
+        <a href="portfolio.html" class="av-nav-link" data-page="portfolio">
+          <i class="fa-solid fa-briefcase"></i>
+          Portfolio
+        </a>
+        <a href="signals.html" class="av-nav-link" data-page="signals">
+          <i class="fa-solid fa-satellite-dish"></i>
+          ML Signals
+          <span class="av-nav-badge" id="sidebar-signals-badge">—</span>
+        </a>
+        <a href="trading.html" class="av-nav-link" data-page="trading">
+          <i class="fa-solid fa-bolt"></i>
+          Trading
+        </a>
+
+        <div class="av-nav-section">Intelligence</div>
+
+        <a href="agents.html" class="av-nav-link" data-page="agents">
+          <i class="fa-solid fa-robot"></i>
+          Agents
+        </a>
+        <a href="regime.html" class="av-nav-link" data-page="regime">
+          <i class="fa-solid fa-globe"></i>
+          Market Regime
+        </a>
+        <a href="analytics.html" class="av-nav-link" data-page="analytics">
+          <i class="fa-solid fa-chart-line"></i>
+          Analytics
+        </a>
+
+        <div class="av-nav-section">Tools</div>
+
+        <a href="watchlist.html" class="av-nav-link active" data-page="watchlist">
+          <i class="fa-solid fa-eye"></i>
+          Watchlist
+        </a>
+        <a href="settings.html" class="av-nav-link" data-page="settings">
+          <i class="fa-solid fa-gear"></i>
+          Settings
+        </a>
+      </div>
+
+      <!-- Sidebar status -->
+      <div class="av-sidebar-status">
+        <div class="av-status-row">
+          <div class="av-status-dot gray" id="sb-ibkr-dot"></div>
+          <span style="font-size:11px;font-weight:600;color:var(--text-secondary)"
+                id="sb-mode-label">Loading...</span>
+        </div>
+        <div class="av-status-row">
+          <i class="fa-solid fa-rotate" style="font-size:9px;color:var(--text-faint)"></i>
+          <span style="font-size:10px;color:var(--text-faint)" id="sb-last-sync">—</span>
+        </div>
+      </div>
+
+    </nav>
+
+    <!-- ── MAIN ─────────────────────────────────────────────── -->
+    <div class="av-main">
+
+      <!-- Topbar -->
+      <div class="av-topbar">
+        <button class="av-hamburger" id="av-hamburger" aria-label="Menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <div class="av-topbar-page-title">
+          <i class="fa-solid fa-eye"></i>
+          Watchlist
+        </div>
+
+        <div class="av-topbar-spacer"></div>
+
+        <div class="av-topbar-actions">
+          <!-- Mode badge -->
+          <span class="badge" id="topbar-mode-badge" style="font-size:10px">
+            <i class="fa-solid fa-circle-notch fa-spin" style="font-size:8px"></i>
+            Loading
+          </span>
+
+          <!-- Last refresh -->
+          <span id="topbar-refresh-time"
+                style="font-size:11px;color:var(--text-faint);white-space:nowrap;
+                       display:flex;align-items:center;gap:5px">
+            <i class="fa-regular fa-clock"></i>
+            <span>—</span>
+          </span>
+
+          <!-- Theme toggle -->
+          <button class="btn btn-secondary btn-sm" id="av-theme-toggle"
+                  title="Switch to Dark Mode" aria-label="Toggle theme">
+            <i class="fa-solid fa-moon"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ── PAGE CONTENT ──────────────────────────────────── -->
+      <div class="av-content">
+        <div id="sec-watchlist">
+
+          <!-- ── TOOLBAR ─────────────────────────────────────── -->
+          <div class="wl-toolbar">
+
+            <!-- Stats pill -->
+            <div class="wl-stats-pill">
+              <i class="fa-solid fa-eye"></i>
+              <span id="wl-sym-count" class="wl-stats-count">0 symbols</span>
+              <div class="wl-stats-sep"></div>
+              <span class="wl-stats-universe">907 available</span>
+            </div>
+
+            <!-- Search -->
+            <div class="wl-search-wrap">
+              <i class="fa-solid fa-magnifying-glass wl-search-icon"></i>
+              <input
+                type="text"
+                id="wl-search"
+                class="wl-search-input"
+                placeholder="Search symbol or sector…"
+                autocomplete="off"
+              >
+            </div>
+
+            <!-- Add form -->
+            <form id="wl-add-form" class="wl-add-form">
+              <div class="wl-add-input-wrap">
+                <i class="fa-solid fa-plus wl-add-icon"></i>
+                <input
+                  type="text"
+                  id="wl-add-input"
+                  class="wl-add-input"
+                  placeholder="Ticker…"
+                  maxlength="10"
+                  autocomplete="off"
+                  autocapitalize="characters"
+                  spellcheck="false"
+                  list="wl-universe-datalist"
+                >
+                <datalist id="wl-universe-datalist"></datalist>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm wl-add-btn">
+                <i class="fa-solid fa-plus"></i>
+                <span class="wl-add-btn-label">Add</span>
+              </button>
+            </form>
+
+          </div>
+          <!-- /.wl-toolbar -->
+
+          <!-- ── SECTOR TABS ──────────────────────────────────── -->
+          <div class="wl-sector-outer">
+            <div id="sector-tabs" class="wl-sector-tabs"></div>
+          </div>
+
+          <!-- ── MAIN CARD ────────────────────────────────────── -->
+          <div class="av-card wl-main-card">
+
+            <div class="av-card-header">
+              <i class="fa-solid fa-table-list"></i>
+              Watchlist
+              <span class="badge badge-blue wl-card-count" id="wl-count">0 symbols</span>
+              <div class="wl-card-actions">
+                <button class="btn btn-secondary btn-xs" id="wl-refresh-btn"
+                        title="Refresh quotes">
+                  <i class="fa-solid fa-rotate"></i>
+                  <span class="wl-btn-label">Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="av-card-body" style="padding:0">
+
+              <!-- Sync bar injected here by JS (_buildSyncBar) -->
+
+              <!-- Table wrapper -->
+              <div class="av-table-wrapper wl-table-wrapper">
+                <table class="av-table" id="watchlist-table">
+                  <thead>
+                    <tr>
+                      <!-- Star -->
+                      <th class="wl-th-star">
+                        <i class="fa-regular fa-star"
+                           style="font-size:11px;color:var(--text-faint)"></i>
+                      </th>
+                      <!-- Symbol -->
+                      <th class="wl-th-sym">Symbol</th>
+                      <!-- Price -->
+                      <th class="wl-th-price">Price</th>
+                      <!-- Change -->
+                      <th class="wl-th-chg">Chg %</th>
+                      <!-- Score -->
+                      <th class="wl-th-score">Score</th>
+                      <!-- Direction -->
+                      <th class="wl-th-dir">Direction</th>
+                      <!-- Buy Prob -->
+                      <th class="wl-th-prob">Buy Prob</th>
+                      <!-- Regime -->
+                      <th class="wl-th-regime">Regime</th>
+                      <!-- Council -->
+                      <th class="wl-th-council">Council</th>
+                      <!-- Actions -->
+                      <th class="wl-th-actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="watchlist-tbody">
+                    <!-- Initial loading state -->
+                    <tr>
+                      <td colspan="10" class="wl-loading-cell">
+                        <i class="fa-solid fa-circle-notch fa-spin wl-loading-icon"></i>
+                        <span class="wl-loading-text">Loading watchlist…</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <!-- /.av-table-wrapper -->
+
+              <!-- Pagination -->
+              <div class="wl-pagination-wrap" id="wl-pagination"></div>
+
+            </div>
+            <!-- /.av-card-body -->
+          </div>
+          <!-- /.av-card -->
+
+        </div>
+        <!-- /#sec-watchlist -->
+      </div>
+      <!-- /.av-content -->
+    </div>
+    <!-- /.av-main -->
+  </div>
+  <!-- /.av-layout -->
+
+  <!-- ══════════════════════════════════════════════════════════
+       SCRIPTS — ordre impératif
+       ══════════════════════════════════════════════════════════ -->
+  <script src="assets/js/av-config.js"></script>
+  <script src="assets/js/av-utils.js"></script>
+  <script src="assets/js/av-api.js"></script>
+  <script src="assets/js/av-stock-detail.js"></script>
+  <script src="assets/js/av-watchlist.js"></script>
+
+  <!-- Init -->
+  <script>
+    (async () => {
+      // Init watchlist (charge GitHub → localStorage → render)
+      await WatchlistManager.init();
+      WatchlistManager.render({});
+
+      // Populate datalist (autocomplete sur 907 symboles)
+      const dl = document.getElementById('wl-universe-datalist');
+      if (dl) {
+        WatchlistManager.getAllSymbols().forEach(sym => {
+          const opt   = document.createElement('option');
+          opt.value   = sym;
+          const meta  = WatchlistManager.getSymbolMeta(sym);
+          opt.label   = meta?.sector || '';
+          dl.appendChild(opt);
+        });
+      }
+
+      // Refresh button
+      document.getElementById('wl-refresh-btn')
+        ?.addEventListener('click', () => WatchlistManager.render({}));
+    })();
+  </script>
+
+</body>
+</html>
