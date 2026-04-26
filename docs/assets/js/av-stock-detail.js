@@ -248,12 +248,15 @@ const StockDetail = (() => {
   let _lastFPW  = 0;
   const _sdCJ   = {};
 
-  // ── Styles ─────────────────────────────────────────────
   function _injectStyles() {
     if (document.getElementById('sdp-styles')) return;
     const style = document.createElement('style');
     style.id    = 'sdp-styles';
     style.textContent = `
+
+      /* ══════════════════════════════════════════════════════
+         BASE — Full page overlay
+         ══════════════════════════════════════════════════════ */
       .sdp-fullpage {
         display: none;
         position: fixed;
@@ -263,25 +266,28 @@ const StockDetail = (() => {
         flex-direction: column;
         overflow-y: auto;
         overflow-x: hidden;
-        animation: fadeIn 0.2s ease;
+        animation: fadeIn 0.18s ease;
+        -webkit-overflow-scrolling: touch;
       }
-      [data-theme="dark"] .sdp-fullpage {
-        background: var(--bg-primary, #0f172a);
-      }
+      [data-theme="dark"] .sdp-fullpage { background: var(--bg-primary, #0f172a); }
       .sdp-fullpage.open { display: flex !important; }
 
+      /* ══════════════════════════════════════════════════════
+         HEADER
+         ══════════════════════════════════════════════════════ */
       .sdp-fp-header {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 14px 20px;
+        gap: 10px;
+        padding: 12px 24px;
         background: var(--bg-card, #fff);
         border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
         position: sticky;
         top: 0;
-        z-index: 10;
-        flex-wrap: wrap;
+        z-index: 100;
+        flex-wrap: nowrap;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        min-height: 56px;
       }
       .sdp-fp-back {
         display: flex; align-items: center; gap: 6px;
@@ -292,39 +298,40 @@ const StockDetail = (() => {
         font-size: 12px; font-weight: 600;
         cursor: pointer; transition: all 0.15s;
         font-family: var(--font-sans, 'Inter', sans-serif);
+        flex-shrink: 0;
+        white-space: nowrap;
       }
-      .sdp-fp-back:hover {
-        background: var(--bg-hover, rgba(59,130,246,0.05));
-        color: var(--accent-blue, #3b82f6);
-      }
+      .sdp-fp-back:hover { background: rgba(59,130,246,0.05); color: #3b82f6; }
+
       .sdp-fp-sym {
         font-size: 18px; font-weight: 900;
         color: var(--text-primary, #0f172a);
         font-family: var(--font-mono, monospace);
+        white-space: nowrap;
       }
-      .sdp-fp-name {
-        font-size: 11px; color: var(--text-muted, #64748b);
-      }
+      .sdp-fp-name  { font-size: 11px; color: var(--text-muted, #64748b); white-space: nowrap; }
       .sdp-fp-price {
-        font-size: 22px; font-weight: 900;
+        font-size: 20px; font-weight: 900;
         font-family: var(--font-mono, monospace);
         color: var(--text-primary, #0f172a);
+        white-space: nowrap;
       }
-      .sdp-fp-change { font-size: 13px; font-weight: 700; }
+      .sdp-fp-change      { font-size: 13px; font-weight: 700; white-space: nowrap; }
       .sdp-fp-change.up   { color: #10b981; }
       .sdp-fp-change.down { color: #ef4444; }
 
-      .sdp-fp-actions { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+      .sdp-fp-actions { display: flex; gap: 6px; margin-left: auto; flex-shrink: 0; }
       .sdp-fp-action-btn {
         display: flex; align-items: center; gap: 5px;
         padding: 7px 14px; border-radius: 8px; border: none;
         font-size: 12px; font-weight: 700; cursor: pointer;
         transition: all 0.15s;
         font-family: var(--font-sans, 'Inter', sans-serif);
+        white-space: nowrap;
       }
       .sdp-fp-action-btn.buy  { background: #10b981; color: #fff; }
       .sdp-fp-action-btn.sell { background: #ef4444; color: #fff; }
-      .sdp-fp-action-btn.wl {
+      .sdp-fp-action-btn.wl   {
         background: var(--bg-primary, #f1f5f9);
         border: 1px solid var(--border, rgba(0,0,0,0.1));
         color: var(--text-muted, #64748b);
@@ -333,12 +340,21 @@ const StockDetail = (() => {
       .sdp-fp-action-btn.sell:hover { background: #dc2626; }
       .sdp-fp-action-btn.wl:hover   { border-color: #eab308; color: #eab308; }
 
+      /* ══════════════════════════════════════════════════════
+         TABS
+         ══════════════════════════════════════════════════════ */
       .sdp-fp-tabs {
-        display: flex; gap: 2px; padding: 10px 20px 0;
+        display: flex;
+        gap: 2px;
+        padding: 10px 24px 0;
         background: var(--bg-card, #fff);
         border-bottom: 2px solid var(--border, rgba(0,0,0,0.08));
-        flex-wrap: wrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-shrink: 0;
       }
+      .sdp-fp-tabs::-webkit-scrollbar { display: none; }
       .sdp-fp-tab {
         display: flex; align-items: center; gap: 7px;
         padding: 9px 16px; border: none; background: transparent;
@@ -347,28 +363,35 @@ const StockDetail = (() => {
         border-radius: 8px 8px 0 0;
         transition: all 0.15s; position: relative;
         font-family: var(--font-sans, 'Inter', sans-serif);
+        white-space: nowrap;
+        flex-shrink: 0;
       }
-      .sdp-fp-tab:hover   { color: var(--accent-blue, #3b82f6); }
-      .sdp-fp-tab.active  {
-        color: var(--accent-blue, #3b82f6);
-        background: var(--bg-primary, #f1f5f9);
-      }
+      .sdp-fp-tab:hover  { color: #3b82f6; }
+      .sdp-fp-tab.active { color: #3b82f6; background: var(--bg-primary, #f1f5f9); }
       .sdp-fp-tab.active::after {
-        content: ''; position: absolute; bottom: -2px;
-        left: 0; right: 0; height: 2px;
-        background: var(--accent-blue, #3b82f6);
+        content: ''; position: absolute;
+        bottom: -2px; left: 0; right: 0;
+        height: 2px; background: #3b82f6;
       }
 
+      /* ══════════════════════════════════════════════════════
+         BODY — utilise tout l'espace sur PC
+         ══════════════════════════════════════════════════════ */
       .sdp-fp-body {
-        padding: 20px;
+        padding: 20px 28px;
         display: flex;
         flex-direction: column;
         gap: 16px;
-        max-width: 1200px;
+        max-width: 1440px;
         margin: 0 auto;
         width: 100%;
+        box-sizing: border-box;
+        flex: 1;
       }
 
+      /* ══════════════════════════════════════════════════════
+         CARDS
+         ══════════════════════════════════════════════════════ */
       .sdp-fp-stat-section {
         background: var(--bg-card, #fff);
         border: 1px solid var(--border, rgba(0,0,0,0.08));
@@ -383,11 +406,11 @@ const StockDetail = (() => {
         margin-bottom: 14px;
         padding-bottom: 10px;
         border-bottom: 1px solid var(--border, rgba(0,0,0,0.06));
+        flex-wrap: wrap;
       }
-
       .sdp-fp-stats {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
         gap: 8px;
       }
       .sdp-fp-stat-item {
@@ -405,56 +428,61 @@ const StockDetail = (() => {
         font-family: var(--font-mono, monospace);
       }
 
+      /* ══════════════════════════════════════════════════════
+         CHARTS
+         ══════════════════════════════════════════════════════ */
       .sdp-fp-chart-mini-sm {
-        height: 180px; min-height: 180px; max-height: 180px;
+        height: 200px; min-height: 200px;
         overflow: hidden; position: relative;
       }
-
       .sdp-fp-chart {
-        height: 420px; min-height: 420px; max-height: 420px;
+        height: 480px; min-height: 480px;
         overflow: hidden; position: relative;
       }
 
-      .sdp-iv-tabs {
-        display: flex; gap: 3px; padding: 10px 0 8px;
-        flex-wrap: wrap;
+      /* ══════════════════════════════════════════════════════
+         OVERVIEW GRID — signal + mini chart
+         ══════════════════════════════════════════════════════ */
+      .sdp-ov-grid {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 14px;
+        align-items: start;
       }
+
+      /* ══════════════════════════════════════════════════════
+         MISC COMPONENTS
+         ══════════════════════════════════════════════════════ */
+      .sdp-iv-tabs { display: flex; gap: 4px; padding: 10px 0 8px; flex-wrap: wrap; }
       .sdp-iv-btn {
         padding: 5px 12px; border-radius: 6px;
         border: 1px solid var(--border, rgba(0,0,0,0.1));
-        background: transparent;
-        color: var(--text-muted, #64748b);
-        font-size: 11px; font-weight: 600; cursor: pointer;
-        transition: all 0.15s;
+        background: transparent; color: var(--text-muted, #64748b);
+        font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s;
         font-family: var(--font-sans, 'Inter', sans-serif);
       }
       .sdp-iv-btn.active {
         background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         color: #fff; border-color: transparent;
       }
-
       .sdp-desc-toggle {
-        font-size: 11px; color: var(--accent-blue, #3b82f6);
-        background: none; border: none; cursor: pointer; padding: 4px 0;
-        font-weight: 600; font-family: var(--font-sans, 'Inter', sans-serif);
+        font-size: 11px; color: #3b82f6; background: none;
+        border: none; cursor: pointer; padding: 4px 0; font-weight: 600;
+        font-family: var(--font-sans, 'Inter', sans-serif);
       }
 
-      /* News tab */
-      .sdp-news-page { display: flex; flex-direction: column; gap: 0; }
-      .sdp-news-header {
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 0 12px; flex-wrap: wrap; gap: 8px;
-      }
-      .sdp-news-count {
-        font-size: 12px; font-weight: 700;
-        color: var(--text-primary, #0f172a);
-      }
+      /* ══════════════════════════════════════════════════════
+         NEWS TAB
+         ══════════════════════════════════════════════════════ */
+      .sdp-news-page   { display: flex; flex-direction: column; gap: 0; }
+      .sdp-news-header { display: flex; align-items: center; justify-content: space-between;
+                         padding: 0 0 12px; flex-wrap: wrap; gap: 8px; }
+      .sdp-news-count  { font-size: 12px; font-weight: 700; color: var(--text-primary, #0f172a); }
       .sdp-news-refresh-btn {
         display: flex; align-items: center; gap: 5px;
         padding: 6px 12px; border-radius: 8px;
         border: 1px solid var(--border, rgba(0,0,0,0.1));
-        background: transparent;
-        color: var(--text-muted, #64748b);
+        background: transparent; color: var(--text-muted, #64748b);
         font-size: 11px; font-weight: 600; cursor: pointer;
         font-family: var(--font-sans, 'Inter', sans-serif);
       }
@@ -478,12 +506,11 @@ const StockDetail = (() => {
         background: var(--bg-primary, #f1f5f9);
         display: flex; align-items: center; justify-content: center;
       }
-      .sdp-news-card-thumb img { width: 100%; height: 100%; object-fit: cover; }
-      .sdp-news-thumb-icon { font-size: 20px; color: var(--text-muted, #94a3b8); }
-      .sdp-news-card-body { flex: 1; min-width: 0; }
+      .sdp-news-card-thumb img  { width: 100%; height: 100%; object-fit: cover; }
+      .sdp-news-thumb-icon      { font-size: 20px; color: var(--text-muted, #94a3b8); }
+      .sdp-news-card-body       { flex: 1; min-width: 0; }
       .sdp-news-card-title {
-        font-size: 13px; font-weight: 700;
-        color: var(--text-primary, #0f172a);
+        font-size: 13px; font-weight: 700; color: var(--text-primary, #0f172a);
         line-height: 1.4; margin-bottom: 5px;
         display: -webkit-box; -webkit-line-clamp: 2;
         -webkit-box-orient: vertical; overflow: hidden;
@@ -494,133 +521,35 @@ const StockDetail = (() => {
         display: -webkit-box; -webkit-line-clamp: 2;
         -webkit-box-orient: vertical; overflow: hidden;
       }
-      .sdp-news-card-meta {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-      }
-      .sdp-news-source { font-size: 10px; color: var(--accent-blue, #3b82f6); font-weight: 600; }
-      .sdp-news-time   { font-size: 10px; color: var(--text-muted, #94a3b8); }
-      .sdp-news-sent   { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
-      .sdp-news-sent.positive { background:rgba(16,185,129,0.1); color:#10b981; }
-      .sdp-news-sent.negative { background:rgba(239,68,68,0.1);  color:#ef4444; }
-      .sdp-news-sent.neutral  { background:rgba(107,114,128,0.1);color:#6b7280; }
+      .sdp-news-card-meta   { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+      .sdp-news-source      { font-size: 10px; color: #3b82f6; font-weight: 600; }
+      .sdp-news-time        { font-size: 10px; color: var(--text-muted, #94a3b8); }
+      .sdp-news-sent        { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+      .sdp-news-sent.positive { background: rgba(16,185,129,0.1); color: #10b981; }
+      .sdp-news-sent.negative { background: rgba(239,68,68,0.1);  color: #ef4444; }
+      .sdp-news-sent.neutral  { background: rgba(107,114,128,0.1);color: #6b7280; }
       .sdp-news-card-action { color: var(--text-muted, #94a3b8); font-size: 12px; flex-shrink: 0; margin-top: 4px; }
-      .sdp-news-footer { padding: 12px 0 0; font-size: 10px; color: var(--text-muted, #94a3b8); text-align: center; }
+      .sdp-news-footer      { padding: 12px 0 0; font-size: 10px; color: var(--text-muted, #94a3b8); text-align: center; }
 
-      @keyframes slideInRight {
-        from { opacity:0; transform:translateX(10px); }
-        to   { opacity:1; transform:translateX(0); }
-      }
-
-      /* Dir badges */
-      .dir-badge {
-        display: inline-flex; align-items: center; gap: 4px;
-        padding: 3px 8px; border-radius: 5px;
-        font-size: 10px; font-weight: 700;
-      }
-      .dir-badge.buy     { background:rgba(16,185,129,0.12); color:#10b981; }
-      .dir-badge.sell    { background:rgba(239,68,68,0.12);  color:#ef4444; }
-      .dir-badge.neutral { background:rgba(107,114,128,0.12);color:#6b7280; }
-
-      /* Symbol initial badge */
-      .sym-initial-badge {
-        display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 50%; background: linear-gradient(135deg,#3b82f6,#8b5cf6);
-        color: #fff; font-weight: 800; flex-shrink: 0;
-      }
-
-      @media (max-width: 768px) {
-        .sdp-fp-header  { padding: 10px 14px; gap: 8px; }
-        .sdp-fp-body    { padding: 12px; }
-        .sdp-fp-stats   { grid-template-columns: 1fr 1fr; }
-      }
-
-      /* Regime chip (manquant — utilisé dans _renderOverview & _renderFinancialsEarnings) */
-      .regime-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 3px;
-        padding: 2px 9px;
-        border-radius: 20px;
-        font-size: 10px;
-        font-weight: 700;
-        border: 1px solid rgba(59,130,246,0.2);
-        background: rgba(59,130,246,0.07);
-        color: #3b82f6;
-        white-space: nowrap;
-      }
-
-      @keyframes fadeIn {
-        from { opacity: 0; }
-        to   { opacity: 1; }
-      }
-      @keyframes scaleIn {
-        from { opacity:0; transform:scale(0.95); }
-        to   { opacity:1; transform:scale(1); }
-      }
-
-      /* ═══════════════════════════════════════════════════
-         RESPONSIVE — Stock Detail Full Page
-         ═══════════════════════════════════════════════════ */
-      @media (max-width: 900px) {
-        .sdp-ov-grid { grid-template-columns: 1fr !important; }
-        .sdp-q-grid-3 { grid-template-columns: 1fr 1fr !important; }
-      }
-      @media (max-width: 768px) {
-        .sdp-fp-header       { padding: 10px 12px; gap: 6px; flex-wrap: wrap; }
-        .sdp-fp-sym          { font-size: 14px; }
-        .sdp-fp-price        { font-size: 17px; }
-        .sdp-fp-name         { display: none; }
-        #sdp-fp-sector       { display: none; }
-        #sdp-fp-vol          { display: none; }
-        #sdp-fp-cap          { display: none; }
-        .sdp-fp-actions      { gap: 4px; flex-shrink: 0; }
-        .sdp-fp-action-btn   { padding: 6px 9px; font-size: 11px; gap: 3px; }
-        .sdp-fp-action-btn.sell { display: none; }
-        .sdp-fp-tabs         { overflow-x: auto; flex-wrap: nowrap;
-                                padding: 8px 12px 0; scrollbar-width: none; }
-        .sdp-fp-tabs::-webkit-scrollbar { display: none; }
-        .sdp-fp-tab          { white-space: nowrap; padding: 8px 10px;
-                                font-size: 11px; flex-shrink: 0; }
-        .sdp-fp-body         { padding: 10px; gap: 10px; }
-        .sdp-fp-stats        { grid-template-columns: 1fr 1fr; gap: 6px; }
-        .sdp-fp-stat-section { padding: 12px 14px; }
-        .sdp-ta-grid         { grid-template-columns: 1fr !important; }
-        .sdp-q-grid-3        { grid-template-columns: 1fr !important; }
-        .sdp-q-grid-2        { grid-template-columns: 1fr !important; }
-        .sdp-tv-container    { height: 380px !important; }
-      }
-      @media (max-width: 480px) {
-        .sdp-fp-stats        { grid-template-columns: 1fr 1fr; }
-        .sdp-bs-form         { grid-template-columns: 1fr 1fr !important; }
-        .sdp-greeks-grid     { grid-template-columns: repeat(3,1fr) !important; }
-        .sdp-tv-container    { height: 300px !important; }
-        .sdp-mc-container    { height: 200px !important; }
-        .sdp-rd-container    { height: 160px !important; }
-      }
-
-      /* ══ QUANT TAB ══════════════════════════════════════════ */
+      /* ══════════════════════════════════════════════════════
+         QUANT TAB — grilles
+         ══════════════════════════════════════════════════════ */
       .sdp-q-grid-3 {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
+        gap: 14px;
       }
       .sdp-q-grid-2 {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
+        gap: 14px;
       }
-      @media (max-width: 1000px) {
-        .sdp-q-grid-3 { grid-template-columns: 1fr 1fr; }
-      }
-      @media (max-width: 700px) {
-        .sdp-q-grid-3, .sdp-q-grid-2 { grid-template-columns: 1fr; }
-      }
-
       .sdp-q-metric {
         display: flex; align-items: center; justify-content: space-between;
-        padding: 4px 0;
+        padding: 5px 0;
         border-bottom: 1px solid var(--border, rgba(0,0,0,0.05));
       }
+      .sdp-q-metric:last-child { border-bottom: none; }
       .sdp-q-lbl {
         font-size: 10px; color: var(--text-muted, #64748b); font-weight: 600;
       }
@@ -630,15 +559,20 @@ const StockDetail = (() => {
         color: var(--text-primary, #0f172a);
       }
 
+      /* ── TradingView ─────────────────────────────────── */
       .sdp-tv-container {
-        height: 500px; min-height: 500px;
+        height: 620px;
+        min-height: 620px;
         overflow: hidden;
       }
 
+      /* ── Hurst bar ───────────────────────────────────── */
       .sdp-hurst-bar {
         height: 8px;
         background: linear-gradient(90deg, #8b5cf6, #6b7280, #10b981);
-        border-radius: 4px; position: relative;
+        border-radius: 4px;
+        position: relative;
+        margin: 6px 0 2px;
       }
       .sdp-hurst-marker {
         position: absolute; top: -4px;
@@ -648,25 +582,28 @@ const StockDetail = (() => {
         box-shadow: 0 2px 6px rgba(0,0,0,0.2);
       }
 
+      /* ── Black-Scholes ───────────────────────────────── */
       .sdp-bs-form {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 10px; margin-bottom: 14px;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
         padding: 14px;
         background: var(--bg-primary, #f1f5f9);
         border-radius: 10px;
+        margin-bottom: 14px;
       }
       .sdp-bs-label {
+        display: block;
         font-size: 9px; font-weight: 700;
         color: var(--text-muted, #64748b);
         text-transform: uppercase; letter-spacing: 0.5px;
-        display: block; margin-bottom: 4px;
+        margin-bottom: 4px;
       }
       .sdp-bs-input {
-        width: 100%; height: 34px; padding: 0 10px;
+        width: 100%; height: 36px; padding: 0 10px;
         background: var(--bg-card, #fff);
         border: 1px solid var(--border, rgba(0,0,0,0.1));
-        border-radius: 6px;
+        border-radius: 7px;
         font-size: 13px; font-weight: 600;
         color: var(--text-primary, #0f172a);
         font-family: var(--font-mono, monospace);
@@ -678,53 +615,256 @@ const StockDetail = (() => {
         box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
       }
 
+      /* ── Option Chain table ──────────────────────────── */
+      .sdp-bs-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .sdp-bs-table { width: 100%; border-collapse: collapse; font-size: 11px; }
       .sdp-bs-table th {
-        padding: 6px 8px; text-align: right;
+        padding: 7px 10px; text-align: right;
         font-size: 9px; font-weight: 700;
         color: var(--text-muted, #64748b);
-        text-transform: uppercase;
+        text-transform: uppercase; letter-spacing: 0.4px;
         border-bottom: 2px solid var(--border, rgba(0,0,0,0.08));
+        white-space: nowrap;
       }
-      .sdp-bs-table th:first-child, .sdp-bs-table td:first-child,
-      .sdp-bs-table th:nth-child(2), .sdp-bs-table td:nth-child(2) {
-        text-align: left;
-      }
+      .sdp-bs-table th:first-child { text-align: left; }
       .sdp-bs-table td {
-        padding: 5px 8px; text-align: right;
+        padding: 6px 10px; text-align: right;
         font-family: var(--font-mono, monospace); font-weight: 600;
         border-bottom: 1px solid var(--border, rgba(0,0,0,0.05));
         color: var(--text-primary, #0f172a);
+        white-space: nowrap;
       }
-      .sdp-bs-table tr:hover td {
-        background: var(--bg-hover, rgba(59,130,246,0.04));
-      }
+      .sdp-bs-table td:first-child { text-align: left; }
+      .sdp-bs-table tr:hover td { background: rgba(59,130,246,0.03); }
 
+      /* ── Greeks grid ─────────────────────────────────── */
       .sdp-greeks-grid {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
       }
-      @media (max-width: 700px) {
-        .sdp-greeks-grid { grid-template-columns: repeat(3, 1fr); }
-      }
-      .sdp-greek-card {
-        background: var(--bg-primary, #f1f5f9);
-        border-radius: 8px; padding: 10px; text-align: center;
-        border: 1px solid var(--border, rgba(0,0,0,0.06));
-      }
-      .sdp-greek-sym  { font-size: 20px; font-weight: 900; color: #3b82f6; font-family: serif; margin-bottom: 2px; }
-      .sdp-greek-name { font-size: 9px; font-weight: 700; color: var(--text-muted, #64748b); text-transform: uppercase; margin-bottom: 4px; }
-      .sdp-greek-c    { font-size: 11px; font-weight: 700; color: #10b981; font-family: var(--font-mono, monospace); }
-      .sdp-greek-p    { font-size: 11px; font-weight: 700; color: #ef4444; font-family: var(--font-mono, monospace); }
 
-      .sdp-mc-container { height: 300px; min-height: 300px; position: relative; margin-bottom: 12px; }
+      /* ── Monte Carlo ─────────────────────────────────── */
+      .sdp-mc-container {
+        height: 360px; min-height: 360px;
+        position: relative; margin-bottom: 12px;
+      }
       .sdp-mc-targets {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
         gap: 8px; margin-top: 10px;
       }
-      .sdp-rd-container { height: 220px; min-height: 220px; position: relative; }
+
+      /* ── Return Distribution ─────────────────────────── */
+      .sdp-rd-container {
+        height: 260px; min-height: 260px;
+        position: relative;
+      }
+
+      /* ══════════════════════════════════════════════════════
+         BADGES & UTILS
+         ══════════════════════════════════════════════════════ */
+      .regime-chip {
+        display: inline-flex; align-items: center; gap: 3px;
+        padding: 2px 9px; border-radius: 20px;
+        font-size: 10px; font-weight: 700;
+        border: 1px solid rgba(59,130,246,0.2);
+        background: rgba(59,130,246,0.07);
+        color: #3b82f6; white-space: nowrap;
+      }
+      .dir-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 3px 8px; border-radius: 5px;
+        font-size: 10px; font-weight: 700;
+      }
+      .dir-badge.buy     { background: rgba(16,185,129,0.12); color: #10b981; }
+      .dir-badge.sell    { background: rgba(239,68,68,0.12);  color: #ef4444; }
+      .dir-badge.neutral { background: rgba(107,114,128,0.12);color: #6b7280; }
+
+      /* ══════════════════════════════════════════════════════
+         KEYFRAMES
+         ══════════════════════════════════════════════════════ */
+      @keyframes fadeIn {
+        from { opacity: 0; } to { opacity: 1; }
+      }
+      @keyframes scaleIn {
+        from { opacity: 0; transform: scale(0.96); }
+        to   { opacity: 1; transform: scale(1); }
+      }
+      @keyframes slideInRight {
+        from { opacity: 0; transform: translateX(10px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 1200px (grand PC → plein écran)
+         ══════════════════════════════════════════════════════ */
+      @media (min-width: 1200px) {
+        .sdp-fp-body     { padding: 24px 40px; }
+        .sdp-tv-container{ height: 680px; min-height: 680px; }
+        .sdp-mc-container{ height: 400px; min-height: 400px; }
+        .sdp-rd-container{ height: 300px; min-height: 300px; }
+        .sdp-fp-chart    { height: 540px; min-height: 540px; max-height: 540px; }
+        .sdp-fp-chart-mini-sm { height: 220px; min-height: 220px; max-height: 220px; }
+        .sdp-greeks-grid { grid-template-columns: repeat(4, 1fr); }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 1024px (laptop standard)
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 1024px) {
+        .sdp-fp-body      { padding: 16px 20px; }
+        .sdp-bs-form      { grid-template-columns: repeat(3, 1fr); }
+        .sdp-greeks-grid  { grid-template-columns: repeat(4, 1fr); }
+        .sdp-tv-container { height: 520px; min-height: 520px; }
+        .sdp-mc-container { height: 320px; min-height: 320px; }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 900px (tablette paysage)
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 900px) {
+        .sdp-ov-grid    { grid-template-columns: 1fr !important; }
+        .sdp-q-grid-3   { grid-template-columns: 1fr 1fr; }
+        .sdp-tv-container{ height: 460px; min-height: 460px; }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 768px (tablette portrait / mobile large)
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 768px) {
+        /* Header compact */
+        .sdp-fp-header   { padding: 8px 12px; gap: 6px; min-height: 48px; }
+        .sdp-fp-sym      { font-size: 15px; }
+        .sdp-fp-price    { font-size: 16px; }
+        .sdp-fp-name     { display: none; }
+        #sdp-fp-sector   { display: none; }
+        #sdp-fp-vol      { display: none; }
+        #sdp-fp-cap      { display: none; }
+        .sdp-fp-actions  { gap: 4px; }
+        .sdp-fp-action-btn { padding: 6px 9px; font-size: 11px; gap: 3px; }
+
+        /* Tabs scroll */
+        .sdp-fp-tabs  { padding: 6px 12px 0; }
+        .sdp-fp-tab   { padding: 7px 10px; font-size: 11px; }
+
+        /* Body */
+        .sdp-fp-body  { padding: 10px 12px; gap: 10px; }
+
+        /* Stats */
+        .sdp-fp-stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+        .sdp-fp-stat-section { padding: 12px 14px; }
+        .sdp-fp-stat-val     { font-size: 12px; }
+
+        /* Charts */
+        .sdp-fp-chart         { height: 320px; min-height: 320px; max-height: 320px; }
+        .sdp-fp-chart-mini-sm { height: 160px; min-height: 160px; max-height: 160px; }
+        .sdp-tv-container     { height: 380px; min-height: 380px; }
+        .sdp-mc-container     { height: 240px; min-height: 240px; }
+        .sdp-rd-container     { height: 190px; min-height: 190px; }
+
+        /* Quant grids */
+        .sdp-q-grid-3  { grid-template-columns: 1fr; }
+        .sdp-q-grid-2  { grid-template-columns: 1fr; }
+
+        /* BS form */
+        .sdp-bs-form   { grid-template-columns: 1fr 1fr; }
+
+        /* Greeks */
+        .sdp-greeks-grid { grid-template-columns: repeat(2, 1fr); }
+
+        /* MC targets */
+        .sdp-mc-targets  { grid-template-columns: repeat(3, 1fr); }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 480px (smartphone standard)
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 480px) {
+        /* Header minimal */
+        .sdp-fp-header     { padding: 7px 10px; gap: 5px; }
+        .sdp-fp-sym        { font-size: 14px; }
+        .sdp-fp-price      { font-size: 14px; }
+        .sdp-fp-change     { font-size: 11px; }
+        .sdp-fp-back       { padding: 6px 8px; font-size: 11px; }
+        .sdp-fp-action-btn.sell { display: none; }
+        .sdp-fp-action-btn.wl   { display: none; }
+
+        /* Logo */
+        #sdp-fp-logo { display: none; }
+
+        /* Body */
+        .sdp-fp-body   { padding: 8px; gap: 8px; }
+
+        /* Stats : 2 colonnes */
+        .sdp-fp-stats  { grid-template-columns: 1fr 1fr; gap: 5px; }
+        .sdp-fp-stat-item  { padding: 7px 9px; }
+        .sdp-fp-stat-lbl   { font-size: 9px; }
+        .sdp-fp-stat-val   { font-size: 12px; }
+
+        /* Charts */
+        .sdp-fp-chart         { height: 260px; min-height: 260px; max-height: 260px; }
+        .sdp-fp-chart-mini-sm { height: 140px; min-height: 140px; max-height: 140px; }
+        .sdp-tv-container     { height: 300px; min-height: 300px; }
+        .sdp-mc-container     { height: 200px; min-height: 200px; }
+        .sdp-rd-container     { height: 160px; min-height: 160px; }
+
+        /* BS */
+        .sdp-bs-form   { grid-template-columns: 1fr 1fr; padding: 10px; gap: 8px; }
+        .sdp-bs-input  { height: 32px; font-size: 12px; }
+
+        /* Greeks */
+        .sdp-greeks-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+        /* MC targets */
+        .sdp-mc-targets { grid-template-columns: repeat(2, 1fr); }
+
+        /* News cards */
+        .sdp-news-card-thumb { width: 48px; height: 48px; }
+        .sdp-news-card-title { font-size: 12px; }
+
+        /* Tabs */
+        .sdp-fp-tab { padding: 6px 9px; font-size: 10px; gap: 4px; }
+        .sdp-fp-tab i { font-size: 10px; }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         RESPONSIVE — 375px (petits iPhones)
+         ══════════════════════════════════════════════════════ */
+      @media (max-width: 375px) {
+        .sdp-fp-body   { padding: 6px; gap: 6px; }
+        .sdp-fp-stats  { grid-template-columns: 1fr 1fr; gap: 4px; }
+        .sdp-tv-container  { height: 260px; min-height: 260px; }
+        .sdp-mc-container  { height: 170px; min-height: 170px; }
+        .sdp-rd-container  { height: 140px; min-height: 140px; }
+        .sdp-bs-form       { grid-template-columns: 1fr; }
+        .sdp-greeks-grid   { grid-template-columns: 1fr 1fr; }
+      }
+
+      /* ══════════════════════════════════════════════════════
+         TOUCH DEVICES — tap targets min 44px
+         ══════════════════════════════════════════════════════ */
+      @media (hover: none) and (pointer: coarse) {
+        .sdp-fp-action-btn { min-height: 40px; min-width: 40px; }
+        .sdp-fp-back       { min-height: 40px; }
+        .sdp-fp-tab        { min-height: 40px; }
+        .sdp-iv-btn        { min-height: 40px; padding: 0 14px; }
+        .sdp-bs-input      { height: 42px; font-size: 16px; }
+        .sdp-news-card:hover { transform: none; }
+      }
+
+      /* Overview top grid : Signal + Chart mini */
+      .sdp-ov-top-grid {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 12px;
+        align-items: start;
+      }
+      @media (max-width: 768px) {
+        .sdp-ov-top-grid {
+          grid-template-columns: 1fr;
+        }
+      }
     `;
     document.head.appendChild(style);
   }
@@ -737,32 +877,43 @@ const StockDetail = (() => {
     document.body.insertAdjacentHTML('beforeend', `
       <div class="sdp-fullpage" id="sdp-fullpage">
 
+        <!-- ── HEADER ──────────────────────────────────────── -->
         <div class="sdp-fp-header" id="sdp-fp-header-row">
+
           <button class="sdp-fp-back" id="sdp-back">
             <i class="fa-solid fa-arrow-left"></i> Back
           </button>
+
           <div id="sdp-fp-logo" style="flex-shrink:0"></div>
-          <div>
+
+          <div style="min-width:0">
             <div class="sdp-fp-sym"  id="sdp-fp-sym">—</div>
             <div class="sdp-fp-name" id="sdp-fp-name">Loading...</div>
           </div>
+
           <div id="sdp-fp-sector"
                style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;
                       background:rgba(59,130,246,0.08);color:#3b82f6;
-                      border:1px solid rgba(59,130,246,0.2);flex-shrink:0">—</div>
-          <div class="sdp-fp-price"  id="sdp-fp-price">—</div>
-          <div class="sdp-fp-change" id="sdp-fp-change">—</div>
+                      border:1px solid rgba(59,130,246,0.2);flex-shrink:0;
+                      white-space:nowrap">—</div>
+
+          <div style="display:flex;flex-direction:column;gap:1px;flex-shrink:0">
+            <div class="sdp-fp-price"  id="sdp-fp-price">—</div>
+            <div class="sdp-fp-change" id="sdp-fp-change">—</div>
+          </div>
+
           <div style="display:flex;flex-direction:column;gap:2px;font-size:10px;
-                      color:var(--text-muted,#64748b)">
+                      color:var(--text-muted,#64748b);flex-shrink:0">
             <span id="sdp-fp-vol">Vol: —</span>
             <span id="sdp-fp-cap">Cap: —</span>
           </div>
+
           <div class="sdp-fp-actions">
             <button class="sdp-fp-action-btn buy"  id="sdp-fp-buy">
-              <i class="fa-solid fa-arrow-up"></i> BUY
+              <i class="fa-solid fa-arrow-trend-up"></i> BUY
             </button>
             <button class="sdp-fp-action-btn sell" id="sdp-fp-sell">
-              <i class="fa-solid fa-arrow-down"></i> SELL
+              <i class="fa-solid fa-arrow-trend-down"></i> SELL
             </button>
             <button class="sdp-fp-action-btn wl"   id="sdp-fp-wl">
               <i class="fa-regular fa-star"></i> Watchlist
@@ -770,6 +921,7 @@ const StockDetail = (() => {
           </div>
         </div>
 
+        <!-- ── TABS ────────────────────────────────────────── -->
         <div class="sdp-fp-tabs" id="sdp-fp-tabs">
           <button class="sdp-fp-tab active" data-tab="overview">
             <i class="fa-solid fa-chart-pie"></i> Overview
@@ -785,6 +937,7 @@ const StockDetail = (() => {
           </button>
         </div>
 
+        <!-- ── BODY ────────────────────────────────────────── -->
         <div class="sdp-fp-body" id="sdp-fp-body">
           <div style="display:flex;align-items:center;justify-content:center;
                       gap:12px;color:var(--text-muted,#64748b);padding:60px">
@@ -796,30 +949,38 @@ const StockDetail = (() => {
 
       </div>`);
 
-    document.getElementById('sdp-back')?.addEventListener('click', close);
+    // ── Event : Back button ───────────────────────────────
+    document.getElementById('sdp-back')
+      ?.addEventListener('click', close);
 
+    // ── Event : Tab navigation ────────────────────────────
     document.querySelectorAll('.sdp-fp-tab').forEach(tab => {
       tab.addEventListener('click', () => _switchTab(tab.dataset.tab));
     });
 
+    // ── Event : BUY button → trading.html?symbol=X&side=BUY ──
     document.getElementById('sdp-fp-buy')?.addEventListener('click', () => {
       close();
       window.location.href =
         `trading.html?symbol=${encodeURIComponent(_sym)}&side=BUY`;
     });
 
+    // ── Event : SELL button → trading.html?symbol=X&side=SELL ─
     document.getElementById('sdp-fp-sell')?.addEventListener('click', () => {
       close();
       window.location.href =
         `trading.html?symbol=${encodeURIComponent(_sym)}&side=SELL`;
     });
 
-    document.getElementById('sdp-fp-wl')?.addEventListener('click', _toggleWL);
+    // ── Event : Watchlist toggle ──────────────────────────
+    document.getElementById('sdp-fp-wl')
+      ?.addEventListener('click', _toggleWL);
 
+    // ── Event : Escape key ────────────────────────────────
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' &&
-          document.getElementById('sdp-fullpage')?.classList.contains('open')) {
-        close();
+      if (e.key === 'Escape') {
+        const fp = document.getElementById('sdp-fullpage');
+        if (fp?.classList.contains('open')) close();
       }
     });
   }
@@ -1091,8 +1252,8 @@ const StockDetail = (() => {
     const profEmp     = profile.fullTimeEmployees || null;
 
     _bodyHtml(`
-      <!-- ML Signal + Mini chart -->
-      <div class="sdp-ov-grid" style="display:grid;grid-template-columns:1fr 300px;gap:12px;align-items:start">
+      <!-- ── Signal ML + Mini Chart ──────────────────────── -->
+      <div class="sdp-ov-top-grid">
 
         <div class="sdp-fp-stat-section"
              style="background:${sigBg};border-color:${sigBorder}">
@@ -1101,47 +1262,79 @@ const StockDetail = (() => {
             AlphaVault ML Signal
           </div>
           ${signal ? _renderSignalBlock(signal) : `
-            <div style="color:var(--text-muted,#64748b);font-size:12px">
-              <i class="fa-solid fa-clock"></i> Awaiting signal cycle...
+            <div style="color:var(--text-muted,#64748b);font-size:13px;
+                        display:flex;align-items:center;gap:8px;padding:8px 0">
+              <i class="fa-solid fa-clock" style="color:#f59e0b"></i>
+              Awaiting next signal cycle...
             </div>`}
         </div>
 
         <div class="sdp-fp-stat-section">
           <div class="sdp-fp-stat-title" style="margin-bottom:8px">
-            <i class="fa-solid fa-chart-line" style="color:#3b82f6"></i>
-            Price Chart (1Y)
+            <i class="fa-solid fa-chart-candlestick" style="color:#3b82f6"></i>
+            Price Chart — 1Y
           </div>
           <div id="sdp-fp-chart-mini" class="sdp-fp-chart-mini-sm"></div>
         </div>
       </div>
 
-      <!-- About -->
-      ${(profSector || profDesc) ? `
+      <!-- ── About ──────────────────────────────────────────── -->
+      ${(profSector || profDesc || profCountry || profEmp) ? `
         <div class="sdp-fp-stat-section">
           <div class="sdp-fp-stat-title">
-            <i class="fa-solid fa-building" style="color:#6b7280"></i> About ${sym}
+            <i class="fa-solid fa-building" style="color:#6b7280"></i>
+            About ${sym}
           </div>
-          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
-            ${profSector   ? `<span class="regime-chip">${profSector}</span>` : ''}
-            ${profCountry  ? `<span class="regime-chip"><i class="fa-solid fa-globe" style="font-size:9px"></i> ${profCountry}</span>` : ''}
-            ${profEmp      ? `<span class="regime-chip"><i class="fa-solid fa-users" style="font-size:9px"></i> ${_fmtNum(profEmp)}</span>` : ''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:${profDesc ? '10px' : '0'}">
+            ${profSector  ? `<span class="regime-chip">
+                               <i class="fa-solid fa-industry" style="font-size:8px"></i>
+                               ${profSector}
+                             </span>` : ''}
+            ${profCountry ? `<span class="regime-chip">
+                               <i class="fa-solid fa-globe" style="font-size:8px"></i>
+                               ${profCountry}
+                             </span>` : ''}
+            ${profEmp     ? `<span class="regime-chip">
+                               <i class="fa-solid fa-users" style="font-size:8px"></i>
+                               ${_fmtNum(profEmp)} employees
+                             </span>` : ''}
           </div>
           ${profDesc ? `
             <p id="sdp-desc-p"
-               style="font-size:12px;color:var(--text-muted,#64748b);line-height:1.7;
+               style="font-size:12px;color:var(--text-muted,#64748b);line-height:1.75;
+                      margin:0 0 6px;
                       display:-webkit-box;-webkit-line-clamp:3;
                       -webkit-box-orient:vertical;overflow:hidden">
               ${profDesc}
             </p>
-            <button class="sdp-desc-toggle" id="sdp-desc-toggle">Show more</button>` : ''}
+            <button class="sdp-desc-toggle" id="sdp-desc-toggle">
+              <i class="fa-solid fa-chevron-down" style="font-size:9px"></i> Show more
+            </button>` : ''}
         </div>` : ''}
 
-      <!-- Key Statistics -->
+      <!-- ── Key Statistics ─────────────────────────────────── -->
       <div class="sdp-fp-stat-section">
         <div class="sdp-fp-stat-title">
-          <i class="fa-solid fa-table" style="color:#3b82f6"></i> Key Statistics
+          <i class="fa-solid fa-table-cells" style="color:#3b82f6"></i>
+          Key Statistics
+          <div style="margin-left:auto">
+            ${kstats.length >= 12
+              ? `<span class="badge badge-green" style="font-size:10px">
+                   <i class="fa-solid fa-circle-check"></i> Full
+                 </span>`
+              : kstats.length >= 5
+              ? `<span class="badge badge-blue" style="font-size:10px">
+                   <i class="fa-solid fa-circle-half-stroke"></i> Partial
+                 </span>`
+              : kstats.length > 0
+              ? `<span class="badge badge-orange" style="font-size:10px">
+                   <i class="fa-solid fa-triangle-exclamation"></i> Limited
+                 </span>`
+              : ''}
+          </div>
         </div>
-        ${kstats.length ? `
+
+        ${kstats.length > 0 ? `
           <div class="sdp-fp-stats">
             ${kstats.map(i => `
               <div class="sdp-fp-stat-item">
@@ -1149,28 +1342,37 @@ const StockDetail = (() => {
                 <div class="sdp-fp-stat-val">${i.v}</div>
               </div>`).join('')}
           </div>` : `
-          <div style="text-align:center;padding:20px;color:var(--text-muted,#64748b);font-size:12px">
-            <i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i>
-            Financial data unavailable.
-            <button onclick="StockDetail._retryFinancials()" class="sdp-desc-toggle" style="margin-left:8px">
+          <div style="text-align:center;padding:24px 20px;color:var(--text-muted,#64748b)">
+            <i class="fa-solid fa-triangle-exclamation"
+               style="color:#f59e0b;font-size:20px;display:block;margin-bottom:8px"></i>
+            <div style="font-size:13px;margin-bottom:10px">
+              Financial data unavailable for <strong>${sym}</strong>
+            </div>
+            <button onclick="StockDetail._retryFinancials()"
+                    style="padding:6px 16px;border-radius:8px;border:1px solid var(--border);
+                           background:transparent;color:var(--accent-blue,#3b82f6);
+                           font-size:12px;font-weight:600;cursor:pointer;font-family:inherit">
               <i class="fa-solid fa-rotate"></i> Retry
             </button>
           </div>`}
       </div>`);
 
-    // Toggle desc
+    // ── Post-render : toggle description ──────────────────
     const tog  = document.getElementById('sdp-desc-toggle');
     const para = document.getElementById('sdp-desc-p');
     if (tog && para) {
-      let ex = false;
+      let expanded = false;
       tog.addEventListener('click', () => {
-        ex = !ex;
-        para.style.webkitLineClamp = ex ? 'unset' : '3';
-        para.style.overflow        = ex ? 'visible' : 'hidden';
-        tog.textContent            = ex ? 'Show less' : 'Show more';
+        expanded = !expanded;
+        para.style.webkitLineClamp = expanded ? 'unset' : '3';
+        para.style.overflow        = expanded ? 'visible' : 'hidden';
+        tog.innerHTML = expanded
+          ? '<i class="fa-solid fa-chevron-up" style="font-size:9px"></i> Show less'
+          : '<i class="fa-solid fa-chevron-down" style="font-size:9px"></i> Show more';
       });
     }
 
+    // ── Post-render : mini chart + TA ─────────────────────
     setTimeout(() => _loadMiniChart('sdp-fp-chart-mini', sym, '1d', '1y', 180), 80);
     setTimeout(() => _appendTASection(sym), 150);
   }
