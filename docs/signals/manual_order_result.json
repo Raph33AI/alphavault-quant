@@ -1,6 +1,20 @@
 {
   "orders": [
     {
+      "symbol": "AMZN",
+      "action": "BUY",
+      "quantity": 11,
+      "order_type": "MARKET",
+      "dry_run": false,
+      "account": "DUM895161",
+      "trading_mode": "paper",
+      "timestamp": "2026-04-28T13:47:01.723318+00:00",
+      "status": "submitted",
+      "ibkr_order_id": "95424468",
+      "error": null,
+      "order_id": "orc-amzn-1777384021"
+    },
+    {
       "symbol": "AMD",
       "action": "BUY",
       "quantity": 9,
@@ -8,25 +22,11 @@
       "dry_run": false,
       "account": "DUM895161",
       "trading_mode": "paper",
-      "timestamp": "2026-04-28T13:32:23.259598+00:00",
+      "timestamp": "2026-04-28T13:47:08.159584+00:00",
       "status": "submitted",
-      "ibkr_order_id": "95424378",
+      "ibkr_order_id": "95424469",
       "error": null,
-      "order_id": "orc-amd-1777383131"
-    },
-    {
-      "symbol": "AVGO",
-      "action": "BUY",
-      "quantity": 7,
-      "order_type": "MARKET",
-      "dry_run": false,
-      "account": "DUM895161",
-      "trading_mode": "paper",
-      "timestamp": "2026-04-28T13:32:23.639818+00:00",
-      "status": "submitted",
-      "ibkr_order_id": "95424379",
-      "error": null,
-      "order_id": "orc-avgo-1777383131"
+      "order_id": "orc-amd-1777384021"
     },
     {
       "symbol": "TXN",
@@ -36,11 +36,11 @@
       "dry_run": false,
       "account": "DUM895161",
       "trading_mode": "paper",
-      "timestamp": "2026-04-28T13:32:24.114026+00:00",
-      "status": "submitted",
-      "ibkr_order_id": "95424380",
-      "error": null,
-      "order_id": "orc-txn-1777383131"
+      "timestamp": "2026-04-28T13:47:13.089094+00:00",
+      "status": "error",
+      "ibkr_order_id": null,
+      "error": "Empty response: {'error': '\"BUY 11 TXN NASDAQ.NMS\"\\nWe are unable to accept your order. Your Available Funds are in sufficient to cover the change in the account\\'s margin requirements if this order executes. In order to obtain the desired position your Equity with Loan Value [1033104.01 EUR] must exceed the new total Initial Margin of  [1136853.04 EUR].', 'cqe': {'post_payload': {'snapshots': [{'balances': {'EUR': '1010018.06', 'USD': '8214227.2256', 'BASE': '8029822.7203'}}], 'side': 'b', 'rejections': ['YOUR ORDER IS NOT ACCEPTED. IN ORDER TO OBTAIN THE DESIRED POSITION YOUR EQUITY WITH LOAN VALUE [1033104.01 EUR] MUST EXCEED THE INITIAL MARGIN [1136853.04 EUR]'], 'account_id': 'DUM895161', 'order_currency': 'USD', 'sec_type': 'STK', 'clams_tags': ['B__^YOUR_ORDER_IS_NOT_ACCEPTED\\\\._IN_ORDER_TO_OBTAIN_THE_DESIRED_POSITION_YOUR_EQUITY_WITH_LOAN_VALUE_\\\\[([0-9.+e-]+)_([A-Z]{3})\\\\]_MUST_EXCEED_THE_INITIAL_MARGIN_\\\\[([0-9.+e-]+)_([A-Z]{3})\\\\]$'], 'order_total': '2959.87999999999965439201332628726959228515625', 'conid': '13096', 'exchange': 'SMART', 'order_id': '01dcccbd.00017f98.69f03c92.0001'}, 'request_method': 'POST'}, 'action': 'order_submit_issue'}",
+      "order_id": "orc-txn-1777384021"
     },
     {
       "symbol": "MU",
@@ -50,11 +50,11 @@
       "dry_run": false,
       "account": "DUM895161",
       "trading_mode": "paper",
-      "timestamp": "2026-04-28T13:32:24.536935+00:00",
-      "status": "submitted",
-      "ibkr_order_id": "95424381",
-      "error": null,
-      "order_id": "orc-mu-1777383131"
+      "timestamp": "2026-04-28T13:47:16.022696+00:00",
+      "status": "error",
+      "ibkr_order_id": null,
+      "error": "Empty response: {'error': '\"BUY 5 MU NASDAQ.NMS\"\\nWe are unable to accept your order. Your Available Funds are in sufficient to cover the change in the account\\'s margin requirements if this order executes. In order to obtain the desired position your Equity with Loan Value [1033104.06 EUR] must exceed the new total Initial Margin of  [1136804.86 EUR].', 'cqe': {'post_payload': {'snapshots': [{'balances': {'EUR': '1010018.06', 'USD': '8214227.2256', 'BASE': '8029822.7203'}}], 'side': 'b', 'rejections': ['YOUR ORDER IS NOT ACCEPTED. IN ORDER TO OBTAIN THE DESIRED POSITION YOUR EQUITY WITH LOAN VALUE [1033104.06 EUR] MUST EXCEED THE INITIAL MARGIN [1136804.86 EUR]'], 'account_id': 'DUM895161', 'order_currency': 'USD', 'sec_type': 'STK', 'clams_tags': ['B__^YOUR_ORDER_IS_NOT_ACCEPTED\\\\._IN_ORDER_TO_OBTAIN_THE_DESIRED_POSITION_YOUR_EQUITY_WITH_LOAN_VALUE_\\\\[([0-9.+e-]+)_([A-Z]{3})\\\\]_MUST_EXCEED_THE_INITIAL_MARGIN_\\\\[([0-9.+e-]+)_([A-Z]{3})\\\\]$'], 'order_total': '2577.8000000000001818989403545856475830078125', 'conid': '9939', 'exchange': 'SMART', 'order_id': '01dcccbd.00017f98.69f03c93.0001'}, 'request_method': 'POST'}, 'action': 'order_submit_issue'}",
+      "order_id": "orc-mu-1777384021"
     },
     {
       "symbol": "UNH",
@@ -64,12 +64,12 @@
       "dry_run": false,
       "account": "DUM895161",
       "trading_mode": "paper",
-      "timestamp": "2026-04-28T13:32:24.909740+00:00",
+      "timestamp": "2026-04-28T13:47:17.893013+00:00",
       "status": "submitted",
-      "ibkr_order_id": "95424382",
+      "ibkr_order_id": "95424473",
       "error": null,
-      "order_id": "orc-unh-1777383131"
+      "order_id": "orc-unh-1777384021"
     }
   ],
-  "last_updated": "2026-04-28T13:32:23.141511+00:00"
+  "last_updated": "2026-04-28T13:46:57.735525+00:00"
 }
