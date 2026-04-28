@@ -1,118 +1,57 @@
 {
-  "leverage": {
-    "current_leverage": 4.077,
-    "max_leverage": 1.0,
-    "allowed_leverage": 1.0,
-    "is_over_leveraged": true,
-    "positions_value": 4156352.82,
-    "reduce_by_pct": 0.7547,
-    "regime_mult": 1.19,
-    "source": "ibeam_live"
-  },
+  "timestamp": "2026-04-28T04:17:11.571865Z",
   "drawdown": {
-    "current_drawdown": 0.0042,
-    "max_drawdown": 0.0047,
-    "portfolio_peak": 1023814.94,
-    "current_nav": 1019473.0,
-    "threshold": 0.15,
-    "is_breached": false
+    "current_drawdown": 0.0,
+    "halt_active": false,
+    "daily_pnl_pct": 0.0,
+    "halt_reason": "",
+    "exposure_mult": 1.0
   },
-  "var_metrics": {
-    "var_95": 0.0005,
-    "var_99": 0.0009,
-    "var_95_mc": 0.0004,
-    "var_99_mc": 0.0006,
-    "cvar_95": 0.0005,
-    "cvar_99": 0.0006,
-    "var_95_usd": 427.09,
-    "var_99_usd": 576.94,
-    "cvar_95_usd": 521.75,
-    "sharpe_ratio": -3.837,
-    "volatility": 0.0035,
-    "mean_return": -5.3e-05,
-    "n_observations": 76,
-    "mc_source": "monte_carlo_10k",
-    "source": "risk_manager_v5.0"
+  "leverage": {
+    "max_leverage": 1.5,
+    "allowed_leverage": 1.5,
+    "current_leverage": 0.0,
+    "is_over_leveraged": false,
+    "reduce_by_pct": 0.0,
+    "regime_mult": 1.0
   },
   "correlation": {
-    "max_correlation": 0.804,
-    "avg_correlation": 0.2316,
-    "n_positions": 20,
-    "threshold": 0.7,
-    "is_high": true,
-    "source": "risk_manager_v5.0"
+    "avg_correlation": 0.546,
+    "diversification": 0.454,
+    "corr_spike": false,
+    "n_clusters": 1,
+    "best_diversifiers": [
+      "TLT",
+      "GLD",
+      "EEM"
+    ]
   },
-  "alerts": [
-    {
-      "alert_type": "over_leveraged",
-      "type": "over_leveraged",
-      "severity": "WARNING",
-      "current": 4.077,
-      "threshold": 1.0,
-      "message": "Leverage 4.08x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
-      "timestamp": "2026-04-28T04:15:45.645982+00:00",
-      "source": "risk_manager_v5.0"
+  "greeks": {
+    "portfolio_greeks": {
+      "delta": 0.0,
+      "gamma": 0.0,
+      "vega": 0.0,
+      "theta": 0.0
     },
-    {
-      "alert_type": "high_correlation",
-      "type": "high_correlation",
-      "severity": "WARNING",
-      "current": 0.804,
-      "threshold": 0.7,
-      "message": "Corr\u00e9lation max 0.80 > 0.7",
-      "timestamp": "2026-04-28T04:15:45.651634+00:00",
-      "source": "risk_manager_v5.0"
-    }
-  ],
-  "risk_score": 60,
-  "portfolio": {
-    "net_liquidation": 1019473.0,
-    "cash_value": 5120197.62,
-    "cash_pct": 5.0224,
-    "n_positions": 48,
-    "min_cash_pct": 0.05,
-    "cash_ok": true
+    "greeks_by_symbol": {},
+    "breaches": {
+      "delta": false,
+      "vega": false,
+      "gamma": false
+    },
+    "recommendations": [],
+    "portfolio_balanced": true
   },
-  "thresholds": {
-    "max_leverage": 1.0,
-    "max_drawdown": 0.15,
-    "max_corr": 0.7,
-    "min_cash_pct": 0.05
+  "feature_drift": {
+    "features_analyzed": 0,
+    "drifted_features": [],
+    "psi_scores": {},
+    "ks_scores": {},
+    "retrain_recommended": false,
+    "overall_drift": "stable",
+    "status": "baseline_set"
   },
-  "stats": {
-    "total_cycles": 80,
-    "alerts_emitted": 0,
-    "over_leveraged_cnt": 77,
-    "high_corr_cnt": 77,
-    "drawdown_warn_cnt": 0,
-    "low_cash_cnt": 0,
-    "last_netliq": 1019473.0,
-    "last_leverage": 4.077,
-    "last_cash_pct": 5.0224,
-    "ibeam_ok": 77,
-    "ibeam_fail": 3
-  },
-  "nav_history_n": 77,
-  "updated_at": "2026-04-28T04:15:45.658195+00:00",
-  "timestamp": "2026-04-28T04:15:45.658195+00:00",
-  "stress_tests": {
-    "available": true,
-    "worst_1d_pct": -0.12,
-    "worst_5d_pct": -0.35,
-    "worst_21d_pct": -0.45,
-    "worst_1d_usd": -1209.73,
-    "worst_5d_usd": -3596.87,
-    "shock_10pct_usd": -101947.3,
-    "shock_20pct_usd": -203894.6,
-    "shock_30pct_usd": -305841.9,
-    "shock_50pct_usd": -509736.5,
-    "n_obs": 76,
-    "engine": "quant_v2.1",
-    "source": "risk_manager_v5.0"
-  },
-  "source": "risk_manager_v5.0",
-  "version": "5.0.4",
-  "cycle": 80,
-  "duration_s": 0.65,
-  "pushed_at": "2026-04-28T04:16:59.707558+00:00"
+  "var_metrics": {},
+  "oracle_cycle": 298,
+  "pushed_from": "oracle_a1_full_pipeline"
 }
