@@ -1,27 +1,46 @@
 {
-  "regime": "NEUTRAL",
-  "signal": "NEUTRAL",
-  "current_regime": "NEUTRAL",
-  "confidence": 0.5,
+  "regime": "BULL",
+  "signal": "BULL",
+  "current_regime": "BULL",
+  "confidence": 0.95,
   "previous_regime": "NEUTRAL",
-  "regime_duration": 0,
+  "regime_duration": 7,
   "signal_thresholds": {
-    "buy": 0.68,
-    "sell": 0.35
+    "buy": 0.6,
+    "sell": 0.4
   },
-  "cash_reserve_pct": 0.15,
-  "max_position_pct": 0.12,
+  "cash_reserve_pct": 0.05,
+  "max_position_pct": 0.15,
   "exit_aggression": "normal",
   "probabilities": {
-    "BULL": 0.0,
-    "NEUTRAL": 1.0,
+    "CRISIS": 0.0,
     "BEAR": 0.0,
-    "CRISIS": 0.0
+    "BULL": 0.95,
+    "NEUTRAL": 0.05
   },
-  "indicators": {},
+  "indicators": {
+    "spy_price": 715.17,
+    "spy_ma5": 710.57,
+    "spy_ma20": 685.04,
+    "spy_ma50": 676.78,
+    "spy_above_ma5": true,
+    "spy_above_ma20": true,
+    "spy_above_ma50": true,
+    "spy_change_1d": 0.0017,
+    "spy_change_5d": 0.0091,
+    "spy_change_20d": 0.1279,
+    "rsi14_spy": 87.6,
+    "vxx_price": 28.89,
+    "vxx_ma10": 29.38,
+    "vxx_change_5d": -0.015,
+    "vxx_high": false,
+    "breadth": 0.6,
+    "momentum_score": 0.92,
+    "timestamp": "2026-04-28T06:00:15.009200+00:00"
+  },
   "source": "regime_detector_v5.0",
   "version": "5.0.4",
-  "updated_at": "2026-04-28T05:56:08.671962+00:00",
-  "timestamp": "2026-04-28T05:56:08.671973+00:00",
-  "pushed_at": "2026-04-28T05:59:40.921050+00:00"
+  "updated_at": "2026-04-28T06:00:15.014600+00:00",
+  "timestamp": "2026-04-28T06:00:15.014608+00:00",
+  "pushed_at": "2026-04-28T06:00:28.219034+00:00"
 }
