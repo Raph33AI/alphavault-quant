@@ -13,17 +13,17 @@
     "current_drawdown": 0.0073,
     "max_drawdown": 0.0074,
     "portfolio_peak": 1069248.25,
-    "current_nav": 1061468.38,
+    "current_nav": 1061464.5,
     "threshold": 0.15,
     "is_breached": false
   },
   "var_metrics": {
     "var_95": 0.0006,
     "var_99": 0.0016,
-    "sharpe_ratio": 0.5572,
-    "volatility": 0.0124,
+    "sharpe_ratio": 0.5543,
+    "volatility": 0.0123,
     "mean_return": 2.7e-05,
-    "n_observations": 121,
+    "n_observations": 122,
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -34,11 +34,32 @@
     "is_high": true,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [],
-  "risk_score": 30,
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 7.4946,
+      "threshold": 1.0,
+      "message": "Leverage 7.49x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-04-29T05:40:46.227032+00:00",
+      "source": "risk_manager_v5.0"
+    },
+    {
+      "alert_type": "high_correlation",
+      "type": "high_correlation",
+      "severity": "WARNING",
+      "current": 0.7737,
+      "threshold": 0.7,
+      "message": "Corr\u00e9lation max 0.77 > 0.7",
+      "timestamp": "2026-04-29T05:40:46.247809+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 40,
   "portfolio": {
-    "net_liquidation": 1061468.38,
-    "cash_value": 9004625.9,
+    "net_liquidation": 1061464.5,
+    "cash_value": 9004622.03,
     "cash_pct": 8.4832,
     "n_positions": 50,
     "min_cash_pct": 0.05,
@@ -51,24 +72,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 125,
+    "total_cycles": 126,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 122,
-    "high_corr_cnt": 122,
+    "over_leveraged_cnt": 123,
+    "high_corr_cnt": 123,
     "drawdown_warn_cnt": 0,
     "low_cash_cnt": 0,
-    "last_netliq": 1061468.38,
+    "last_netliq": 1061464.5,
     "last_leverage": 7.4946,
     "last_cash_pct": 8.4832,
-    "ibeam_ok": 122,
+    "ibeam_ok": 123,
     "ibeam_fail": 3
   },
-  "nav_history_n": 122,
-  "updated_at": "2026-04-29T05:35:46.164325+00:00",
-  "timestamp": "2026-04-29T05:35:46.164325+00:00",
+  "nav_history_n": 123,
+  "updated_at": "2026-04-29T05:40:46.258151+00:00",
+  "timestamp": "2026-04-29T05:40:46.258151+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 125,
-  "duration_s": 1.13,
-  "pushed_at": "2026-04-29T05:40:06.724028+00:00"
+  "cycle": 126,
+  "duration_s": 1.23,
+  "pushed_at": "2026-04-29T05:40:51.242337+00:00"
 }
