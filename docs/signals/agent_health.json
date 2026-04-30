@@ -4,11 +4,11 @@
       "name": "market_scanner",
       "description": "Scan 907 symboles yfinance \u2014 filtre top candidats",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 5,
       "errors": 0,
-      "last_run": "2026-04-30T08:35:15.023843+00:00",
+      "last_run": "2026-04-30T08:40:15.022497+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "total_quotes": 345,
@@ -16,9 +16,9 @@
         "session": "europe",
         "universe_size": 351,
         "tradeable_size": 344,
-        "cycles": 3,
+        "cycles": 5,
         "errors": 0,
-        "last_run": "2026-04-30T08:35:15.023843+00:00",
+        "last_run": "2026-04-30T08:40:15.022497+00:00",
         "duration_s": 0.02
       }
     },
@@ -26,28 +26,33 @@
       "name": "signal",
       "description": "SignalAgent v5.0 | XGB+LGB+LOG | 5min",
       "status": "running",
-      "cycles": 1,
+      "cycles": 2,
       "errors": 0,
-      "last_run": null,
+      "last_run": "2026-04-30T08:38:27.833756+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
-      "metrics": {}
+      "metrics": {
+        "cycles": 1,
+        "errors": 0,
+        "last_run": "2026-04-30T08:38:27.833756+00:00",
+        "duration_s": 177.83
+      }
     },
     "regime_detector": {
       "name": "regime_detector",
       "description": "D\u00e9tecte BULL/BEAR/NEUTRAL/CRISIS \u2014 adapte tous les agents",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 5,
       "errors": 0,
-      "last_run": "2026-04-30T08:35:15.007764+00:00",
+      "last_run": "2026-04-30T08:40:15.006743+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 3,
+        "cycles": 5,
         "errors": 0,
-        "last_run": "2026-04-30T08:35:15.007764+00:00",
+        "last_run": "2026-04-30T08:40:15.006743+00:00",
         "duration_s": 0.0
       }
     },
@@ -59,7 +64,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -71,7 +76,7 @@
       "errors": 0,
       "last_run": "2026-04-30T08:35:56.008788+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -84,45 +89,45 @@
       "name": "risk_manager",
       "description": "RiskManagerAgent v5.0 | VaR+DD+Corr+Leverage | 5min",
       "status": "idle",
-      "cycles": 1,
+      "cycles": 2,
       "errors": 0,
-      "last_run": "2026-04-30T08:35:46.624609+00:00",
+      "last_run": "2026-04-30T08:40:46.547060+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 1,
+        "cycles": 2,
         "errors": 0,
-        "last_run": "2026-04-30T08:35:46.624609+00:00",
-        "duration_s": 1.6
+        "last_run": "2026-04-30T08:40:46.547060+00:00",
+        "duration_s": 1.52
       }
     },
     "pnl_monitor": {
       "name": "pnl_monitor",
       "description": "Surveille PnL 60s \u2014 8 r\u00e8gles exit \u2014 trailing stop",
       "status": "running",
-      "cycles": 3,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-04-30T08:35:57.335378+00:00",
+      "last_run": "2026-04-30T08:39:55.444135+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 2,
+        "cycles": 6,
         "errors": 0,
-        "last_run": "2026-04-30T08:35:57.335378+00:00",
-        "duration_s": 2.63
+        "last_run": "2026-04-30T08:39:55.444135+00:00",
+        "duration_s": 0.74
       }
     },
     "llm_council": {
       "name": "llm_council",
       "description": "Vote 3 mod\u00e8les Ollama | CONFIRM/REJECT/REDUCE | 2/3 quorum",
       "status": "idle",
-      "cycles": 1,
+      "cycles": 2,
       "errors": 0,
-      "last_run": "2026-04-30T08:35:50.098684+00:00",
+      "last_run": "2026-04-30T08:40:50.091087+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "total_councils": 0,
@@ -132,9 +137,9 @@
         "fallbacks": 0,
         "timeouts": 0,
         "cache_size": 0,
-        "cycles": 1,
+        "cycles": 2,
         "errors": 0,
-        "last_run": "2026-04-30T08:35:50.098684+00:00",
+        "last_run": "2026-04-30T08:40:50.091087+00:00",
         "duration_s": 0.07
       }
     },
@@ -146,7 +151,7 @@
       "errors": 0,
       "last_run": "2026-04-30T08:36:16.046849+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -163,7 +168,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -175,7 +180,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -187,7 +192,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -195,17 +200,17 @@
       "name": "dashboard_sync",
       "description": "Sync GitHub Pages 60s | docs/signals/ | v5.0.4",
       "status": "running",
-      "cycles": 3,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-04-30T08:36:04.697576+00:00",
+      "last_run": "2026-04-30T08:40:01.858565+00:00",
       "last_error": null,
-      "uptime_h": 0.05,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 2,
+        "cycles": 6,
         "errors": 0,
-        "last_run": "2026-04-30T08:36:04.697576+00:00",
-        "duration_s": 9.98
+        "last_run": "2026-04-30T08:40:01.858565+00:00",
+        "duration_s": 7.16
       }
     }
   },
@@ -214,6 +219,6 @@
   "n_errors": 0,
   "source": "dashboard_sync_v5.0",
   "version": "5.0",
-  "updated_at": "2026-04-30T08:36:54.720994+00:00",
-  "timestamp": "2026-04-30T08:36:54.720997+00:00"
+  "updated_at": "2026-04-30T08:40:54.720864+00:00",
+  "timestamp": "2026-04-30T08:40:54.720866+00:00"
 }
