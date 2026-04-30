@@ -3,12 +3,12 @@
     "market_scanner": {
       "name": "market_scanner",
       "description": "Scan 907 symboles yfinance \u2014 filtre top candidats",
-      "status": "idle",
-      "cycles": 3,
+      "status": "running",
+      "cycles": 4,
       "errors": 0,
       "last_run": "2026-04-30T06:45:15.022829+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "total_quotes": 345,
@@ -25,30 +25,35 @@
     "signal": {
       "name": "signal",
       "description": "SignalAgent v5.0 | XGB+LGB+LOG | 5min",
-      "status": "running",
+      "status": "idle",
       "cycles": 1,
       "errors": 0,
-      "last_run": null,
+      "last_run": "2026-04-30T06:48:20.823383+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
-      "metrics": {}
+      "metrics": {
+        "cycles": 1,
+        "errors": 0,
+        "last_run": "2026-04-30T06:48:20.823383+00:00",
+        "duration_s": 170.82
+      }
     },
     "regime_detector": {
       "name": "regime_detector",
       "description": "D\u00e9tecte BULL/BEAR/NEUTRAL/CRISIS \u2014 adapte tous les agents",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 4,
       "errors": 0,
-      "last_run": "2026-04-30T06:45:15.007071+00:00",
+      "last_run": "2026-04-30T06:50:00.016335+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 3,
+        "cycles": 4,
         "errors": 0,
-        "last_run": "2026-04-30T06:45:15.007071+00:00",
-        "duration_s": 0.0
+        "last_run": "2026-04-30T06:50:00.016335+00:00",
+        "duration_s": 0.01
       }
     },
     "sentiment": {
@@ -59,7 +64,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -71,7 +76,7 @@
       "errors": 0,
       "last_run": "2026-04-30T06:45:56.272695+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -88,7 +93,7 @@
       "errors": 0,
       "last_run": "2026-04-30T06:45:46.623872+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -101,17 +106,17 @@
       "name": "pnl_monitor",
       "description": "Surveille PnL 60s \u2014 8 r\u00e8gles exit \u2014 trailing stop",
       "status": "running",
-      "cycles": 4,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-04-30T06:46:10.594566+00:00",
+      "last_run": "2026-04-30T06:49:08.961107+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 3,
+        "cycles": 6,
         "errors": 0,
-        "last_run": "2026-04-30T06:46:10.594566+00:00",
-        "duration_s": 2.36
+        "last_run": "2026-04-30T06:49:08.961107+00:00",
+        "duration_s": 0.73
       }
     },
     "llm_council": {
@@ -122,7 +127,7 @@
       "errors": 0,
       "last_run": "2026-04-30T06:45:50.099809+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "total_councils": 0,
@@ -146,7 +151,7 @@
       "errors": 0,
       "last_run": "2026-04-30T06:46:14.600920+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -163,7 +168,7 @@
       "errors": 0,
       "last_run": "2026-04-30T06:45:05.021848+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
         "cycles": 1,
@@ -180,7 +185,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -192,7 +197,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {}
     },
@@ -200,17 +205,17 @@
       "name": "dashboard_sync",
       "description": "Sync GitHub Pages 60s | docs/signals/ | v5.0.4",
       "status": "running",
-      "cycles": 4,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-04-30T06:46:16.576419+00:00",
+      "last_run": "2026-04-30T06:49:14.909318+00:00",
       "last_error": null,
-      "uptime_h": 0.07,
+      "uptime_h": 0.12,
       "paused": false,
       "metrics": {
-        "cycles": 3,
+        "cycles": 6,
         "errors": 0,
-        "last_run": "2026-04-30T06:46:16.576419+00:00",
-        "duration_s": 8.34
+        "last_run": "2026-04-30T06:49:14.909318+00:00",
+        "duration_s": 6.68
       }
     }
   },
@@ -219,6 +224,6 @@
   "n_errors": 0,
   "source": "dashboard_sync_v5.0",
   "version": "5.0",
-  "updated_at": "2026-04-30T06:47:08.249692+00:00",
-  "timestamp": "2026-04-30T06:47:08.249695+00:00"
+  "updated_at": "2026-04-30T06:50:08.230057+00:00",
+  "timestamp": "2026-04-30T06:50:08.230059+00:00"
 }
