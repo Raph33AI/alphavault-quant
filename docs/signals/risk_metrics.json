@@ -1,31 +1,58 @@
 {
-  "leverage": {
-    "current_leverage": 0,
-    "max_leverage": 1.0
-  },
+  "timestamp": "2026-04-30T05:31:38.463879Z",
   "drawdown": {
-    "current_drawdown": 0,
-    "max_drawdown": 0
+    "current_drawdown": 0.0,
+    "halt_active": false,
+    "daily_pnl_pct": 0.0,
+    "halt_reason": "",
+    "exposure_mult": 1.0
   },
-  "var_metrics": {
-    "var_95": 0,
-    "sharpe_ratio": 0,
-    "volatility": 0
+  "leverage": {
+    "max_leverage": 1.5,
+    "allowed_leverage": 1.5,
+    "current_leverage": 0.0,
+    "is_over_leveraged": false,
+    "reduce_by_pct": 0.0,
+    "regime_mult": 1.0
   },
   "correlation": {
-    "max_correlation": 0
+    "avg_correlation": 0.547,
+    "diversification": 0.453,
+    "corr_spike": false,
+    "n_clusters": 1,
+    "best_diversifiers": [
+      "TLT",
+      "GLD",
+      "EEM"
+    ]
   },
-  "alerts": [],
-  "risk_score": 0,
-  "portfolio": {
-    "n_positions": 0,
-    "cash_pct": 0
+  "greeks": {
+    "portfolio_greeks": {
+      "delta": 0.0,
+      "gamma": 0.0,
+      "vega": 0.0,
+      "theta": 0.0
+    },
+    "greeks_by_symbol": {},
+    "breaches": {
+      "delta": false,
+      "vega": false,
+      "gamma": false
+    },
+    "recommendations": [],
+    "portfolio_balanced": true
   },
-  "updated_at": "2026-04-30T05:30:45.622097+00:00",
-  "timestamp": "2026-04-30T05:30:45.622097+00:00",
-  "source": "risk_manager_v5.0",
-  "version": "5.0.4",
-  "cycle": 412,
-  "note": "portfolio non disponible",
-  "pushed_at": "2026-04-30T05:31:33.625417+00:00"
+  "feature_drift": {
+    "features_analyzed": 0,
+    "drifted_features": [],
+    "psi_scores": {},
+    "ks_scores": {},
+    "retrain_recommended": false,
+    "overall_drift": "stable",
+    "status": "baseline_set"
+  },
+  "var_metrics": {},
+  "oracle_cycle": 491,
+  "pushed_from": "oracle_a1_full_pipeline",
+  "pushed_at": "2026-04-30T05:32:22.551248+00:00"
 }
