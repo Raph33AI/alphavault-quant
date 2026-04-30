@@ -4,11 +4,11 @@
       "name": "market_scanner",
       "description": "Scan 907 symboles yfinance \u2014 filtre top candidats",
       "status": "idle",
-      "cycles": 5,
+      "cycles": 1,
       "errors": 0,
-      "last_run": "2026-04-30T07:05:15.023549+00:00",
+      "last_run": "2026-04-30T07:13:03.240518+00:00",
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {
         "total_quotes": 345,
@@ -16,171 +16,129 @@
         "session": "europe",
         "universe_size": 351,
         "tradeable_size": 344,
-        "cycles": 5,
+        "cycles": 1,
         "errors": 0,
-        "last_run": "2026-04-30T07:05:15.023549+00:00",
-        "duration_s": 0.02
+        "last_run": "2026-04-30T07:13:03.240518+00:00",
+        "duration_s": 16.68
       }
     },
     "signal": {
       "name": "signal",
       "description": "SignalAgent v5.0 | XGB+LGB+LOG | 5min",
-      "status": "running",
-      "cycles": 3,
+      "status": "idle",
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:03:32.972373+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 2,
-        "errors": 0,
-        "last_run": "2026-04-30T07:03:32.972373+00:00",
-        "duration_s": 182.96
-      }
+      "metrics": {}
     },
     "regime_detector": {
       "name": "regime_detector",
       "description": "D\u00e9tecte BULL/BEAR/NEUTRAL/CRISIS \u2014 adapte tous les agents",
       "status": "idle",
-      "cycles": 5,
+      "cycles": 1,
       "errors": 0,
-      "last_run": "2026-04-30T07:05:15.008984+00:00",
+      "last_run": "2026-04-30T07:13:16.571549+00:00",
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {
-        "cycles": 5,
+        "cycles": 1,
         "errors": 0,
-        "last_run": "2026-04-30T07:05:15.008984+00:00",
-        "duration_s": 0.0
+        "last_run": "2026-04-30T07:13:16.571549+00:00",
+        "duration_s": 30.01
       }
     },
     "sentiment": {
       "name": "sentiment",
       "description": "FinBERT + Ollama sentiment | RAG PostgreSQL | 30min",
       "status": "idle",
-      "cycles": 1,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:00:10.072448+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 1,
-        "errors": 0,
-        "last_run": "2026-04-30T07:00:10.072448+00:00",
-        "duration_s": 0.06
-      }
+      "metrics": {}
     },
     "capital_allocator": {
       "name": "capital_allocator",
       "description": "Kelly Criterion + Risk Parity | 100% cash | Never overflow",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:05:56.022370+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 3,
-        "errors": 0,
-        "last_run": "2026-04-30T07:05:56.022370+00:00",
-        "duration_s": 1.01
-      }
+      "metrics": {}
     },
     "risk_manager": {
       "name": "risk_manager",
       "description": "RiskManagerAgent v5.0 | VaR+DD+Corr+Leverage | 5min",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:05:47.141570+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 3,
-        "errors": 0,
-        "last_run": "2026-04-30T07:05:47.141570+00:00",
-        "duration_s": 2.11
-      }
+      "metrics": {}
     },
     "pnl_monitor": {
       "name": "pnl_monitor",
       "description": "Surveille PnL 60s \u2014 8 r\u00e8gles exit \u2014 trailing stop",
       "status": "running",
-      "cycles": 12,
+      "cycles": 2,
       "errors": 0,
-      "last_run": "2026-04-30T07:06:26.331971+00:00",
+      "last_run": "2026-04-30T07:13:48.088082+00:00",
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {
-        "cycles": 11,
+        "cycles": 1,
         "errors": 0,
-        "last_run": "2026-04-30T07:06:26.331971+00:00",
-        "duration_s": 2.48
+        "last_run": "2026-04-30T07:13:48.088082+00:00",
+        "duration_s": 1.53
       }
     },
     "llm_council": {
       "name": "llm_council",
       "description": "Vote 3 mod\u00e8les Ollama | CONFIRM/REJECT/REDUCE | 2/3 quorum",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:05:50.171508+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "total_councils": 0,
-        "confirms": 0,
-        "rejects": 0,
-        "reduces": 0,
-        "fallbacks": 0,
-        "timeouts": 0,
-        "cache_size": 0,
-        "cycles": 3,
-        "errors": 0,
-        "last_run": "2026-04-30T07:05:50.171508+00:00",
-        "duration_s": 0.1
-      }
+      "metrics": {}
     },
     "execution": {
       "name": "execution",
       "description": "Smart Order Routing \u2192 IBeam :5055 | Paper/Live | 2-step confirm",
       "status": "idle",
-      "cycles": 3,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:06:09.348178+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 3,
-        "errors": 0,
-        "last_run": "2026-04-30T07:06:09.348178+00:00",
-        "duration_s": 11.29
-      }
+      "metrics": {}
     },
     "portfolio_rebalancer": {
       "name": "portfolio_rebalancer",
       "description": "Drift detection \u2014 Kelly rebalance \u2014 Sector limits \u2014 5x/jour max",
       "status": "idle",
-      "cycles": 1,
+      "cycles": 0,
       "errors": 0,
-      "last_run": "2026-04-30T07:00:05.056863+00:00",
+      "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
-      "metrics": {
-        "cycles": 1,
-        "errors": 0,
-        "last_run": "2026-04-30T07:00:05.056863+00:00",
-        "duration_s": 0.0
-      }
+      "metrics": {}
     },
     "history_learner": {
       "name": "history_learner",
@@ -190,19 +148,19 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {}
     },
     "model_trainer": {
       "name": "model_trainer",
       "description": "Training Oracle direct | yfinance 252j | XGB+LGB+Meta | Optuna",
-      "status": "running",
-      "cycles": 1,
+      "status": "idle",
+      "cycles": 0,
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {}
     },
@@ -210,17 +168,17 @@
       "name": "dashboard_sync",
       "description": "Sync GitHub Pages 60s | docs/signals/ | v5.0.4",
       "status": "running",
-      "cycles": 12,
+      "cycles": 2,
       "errors": 0,
-      "last_run": "2026-04-30T07:06:33.930304+00:00",
+      "last_run": "2026-04-30T07:13:53.703202+00:00",
       "last_error": null,
-      "uptime_h": 0.2,
+      "uptime_h": 0.07,
       "paused": false,
       "metrics": {
-        "cycles": 11,
+        "cycles": 1,
         "errors": 0,
-        "last_run": "2026-04-30T07:06:33.930304+00:00",
-        "duration_s": 10.07
+        "last_run": "2026-04-30T07:13:53.703202+00:00",
+        "duration_s": 7.14
       }
     }
   },
@@ -229,6 +187,6 @@
   "n_errors": 0,
   "source": "dashboard_sync_v5.0",
   "version": "5.0",
-  "updated_at": "2026-04-30T07:07:23.871261+00:00",
-  "timestamp": "2026-04-30T07:07:23.871264+00:00"
+  "updated_at": "2026-04-30T07:14:46.558898+00:00",
+  "timestamp": "2026-04-30T07:14:46.558900+00:00"
 }
