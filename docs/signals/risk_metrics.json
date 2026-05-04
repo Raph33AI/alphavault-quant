@@ -1,84 +1,84 @@
 {
-  "timestamp": "2026-05-04T07:17:26.067831Z",
+  "leverage": {
+    "current_leverage": 1.6583,
+    "max_leverage": 1.0,
+    "allowed_leverage": 1.0,
+    "is_over_leveraged": true,
+    "positions_value": 1646062.11,
+    "reduce_by_pct": 0.397,
+    "regime_mult": 1.19,
+    "source": "ibeam_live"
+  },
   "drawdown": {
     "current_drawdown": 0.0,
-    "halt_active": false,
-    "daily_pnl_pct": 0.0,
-    "halt_reason": "",
-    "exposure_mult": 1.0
+    "max_drawdown": 0.0,
+    "portfolio_peak": 992631.81,
+    "current_nav": 992631.81,
+    "threshold": 0.15,
+    "is_breached": false
   },
-  "leverage": {
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
-    "current_leverage": 0.0,
-    "is_over_leveraged": false,
-    "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+  "var_metrics": {
+    "var_95": 0.0,
+    "var_99": 0.0,
+    "sharpe_ratio": 0.0,
+    "volatility": 0.0,
+    "note": "Historique insuffisant (1 points)",
+    "source": "risk_manager_v5.0"
   },
   "correlation": {
-    "avg_correlation": 0.55,
-    "diversification": 0.45,
-    "corr_spike": false,
-    "n_clusters": 1,
-    "best_diversifiers": [
-      "TLT",
-      "GLD",
-      "EEM"
-    ]
+    "max_correlation": 0.5718,
+    "avg_correlation": 0.1407,
+    "n_positions": 20,
+    "threshold": 0.7,
+    "is_high": false,
+    "source": "risk_manager_v5.0"
   },
-  "greeks": {
-    "portfolio_greeks": {
-      "delta": 0.0,
-      "gamma": 0.0,
-      "vega": 0.0,
-      "theta": 0.0
-    },
-    "greeks_by_symbol": {},
-    "breaches": {
-      "delta": false,
-      "vega": false,
-      "gamma": false
-    },
-    "recommendations": [],
-    "portfolio_balanced": true
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 1.6583,
+      "threshold": 1.0,
+      "message": "Leverage 1.66x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-04T07:20:46.632928+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 35,
+  "portfolio": {
+    "net_liquidation": 992631.81,
+    "cash_value": 2003068.62,
+    "cash_pct": 2.0179,
+    "n_positions": 65,
+    "min_cash_pct": 0.05,
+    "cash_ok": true
   },
-  "feature_drift": {
-    "features_analyzed": 0,
-    "drifted_features": [],
-    "psi_scores": {},
-    "ks_scores": {},
-    "retrain_recommended": false,
-    "overall_drift": "stable",
-    "status": "baseline_set"
+  "thresholds": {
+    "max_leverage": 1.0,
+    "max_drawdown": 0.15,
+    "max_corr": 0.7,
+    "min_cash_pct": 0.05
   },
-  "var_metrics": {},
-  "oracle_cycle": 707,
-  "pushed_from": "oracle_a1_full_pipeline",
-  "cvar_v6": {
-    "timestamp": "2026-05-04T07:18:49.727843",
-    "n_observations": 252,
-    "netliq": 1011233.6,
-    "var_95": 0.01196,
-    "var_99": 0.01579,
-    "cvar_95": 0.01481,
-    "cvar_99": 0.01769,
-    "es_95": 0.01481,
-    "es_99": 0.01769,
-    "cvar_95_usd": 14975.66,
-    "cvar_99_usd": 17885.23,
-    "stressed_cvar_95": 0.02221,
-    "stressed_cvar_99": 0.02653,
-    "tail_ratio": 1.32,
-    "gain_loss_ratio": 0.929,
-    "omega_ratio": 0.99,
-    "sharpe_ratio_v6": -0.4688,
-    "sortino_ratio": -0.8401,
-    "calmar_ratio": -0.0557,
-    "max_drawdown_v6": 0.1364,
-    "win_rate_v6": 0.5159,
-    "baselIII_breach_95": false,
-    "baselIII_breach_99": false
+  "stats": {
+    "total_cycles": 1,
+    "alerts_emitted": 0,
+    "over_leveraged_cnt": 1,
+    "high_corr_cnt": 0,
+    "drawdown_warn_cnt": 0,
+    "low_cash_cnt": 0,
+    "last_netliq": 992631.81,
+    "last_leverage": 1.6583,
+    "last_cash_pct": 2.0179,
+    "ibeam_ok": 1,
+    "ibeam_fail": 0
   },
-  "updated_at": "2026-05-04T07:18:49.727963",
-  "pushed_at": "2026-05-04T07:20:34.858851+00:00"
+  "nav_history_n": 1,
+  "updated_at": "2026-05-04T07:20:46.633700+00:00",
+  "timestamp": "2026-05-04T07:20:46.633700+00:00",
+  "source": "risk_manager_v5.0",
+  "version": "5.0.4",
+  "cycle": 1,
+  "duration_s": 1.63,
+  "pushed_at": "2026-05-04T07:21:21.033126+00:00"
 }
