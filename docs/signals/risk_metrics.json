@@ -12,8 +12,8 @@
   "drawdown": {
     "current_drawdown": 0.0,
     "max_drawdown": 0.0,
-    "portfolio_peak": 992637.75,
-    "current_nav": 992632.56,
+    "portfolio_peak": 992631.0,
+    "current_nav": 992631.0,
     "threshold": 0.15,
     "is_breached": false
   },
@@ -22,7 +22,7 @@
     "var_99": 0.0,
     "sharpe_ratio": 0.0,
     "volatility": 0.0,
-    "note": "Historique insuffisant (4 points)",
+    "note": "Historique insuffisant (1 points)",
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -33,11 +33,22 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [],
-  "risk_score": 30,
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 1.6583,
+      "threshold": 1.0,
+      "message": "Leverage 1.66x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-04T07:10:46.046467+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 35,
   "portfolio": {
-    "net_liquidation": 992632.56,
-    "cash_value": 2003069.37,
+    "net_liquidation": 992631.0,
+    "cash_value": 2003067.81,
     "cash_pct": 2.0179,
     "n_positions": 65,
     "min_cash_pct": 0.05,
@@ -50,24 +61,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 4,
+    "total_cycles": 1,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 4,
+    "over_leveraged_cnt": 1,
     "high_corr_cnt": 0,
     "drawdown_warn_cnt": 0,
     "low_cash_cnt": 0,
-    "last_netliq": 992632.56,
+    "last_netliq": 992631.0,
     "last_leverage": 1.6583,
     "last_cash_pct": 2.0179,
-    "ibeam_ok": 4,
+    "ibeam_ok": 1,
     "ibeam_fail": 0
   },
-  "nav_history_n": 4,
-  "updated_at": "2026-05-04T07:05:46.292318+00:00",
-  "timestamp": "2026-05-04T07:05:46.292318+00:00",
+  "nav_history_n": 1,
+  "updated_at": "2026-05-04T07:10:46.047140+00:00",
+  "timestamp": "2026-05-04T07:10:46.047140+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 4,
-  "duration_s": 1.25,
-  "pushed_at": "2026-05-04T07:10:26.321878+00:00"
+  "cycle": 1,
+  "duration_s": 1.03,
+  "pushed_at": "2026-05-04T07:11:11.790059+00:00"
 }
