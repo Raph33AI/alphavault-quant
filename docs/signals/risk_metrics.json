@@ -84,11 +84,51 @@
     "ibeam_fail": 0
   },
   "nav_history_n": 3,
-  "updated_at": "2026-05-05T14:25:46.316066+00:00",
+  "updated_at": "2026-05-05T14:27:38.687347+00:00",
   "timestamp": "2026-05-05T14:25:46.316066+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
   "cycle": 3,
   "duration_s": 1.3,
-  "pushed_at": "2026-05-05T14:27:18.560854+00:00"
+  "greeks": {
+    "delta_portfolio": 1.3062,
+    "gamma_portfolio": 2.583409,
+    "vega_portfolio": 160841.2775,
+    "theta_portfolio": -62784.8851,
+    "source": "options_greeks_agent_phase3",
+    "timestamp": "2026-05-05T14:27:38.687347+00:00"
+  },
+  "hedge_recommendations": [
+    {
+      "type": "DELTA_HEDGE",
+      "urgency": "HIGH",
+      "action": "Ouvrir position SHORT SPY",
+      "delta_net": 1.3062,
+      "delta_limit": 0.2,
+      "suggested_size": 1321001.0
+    },
+    {
+      "type": "VEGA_HEDGE",
+      "urgency": "MEDIUM",
+      "action": "R\u00e9duire exposition volatilit\u00e9",
+      "vega_net": 160841.28,
+      "vega_limit": 50000
+    },
+    {
+      "type": "THETA_ALERT",
+      "urgency": "LOW",
+      "action": "Time decay \u00e9lev\u00e9 \u2014 surveiller positions longues",
+      "theta_daily": -62784.89
+    }
+  ],
+  "cvar_95": -2.34,
+  "cvar_99": -2.34,
+  "es_95": -2.34,
+  "macro_context": {
+    "regime": "RISK_ON",
+    "score": 0.4323,
+    "vix": 20.0,
+    "source": "macro_sentiment_agent_phase3"
+  },
+  "pushed_at": "2026-05-05T14:27:43.998124+00:00"
 }
