@@ -54,5 +54,39 @@
   "var_metrics": {},
   "oracle_cycle": 827,
   "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-05T13:48:56.492972+00:00"
+  "hedge_recommendations": [
+    {
+      "type": "DELTA_HEDGE",
+      "urgency": "HIGH",
+      "action": "Ouvrir position SHORT SPY",
+      "delta_net": 1.7287,
+      "delta_limit": 0.2,
+      "suggested_size": 1748289.0
+    },
+    {
+      "type": "VEGA_HEDGE",
+      "urgency": "MEDIUM",
+      "action": "R\u00e9duire exposition volatilit\u00e9",
+      "vega_net": 394975.39,
+      "vega_limit": 50000
+    },
+    {
+      "type": "THETA_ALERT",
+      "urgency": "LOW",
+      "action": "Time decay \u00e9lev\u00e9 \u2014 surveiller positions longues",
+      "theta_daily": -154179.85
+    }
+  ],
+  "cvar_95": -2.845,
+  "cvar_99": -3.71,
+  "es_95": -2.845,
+  "macro_context": {
+    "regime": "RISK_ON",
+    "score": 0.4719,
+    "vix": 20.0,
+    "buy_thr_adj": -0.05,
+    "source": "macro_sentiment_agent_phase3"
+  },
+  "updated_at": "2026-05-05T13:49:02.996220+00:00",
+  "pushed_at": "2026-05-05T13:49:50.317330+00:00"
 }
