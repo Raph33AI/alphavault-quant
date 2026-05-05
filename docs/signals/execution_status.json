@@ -2,8 +2,8 @@
   "ibkr_connected": true,
   "trading_mode": "paper",
   "account": "DUM895161",
-  "netliq": 794146.12,
-  "available_cash": -304530.72,
+  "netliq": 784700.81,
+  "available_cash": -334403.16,
   "stats": {
     "executed": 0,
     "failed": 0,
@@ -12,8 +12,23 @@
   },
   "order_locks": {},
   "exit_queue_size": 0,
-  "regular_queue_size": 0,
+  "regular_queue_size": 5,
   "source": "execution_agent_v5.0",
-  "updated_at": "2026-05-05T15:15:58.557966+00:00",
-  "version": "5.0"
+  "updated_at": "2026-05-05T15:23:03.369942+00:00",
+  "version": "5.0",
+  "execution_algo": "TWAP_VWAP_AlmgrenChriss",
+  "almgren": true,
+  "twap": true,
+  "vwap": true,
+  "slippage": true,
+  "momentum_ignition": true,
+  "algo_details": {
+    "almgren_chriss": {
+      "eta": 0.1,
+      "gamma": 0.1
+    },
+    "twap_intervals": 10,
+    "vwap_window": "1day",
+    "slippage_model": "sqrt"
+  }
 }

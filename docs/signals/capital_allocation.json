@@ -21,27 +21,82 @@
     {
       "symbol": "AMD",
       "action": "SELL",
-      "quantity": 40,
-      "position_usd": 14049.6,
+      "quantity": 48,
+      "position_usd": 16859.52,
       "position_pct": 0,
       "kelly_pct": 0,
       "confidence": 0.6542
     }
   ],
-  "netliq": 794138.5,
-  "cash_available": -304576.75,
+  "netliq": 1011331.4,
+  "cash_available": -334482.81,
   "investable_cash": 0,
   "total_allocated": 0,
   "utilization_pct": 0.0,
   "cash_reserve_pct": 5.0,
   "regime": "BULL",
-  "n_positions": 25,
+  "n_positions": 26,
   "stats": {
-    "total_allocations": 1,
-    "total_orders": 3,
+    "total_allocations": 2,
+    "total_orders": 6,
     "total_usd_allocated": 0.0
   },
   "source": "capital_allocator_v5.0",
-  "updated_at": "2026-05-05T15:16:14.348796+00:00",
-  "version": "5.0"
+  "updated_at": "2026-05-05T15:23:03.369942+00:00",
+  "version": "5.0",
+  "method": "black_litterman_hrp_kelly",
+  "allocation_method": "Black-Litterman + HRP + Kelly fractional",
+  "bl_active": true,
+  "hrp_active": true,
+  "black_litterman": {
+    "tau": 0.05,
+    "lambda": 3.0,
+    "active": true,
+    "source": "capital_allocator_phase2_v5.1.0"
+  },
+  "hrp": {
+    "clustering": "hierarchical",
+    "method": "bisect_recursive",
+    "active": true
+  },
+  "kelly": {
+    "fraction": 0.5,
+    "max_pos": 0.15,
+    "cash_reserve": 0.05
+  },
+  "netliq_source": "portfolio.json (R1)",
+  "bl_returns_top10": {
+    "XLB": 0.037656,
+    "FATE": 0.033214,
+    "XOM": 0.031518,
+    "NIO": 0.029255,
+    "IREN": 0.029138,
+    "LCID": 0.02819,
+    "CLOV": 0.027839,
+    "ELV": 0.027724,
+    "CNC": 0.027583,
+    "SYK": 0.027286
+  },
+  "hrp_weights_ref": {
+    "ELV": 0.022655,
+    "CLOV": 0.024464,
+    "BKNG": 0.02011,
+    "FATE": 0.02437,
+    "AVGO": 0.018344,
+    "CNC": 0.022134,
+    "XLB": 0.017882,
+    "JPM": 0.016168,
+    "FDX": 0.01801,
+    "KLAC": 0.018818,
+    "AAPL": 0.016325,
+    "BAC": 0.022275,
+    "LLY": 0.016983,
+    "SYK": 0.015515,
+    "NIO": 0.016958,
+    "XOM": 0.01717,
+    "MDB": 0.015619,
+    "LCID": 0.017705,
+    "AMD": 0.017316,
+    "IREN": 0.020958
+  }
 }
