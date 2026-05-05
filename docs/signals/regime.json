@@ -3567,5 +3567,47 @@
   },
   "oracle_cycle": 830,
   "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-05T14:35:45.142035+00:00"
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ],
+    "source": "regime_detector_phase2_v5.1.0",
+    "timestamp": "2026-05-05T14:35:58.993047+00:00"
+  },
+  "regime_params": {
+    "BULL": {
+      "max_pos": 0.15,
+      "kelly_mult": 1.0,
+      "atr_mult": 2.0
+    },
+    "BEAR": {
+      "max_pos": 0.08,
+      "kelly_mult": 0.5,
+      "atr_mult": 1.0
+    },
+    "NEUTRAL": {
+      "max_pos": 0.1,
+      "kelly_mult": 0.7,
+      "atr_mult": 1.5
+    },
+    "CRISIS": {
+      "max_pos": 0.05,
+      "kelly_mult": 0.2,
+      "atr_mult": 0.8
+    },
+    "RECOVERY": {
+      "max_pos": 0.12,
+      "kelly_mult": 0.8,
+      "atr_mult": 1.8
+    }
+  },
+  "updated_at": "2026-05-05T14:35:58.993047+00:00",
+  "version": "5.1.0_phase2",
+  "pushed_at": "2026-05-05T14:36:16.719789+00:00"
 }
