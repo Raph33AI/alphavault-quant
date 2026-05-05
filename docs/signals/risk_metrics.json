@@ -1,19 +1,19 @@
 {
   "leverage": {
-    "current_leverage": 1.4901,
+    "current_leverage": 1.5127,
     "max_leverage": 1.0,
     "allowed_leverage": 1.0,
     "is_over_leveraged": true,
-    "positions_value": 1225534.53,
-    "reduce_by_pct": 0.3289,
+    "positions_value": 1229646.13,
+    "reduce_by_pct": 0.3389,
     "regime_mult": 1.2,
     "source": "ibeam_live"
   },
   "drawdown": {
-    "current_drawdown": 0.0073,
-    "max_drawdown": 0.0073,
-    "portfolio_peak": 828528.75,
-    "current_nav": 822439.12,
+    "current_drawdown": 0.0,
+    "max_drawdown": 0.0,
+    "portfolio_peak": 812865.94,
+    "current_nav": 812865.94,
     "threshold": 0.15,
     "is_breached": false
   },
@@ -22,7 +22,7 @@
     "var_99": 0.0,
     "sharpe_ratio": 0.0,
     "volatility": 0.0,
-    "note": "Historique insuffisant (3 points)",
+    "note": "Historique insuffisant (1 points)",
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -38,10 +38,10 @@
       "alert_type": "over_leveraged",
       "type": "over_leveraged",
       "severity": "WARNING",
-      "current": 1.4901,
+      "current": 1.5127,
       "threshold": 1.0,
-      "message": "Leverage 1.49x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
-      "timestamp": "2026-05-05T14:25:46.284818+00:00",
+      "message": "Leverage 1.51x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-05T14:30:50.189862+00:00",
       "source": "risk_manager_v5.0"
     },
     {
@@ -51,15 +51,15 @@
       "current": 0.7877,
       "threshold": 0.7,
       "message": "Corr\u00e9lation max 0.79 > 0.7",
-      "timestamp": "2026-05-05T14:25:46.305670+00:00",
+      "timestamp": "2026-05-05T14:30:50.191130+00:00",
       "source": "risk_manager_v5.0"
     }
   ],
-  "risk_score": 25,
+  "risk_score": 40,
   "portfolio": {
-    "net_liquidation": 822439.12,
-    "cash_value": 1820370.55,
-    "cash_pct": 2.2134,
+    "net_liquidation": 812865.94,
+    "cash_value": 1820664.87,
+    "cash_pct": 2.2398,
     "n_positions": 25,
     "min_cash_pct": 0.05,
     "cash_ok": true
@@ -71,64 +71,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 3,
+    "total_cycles": 1,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 3,
-    "high_corr_cnt": 3,
+    "over_leveraged_cnt": 1,
+    "high_corr_cnt": 1,
     "drawdown_warn_cnt": 0,
     "low_cash_cnt": 0,
-    "last_netliq": 822439.12,
-    "last_leverage": 1.4901,
-    "last_cash_pct": 2.2134,
-    "ibeam_ok": 3,
+    "last_netliq": 812865.94,
+    "last_leverage": 1.5127,
+    "last_cash_pct": 2.2398,
+    "ibeam_ok": 1,
     "ibeam_fail": 0
   },
-  "nav_history_n": 3,
-  "updated_at": "2026-05-05T14:27:38.687347+00:00",
-  "timestamp": "2026-05-05T14:25:46.316066+00:00",
+  "nav_history_n": 1,
+  "updated_at": "2026-05-05T14:30:50.192414+00:00",
+  "timestamp": "2026-05-05T14:30:50.192414+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 3,
-  "duration_s": 1.3,
-  "greeks": {
-    "delta_portfolio": 1.3062,
-    "gamma_portfolio": 2.583409,
-    "vega_portfolio": 160841.2775,
-    "theta_portfolio": -62784.8851,
-    "source": "options_greeks_agent_phase3",
-    "timestamp": "2026-05-05T14:27:38.687347+00:00"
-  },
-  "hedge_recommendations": [
-    {
-      "type": "DELTA_HEDGE",
-      "urgency": "HIGH",
-      "action": "Ouvrir position SHORT SPY",
-      "delta_net": 1.3062,
-      "delta_limit": 0.2,
-      "suggested_size": 1321001.0
-    },
-    {
-      "type": "VEGA_HEDGE",
-      "urgency": "MEDIUM",
-      "action": "R\u00e9duire exposition volatilit\u00e9",
-      "vega_net": 160841.28,
-      "vega_limit": 50000
-    },
-    {
-      "type": "THETA_ALERT",
-      "urgency": "LOW",
-      "action": "Time decay \u00e9lev\u00e9 \u2014 surveiller positions longues",
-      "theta_daily": -62784.89
-    }
-  ],
-  "cvar_95": -2.34,
-  "cvar_99": -2.34,
-  "es_95": -2.34,
-  "macro_context": {
-    "regime": "RISK_ON",
-    "score": 0.4323,
-    "vix": 20.0,
-    "source": "macro_sentiment_agent_phase3"
-  },
-  "pushed_at": "2026-05-05T14:30:02.455874+00:00"
+  "cycle": 1,
+  "duration_s": 5.18,
+  "pushed_at": "2026-05-05T14:30:57.308654+00:00"
 }
