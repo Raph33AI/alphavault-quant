@@ -3567,5 +3567,58 @@
   },
   "oracle_cycle": 827,
   "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-05T13:48:14.045190+00:00"
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ],
+    "is_recovery": false,
+    "confidence": 0.0,
+    "prev_regime": "NEUTRAL",
+    "current_regime": "BULL",
+    "source": "regime_detector_phase2_v5.1.0"
+  },
+  "regime_params": {
+    "BULL": {
+      "max_pos": 0.15,
+      "kelly_mult": 1.0,
+      "stop_mult": 2.0,
+      "atr_mult": 2.0
+    },
+    "BEAR": {
+      "max_pos": 0.08,
+      "kelly_mult": 0.5,
+      "stop_mult": 1.0,
+      "atr_mult": 1.0
+    },
+    "NEUTRAL": {
+      "max_pos": 0.1,
+      "kelly_mult": 0.7,
+      "stop_mult": 1.5,
+      "atr_mult": 1.5
+    },
+    "CRISIS": {
+      "max_pos": 0.05,
+      "kelly_mult": 0.2,
+      "stop_mult": 0.8,
+      "atr_mult": 0.8
+    },
+    "RECOVERY": {
+      "max_pos": 0.12,
+      "kelly_mult": 0.8,
+      "stop_mult": 1.8,
+      "atr_mult": 1.8
+    }
+  },
+  "macro_regime": "RISK_ON",
+  "macro_score": 0.4719,
+  "vix_level": 20.0,
+  "updated_at": "2026-05-05T13:49:02.996220+00:00",
+  "version": "5.1.0_phase2",
+  "pushed_at": "2026-05-05T13:49:10.580772+00:00"
 }
