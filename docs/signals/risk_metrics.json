@@ -1,58 +1,74 @@
 {
-  "timestamp": "2026-05-08T09:31:45.701977Z",
-  "drawdown": {
-    "current_drawdown": 0.0,
-    "halt_active": false,
-    "daily_pnl_pct": 0.0,
-    "halt_reason": "",
-    "exposure_mult": 1.0
-  },
   "leverage": {
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
-    "current_leverage": 0.0,
-    "is_over_leveraged": false,
-    "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+    "current_leverage": 1.6662,
+    "max_leverage": 1.0,
+    "allowed_leverage": 1.0,
+    "is_over_leveraged": true,
+    "positions_value": 1393454.75,
+    "reduce_by_pct": 0.3998,
+    "regime_mult": 1.17,
+    "source": "ibeam_live"
+  },
+  "drawdown": {
+    "current_drawdown": 0.0115,
+    "max_drawdown": 0.0227,
+    "portfolio_peak": 846061.5,
+    "current_nav": 836294.12,
+    "threshold": 0.15,
+    "is_breached": false
+  },
+  "var_metrics": {
+    "var_95": 0.0019,
+    "var_99": 0.0037,
+    "sharpe_ratio": -0.0105,
+    "volatility": 0.0197,
+    "mean_return": -1e-06,
+    "n_observations": 210,
+    "source": "risk_manager_v5.0"
   },
   "correlation": {
-    "avg_correlation": 0.563,
-    "diversification": 0.437,
-    "corr_spike": false,
-    "n_clusters": 1,
-    "best_diversifiers": [
-      "TLT",
-      "GLD",
-      "EEM"
-    ]
+    "max_correlation": 0.8355,
+    "avg_correlation": 0.0905,
+    "n_positions": 20,
+    "threshold": 0.7,
+    "is_high": true,
+    "source": "risk_manager_v5.0"
   },
-  "greeks": {
-    "portfolio_greeks": {
-      "delta": 0.0,
-      "gamma": 0.0,
-      "vega": 0.0,
-      "theta": 0.0
-    },
-    "greeks_by_symbol": {},
-    "breaches": {
-      "delta": false,
-      "vega": false,
-      "gamma": false
-    },
-    "recommendations": [],
-    "portfolio_balanced": true
+  "alerts": [],
+  "risk_score": 40,
+  "portfolio": {
+    "net_liquidation": 836294.12,
+    "cash_value": -557160.62,
+    "cash_pct": -0.6662,
+    "n_positions": 85,
+    "min_cash_pct": 0.05,
+    "cash_ok": false
   },
-  "feature_drift": {
-    "features_analyzed": 0,
-    "drifted_features": [],
-    "psi_scores": {},
-    "ks_scores": {},
-    "retrain_recommended": false,
-    "overall_drift": "stable",
-    "status": "baseline_set"
+  "thresholds": {
+    "max_leverage": 1.0,
+    "max_drawdown": 0.15,
+    "max_corr": 0.7,
+    "min_cash_pct": 0.05
   },
-  "var_metrics": {},
-  "oracle_cycle": 1092,
-  "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-08T09:35:02.366881+00:00"
+  "stats": {
+    "total_cycles": 216,
+    "alerts_emitted": 0,
+    "over_leveraged_cnt": 211,
+    "high_corr_cnt": 205,
+    "drawdown_warn_cnt": 0,
+    "low_cash_cnt": 200,
+    "last_netliq": 836294.12,
+    "last_leverage": 1.6662,
+    "last_cash_pct": -0.6662,
+    "ibeam_ok": 211,
+    "ibeam_fail": 5
+  },
+  "nav_history_n": 211,
+  "updated_at": "2026-05-08T09:35:46.568563+00:00",
+  "timestamp": "2026-05-08T09:35:46.568563+00:00",
+  "source": "risk_manager_v5.0",
+  "version": "5.0.4",
+  "cycle": 216,
+  "duration_s": 1.54,
+  "pushed_at": "2026-05-08T09:35:51.413412+00:00"
 }
