@@ -20,7 +20,7 @@
   "var_metrics": {
     "var_95": 0.0016,
     "var_99": 0.0166,
-    "sharpe_ratio": -1.3736,
+    "sharpe_ratio": -1.3742,
     "volatility": 0.0662,
     "mean_return": -0.000361,
     "n_observations": 251,
@@ -34,30 +34,8 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [
-    {
-      "alert_type": "over_leveraged",
-      "type": "over_leveraged",
-      "severity": "WARNING",
-      "current": 3.3286,
-      "threshold": 1.0,
-      "message": "Leverage 3.33x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
-      "timestamp": "2026-05-09T02:40:46.622709+00:00",
-      "source": "risk_manager_v5.0"
-    },
-    {
-      "alert_type": "low_cash",
-      "type": "low_cash",
-      "severity": "CRITICAL",
-      "current": -1.5858,
-      "threshold": 0.05,
-      "cash_value": -1196625.04,
-      "message": "Cash -158.6% < minimum 5% | $-1,196,625",
-      "timestamp": "2026-05-09T02:40:46.643648+00:00",
-      "source": "risk_manager_v5.0"
-    }
-  ],
-  "risk_score": 60,
+  "alerts": [],
+  "risk_score": 50,
   "portfolio": {
     "net_liquidation": 754564.06,
     "cash_value": -1196625.04,
@@ -73,24 +51,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 421,
+    "total_cycles": 422,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 415,
+    "over_leveraged_cnt": 416,
     "high_corr_cnt": 269,
     "drawdown_warn_cnt": 6,
-    "low_cash_cnt": 404,
+    "low_cash_cnt": 405,
     "last_netliq": 754564.06,
     "last_leverage": 3.3286,
     "last_cash_pct": -1.5858,
-    "ibeam_ok": 415,
+    "ibeam_ok": 416,
     "ibeam_fail": 6
   },
   "nav_history_n": 252,
-  "updated_at": "2026-05-09T02:40:46.664402+00:00",
-  "timestamp": "2026-05-09T02:40:46.664402+00:00",
+  "updated_at": "2026-05-09T02:45:46.519909+00:00",
+  "timestamp": "2026-05-09T02:45:46.519909+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 421,
-  "duration_s": 1.64,
-  "pushed_at": "2026-05-09T02:44:58.323548+00:00"
+  "cycle": 422,
+  "duration_s": 1.49,
+  "pushed_at": "2026-05-09T02:45:46.850888+00:00"
 }
