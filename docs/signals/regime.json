@@ -3567,5 +3567,27 @@
   },
   "oracle_cycle": 1166,
   "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-10T15:04:16.088412+00:00"
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ]
+  },
+  "state_probabilities": {
+    "BULL": 0.85,
+    "BEAR": 0.05,
+    "NEUTRAL": 0.05,
+    "CRISIS": 0.02,
+    "RECOVERY": 0.03
+  },
+  "n_states": 5,
+  "hmm_active": true,
+  "hmm_n_states": 5,
+  "updated_at": "2026-05-10T15:05:01.308283+00:00",
+  "pushed_at": "2026-05-10T15:05:03.602690+00:00"
 }
