@@ -1,58 +1,106 @@
 {
-  "timestamp": "2026-05-12T00:16:34.826758Z",
-  "drawdown": {
-    "current_drawdown": 0.0,
-    "halt_active": false,
-    "daily_pnl_pct": 0.0,
-    "halt_reason": "",
-    "exposure_mult": 1.0
-  },
   "leverage": {
-    "max_leverage": 1.5,
-    "allowed_leverage": 1.5,
-    "current_leverage": 0.0,
-    "is_over_leveraged": false,
-    "reduce_by_pct": 0.0,
-    "regime_mult": 1.0
+    "current_leverage": 6.8825,
+    "max_leverage": 1.0,
+    "allowed_leverage": 1.0,
+    "is_over_leveraged": true,
+    "positions_value": 4746034.78,
+    "reduce_by_pct": 0.8547,
+    "regime_mult": 1.2,
+    "source": "ibeam_live"
+  },
+  "drawdown": {
+    "current_drawdown": 0.0941,
+    "max_drawdown": 0.1004,
+    "portfolio_peak": 761254.31,
+    "current_nav": 689585.06,
+    "threshold": 0.15,
+    "is_breached": false
+  },
+  "var_metrics": {
+    "var_95": 0.0027,
+    "var_99": 0.0139,
+    "sharpe_ratio": -1.2586,
+    "volatility": 0.0692,
+    "mean_return": -0.000346,
+    "n_observations": 251,
+    "source": "risk_manager_v5.0"
   },
   "correlation": {
-    "avg_correlation": 0.571,
-    "diversification": 0.429,
-    "corr_spike": false,
-    "n_clusters": 1,
-    "best_diversifiers": [
-      "TLT",
-      "GLD",
-      "EEM"
-    ]
+    "max_correlation": 0.7702,
+    "avg_correlation": 0.0936,
+    "n_positions": 20,
+    "threshold": 0.7,
+    "is_high": true,
+    "source": "risk_manager_v5.0"
   },
-  "greeks": {
-    "portfolio_greeks": {
-      "delta": 0.0,
-      "gamma": 0.0,
-      "vega": 0.0,
-      "theta": 0.0
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 6.8825,
+      "threshold": 1.0,
+      "message": "Leverage 6.88x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-12T00:20:46.832915+00:00",
+      "source": "risk_manager_v5.0"
     },
-    "greeks_by_symbol": {},
-    "breaches": {
-      "delta": false,
-      "vega": false,
-      "gamma": false
+    {
+      "alert_type": "low_cash",
+      "type": "low_cash",
+      "severity": "CRITICAL",
+      "current": -4.8354,
+      "threshold": 0.05,
+      "cash_value": -3334444.96,
+      "message": "Cash -483.5% < minimum 5% | $-3,334,445",
+      "timestamp": "2026-05-12T00:20:46.853852+00:00",
+      "source": "risk_manager_v5.0"
     },
-    "recommendations": [],
-    "portfolio_balanced": true
+    {
+      "alert_type": "high_correlation",
+      "type": "high_correlation",
+      "severity": "WARNING",
+      "current": 0.7702,
+      "threshold": 0.7,
+      "message": "Corr\u00e9lation max 0.77 > 0.7",
+      "timestamp": "2026-05-12T00:20:46.875655+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 65,
+  "portfolio": {
+    "net_liquidation": 689585.06,
+    "cash_value": -3334444.96,
+    "cash_pct": -4.8354,
+    "n_positions": 119,
+    "min_cash_pct": 0.05,
+    "cash_ok": false
   },
-  "feature_drift": {
-    "features_analyzed": 0,
-    "drifted_features": [],
-    "psi_scores": {},
-    "ks_scores": {},
-    "retrain_recommended": false,
-    "overall_drift": "stable",
-    "status": "baseline_set"
+  "thresholds": {
+    "max_leverage": 1.0,
+    "max_drawdown": 0.15,
+    "max_corr": 0.7,
+    "min_cash_pct": 0.05
   },
-  "var_metrics": {},
-  "oracle_cycle": 1264,
-  "pushed_from": "oracle_a1_full_pipeline",
-  "pushed_at": "2026-05-12T00:20:02.790597+00:00"
+  "stats": {
+    "total_cycles": 554,
+    "alerts_emitted": 0,
+    "over_leveraged_cnt": 551,
+    "high_corr_cnt": 99,
+    "drawdown_warn_cnt": 0,
+    "low_cash_cnt": 551,
+    "last_netliq": 689585.06,
+    "last_leverage": 6.8825,
+    "last_cash_pct": -4.8354,
+    "ibeam_ok": 551,
+    "ibeam_fail": 3
+  },
+  "nav_history_n": 252,
+  "updated_at": "2026-05-12T00:20:46.886081+00:00",
+  "timestamp": "2026-05-12T00:20:46.886081+00:00",
+  "source": "risk_manager_v5.0",
+  "version": "5.0.4",
+  "cycle": 554,
+  "duration_s": 1.88,
+  "pushed_at": "2026-05-12T00:20:52.087682+00:00"
 }
