@@ -20,10 +20,10 @@
   "var_metrics": {
     "var_95": 0.0023,
     "var_99": 0.0045,
-    "sharpe_ratio": -0.6613,
-    "volatility": 0.0256,
+    "sharpe_ratio": -0.6585,
+    "volatility": 0.0255,
     "mean_return": -6.7e-05,
-    "n_observations": 120,
+    "n_observations": 121,
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -34,30 +34,8 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [
-    {
-      "alert_type": "over_leveraged",
-      "type": "over_leveraged",
-      "severity": "WARNING",
-      "current": 6.4666,
-      "threshold": 1.0,
-      "message": "Leverage 6.47x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
-      "timestamp": "2026-05-16T00:10:48.183326+00:00",
-      "source": "risk_manager_v5.0"
-    },
-    {
-      "alert_type": "low_cash",
-      "type": "low_cash",
-      "severity": "CRITICAL",
-      "current": -3.7357,
-      "threshold": 0.05,
-      "cash_value": -2095878.36,
-      "message": "Cash -373.6% < minimum 5% | $-2,095,878",
-      "timestamp": "2026-05-16T00:10:48.188906+00:00",
-      "source": "risk_manager_v5.0"
-    }
-  ],
-  "risk_score": 50,
+  "alerts": [],
+  "risk_score": 40,
   "portfolio": {
     "net_liquidation": 561037.5,
     "cash_value": -2095878.36,
@@ -73,24 +51,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 122,
+    "total_cycles": 123,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 121,
+    "over_leveraged_cnt": 122,
     "high_corr_cnt": 18,
     "drawdown_warn_cnt": 0,
-    "low_cash_cnt": 121,
+    "low_cash_cnt": 122,
     "last_netliq": 561037.5,
     "last_leverage": 6.4666,
     "last_cash_pct": -3.7357,
-    "ibeam_ok": 121,
+    "ibeam_ok": 122,
     "ibeam_fail": 1
   },
-  "nav_history_n": 121,
-  "updated_at": "2026-05-16T00:10:48.196704+00:00",
-  "timestamp": "2026-05-16T00:10:48.196704+00:00",
+  "nav_history_n": 122,
+  "updated_at": "2026-05-16T00:15:47.369804+00:00",
+  "timestamp": "2026-05-16T00:15:47.369804+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 122,
-  "duration_s": 2.16,
-  "pushed_at": "2026-05-16T00:15:06.991790+00:00"
+  "cycle": 123,
+  "duration_s": 2.36,
+  "pushed_at": "2026-05-16T00:15:56.041617+00:00"
 }
