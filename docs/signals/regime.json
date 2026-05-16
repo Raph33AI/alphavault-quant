@@ -40,7 +40,28 @@
   },
   "source": "regime_detector_v5.0",
   "version": "5.0.4",
-  "updated_at": "2026-05-16T03:30:15.009925+00:00",
+  "updated_at": "2026-05-16T03:35:01.777819+00:00",
   "timestamp": "2026-05-16T03:30:15.009937+00:00",
-  "pushed_at": "2026-05-16T03:34:14.564797+00:00"
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ]
+  },
+  "state_probabilities": {
+    "BULL": 0.8,
+    "BEAR": 0.1,
+    "NEUTRAL": 0.05,
+    "CRISIS": 0.02,
+    "RECOVERY": 0.03
+  },
+  "n_states": 5,
+  "hmm_active": true,
+  "hmm_n_states": 5,
+  "pushed_at": "2026-05-16T03:35:03.404111+00:00"
 }
