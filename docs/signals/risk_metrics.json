@@ -20,10 +20,10 @@
   "var_metrics": {
     "var_95": 0.002,
     "var_99": 0.0045,
-    "sharpe_ratio": -0.607,
+    "sharpe_ratio": -0.6051,
     "volatility": 0.0223,
-    "mean_return": -5.4e-05,
-    "n_observations": 158,
+    "mean_return": -5.3e-05,
+    "n_observations": 159,
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -34,8 +34,30 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [],
-  "risk_score": 40,
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 6.4689,
+      "threshold": 1.0,
+      "message": "Leverage 6.47x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-16T03:25:47.076925+00:00",
+      "source": "risk_manager_v5.0"
+    },
+    {
+      "alert_type": "low_cash",
+      "type": "low_cash",
+      "severity": "CRITICAL",
+      "current": -3.7373,
+      "threshold": 0.05,
+      "cash_value": -2095838.81,
+      "message": "Cash -373.7% < minimum 5% | $-2,095,839",
+      "timestamp": "2026-05-16T03:25:47.083370+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 50,
   "portfolio": {
     "net_liquidation": 560794.38,
     "cash_value": -2095838.81,
@@ -51,24 +73,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 160,
+    "total_cycles": 161,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 159,
+    "over_leveraged_cnt": 160,
     "high_corr_cnt": 18,
     "drawdown_warn_cnt": 0,
-    "low_cash_cnt": 159,
+    "low_cash_cnt": 160,
     "last_netliq": 560794.38,
     "last_leverage": 6.4689,
     "last_cash_pct": -3.7373,
-    "ibeam_ok": 159,
+    "ibeam_ok": 160,
     "ibeam_fail": 1
   },
-  "nav_history_n": 159,
-  "updated_at": "2026-05-16T03:20:47.158253+00:00",
-  "timestamp": "2026-05-16T03:20:47.158253+00:00",
+  "nav_history_n": 160,
+  "updated_at": "2026-05-16T03:25:47.083631+00:00",
+  "timestamp": "2026-05-16T03:25:47.083631+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 160,
-  "duration_s": 2.15,
-  "pushed_at": "2026-05-16T03:25:32.862919+00:00"
+  "cycle": 161,
+  "duration_s": 2.07,
+  "pushed_at": "2026-05-16T03:26:21.198974+00:00"
 }
