@@ -4,7 +4,7 @@
   "current_regime": "BULL",
   "confidence": 0.95,
   "previous_regime": "NEUTRAL",
-  "regime_duration": 19,
+  "regime_duration": 20,
   "signal_thresholds": {
     "buy": 0.52,
     "sell": 0.4
@@ -19,28 +19,49 @@
     "NEUTRAL": 0.05
   },
   "indicators": {
-    "spy_price": 740.79,
-    "spy_ma5": 740.1,
-    "spy_ma20": 728.26,
-    "spy_ma50": 693.49,
+    "spy_price": 741.18,
+    "spy_ma5": 740.18,
+    "spy_ma20": 728.28,
+    "spy_ma50": 693.5,
     "spy_above_ma5": true,
     "spy_above_ma20": true,
     "spy_above_ma50": true,
-    "spy_change_1d": 0.0096,
-    "spy_change_5d": -0.002,
-    "spy_change_20d": 0.0416,
-    "rsi14_spy": 67.6,
-    "vxx_price": 27.03,
-    "vxx_ma10": 27.79,
-    "vxx_change_5d": -0.0472,
+    "spy_change_1d": 0.0102,
+    "spy_change_5d": -0.0015,
+    "spy_change_20d": 0.0421,
+    "rsi14_spy": 67.8,
+    "vxx_price": 27.14,
+    "vxx_ma10": 27.8,
+    "vxx_change_5d": -0.0435,
     "vxx_high": false,
     "breadth": 0.8,
     "momentum_score": 0.96,
-    "timestamp": "2026-05-20T19:40:15.006456+00:00"
+    "timestamp": "2026-05-20T19:45:01.740471+00:00"
   },
   "source": "regime_detector_v5.0",
   "version": "5.0.4",
-  "updated_at": "2026-05-20T19:40:15.007975+00:00",
-  "timestamp": "2026-05-20T19:40:15.007983+00:00",
-  "pushed_at": "2026-05-20T19:44:17.094309+00:00"
+  "updated_at": "2026-05-20T19:45:01.844010+00:00",
+  "timestamp": "2026-05-20T19:45:01.742676+00:00",
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ]
+  },
+  "state_probabilities": {
+    "BULL": 0.95,
+    "BEAR": -0.05,
+    "NEUTRAL": 0.05,
+    "CRISIS": 0.02,
+    "RECOVERY": 0.03
+  },
+  "n_states": 5,
+  "hmm_active": true,
+  "hmm_n_states": 5,
+  "pushed_at": "2026-05-20T19:45:06.276795+00:00"
 }
