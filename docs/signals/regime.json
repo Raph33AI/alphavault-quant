@@ -1,25 +1,27 @@
 {
-  "recovery_detection": {
-    "enabled": true,
-    "n_states": 5,
-    "states": [
-      "BULL",
-      "BEAR",
-      "NEUTRAL",
-      "CRISIS",
-      "RECOVERY"
-    ]
+  "regime": "NEUTRAL",
+  "signal": "NEUTRAL",
+  "current_regime": "NEUTRAL",
+  "confidence": 0.5,
+  "previous_regime": "NEUTRAL",
+  "regime_duration": 0,
+  "signal_thresholds": {
+    "buy": 0.55,
+    "sell": 0.35
   },
-  "state_probabilities": {
-    "BULL": 0.85,
-    "BEAR": 0.05,
-    "NEUTRAL": 0.05,
-    "CRISIS": 0.02,
-    "RECOVERY": 0.03
+  "cash_reserve_pct": 0.15,
+  "max_position_pct": 0.12,
+  "exit_aggression": "normal",
+  "probabilities": {
+    "BULL": 0.0,
+    "NEUTRAL": 1.0,
+    "BEAR": 0.0,
+    "CRISIS": 0.0
   },
-  "n_states": 5,
-  "hmm_active": true,
-  "hmm_n_states": 5,
-  "updated_at": "2026-05-21T02:15:16.634909+00:00",
-  "pushed_at": "2026-05-21T02:15:54.680125+00:00"
+  "indicators": {},
+  "source": "regime_detector_v5.0",
+  "version": "5.0.4",
+  "updated_at": "2026-05-21T02:15:54.839562+00:00",
+  "timestamp": "2026-05-21T02:15:54.839572+00:00",
+  "pushed_at": "2026-05-21T02:16:29.909968+00:00"
 }
