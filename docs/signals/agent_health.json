@@ -4,11 +4,11 @@
       "name": "market_scanner",
       "description": "Scan 907 symboles yfinance \u2014 filtre top candidats",
       "status": "idle",
-      "cycles": 13,
+      "cycles": 15,
       "errors": 0,
-      "last_run": "2026-05-21T11:25:15.027462+00:00",
+      "last_run": "2026-05-21T11:30:15.116521+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
         "total_quotes": 344,
@@ -16,21 +16,21 @@
         "session": "europe",
         "universe_size": 351,
         "tradeable_size": 344,
-        "cycles": 13,
+        "cycles": 15,
         "errors": 0,
-        "last_run": "2026-05-21T11:25:15.027462+00:00",
-        "duration_s": 0.02
+        "last_run": "2026-05-21T11:30:15.116521+00:00",
+        "duration_s": 0.11
       }
     },
     "signal": {
       "name": "signal",
       "description": "SignalAgent v5.0 | XGB+LGB+LOG | 5min",
-      "status": "idle",
-      "cycles": 5,
+      "status": "running",
+      "cycles": 6,
       "errors": 0,
       "last_run": "2026-05-21T11:27:01.958498+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
         "cycles": 5,
@@ -43,142 +43,142 @@
       "name": "regime_detector",
       "description": "D\u00e9tecte BULL/BEAR/NEUTRAL/CRISIS \u2014 adapte tous les agents",
       "status": "idle",
-      "cycles": 14,
+      "cycles": 16,
       "errors": 0,
-      "last_run": "2026-05-21T11:25:15.009233+00:00",
+      "last_run": "2026-05-21T11:30:15.142842+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 14,
+        "cycles": 16,
         "errors": 0,
-        "last_run": "2026-05-21T11:25:15.009233+00:00",
-        "duration_s": 0.0
+        "last_run": "2026-05-21T11:30:15.142842+00:00",
+        "duration_s": 0.14
       }
     },
     "sentiment": {
       "name": "sentiment",
       "description": "FinBERT + Ollama sentiment | RAG PostgreSQL | 30min",
       "status": "idle",
-      "cycles": 2,
+      "cycles": 3,
       "errors": 0,
-      "last_run": "2026-05-21T11:00:10.009989+00:00",
+      "last_run": "2026-05-21T11:30:10.092137+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 2,
+        "cycles": 3,
         "errors": 0,
-        "last_run": "2026-05-21T11:00:10.009989+00:00",
-        "duration_s": 0.01
+        "last_run": "2026-05-21T11:30:10.092137+00:00",
+        "duration_s": 0.09
       }
     },
     "capital_allocator": {
       "name": "capital_allocator",
       "description": "Kelly Criterion + Risk Parity | 100% cash | Never overflow",
       "status": "idle",
-      "cycles": 6,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-05-21T11:25:55.443877+00:00",
+      "last_run": "2026-05-21T11:30:55.479244+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 6,
+        "cycles": 7,
         "errors": 0,
-        "last_run": "2026-05-21T11:25:55.443877+00:00",
-        "duration_s": 0.42
+        "last_run": "2026-05-21T11:30:55.479244+00:00",
+        "duration_s": 0.47
       }
     },
     "risk_manager": {
       "name": "risk_manager",
       "description": "RiskManagerAgent v5.0 | VaR+DD+Corr+Leverage | 5min",
       "status": "idle",
-      "cycles": 6,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-05-21T11:25:47.137690+00:00",
+      "last_run": "2026-05-21T11:30:47.858592+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 6,
+        "cycles": 7,
         "errors": 0,
-        "last_run": "2026-05-21T11:25:47.137690+00:00",
-        "duration_s": 2.12
+        "last_run": "2026-05-21T11:30:47.858592+00:00",
+        "duration_s": 2.85
       }
     },
     "pnl_monitor": {
       "name": "pnl_monitor",
       "description": "Surveille PnL 60s \u2014 8 r\u00e8gles exit \u2014 trailing stop",
       "status": "running",
-      "cycles": 24,
+      "cycles": 26,
       "errors": 0,
-      "last_run": "2026-05-21T11:28:33.898735+00:00",
+      "last_run": "2026-05-21T11:30:34.469303+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 23,
+        "cycles": 25,
         "errors": 0,
-        "last_run": "2026-05-21T11:28:33.898735+00:00",
-        "duration_s": 2.85
+        "last_run": "2026-05-21T11:30:34.469303+00:00",
+        "duration_s": 3.43
       }
     },
     "llm_council": {
       "name": "llm_council",
       "description": "Vote 3 mod\u00e8les Ollama | CONFIRM/REJECT/REDUCE | 2/3 quorum",
       "status": "idle",
-      "cycles": 6,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-05-21T11:25:50.006924+00:00",
+      "last_run": "2026-05-21T11:30:50.333489+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "total_councils": 4689224658800357011625215662867376422119584643434413043548086181337773091336662919471013763762868949717691615588349754769978346308365638669797298551378691720586778760865039195946441200786514196674640376518227985143749550186783355182755965355058396854521266359472114092777612413379841312255653596508288036649644669134584076407437184403342134609105879663959285461852824913534039916716330624806164428905685163923834437250285720649624417649991378066636487285788636663961235662876139533854999778950819504036283958500302266561282128838149405510940897732256346006394756385315625176580822127166922018731044210346749595139723305581702214614144701807801679497127930841077685102513170794575642691546002354954227488604812017226574203713283511985848854512056828653360911160829564793651942065761062609676744745473036010394916759485527948037463243749085031052435291783934766104518177822635019622987794991863170908551410613116708681493472174213147229195906229750916501120271221394283751554269579445254789136778501913550971844881544992007966702441007614324037420054846939931285230119867588985945786863619020513310784559809258297844236473071839971317436663160095836625608332817576922758419788670654661268113217709753019569384148268350827491586747926111870921529495353748758745870263005511232313556550750813454948343644294706547602536643077287178947002368,
+        "total_councils": 9378449317600714023250431325734752844239169286868826087096172362675546182673325838942027527525737899435383231176699509539956692616731277339594597102757383441173557521730078391892882401573028393349280753036455970287499100373566710365511930710116793709042532718944228185555224826759682624511307193016576073299289338269168152814874368806684269218211759327918570923705649827068079833432661249612328857811370327847668874500571441299248835299982756133272974571577273327922471325752279067709999557901639008072567917000604533122564257676298811021881795464512692012789512770631250353161644254333844037462088420693499190279446611163404429228289403615603358994255861682155370205026341589151285383092004709908454977209624034453148407426567023971697709024113657306721822321659129587303884131522125219353489490946072020789833518971055896074926487498170062104870583567869532209036355645270039245975589983726341817102821226233417362986944348426294458391812459501833002240542442788567503108539158890509578273557003827101943689763089984015933404882015228648074840109693879862570460239735177971891573727238041026621569119618516595688472946143679942634873326320191673251216665635153845516839577341309322536226435419506039138768296536701654983173495852223741843058990707497517491740526011022464627113101501626909896687288589413095205073286154574357894004736,
         "confirms": 1831,
         "rejects": 0,
         "reduces": 0,
         "fallbacks": 0,
         "timeouts": 0,
         "cache_size": 0,
-        "cycles": 6,
+        "cycles": 7,
         "errors": 0,
-        "last_run": "2026-05-21T11:25:50.006924+00:00",
-        "duration_s": 0.0
+        "last_run": "2026-05-21T11:30:50.333489+00:00",
+        "duration_s": 0.1
       }
     },
     "execution": {
       "name": "execution",
       "description": "Smart Order Routing \u2192 IBeam :5055 | Paper/Live | 2-step confirm",
       "status": "idle",
-      "cycles": 6,
+      "cycles": 7,
       "errors": 0,
-      "last_run": "2026-05-21T11:26:20.111242+00:00",
+      "last_run": "2026-05-21T11:31:19.286874+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 6,
+        "cycles": 7,
         "errors": 0,
-        "last_run": "2026-05-21T11:26:20.111242+00:00",
-        "duration_s": 22.09
+        "last_run": "2026-05-21T11:31:19.286874+00:00",
+        "duration_s": 21.25
       }
     },
     "portfolio_rebalancer": {
       "name": "portfolio_rebalancer",
       "description": "Drift detection \u2014 Kelly rebalance \u2014 Sector limits \u2014 5x/jour max",
       "status": "idle",
-      "cycles": 2,
+      "cycles": 3,
       "errors": 0,
-      "last_run": "2026-05-21T11:15:05.011410+00:00",
+      "last_run": "2026-05-21T11:30:05.004546+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 2,
+        "cycles": 3,
         "errors": 0,
-        "last_run": "2026-05-21T11:15:05.011410+00:00",
+        "last_run": "2026-05-21T11:30:05.004546+00:00",
         "duration_s": 0.0
       }
     },
@@ -190,7 +190,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {}
     },
@@ -202,7 +202,7 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {}
     },
@@ -210,17 +210,17 @@
       "name": "dashboard_sync",
       "description": "Sync GitHub Pages 60s | docs/signals/ | v5.0.4",
       "status": "running",
-      "cycles": 23,
+      "cycles": 25,
       "errors": 0,
-      "last_run": "2026-05-21T11:28:39.280817+00:00",
+      "last_run": "2026-05-21T11:30:44.647021+00:00",
       "last_error": null,
-      "uptime_h": 0.56,
+      "uptime_h": 0.59,
       "paused": false,
       "metrics": {
-        "cycles": 22,
+        "cycles": 24,
         "errors": 0,
-        "last_run": "2026-05-21T11:28:39.280817+00:00",
-        "duration_s": 8.23
+        "last_run": "2026-05-21T11:30:44.647021+00:00",
+        "duration_s": 13.6
       }
     },
     "options_greeks": {
@@ -231,11 +231,11 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.24,
+      "uptime_h": 0.02,
       "paused": false,
       "phase": "phase3",
       "metrics": {
-        "age_s": 869,
+        "age_s": 88,
         "fresh": true,
         "n_keys": 9
       }
@@ -248,11 +248,11 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.24,
+      "uptime_h": 0.02,
       "paused": false,
       "phase": "phase3",
       "metrics": {
-        "age_s": 869,
+        "age_s": 88,
         "fresh": true,
         "n_keys": 13
       }
@@ -265,11 +265,11 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.24,
+      "uptime_h": 0.02,
       "paused": false,
       "phase": "phase3",
       "metrics": {
-        "age_s": 869,
+        "age_s": 88,
         "fresh": true,
         "n_keys": 11
       }
@@ -282,11 +282,11 @@
       "errors": 0,
       "last_run": null,
       "last_error": null,
-      "uptime_h": 0.24,
+      "uptime_h": 0.02,
       "paused": false,
       "phase": "phase3",
       "metrics": {
-        "age_s": 869,
+        "age_s": 88,
         "fresh": true,
         "n_keys": 11
       }
@@ -314,6 +314,6 @@
   "n_errors": 0,
   "source": "dashboard_sync_v5.1.0",
   "version": "5.1.0",
-  "updated_at": "2026-05-21T11:29:31.045353+00:00",
-  "timestamp": "2026-05-21T11:29:31.045355+00:00"
+  "updated_at": "2026-05-21T11:31:31.056020+00:00",
+  "timestamp": "2026-05-21T11:31:31.056022+00:00"
 }
