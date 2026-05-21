@@ -4,7 +4,7 @@
   "current_regime": "BULL",
   "confidence": 0.95,
   "previous_regime": "NEUTRAL",
-  "regime_duration": 123,
+  "regime_duration": 124,
   "signal_thresholds": {
     "buy": 0.52,
     "sell": 0.4
@@ -36,11 +36,32 @@
     "vxx_high": false,
     "breadth": 0.8,
     "momentum_score": 0.96,
-    "timestamp": "2026-05-21T07:20:15.006752+00:00"
+    "timestamp": "2026-05-21T07:25:00.002670+00:00"
   },
   "source": "regime_detector_v5.0",
   "version": "5.0.4",
-  "updated_at": "2026-05-21T07:20:15.008771+00:00",
-  "timestamp": "2026-05-21T07:20:15.008778+00:00",
-  "pushed_at": "2026-05-21T07:24:12.699642+00:00"
+  "updated_at": "2026-05-21T07:25:01.863233+00:00",
+  "timestamp": "2026-05-21T07:25:00.010742+00:00",
+  "recovery_detection": {
+    "enabled": true,
+    "n_states": 5,
+    "states": [
+      "BULL",
+      "BEAR",
+      "NEUTRAL",
+      "CRISIS",
+      "RECOVERY"
+    ]
+  },
+  "state_probabilities": {
+    "BULL": 0.95,
+    "BEAR": -0.05,
+    "NEUTRAL": 0.05,
+    "CRISIS": 0.02,
+    "RECOVERY": 0.03
+  },
+  "n_states": 5,
+  "hmm_active": true,
+  "hmm_n_states": 5,
+  "pushed_at": "2026-05-21T07:25:06.314055+00:00"
 }
