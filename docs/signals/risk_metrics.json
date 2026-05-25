@@ -12,8 +12,8 @@
   "drawdown": {
     "current_drawdown": 0.0,
     "max_drawdown": 0.0001,
-    "portfolio_peak": 420119.5,
-    "current_nav": 420119.5,
+    "portfolio_peak": 420127.19,
+    "current_nav": 420127.19,
     "threshold": 0.15,
     "is_breached": false
   },
@@ -21,8 +21,9 @@
     "var_95": 0.0,
     "var_99": 0.0,
     "sharpe_ratio": 0.0,
-    "volatility": 0.0,
-    "note": "Historique insuffisant (4 points)",
+    "volatility": 0.0013,
+    "mean_return": 5e-05,
+    "n_observations": 4,
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -33,11 +34,22 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [],
-  "risk_score": 30,
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 3.3102,
+      "threshold": 1.0,
+      "message": "Leverage 3.31x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-25T01:20:48.260111+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 35,
   "portfolio": {
-    "net_liquidation": 420119.5,
-    "cash_value": 841975.62,
+    "net_liquidation": 420127.19,
+    "cash_value": 841983.31,
     "cash_pct": 2.0041,
     "n_positions": 67,
     "min_cash_pct": 0.05,
@@ -50,24 +62,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 4,
+    "total_cycles": 5,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 4,
+    "over_leveraged_cnt": 5,
     "high_corr_cnt": 0,
     "drawdown_warn_cnt": 0,
     "low_cash_cnt": 0,
-    "last_netliq": 420119.5,
+    "last_netliq": 420127.19,
     "last_leverage": 3.3102,
     "last_cash_pct": 2.0041,
-    "ibeam_ok": 4,
+    "ibeam_ok": 5,
     "ibeam_fail": 0
   },
-  "nav_history_n": 4,
-  "updated_at": "2026-05-25T01:15:47.400566+00:00",
-  "timestamp": "2026-05-25T01:15:47.400566+00:00",
+  "nav_history_n": 5,
+  "updated_at": "2026-05-25T01:20:48.261398+00:00",
+  "timestamp": "2026-05-25T01:20:48.261398+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 4,
-  "duration_s": 2.37,
-  "pushed_at": "2026-05-25T01:20:06.779112+00:00"
+  "cycle": 5,
+  "duration_s": 3.24,
+  "pushed_at": "2026-05-25T01:20:52.848630+00:00"
 }
