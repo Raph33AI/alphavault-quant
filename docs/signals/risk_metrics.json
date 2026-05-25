@@ -1,6 +1,6 @@
 {
   "leverage": {
-    "current_leverage": 3.3104,
+    "current_leverage": 3.3105,
     "max_leverage": 1.0,
     "allowed_leverage": 1.0,
     "is_over_leveraged": true,
@@ -13,17 +13,17 @@
     "current_drawdown": 0.0001,
     "max_drawdown": 0.0001,
     "portfolio_peak": 420138.16,
-    "current_nav": 420094.16,
+    "current_nav": 420081.66,
     "threshold": 0.15,
     "is_breached": false
   },
   "var_metrics": {
     "var_95": 0.0001,
     "var_99": 0.0001,
-    "sharpe_ratio": 1.9883,
+    "sharpe_ratio": 1.4469,
     "volatility": 0.0008,
-    "mean_return": 6e-06,
-    "n_observations": 19,
+    "mean_return": 5e-06,
+    "n_observations": 20,
     "source": "risk_manager_v5.0"
   },
   "correlation": {
@@ -34,11 +34,22 @@
     "is_high": false,
     "source": "risk_manager_v5.0"
   },
-  "alerts": [],
-  "risk_score": 30,
+  "alerts": [
+    {
+      "alert_type": "over_leveraged",
+      "type": "over_leveraged",
+      "severity": "WARNING",
+      "current": 3.3105,
+      "threshold": 1.0,
+      "message": "Leverage 3.31x > MAX 1.0x \u2014 r\u00e9duction recommand\u00e9e",
+      "timestamp": "2026-05-25T02:40:48.202923+00:00",
+      "source": "risk_manager_v5.0"
+    }
+  ],
+  "risk_score": 35,
   "portfolio": {
-    "net_liquidation": 420094.16,
-    "cash_value": 841950.28,
+    "net_liquidation": 420081.66,
+    "cash_value": 841937.78,
     "cash_pct": 2.0042,
     "n_positions": 67,
     "min_cash_pct": 0.05,
@@ -51,24 +62,24 @@
     "min_cash_pct": 0.05
   },
   "stats": {
-    "total_cycles": 20,
+    "total_cycles": 21,
     "alerts_emitted": 0,
-    "over_leveraged_cnt": 20,
+    "over_leveraged_cnt": 21,
     "high_corr_cnt": 0,
     "drawdown_warn_cnt": 0,
     "low_cash_cnt": 0,
-    "last_netliq": 420094.16,
-    "last_leverage": 3.3104,
+    "last_netliq": 420081.66,
+    "last_leverage": 3.3105,
     "last_cash_pct": 2.0042,
-    "ibeam_ok": 20,
+    "ibeam_ok": 21,
     "ibeam_fail": 0
   },
-  "nav_history_n": 20,
-  "updated_at": "2026-05-25T02:35:47.017476+00:00",
-  "timestamp": "2026-05-25T02:35:47.017476+00:00",
+  "nav_history_n": 21,
+  "updated_at": "2026-05-25T02:40:48.209384+00:00",
+  "timestamp": "2026-05-25T02:40:48.209384+00:00",
   "source": "risk_manager_v5.0",
   "version": "5.0.4",
-  "cycle": 20,
-  "duration_s": 2.01,
-  "pushed_at": "2026-05-25T02:40:27.674653+00:00"
+  "cycle": 21,
+  "duration_s": 3.19,
+  "pushed_at": "2026-05-25T02:41:14.984388+00:00"
 }
